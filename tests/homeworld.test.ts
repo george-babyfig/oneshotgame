@@ -163,3 +163,36 @@ describe('homeworld', () => {
     expect(p.home.debris).toEqual([]);
   });
 });
+
+describe('resident dress-up and outfit presets', async () => {
+  const H = await import('../src/meta/homeworld');
+  const C = await import('../src/meta/cosmetics');
+  it('accessories unlock with friendship or are bought once with gems', () => {
+    const p = defaultProfile();
+    p.seen = ['otter'];
+    p.home.residents = [{ species: 'otter', fp: 0, lastReq: -1, rewarded: 1 }];
+    expect(H.wearAcc(p, 'otter', 'bow')).toBe('locked');
+    p.home.residents[0].fp = 3;
+    expect(H.wearAcc(p, 'otter', 'bow')).toBe('ok');
+    p.gems = 30;
+    expect(H.wearAcc(p, 'otter', 'shades')).toBe('gems');
+    p.gems = 100;
+    expect(H.wearAcc(p, 'otter', 'shades')).toBe('ok');
+    expect(p.gems).toBe(60);
+    expect(H.wearAcc(p, 'otter', 'shades')).toBe('ok');
+    expect(p.gems).toBe(60); // bought once
+  });
+  it('saves and loads outfits, falling back for items no longer owned', () => {
+    const p = defaultProfile();
+    p.wardrobe = ['hat_sprout'];
+    C.equip(p, 'hat_sprout');
+    C.savePreset(p, 1);
+    C.equip(p, 'hat_antenna');
+    expect(C.loadPreset(p, 1)).toBe(true);
+    expect(C.currentLook(p).hat).toBe('hat_sprout');
+    p.wardrobe = [];
+    C.loadPreset(p, 1);
+    expect(C.currentLook(p).hat).toBe(C.DEFAULT_LOOK.hat);
+    expect(C.loadPreset(p, 2)).toBe(false);
+  });
+});

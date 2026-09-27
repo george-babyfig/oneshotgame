@@ -127,6 +127,45 @@ export interface Resident {
   rewarded: number;
   /** Nickname (from NICKNAMES; kid-safe, no free text). */
   nick?: string;
+  /** Accessory worn (RESIDENT_ACCS id). */
+  acc?: string;
+}
+
+/** Resident accessories: earned with friendship, or a couple bought with gems. */
+export const RESIDENT_ACCS: { id: string; name: string; friend?: number; gems?: number }[] = [
+  { id: 'bow', name: 'Bow', friend: 2 },
+  { id: 'flower', name: 'Flower', friend: 3 },
+  { id: 'scarf', name: 'Scarf', friend: 4 },
+  { id: 'crown', name: 'Tiny Crown', friend: 5 },
+  { id: 'shades', name: 'Sunglasses', gems: 40 },
+  { id: 'party', name: 'Party Hat', gems: 40 },
+];
+
+export function accAvailable(p: Profile, r: Resident, id: string) {
+  const a = RESIDENT_ACCS.find((x) => x.id === id);
+  if (!a) return false;
+  if (a.friend) return friendLevel(r.fp) >= a.friend;
+  return p.home.accs.includes(id);
+}
+
+/** Put an accessory on a resident (buying a gem one first if needed). */
+export function wearAcc(p: Profile, species: string, id: string | undefined): 'ok' | 'locked' | 'gems' {
+  const r = p.home.residents.find((x) => x.species === species);
+  if (!r) return 'locked';
+  if (!id) {
+    r.acc = undefined;
+    return 'ok';
+  }
+  const a = RESIDENT_ACCS.find((x) => x.id === id);
+  if (!a) return 'locked';
+  if (!accAvailable(p, r, id)) {
+    if (a.friend) return 'locked';
+    if (p.gems < (a.gems ?? 0)) return 'gems';
+    p.gems -= a.gems ?? 0;
+    p.home.accs.push(id);
+  }
+  r.acc = id;
+  return 'ok';
 }
 
 /** Pet names for residents: proper nouns, the same in every language. */
@@ -198,6 +237,8 @@ export interface HomeState {
   paint: { ground: string; sea: string };
   /** Paints bought with gems. */
   paints: string[];
+  /** Resident accessories bought with gems (shared by all residents). */
+  accs: string[];
 }
 
 // ------------------------------------------------------------------ paint
@@ -266,6 +307,7 @@ export function defaultHome(now = Date.now()): HomeState {
     intro: false,
     paint: { ground: 'meadow', sea: 'blue' },
     paints: [],
+    accs: [],
   };
 }
 

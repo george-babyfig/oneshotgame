@@ -16,10 +16,14 @@ import {
   owns,
   ownedCount,
   sourceText,
+  DEFAULT_LOOK,
+  PRESETS,
+  loadPreset,
+  savePreset,
   type Look,
   type Slot,
 } from '../../meta/cosmetics';
-import { drawKeeper, drawLauncher, drawTrail, itemCanvas } from '../art/keeper';
+import { drawKeeper, drawLauncher, drawTrail, itemCanvas, keeperHead } from '../art/keeper';
 import { drawProjectile } from '../art/projectiles';
 import type { App } from '../app';
 import { t } from '../../i18n';
@@ -84,6 +88,53 @@ function stage(canvas: HTMLCanvasElement, getLook: () => Look, reduceMotion: boo
   };
   raf = requestAnimationFrame(frame);
   return () => cancelAnimationFrame(raf);
+}
+
+/** Three outfit slots: tap to wear, 💾 to save the current look. */
+function presetRow(app: App, slot: Slot) {
+  const p = app.p;
+  return h(
+    'div',
+    { class: 'presets' },
+    h('small', null, t('Outfits')),
+    ...Array.from({ length: PRESETS }, (_, i) => {
+      const saved = p.presets?.[i];
+      return h(
+        'div',
+        { class: 'preset' },
+        h(
+          'button',
+          {
+            class: `preset-wear${saved ? '' : ' empty'}`,
+            'aria-label': t('Wear outfit {n}', { n: i + 1 }),
+            onclick: () => {
+              if (!loadPreset(p, i)) return toast(t('Tap 💾 to save your current look here'));
+              sfx.click();
+              haptic.light();
+              app.save();
+              showWorkshop(app, slot);
+            },
+          },
+          saved ? keeperHead({ ...DEFAULT_LOOK, ...saved } as Look, 34) : String(i + 1),
+        ),
+        h(
+          'button',
+          {
+            class: 'preset-save',
+            'aria-label': t('Save outfit {n}', { n: i + 1 }),
+            onclick: () => {
+              savePreset(p, i);
+              sfx.coin();
+              toast(t('Outfit {n} saved', { n: i + 1 }), 'good');
+              app.save();
+              showWorkshop(app, slot);
+            },
+          },
+          '💾',
+        ),
+      );
+    }),
+  );
 }
 
 export function showWorkshop(app: App, slot: Slot = lastSlot, tryOn?: string) {
@@ -191,6 +242,7 @@ export function showWorkshop(app: App, slot: Slot = lastSlot, tryOn?: string) {
       h(
         'div',
         { class: 'scroll' },
+        presetRow(app, slot),
         tabs,
         mastery,
         grid,

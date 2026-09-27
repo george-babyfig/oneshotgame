@@ -267,3 +267,22 @@ export const MASTERY_STEPS = [100, 500, 2000];
 export function masteryLevel(flings: number) {
   return MASTERY_STEPS.filter((n) => flings >= n).length;
 }
+
+export const PRESETS = 3;
+
+export function savePreset(p: Profile, i: number) {
+  if (i < 0 || i >= PRESETS) return;
+  const list = [...(p.presets ?? [])];
+  while (list.length < PRESETS) list.push(null);
+  list[i] = { ...currentLook(p) };
+  p.presets = list;
+}
+
+/** Wear a saved outfit; items no longer owned fall back to the default look. */
+export function loadPreset(p: Profile, i: number): boolean {
+  const saved = p.presets?.[i];
+  if (!saved) return false;
+  p.look = { ...DEFAULT_LOOK, ...saved } as Look;
+  p.look = currentLook(p);
+  return true;
+}

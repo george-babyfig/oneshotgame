@@ -210,7 +210,8 @@ function face(g: G, x: number, y: number, u: number, s: Spec, blink: boolean, se
  * Draw a creature standing on the ground at (x, y), with "up" rotated by `angle`
  * (0 = screen up). `size` is roughly its height in px.
  */
-export function drawCreature(g: G, id: string, x: number, y: number, angle: number, size: number, t: number) {
+/** `acc` = an accessory worn by a Homeworld resident (see RESIDENT_ACCS). */
+export function drawCreature(g: G, id: string, x: number, y: number, angle: number, size: number, t: number, acc2 = '') {
   const s = SPECS[id];
   if (!s) return;
   const u = size;
@@ -549,6 +550,7 @@ export function drawCreature(g: G, id: string, x: number, y: number, angle: numb
       g.globalAlpha = 1;
     }
   }
+  if (acc2) drawAccessory(g, acc2, hx, hy, top, hr, u, t);
   g.restore();
 }
 
@@ -559,15 +561,106 @@ function shadeHex(hex: string) {
 }
 
 /** Render a creature to a standalone canvas (for DOM cards like the Lifebook). */
-export function critterCanvas(id: string, px: number, t = 0.4): HTMLCanvasElement {
+export function critterCanvas(id: string, px: number, t = 0.4, acc = ''): HTMLCanvasElement {
   const c = document.createElement('canvas');
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   c.width = c.height = Math.round(px * dpr);
   c.style.width = c.style.height = `${px}px`;
   const g = c.getContext('2d')!;
   g.scale(dpr, dpr);
-  drawCreature(g, id, px / 2, px * 0.9, 0, px * 0.62, t);
+  drawCreature(g, id, px / 2, px * 0.9, 0, px * 0.62, t, acc);
   return c;
 }
 
 export const HAS_ART = (id: string) => id in SPECS;
+
+/** Accessories drawn relative to the head: top of head, face level, neck. */
+function drawAccessory(g: G, id: string, hx: number, hy: number, top: number, hr: number, u: number, t: number) {
+  switch (id) {
+    case 'bow': {
+      const x = hx + hr * 0.45;
+      const y = top + hr * 0.1;
+      tri(g, x, y, x - 0.16 * u, y - 0.1 * u, x - 0.16 * u, y + 0.1 * u, '#ff6aa8');
+      tri(g, x, y, x + 0.16 * u, y - 0.1 * u, x + 0.16 * u, y + 0.1 * u, '#ff6aa8');
+      ell(g, x, y, 0.05 * u, 0.05 * u, '#ffd0e6');
+      break;
+    }
+    case 'flower': {
+      const x = hx - hr * 0.5;
+      const y = top + hr * 0.15;
+      for (let k = 0; k < 5; k++) {
+        const a = (k / 5) * Math.PI * 2 + t * 0.4;
+        ell(g, x + Math.cos(a) * 0.07 * u, y + Math.sin(a) * 0.07 * u, 0.06 * u, 0.06 * u, k % 2 ? '#ffe066' : '#ffffff');
+      }
+      ell(g, x, y, 0.04 * u, 0.04 * u, '#ff9a3d');
+      break;
+    }
+    case 'scarf': {
+      const y = hy + hr * 0.78;
+      g.fillStyle = '#ff5a5a';
+      g.beginPath();
+      g.roundRect(hx - hr * 0.8, y - 0.05 * u, hr * 1.6, 0.11 * u, 0.05 * u);
+      g.fill();
+      g.fillStyle = '#e03a4a';
+      g.beginPath();
+      g.roundRect(hx + hr * 0.35, y, 0.1 * u, 0.22 * u + Math.sin(t * 3) * 0.02 * u, 0.04 * u);
+      g.fill();
+      g.fillStyle = '#ffffff';
+      for (let k = -1; k <= 1; k++) ell(g, hx + k * hr * 0.45, y, 0.02 * u, 0.02 * u, '#ffffff');
+      break;
+    }
+    case 'crown': {
+      const y = top + 0.02 * u;
+      g.fillStyle = '#ffd24a';
+      g.beginPath();
+      g.moveTo(hx - 0.16 * u, y);
+      g.lineTo(hx - 0.18 * u, y - 0.16 * u);
+      g.lineTo(hx - 0.08 * u, y - 0.08 * u);
+      g.lineTo(hx, y - 0.2 * u);
+      g.lineTo(hx + 0.08 * u, y - 0.08 * u);
+      g.lineTo(hx + 0.18 * u, y - 0.16 * u);
+      g.lineTo(hx + 0.16 * u, y);
+      g.closePath();
+      g.fill();
+      ell(g, hx, y - 0.05 * u, 0.03 * u, 0.03 * u, '#ff4a8a');
+      break;
+    }
+    case 'shades': {
+      const y = hy - hr * 0.08;
+      for (const sx of [-1, 1]) {
+        g.fillStyle = '#231a33';
+        g.beginPath();
+        g.roundRect(hx + sx * hr * 0.28 - 0.1 * u, y - 0.06 * u, 0.2 * u, 0.13 * u, 0.05 * u);
+        g.fill();
+      }
+      g.strokeStyle = '#231a33';
+      g.lineWidth = 0.03 * u;
+      g.beginPath();
+      g.moveTo(hx - hr * 0.1, y);
+      g.lineTo(hx + hr * 0.1, y);
+      g.stroke();
+      ell(g, hx - hr * 0.33, y - 0.02 * u, 0.03 * u, 0.02 * u, 'rgba(255,255,255,0.7)');
+      break;
+    }
+    case 'party': {
+      const y = top + 0.04 * u;
+      g.fillStyle = '#6ec8ff';
+      g.beginPath();
+      g.moveTo(hx - 0.13 * u, y);
+      g.lineTo(hx + 0.02 * u, y - 0.4 * u);
+      g.lineTo(hx + 0.15 * u, y);
+      g.closePath();
+      g.fill();
+      g.strokeStyle = '#ffd24a';
+      g.lineWidth = 0.035 * u;
+      g.beginPath();
+      g.moveTo(hx - 0.08 * u, y - 0.12 * u);
+      g.lineTo(hx + 0.1 * u, y - 0.14 * u);
+      g.moveTo(hx - 0.03 * u, y - 0.26 * u);
+      g.lineTo(hx + 0.06 * u, y - 0.27 * u);
+      g.stroke();
+      ell(g, hx + 0.02 * u, y - 0.42 * u, 0.05 * u, 0.05 * u, '#ff6aa8');
+      break;
+    }
+  }
+}

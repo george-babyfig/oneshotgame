@@ -3322,3 +3322,70 @@ button.lb {
   background: linear-gradient(90deg, rgba(255, 138, 61, 0.3), rgba(255, 210, 74, 0.2));
   box-shadow: inset 0 0 0 1px var(--sun);
 }
+.dress {
+  cursor: pointer;
+}
+.acc-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.acc {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  border-radius: 14px;
+  background: var(--panel-2);
+}
+.acc small {
+  font-size: 11px;
+}
+.acc b {
+  font-size: 11px;
+  color: var(--dust);
+  min-height: 13px;
+}
+.acc.on {
+  box-shadow: inset 0 0 0 2px var(--life);
+}
+.acc.locked canvas {
+  opacity: 0.5;
+}
+.presets {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.presets > small {
+  color: var(--muted);
+  font-weight: 700;
+  margin-right: auto;
+}
+.preset {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 14px;
+  background: var(--panel);
+}
+.preset-wear {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  overflow: hidden;
+  background: linear-gradient(160deg, #3a2f8a, #1d1850);
+  font-weight: 700;
+  color: var(--muted);
+}
+.preset-wear.empty {
+  box-shadow: inset 0 0 0 2px var(--line);
+}
+.preset-save {
+  font-size: 16px;
+  padding: 4px;
+}

@@ -46,6 +46,9 @@ import {
   sendHome,
   startExpedition,
   tickHome,
+  RESIDENT_ACCS,
+  accAvailable,
+  wearAcc,
   NICKNAMES,
   setNick,
   isBestFriend,
@@ -342,7 +345,7 @@ export function showHomeworld(app: App) {
       if (home.expedition?.species === r.species) return;
       const base = rot + ((k + 0.5) * TAU) / Math.max(1, n) + Math.sin(time * 0.3 + k * 2) * (TAU / n) * 0.35;
       const q = surf(base);
-      drawCreature(g, r.species, q.x, q.y, base + Math.PI / 2, s * 0.42, time + k);
+      drawCreature(g, r.species, q.x, q.y, base + Math.PI / 2, s * 0.42, time + k, r.acc);
     });
     // the Keeper strolls in the gap before the first plot
     const ka = rot - (TAU / n) * 0.5 + Math.sin(time * 0.4) * (TAU / n) * 0.15;
@@ -745,7 +748,7 @@ function residentsSheet(app: App, after: () => void) {
     return h(
       'div',
       { class: 'hw-res' },
-      critterCanvas(r.species, 52),
+      critterCanvas(r.species, 52, 0.4, r.acc),
       h(
         'div',
         { class: 'grow' },
@@ -755,6 +758,14 @@ function residentsSheet(app: App, after: () => void) {
           r.nick ? h('b', null, r.nick) : null,
           h('small', null, r.nick ? ` · ${t(sp.name)}` : t(sp.name)),
           ' ✏️',
+          h(
+            'span',
+            {
+              class: 'dress',
+              onclick: (e: Event) => (e.stopPropagation(), m.close(), accSheet(app, r.species, () => residentsSheet(app, after))),
+            },
+            ' 👒',
+          ),
           isBestFriend(r) ? h('span', { class: 'ribbon' }, t('🎀 Best friends')) : null,
         ),
         h(
@@ -1181,5 +1192,40 @@ function nickSheet(app: App, species: string, back: () => void) {
     h('div', { class: 'pe-av' }, critterCanvas(species, 80)),
     h('div', { class: 'nick-grid' }, ...NICKNAMES.map((n) => btn(n, `ghost small${r.nick === n ? ' on' : ''}`, () => pick(n)))),
     r.nick ? btn(t('No nickname'), 'ghost wide', () => pick(undefined)) : null,
+  ]);
+}
+
+function accSheet(app: App, species: string, back: () => void) {
+  const p = app.p;
+  const r = p.home.residents.find((x) => x.species === species);
+  if (!r) return;
+  const pick = (id: string | undefined) => {
+    const res = wearAcc(p, species, id);
+    if (res === 'gems') return app.needGems();
+    if (res === 'locked') return toast(t('Become better friends to unlock it'));
+    sfx.click();
+    haptic.light();
+    app.save();
+    m.close();
+    back();
+  };
+  const m = modal([
+    h('div', { class: 'm-title' }, t('Dress up {name}', { name: r.nick ?? t(SPECIES_BY_ID[species].name) })),
+    h('div', { class: 'pe-av' }, critterCanvas(species, 96, 0.4, r.acc)),
+    h(
+      'div',
+      { class: 'acc-grid' },
+      ...RESIDENT_ACCS.map((a) => {
+        const ok = accAvailable(p, r, a.id);
+        return h(
+          'button',
+          { class: `acc${r.acc === a.id ? ' on' : ''}${ok ? '' : ' locked'}`, onclick: () => pick(a.id) },
+          critterCanvas(species, 54, 0.4, a.id),
+          h('small', null, t(a.name)),
+          h('b', null, ok ? '' : a.friend ? `💖${a.friend}` : `💎${a.gems}`),
+        );
+      }),
+    ),
+    r.acc ? btn(t('Take it off'), 'ghost wide', () => pick(undefined)) : null,
   ]);
 }

@@ -17,7 +17,7 @@ import { BANNERS } from '../src/meta/passport';
 import { ACHIEVEMENTS } from '../src/meta/achievements';
 import { BUILDINGS } from '../src/meta/homeworld';
 import { FRAMES, REASON } from '../src/ui/screens/homeworld';
-import { PAINTS } from '../src/meta/homeworld';
+import { PAINTS, RESIDENT_ACCS } from '../src/meta/homeworld';
 import { letterStrings } from '../src/meta/inbox';
 import { LORE } from '../src/meta/lore';
 import { OBJECT_TITLES } from '../src/meta/records';
@@ -69,6 +69,7 @@ export function allKeys(): string[] {
   Object.values(BUILDINGS).forEach((b) => (add(b.name), add(b.desc)));
   Object.values(REASON).forEach(add);
   PAINTS.forEach((x) => add(x.name));
+  RESIDENT_ACCS.forEach((x) => add(x.name));
   FRAMES.forEach((x) => add(x.name));
   letterStrings().forEach(add);
   Object.values(LORE).forEach(add);

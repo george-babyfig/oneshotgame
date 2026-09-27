@@ -124,6 +124,8 @@ export interface Profile {
   mail: Mail[];
   /** Planets whose Comet Guardian has been defeated (first-time reward paid). */
   bosses: number[];
+  /** Saved Keeper outfits (Workshop presets). */
+  presets: (Record<string, string> | null)[];
 }
 
 const KEY = 'pp.profile';
@@ -191,6 +193,7 @@ export function defaultProfile(now = Date.now()): Profile {
     sightings: {},
     mail: [],
     bosses: [],
+    presets: [null, null, null],
   };
 }
 
