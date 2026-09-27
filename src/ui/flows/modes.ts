@@ -146,7 +146,7 @@ function modeEnded(app: App, mode: Mode, r: LevelResult, vs?: { code: string; se
       h('div', { class: 'm-title' }, out.best ? t('New best!') : t('Meteor Rush')),
       h('div', { class: 'end-stars' }, ...[0, 1, 2].map((i) => h('span', { class: i < stars ? 'on' : '' }, '★'))),
       h('div', { class: 'end-score' }, t('{n} life', { n: fmt(r.score) })),
-      h('div', { class: 'reward-list' }, h('span', null, `✨ ${fmt(out.dust)}`), out.best ? h('span', null, t('💎 5 best score')) : null),
+      h('div', { class: 'reward-list' }, h('span', null, `✨ ${fmt(out.dust)}`), out.best ? h('span', null, t('💎 {n} for a new best!', { n: 5 })) : null),
       h('p', { class: 'muted' }, t('Best: {n}', { n: fmt(p.stats.rushBest) })),
     ];
   } else if (mode === 'challenge' && vs) {

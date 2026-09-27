@@ -482,7 +482,6 @@
   "💀 SUPER HARD": "💀 SUPER DIFFICILE",
   "💀 Super Hard planet · ×{n} stardust": "💀 Planète super difficile · ×{n} poussière d'étoiles",
   "💎 300 gems": "💎 300 gemmes",
-  "💎 5 best score": "💎 5 record",
   "💎 {c} · you have {g}": "💎 {c} · tu en as {g}",
   "💎 {n} gems": "💎 {n} gemmes",
   "💎 {n} welcome gift": "💎 {n} cadeau de bienvenue",
@@ -505,5 +504,6 @@
   "🧊 Frozen start": "🧊 Départ gelé",
   "🪐 I grew {n} life on a Pocket Planet!": "🪐 J'ai fait pousser {n} de vie sur une Pocket Planet !",
   "🪨 A rock on bare ground": "🪨 Un rocher sur un sol nu",
-  "🪨 Rock raises land · ☄️ Ice makes oceans · 🌱 Seeds grow life · 🔥 Magma heats & builds volcanoes": "🪨 Le rocher élève la terre · ☄️ La glace crée des océans · 🌱 Les graines font pousser la vie · 🔥 Le magma chauffe et crée des volcans"
+  "🪨 Rock raises land · ☄️ Ice makes oceans · 🌱 Seeds grow life · 🔥 Magma heats & builds volcanoes": "🪨 Le rocher élève la terre · ☄️ La glace crée des océans · 🌱 Les graines font pousser la vie · 🔥 Le magma chauffe et crée des volcans",
+  "💎 {n} for a new best!": "💎 {n} pour un nouveau record"
 }

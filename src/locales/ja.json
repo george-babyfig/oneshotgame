@@ -482,7 +482,6 @@
   "💀 SUPER HARD": "💀 スーパーハード",
   "💀 Super Hard planet · ×{n} stardust": "💀 スーパーハードな惑星 · 星くず×{n}",
   "💎 300 gems": "💎 ジェム300個",
-  "💎 5 best score": "💎 5 ベストスコア",
   "💎 {c} · you have {g}": "💎 {c} · もっている数 {g}",
   "💎 {n} gems": "💎 ジェム{n}個",
   "💎 {n} welcome gift": "💎 {n} ようこそプレゼント",
@@ -505,5 +504,6 @@
   "🧊 Frozen start": "🧊 こおった状態でスタート",
   "🪐 I grew {n} life on a Pocket Planet!": "🪐 Pocket Planetでいのちを{n}そだてたよ！",
   "🪨 A rock on bare ground": "🪨 岩はだにいわ",
-  "🪨 Rock raises land · ☄️ Ice makes oceans · 🌱 Seeds grow life · 🔥 Magma heats & builds volcanoes": "🪨 いわで陸がもりあがる · ☄️ こおりで海ができる · 🌱 タネでいのちがそだつ · 🔥 マグマであたたまって火山ができる"
+  "🪨 Rock raises land · ☄️ Ice makes oceans · 🌱 Seeds grow life · 🔥 Magma heats & builds volcanoes": "🪨 いわで陸がもりあがる · ☄️ こおりで海ができる · 🌱 タネでいのちがそだつ · 🔥 マグマであたたまって火山ができる",
+  "💎 {n} for a new best!": "💎 {n} 新記録ボーナス"
 }
