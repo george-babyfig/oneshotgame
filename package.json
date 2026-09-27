@@ -8,15 +8,21 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "icon": "node resources/render.cjs",
     "ios:sync": "npm run build && npx cap sync ios",
     "ios:open": "npx cap open ios"
   },
   "dependencies": {
+    "@capacitor-community/in-app-review": "^8.0.0",
     "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.5.2",
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.5.2",
+    "@capacitor/local-notifications": "^8.3.1",
     "@capacitor/preferences": "^8.0.1",
+    "@capacitor/share": "^8.0.2",
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.3",
     "@capgo/native-purchases": "^8.8.1",
@@ -24,8 +30,13 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.2",
+    "prettier": "^3.9.9",
     "typescript": "^7.0.2",
     "vite": "^8.3.1",
     "vitest": "^5.0.2"
+  },
+  "description": "Pocket Planet \u2014 fling, terraform and populate tiny worlds. iOS game built with Capacitor.",
+  "engines": {
+    "node": ">=20"
   }
 }

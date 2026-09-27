@@ -42,7 +42,24 @@ export interface LevelDef {
   hue: number;
 }
 
-const NAMES_A = ['Pebble', 'Mossy', 'Glim', 'Tumble', 'Nova', 'Bramble', 'Puddle', 'Ember', 'Frost', 'Cosmo', 'Lumen', 'Dewdrop', 'Zephyr', 'Marble', 'Sprout', 'Comet'];
+const NAMES_A = [
+  'Pebble',
+  'Mossy',
+  'Glim',
+  'Tumble',
+  'Nova',
+  'Bramble',
+  'Puddle',
+  'Ember',
+  'Frost',
+  'Cosmo',
+  'Lumen',
+  'Dewdrop',
+  'Zephyr',
+  'Marble',
+  'Sprout',
+  'Comet',
+];
 const NAMES_B = ['Rock', 'World', 'Orb', 'Globe', 'Isle', 'Sphere', 'Haven', 'Prime', 'Minor', 'Major'];
 
 export function availableKinds(n: number): Kind[] {

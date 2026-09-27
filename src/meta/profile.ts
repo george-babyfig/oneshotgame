@@ -8,72 +8,129 @@ export interface GalaxyPlanet {
   stars: number;
   species: string[];
   life: number;
-  colors?: string[];
+  colors: string[];
+}
+
+export interface QuestState {
+  id: string;
+  progress: number;
+  claimed: boolean;
+}
+
+export interface Settings {
+  sound: boolean;
+  music: boolean;
+  haptics: boolean;
+  reduceMotion: boolean;
+  notifications: boolean;
+}
+
+export interface Stats {
+  throws: number;
+  plays: number;
+  wins: number;
+  bestLife: number;
+  creatures: number;
+  threeStars: number;
 }
 
 export interface Profile {
   v: number;
   gems: number;
   dust: number;
-  level: number; // next level to play
+  /** Highest unlocked level (the next one to beat). */
+  level: number;
   stars: Record<number, number>;
-  seen: string[]; // Lifebook: species ever discovered
+  /** Lifebook: every creature ever discovered. */
+  seen: string[];
   galaxy: GalaxyPlanet[];
   lastCollect: number;
   upgrades: Record<UpgradeId, number>;
   boosters: Record<BoosterId, number>;
   piggy: number;
   starter: boolean;
+  /** Cosmic Pass owned: unlocks the premium Star Road lane. */
+  pass: boolean;
+  /** Premium Star Road tiers already claimed. */
+  roadPass: number[];
   skin: string;
   skins: string[];
   processedTx: string[];
   daily: { last: string; streak: number };
-  settings: { sound: boolean; music: boolean; haptics: boolean };
+  quests: { day: string; list: QuestState[]; bonusClaimed: boolean };
+  /** Star Road tiers already claimed (indices). */
+  road: number[];
+  /** Chapter chests already opened (chapter numbers). */
+  chapters: number[];
+  dailyPlanet: { day: string; best: number; stars: number; rewarded: boolean };
+  settings: Settings;
   tutorial: boolean;
-  stats: { throws: number; plays: number; wins: number; bestLife: number };
+  meta: { installed: number; lastSeen: number; sessions: number; rated: boolean; starterOffered: boolean; notifAsked: boolean };
+  stats: Stats;
 }
 
 const KEY = 'pp.profile';
+export const PROFILE_VERSION = 2;
 
-export function defaultProfile(): Profile {
+export function defaultProfile(now = Date.now()): Profile {
   return {
-    v: 1,
+    v: PROFILE_VERSION,
     gems: 30,
     dust: 0,
     level: 1,
     stars: {},
     seen: [],
     galaxy: [],
-    lastCollect: Date.now(),
+    lastCollect: now,
     upgrades: { scope: 0, throws: 0, splash: 0, vault: 0 },
     boosters: { shower: 1, spark: 1, scope: 1 },
     piggy: 0,
     starter: false,
+    pass: false,
+    roadPass: [],
     skin: 'classic',
     skins: ['classic'],
     processedTx: [],
     daily: { last: '', streak: 0 },
-    settings: { sound: true, music: true, haptics: true },
+    quests: { day: '', list: [], bonusClaimed: false },
+    road: [],
+    chapters: [],
+    dailyPlanet: { day: '', best: 0, stars: 0, rewarded: false },
+    settings: { sound: true, music: true, haptics: true, reduceMotion: false, notifications: true },
     tutorial: false,
-    stats: { throws: 0, plays: 0, wins: 0, bestLife: 0 },
+    meta: { installed: now, lastSeen: now, sessions: 0, rated: false, starterOffered: false, notifAsked: false },
+    stats: { throws: 0, plays: 0, wins: 0, bestLife: 0, creatures: 0, threeStars: 0 },
   };
 }
 
+/** Deep-merge saved data over defaults so fields added in updates get sane values. */
 function merge<T>(base: T, saved: unknown): T {
-  if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return (saved as T) ?? base;
+  if (saved === undefined || saved === null) return base;
+  if (typeof saved !== 'object' || Array.isArray(saved) || typeof base !== 'object' || base === null || Array.isArray(base))
+    return saved as T;
   const out: Record<string, unknown> = { ...(base as Record<string, unknown>) };
   for (const [k, v] of Object.entries(saved as Record<string, unknown>)) {
-    const b = (base as Record<string, unknown>)[k];
-    out[k] = b && typeof b === 'object' && !Array.isArray(b) ? merge(b, v) : v;
+    out[k] = merge((base as Record<string, unknown>)[k], v);
   }
   return out as T;
+}
+
+/** Upgrade older save formats in place. */
+export function migrate(raw: Record<string, unknown>): Profile {
+  const p = merge(defaultProfile(), raw);
+  if ((raw.v as number | undefined) === undefined || (raw.v as number) < 2) {
+    // v1 → v2: galaxy entries gained colours; stats gained counters.
+    p.galaxy = p.galaxy.map((g) => ({ ...g, colors: g.colors ?? [] }));
+  }
+  p.v = PROFILE_VERSION;
+  return p;
 }
 
 export async function loadProfile(): Promise<Profile> {
   const raw = await loadKey(KEY);
   if (!raw) return defaultProfile();
   try {
-    return merge(defaultProfile(), JSON.parse(raw));
+    return migrate(JSON.parse(raw));
   } catch {
     return defaultProfile();
   }
@@ -91,7 +148,6 @@ export function dayGap(a: string, b: string) {
   return Math.round((new Date(b + 'T00:00:00').getTime() - new Date(a + 'T00:00:00').getTime()) / 86400000);
 }
 
-/** Stardust per hour produced by one galaxy planet. */
-export function planetRate(g: GalaxyPlanet) {
-  return 6 + g.stars * 3 + g.species.length * 2;
+export function totalStars(p: Profile) {
+  return Object.values(p.stars).reduce((a, b) => a + b, 0);
 }

@@ -3,7 +3,11 @@ import { haptic } from './haptics';
 
 type Child = Node | string | number | null | undefined | false | Child[];
 
-export function h<K extends keyof HTMLElementTagNameMap>(tag: K, props?: Record<string, unknown> | null, ...kids: Child[]): HTMLElementTagNameMap[K] {
+export function h<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  props?: Record<string, unknown> | null,
+  ...kids: Child[]
+): HTMLElementTagNameMap[K] {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(props ?? {})) {
     if (v === undefined || v === null || v === false) continue;
@@ -75,7 +79,20 @@ export function confirmBox(text: string, yes: string, no = 'Cancel'): Promise<bo
     const m = modal(
       [
         h('p', { class: 'confirm' }, text),
-        h('div', { class: 'row' }, btn(no, 'ghost', () => { answered = true; m.close(); res(false); }), btn(yes, 'primary', () => { answered = true; m.close(); res(true); })),
+        h(
+          'div',
+          { class: 'row' },
+          btn(no, 'ghost', () => {
+            answered = true;
+            m.close();
+            res(false);
+          }),
+          btn(yes, 'primary', () => {
+            answered = true;
+            m.close();
+            res(true);
+          }),
+        ),
       ],
       { onClose: () => !answered && res(false) },
     );

@@ -12,10 +12,14 @@ export interface SceneOpts {
   glow: string;
   seen: Set<string>;
   tutorial: boolean;
+  reduceMotion?: boolean;
   gems: () => number;
   spendGems: (n: number) => boolean;
   continueCost: (i: number) => number;
   onNewSpecies: (id: string) => void;
+  onSpecies?: (id: string) => void;
+  onThrow?: () => void;
+  onTransform?: (regions: number) => void;
   onEnd: (r: LevelResult) => void;
   onQuit: () => void;
   onShop: () => void;
@@ -200,12 +204,27 @@ export class LevelScene {
         'div',
         { class: 'hud-top' },
         h('button', { class: 'icon', 'aria-label': 'Pause', onclick: () => this.pause() }, 'Ⅱ'),
-        h('div', { class: 'hud-title' }, h('div', { class: 'hud-level' }, `Planet ${this.L.n}`), h('div', { class: 'hud-name' }, this.L.name)),
+        h(
+          'div',
+          { class: 'hud-title' },
+          h('div', { class: 'hud-level' }, `Planet ${this.L.n}`),
+          h('div', { class: 'hud-name' }, this.L.name),
+        ),
         this.hudThrows,
       ),
       h('div', { class: 'life' }, bar, this.hudScore),
       twist,
-      h('div', { class: 'hud-bottom' }, h('div', { class: 'queue' }, this.curEl, h('div', { class: 'next-wrap' }, this.nextEl, h('div', { class: 'swap-lbl' }, 'tap to swap'))), this.descEl),
+      h(
+        'div',
+        { class: 'hud-bottom' },
+        h(
+          'div',
+          { class: 'queue' },
+          this.curEl,
+          h('div', { class: 'next-wrap' }, this.nextEl, h('div', { class: 'swap-lbl' }, 'tap to swap')),
+        ),
+        this.descEl,
+      ),
       this.hintShown ? this.hintEl : null,
     );
   }
@@ -343,6 +362,7 @@ export class LevelScene {
     this.throwsUsed++;
     sfx.launch();
     haptic.medium();
+    this.o.onThrow?.();
     if (this.hintShown) {
       this.hintShown = false;
       this.hintEl.remove();
@@ -432,7 +452,18 @@ export class LevelScene {
       if (this.shot) {
         sh.trail.push({ x: sh.x, y: sh.y });
         if (sh.trail.length > 18) sh.trail.shift();
-        if (Math.random() < 0.6) this.particles.push({ x: sh.x, y: sh.y, vx: (Math.random() - 0.5) * 30, vy: (Math.random() - 0.5) * 30, life: 0.5, max: 0.5, size: 3, color: KINDS[sh.kind].color, g: 0 });
+        if (Math.random() < 0.6)
+          this.particles.push({
+            x: sh.x,
+            y: sh.y,
+            vx: (Math.random() - 0.5) * 30,
+            vy: (Math.random() - 0.5) * 30,
+            life: 0.5,
+            max: 0.5,
+            size: 3,
+            color: KINDS[sh.kind].color,
+            g: 0,
+          });
       }
     }
     for (const p of this.particles) {
@@ -466,6 +497,7 @@ export class LevelScene {
     this.burst(sh.x, sh.y, KINDS[sh.kind].color, 34, 7);
     const delta = res.after - res.before;
     this.score = res.after;
+    if (res.changed.length) this.o.onTransform?.(res.changed.length);
     if (delta !== 0) this.popup(sh.x, sh.y - 20, `${delta > 0 ? '+' : ''}${delta}`, delta > 0 ? '#9dffb0' : '#ff9db0', 26);
     // name up to two newly formed biomes
     const shown = new Set<string>();
@@ -475,10 +507,13 @@ export class LevelScene {
       if (!shown.has(bname) && shown.size < 2 && this.planet.sectors[ci].biome !== 'barren') {
         shown.add(bname);
         const [x, y] = this.sectorPoint(ci, 1.35);
-        setTimeout(() => {
-          this.popup(x, y, bname, '#ffffff', 15);
-          sfx.bloom(k);
-        }, 120 + shown.size * 140);
+        setTimeout(
+          () => {
+            this.popup(x, y, bname, '#ffffff', 15);
+            sfx.bloom(k);
+          },
+          120 + shown.size * 140,
+        );
       }
     });
     res.spawned.forEach((s, k) => {
@@ -493,6 +528,7 @@ export class LevelScene {
     const [x, y] = this.sectorPoint(at, 1.55);
     const rare = sp.rarity === 'rare' || sp.rarity === 'legendary';
     const isNew = !this.o.seen.has(id);
+    this.o.onSpecies?.(id);
     sfx.creature(rare || isNew);
     haptic.success();
     this.burst(x, y, rare ? '#ffd84a' : '#ffffff', rare ? 40 : 20, rare ? 7 : 4);
@@ -550,11 +586,23 @@ export class LevelScene {
         h('div', { class: 'end-title' + (won ? '' : ' lost') }, won ? 'Planet complete!' : 'Out of throws'),
         h('div', { class: 'end-stars' }, ...[0, 1, 2].map((i) => h('span', { class: i < stars ? 'on' : '' }, '★'))),
         h('div', { class: 'end-score' }, `${fmt(this.score)} life`),
-        need > 0 ? h('p', { class: 'end-need' }, won ? `Only ${fmt(need)} life from the next star!` : `Just ${fmt(need)} life short of a star.`) : null,
-        canCont && (need > 0 || !won)
-          ? btn(h('span', { class: 'stack' }, h('b', null, '+5 THROWS'), h('small', null, `💎 ${cost} · you have ${this.o.gems()}`)), 'gem wide', cont)
+        need > 0
+          ? h('p', { class: 'end-need' }, won ? `Only ${fmt(need)} life from the next star!` : `Just ${fmt(need)} life short of a star.`)
           : null,
-        won ? btn('Collect', 'primary wide', finish) : btn('Try again', 'primary wide', () => { m.close(); this.modalOpen = null; this.finish(0); }),
+        canCont && (need > 0 || !won)
+          ? btn(
+              h('span', { class: 'stack' }, h('b', null, '+5 THROWS'), h('small', null, `💎 ${cost} · you have ${this.o.gems()}`)),
+              'gem wide',
+              cont,
+            )
+          : null,
+        won
+          ? btn('Collect', 'primary wide', finish)
+          : btn('Try again', 'primary wide', () => {
+              m.close();
+              this.modalOpen = null;
+              this.finish(0);
+            }),
       ],
       { dismiss: false, cls: 'end' },
     );
@@ -706,7 +754,12 @@ export class LevelScene {
     const step = (Math.PI * 2) / SECTORS;
     const lifeK = Math.min(1, this.score / this.L.stars[2]);
     // atmosphere
-    const glow = this.o.glow === 'aurora' ? `hsl(${(this.time * 40) % 360} 90% 65%)` : this.o.glow;
+    const glow =
+      this.o.glow === 'aurora'
+        ? `hsl(${(this.time * 40) % 360} 90% 65%)`
+        : this.o.glow === 'cosmic'
+          ? `hsl(${265 + Math.sin(this.time * 1.5) * 45} 95% 68%)`
+          : this.o.glow;
     const atm = g.createRadialGradient(cx, cy, R * 0.9, cx, cy, R * (1.45 + lifeK * 0.25));
     atm.addColorStop(0, glow + '');
     atm.addColorStop(1, 'rgba(0,0,0,0)');
@@ -844,4 +897,3 @@ function mulberry(seed: number) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-

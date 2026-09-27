@@ -29,7 +29,10 @@ const nativeIap: Iap = {
   },
   async prices() {
     try {
-      const { products } = await NativePurchases.getProducts({ productIdentifiers: PRODUCTS.map((p) => p.id), productType: PURCHASE_TYPE.INAPP });
+      const { products } = await NativePurchases.getProducts({
+        productIdentifiers: PRODUCTS.map((p) => p.id),
+        productType: PURCHASE_TYPE.INAPP,
+      });
       return Object.fromEntries(products.map((p) => [p.identifier, p.priceString]));
     } catch {
       return {};
@@ -37,7 +40,12 @@ const nativeIap: Iap = {
   },
   async purchase(p) {
     try {
-      const tx = await NativePurchases.purchaseProduct({ productIdentifier: p.id, productType: PURCHASE_TYPE.INAPP, quantity: 1, isConsumable: p.consumable });
+      const tx = await NativePurchases.purchaseProduct({
+        productIdentifier: p.id,
+        productType: PURCHASE_TYPE.INAPP,
+        quantity: 1,
+        isConsumable: p.consumable,
+      });
       return { ok: true, txId: tx.transactionId, productId: tx.productIdentifier || p.id };
     } catch (e) {
       const msg = String((e as Error)?.message ?? e);
@@ -49,7 +57,9 @@ const nativeIap: Iap = {
     try {
       await NativePurchases.restorePurchases();
       const { purchases } = await NativePurchases.getPurchases({ productType: PURCHASE_TYPE.INAPP });
-      return purchases.filter((t) => !t.revocationDate && PRODUCT_BY_ID[t.productIdentifier] && !PRODUCT_BY_ID[t.productIdentifier].consumable).map((t) => t.productIdentifier);
+      return purchases
+        .filter((t) => !t.revocationDate && PRODUCT_BY_ID[t.productIdentifier] && !PRODUCT_BY_ID[t.productIdentifier].consumable)
+        .map((t) => t.productIdentifier);
     } catch {
       return [];
     }

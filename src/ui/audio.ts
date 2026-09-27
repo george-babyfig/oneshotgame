@@ -126,6 +126,16 @@ export const sfx = {
   },
   gem: () => [0, 12, 19, 24].forEach((s, i) => tone(semi(880, s), 0.14, 'sine', 0.08, i * 0.05)),
   error: () => tone(160, 0.2, 'square', 0.06),
+  levelUp: () => {
+    [0, 4, 7, 12].forEach((s, i) => tone(semi(392, s), 0.16, 'triangle', 0.09, i * 0.06));
+    noise(0.25, 0.08, 5000, 1.5, 0.2);
+  },
+  chest: () => {
+    noise(0.25, 0.3, 700, 0.8, 0, 'lowpass');
+    [0, 7, 12, 16, 19, 24].forEach((s, i) => tone(semi(523, s), 0.35, 'triangle', 0.09, 0.2 + i * 0.07));
+  },
+  whoosh: () => noise(0.3, 0.15, 1800, 0.7, 0, 'bandpass'),
+  combo: (n: number) => [0, 4, 7].forEach((s, i) => tone(semi(523, s + Math.min(n, 8) * 2), 0.18, 'square', 0.05, i * 0.05)),
 };
 
 // Slow, spacey pad loop.
