@@ -46,6 +46,27 @@ A second research pass (Clash Royale, Brawl Stars, Royal Match, Monopoly GO, Ani
 
 Next up from this research: photo mode with frames, Lifebook lore entries, a login calendar and inbox, iMessage stickers, seasonal (rotating) passes.
 
+## Round 4 research: customization, long-term depth and a living world
+
+Sources: Animal Crossing (Pocket Camp, New Horizons), Cats & Soup, Sky: Children of the Light, Stardew Valley, Pokémon GO, Fortnite, Cookie Run Kingdom, Hollow Knight, Candy Crush, Neko Atsume, Alto's Odyssey, Pikmin Bloom, Royal Match, Two Dots, Angry Birds 2, Toca Boca, plus Apple's App Review Guidelines.
+
+| Finding                                                  | Where it comes from                                         | What we built                                                                                                                                                                                |
+| -------------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kids Category apps need a parental gate before purchases | Apple App Review Guidelines                                 | ✅ Grown-up question before every real-money purchase                                                                                                                                        |
+| Emotes and expressions make an avatar feel alive         | Sky expressions, Fortnite/Brawl Stars emotes                | ✅ **Emote** slot: 7 victory emotes, played on every win and previewed in the Workshop                                                                                                       |
+| Streak calendars that reset punish kids                  | Candy Crush Treat Calendar (resets) vs. kinder designs      | ✅ **Star Calendar**: 28 stamps that never reset, calendar-only items on days 14 and 28                                                                                                      |
+| A world that follows the real calendar feels alive       | Animal Crossing seasons, Neko Atsume yard, Alto's day/night | ✅ **Seasons** with hemisphere setting (snow, blossoms, fireflies, leaves), local **day/night** on the Homeworld, real **meteor showers** (Perseids, Geminids…) that double Supernova charge |
+| Recolourable homes                                       | Pocket Camp camper paint                                    | ✅ **Homeworld paint**: ground + water colours; some free, some for gems, gold for pass holders                                                                                              |
+| Photo mode and stickers                                  | Alto's photo mode, Pikmin Bloom postcards                   | ✅ **Photo mode** with 5 frames, shareable                                                                                                                                                   |
+| Mailbox of letters                                       | Animal Crossing letters                                     | ✅ **Inbox**: letters from Mission Control and residents on milestones, seasons, sky events, some with gifts                                                                                 |
+| Codex that rewards repeat sightings                      | Hollow Knight Hunter's Journal                              | ✅ **Field notes** for all 36 creatures (unlock at 5 sightings) and a gold "Studied" frame at 15                                                                                             |
+| Records instead of grind                                 | Brawl Stars Records                                         | ✅ **Object records** (50/200/500/1000 flings) with Passport titles                                                                                                                          |
+| Bonds with named creatures                               | Pokémon GO buddies, Cats & Soup                             | ✅ Resident **nicknames** (kid-safe list) and a **Best Friends** ribbon                                                                                                                      |
+| Boss levels every chapter                                | Royal Match / Angry Birds 2 boss stages                     | ✅ **Comet Guardian** on every 10th planet: blocks shots, 3 hits defeats it for a first-time bonus                                                                                           |
+| Fortune cookies / random paid rewards                    | Pocket Camp, Angry Birds 2                                  | ❌ Never: every paid item is fixed-price and previewable                                                                                                                                     |
+
+Next up from this research: creature cosmetics, dye system, loadout presets, community-center style bundles fed by level drops, monthly themed events, a non-random sticker album.
+
 ## 1. Foundation
 
 - ✅ Clean repository (`main` + feature branch + PR), CI (format, typecheck, tests, build)
@@ -83,6 +104,7 @@ Next up from this research: photo mode with frames, Lifebook lore entries, a log
 - ✅ Level goals and a simulation-tuned difficulty curve
 - ✅ Object Lab (per-object upgrades) and the Supernova shot
 - ✅ Homeworld (passive base building) with residents and expeditions
+- ✅ Comet Guardian boss planets, object records, Lifebook field notes
 
 ## 5. Modes
 
@@ -120,7 +142,7 @@ Next up from this research: photo mode with frames, Lifebook lore entries, a log
 - ✅ Share a rendered planet postcard image
 - ✅ Settings: reduce motion, reminders, credits
 - ✅ Planet Passport profile + shareable card; expedition postcards
-- ⏳ Photo mode, login calendar, inbox
+- ✅ Photo mode, Star Calendar, inbox, real-calendar seasons and meteor showers
 
 ## 9. Audio
 

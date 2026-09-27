@@ -30,7 +30,7 @@ export function rngFrom(seed: string) {
   };
 }
 
-export type Twist = 'none' | 'fast' | 'tiny' | 'moon' | 'hot' | 'frozen' | 'ocean' | 'wind' | 'heavy' | 'wobble' | 'twin';
+export type Twist = 'none' | 'fast' | 'tiny' | 'moon' | 'hot' | 'frozen' | 'ocean' | 'wind' | 'heavy' | 'wobble' | 'twin' | 'boss';
 
 export const TWISTS: Record<Twist, { name: string; desc: string }> = {
   none: { name: '', desc: '' },
@@ -44,7 +44,11 @@ export const TWISTS: Record<Twist, { name: string; desc: string }> = {
   heavy: { name: 'Dense Core', desc: 'Extra-strong gravity bends shots sharply' },
   wobble: { name: 'Wobbly Spin', desc: 'The planet speeds up, slows and spins back' },
   twin: { name: 'Twin Moons', desc: 'Two moons orbit in opposite directions' },
+  boss: { name: 'Comet Guardian', desc: 'A guardian comet blocks shots — hit it 3 times for a bonus' },
 };
+
+/** Hits needed to defeat a Comet Guardian (every chapter's 10th planet). */
+export const BOSS_HP = 3;
 
 /** Physics twists join the pool as the campaign goes on. */
 function laterTwists(n: number): Twist[] {
@@ -251,6 +255,8 @@ export function makeLevel(n: number, seedPrefix = 'PP'): LevelDef {
     const pool: Twist[] = ['fast', 'tiny', 'moon', ...laterTwists(n)];
     twist = pool[Math.floor(rnd() * pool.length)];
   }
+  // every chapter ends with a Comet Guardian
+  if (seedPrefix === 'PP' && n >= 10 && n % 10 === 0) twist = 'boss';
   const throws = n === 1 ? 6 : n === 2 ? 8 : Math.min(16, 9 + Math.floor(n / 4));
   // weighted deal: new kinds show up a bit more on their debut level
   const weights: Record<Kind, number> = { rock: 4, ice: 4, seed: 4, magma: 3, storm: 2, sun: 1.5 };

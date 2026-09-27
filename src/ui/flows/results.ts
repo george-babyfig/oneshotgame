@@ -2,7 +2,10 @@
 import { h, btn, fmt, modal } from '../dom';
 import { sfx } from '../audio';
 import { planetRate, applyLevelWin } from '../../meta/economy';
-import { chestsReady, questsClaimable, roadReady } from '../../meta/progression';
+import { applyReward, chestsReady, questsClaimable, roadReady, type Reward } from '../../meta/progression';
+
+/** First-time reward for defeating a planet's Comet Guardian. */
+export const BOSS_REWARD: Reward = { gems: 30, dust: 500 };
 import { totalStars } from '../../meta/profile';
 import { FINISH_DUST_PER_THROW, type LevelResult } from '../game';
 import type { App } from '../app';
@@ -36,6 +39,14 @@ export function levelResults(app: App, r: LevelResult) {
   if (eventActive(p) && eventReady(p).length)
     extras.push(h('div', { class: 'nudge' }, t('{emoji} Event reward ready!', { emoji: ensureEvent(p).emoji })));
   if (questsClaimable(p)) extras.push(h('div', { class: 'nudge' }, t('📜 A quest is complete!')));
+  if (r.boss && !p.bosses.includes(n)) {
+    p.bosses.push(n);
+    applyReward(p, BOSS_REWARD);
+    app.save();
+    extras.unshift(
+      h('div', { class: 'nudge boss' }, t('☄️ Guardian defeated! +💎{g} +✨{d}', { g: BOSS_REWARD.gems ?? 0, d: BOSS_REWARD.dust ?? 0 })),
+    );
+  }
   // every campaign win nudges the Homeworld's drones along
   if (homeUnlocked(p) && speedUpBuilds(p.home)) {
     app.save();

@@ -13,7 +13,7 @@ import {
   type Kind,
   type Planet,
 } from '../core/world';
-import { goalProgress, goalsMet, starsFor, type Goal, type LevelDef } from '../core/levels';
+import { BOSS_HP, goalProgress, goalsMet, starsFor, type Goal, type LevelDef } from '../core/levels';
 import { h, btn, fmt, modal, type Modal } from './dom';
 import { icon } from './icons';
 import { renderPlanet, surfaceK } from './art/planet';
@@ -90,6 +90,8 @@ export interface LevelResult {
   throwsUsed: number;
   /** Throws left unused when the player finished early. */
   leftover: number;
+  /** A Comet Guardian was defeated on this planet. */
+  boss?: boolean;
 }
 
 interface Ring {
@@ -313,6 +315,7 @@ export class LevelScene {
       fast: t('🌀 Fast Spin'),
       tiny: t('🔹 Tiny World'),
       moon: t('🌑 A moon blocks shots'),
+      boss: t('☄️ Comet Guardian — hit it 3 times!'),
       hot: t('🔥 Scorched start'),
       frozen: t('🧊 Frozen start'),
       ocean: t('🌊 Water World'),
@@ -527,6 +530,15 @@ export class LevelScene {
   }
   /** Moons that block shots (Moon Guard: one; Twin Moons: two, orbiting opposite ways). */
   private get moons(): { x: number; y: number; r: number }[] {
+    if (this.L.twist === 'boss') {
+      if (this.bossHp <= 0) return [];
+      const a = this.time * 0.45;
+      const r = this.R * 0.3;
+      // an ellipse that always stays on screen
+      const dx = Math.min(this.R * 2.15, this.w / 2 - r * 1.3);
+      const dy = this.R * 1.75;
+      return [{ x: this.cx + Math.cos(a) * dx, y: this.cy + Math.sin(a) * dy, r }];
+    }
     if (this.L.twist !== 'moon' && this.L.twist !== 'twin') return [];
     const out = [];
     const a = this.time * 0.8;
@@ -712,6 +724,12 @@ export class LevelScene {
         const d = Math.hypot(sh.x - this.cx, sh.y - this.cy);
         const i = this.hitSector(sh.x, sh.y);
         const m = this.moons.find((mm) => Math.hypot(sh.x - mm.x, sh.y - mm.y) < mm.r + 8);
+        if (m && this.L.twist === 'boss') {
+          this.hitBoss(sh.x, sh.y);
+          this.shot = null;
+          this.afterShot();
+          break;
+        }
         if (m) {
           this.burst(sh.x, sh.y, '#c9c3d6', 14, 4);
           this.popup(sh.x, sh.y - 10, t('Blocked!'), '#fff', 18);
@@ -1071,6 +1089,7 @@ export class LevelScene {
         won: stars > 0,
         throwsUsed: this.throwsUsed,
         leftover: this.leftover,
+        boss: this.L.twist === 'boss' && this.bossHp <= 0,
       });
     if (stars === 0 || this.o.reduceMotion || this.o.endless) return send();
     // the finished planet shrinks and flies up to join your galaxy
@@ -1160,6 +1179,88 @@ export class LevelScene {
   }
 
   private emoteAt = -1;
+  /** Comet Guardian health (boss planets). */
+  private bossHp = BOSS_HP;
+  private bossFlash = 0;
+
+  private hitBoss(x: number, y: number) {
+    this.bossHp--;
+    this.bossFlash = this.time;
+    this.burst(x, y, '#ff8a3d', 30, 7);
+    this.ring(x, y, '#ffd24a', this.R * 0.8);
+    this.shake = this.o.reduceMotion ? 0 : 14;
+    haptic.heavy();
+    if (this.bossHp > 0) {
+      sfx.impact('magma');
+      this.popup(x, y - 16, tp(this.bossHp, 'Hit! {n} more', 'Hit! {n} more'), '#ffd24a', 24);
+    } else {
+      sfx.win();
+      this.burst(x, y, '#fff2b8', 60, 10);
+      this.popup(this.cx, this.cy - this.R * 1.6, t('Guardian defeated!'), '#ffd24a', 30, 2);
+      this.confetti();
+    }
+  }
+
+  /** The Comet Guardian: a grumpy comet with a fiery tail and health pips. */
+  private drawBoss() {
+    const m = this.moons[0];
+    if (!m) return;
+    const g = this.g;
+    const a = this.time * 0.45;
+    const tx = -Math.sin(a);
+    const ty = Math.cos(a);
+    g.save();
+    // tail (behind the direction of travel)
+    for (let i = 8; i >= 1; i--) {
+      g.globalAlpha = 0.08 + (8 - i) * 0.03;
+      g.fillStyle = i % 2 ? '#ff8a3d' : '#ffd24a';
+      g.beginPath();
+      g.arc(m.x - tx * i * m.r * 0.35, m.y - ty * i * m.r * 0.35, m.r * (1 - i * 0.08), 0, Math.PI * 2);
+      g.fill();
+    }
+    g.globalAlpha = 1;
+    const flash = this.time - this.bossFlash < 0.2;
+    const body = g.createRadialGradient(m.x - m.r * 0.3, m.y - m.r * 0.3, m.r * 0.1, m.x, m.y, m.r);
+    body.addColorStop(0, flash ? '#ffffff' : '#c9b8ff');
+    body.addColorStop(1, flash ? '#ffd24a' : '#5a3aa8');
+    g.fillStyle = body;
+    g.beginPath();
+    g.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+    g.fill();
+    // grumpy face
+    g.fillStyle = '#ffffff';
+    for (const sx of [-1, 1]) {
+      g.beginPath();
+      g.ellipse(m.x + sx * m.r * 0.32, m.y - m.r * 0.05, m.r * 0.18, m.r * 0.2, 0, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.fillStyle = '#231a33';
+    for (const sx of [-1, 1]) {
+      g.beginPath();
+      g.arc(m.x + sx * m.r * 0.3, m.y, m.r * 0.1, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.strokeStyle = '#231a33';
+    g.lineWidth = m.r * 0.08;
+    g.lineCap = 'round';
+    for (const sx of [-1, 1]) {
+      g.beginPath();
+      g.moveTo(m.x + sx * m.r * 0.5, m.y - m.r * 0.32);
+      g.lineTo(m.x + sx * m.r * 0.15, m.y - m.r * 0.22);
+      g.stroke();
+    }
+    g.beginPath();
+    g.arc(m.x, m.y + m.r * 0.45, m.r * 0.18, 1.15 * Math.PI, 1.85 * Math.PI);
+    g.stroke();
+    // health pips
+    for (let i = 0; i < BOSS_HP; i++) {
+      g.fillStyle = i < this.bossHp ? '#ff6a7a' : 'rgba(255,255,255,0.2)';
+      g.beginPath();
+      g.arc(m.x + (i - (BOSS_HP - 1) / 2) * m.r * 0.45, m.y - m.r * 1.35, m.r * 0.14, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.restore();
+  }
   private confetti() {
     this.cheerUntil = this.time + 2.5;
     this.emoteAt = this.time;
@@ -1238,16 +1339,18 @@ export class LevelScene {
       g.stroke();
     }
     g.globalAlpha = 1;
-    for (const m of this.moons) {
-      g.fillStyle = '#b9b3c9';
-      g.beginPath();
-      g.arc(m.x, m.y, m.r, 0, Math.PI * 2);
-      g.fill();
-      g.fillStyle = 'rgba(0,0,0,0.18)';
-      g.beginPath();
-      g.arc(m.x + m.r * 0.3, m.y + m.r * 0.2, m.r * 0.3, 0, Math.PI * 2);
-      g.fill();
-    }
+    if (this.L.twist === 'boss') this.drawBoss();
+    else
+      for (const m of this.moons) {
+        g.fillStyle = '#b9b3c9';
+        g.beginPath();
+        g.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+        g.fill();
+        g.fillStyle = 'rgba(0,0,0,0.18)';
+        g.beginPath();
+        g.arc(m.x + m.r * 0.3, m.y + m.r * 0.2, m.r * 0.3, 0, Math.PI * 2);
+        g.fill();
+      }
     if (this.L.twist === 'wind') this.drawWind();
     this.drawAim();
     // shot

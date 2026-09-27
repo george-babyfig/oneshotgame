@@ -122,6 +122,8 @@ export interface Profile {
   sightings: Record<string, number>;
   /** Inbox letters. */
   mail: Mail[];
+  /** Planets whose Comet Guardian has been defeated (first-time reward paid). */
+  bosses: number[];
 }
 
 const KEY = 'pp.profile';
@@ -188,6 +190,7 @@ export function defaultProfile(now = Date.now()): Profile {
     flings: {},
     sightings: {},
     mail: [],
+    bosses: [],
   };
 }
 
