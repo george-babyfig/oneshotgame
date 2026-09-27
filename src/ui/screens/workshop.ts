@@ -27,8 +27,11 @@ import { drawKeeper, drawLauncher, drawTrail, itemCanvas, keeperHead } from '../
 import { drawProjectile } from '../art/projectiles';
 import type { App } from '../app';
 import { t } from '../../i18n';
+import { DYES, applyDye, ownsDye, unlockDye } from '../../meta/dyes';
+import { MAT_EMOJI, type Mat } from '../../meta/constellations';
 
-let lastSlot: Slot = 'suit';
+type Tab = Slot | 'dye';
+let lastSlot: Tab = 'suit';
 
 /** Animated stage: the Keeper flings a rock every couple of seconds. */
 function stage(canvas: HTMLCanvasElement, getLook: () => Look, reduceMotion: boolean, mastered: (id: string) => boolean, emoting = false) {
@@ -90,8 +93,65 @@ function stage(canvas: HTMLCanvasElement, getLook: () => Look, reduceMotion: boo
   return () => cancelAnimationFrame(raf);
 }
 
+/** Dye tab: recolour the suit body and trim; locked dyes unlock with materials. */
+function dyePanel(app: App) {
+  const p = app.p;
+  const row = (channel: 'main' | 'trim') =>
+    h(
+      'div',
+      { class: 'dye-row' },
+      h(
+        'button',
+        {
+          class: `dye none${p.dye[channel] ? '' : ' on'}`,
+          onclick: () => (applyDye(p, channel, null), app.save(), sfx.click(), showWorkshop(app, 'dye')),
+        },
+        h('i', null, '∅'),
+        h('small', null, t('Suit colour')),
+      ),
+      ...DYES.map((d) => {
+        const owned = ownsDye(p, d.id);
+        const on = p.dye[channel] === d.id;
+        return h(
+          'button',
+          {
+            class: `dye${on ? ' on' : ''}${owned ? '' : ' locked'}`,
+            onclick: () => {
+              if (!owned) {
+                if (!unlockDye(p, d.id)) return toast(t('Needs {cost} — finish more planets for materials', { cost: costText(d.cost) }));
+                sfx.chest();
+                haptic.success();
+                toast(t('{name} dye unlocked!', { name: t(d.name) }), 'good');
+              } else sfx.click();
+              applyDye(p, channel, d.id);
+              app.save();
+              showWorkshop(app, 'dye');
+            },
+          },
+          h('i', { style: `background:${d.color === 'aurora' ? 'conic-gradient(#ff8fc8,#6ec8ff,#b8ff6e,#ffd24a,#ff8fc8)' : d.color}` }),
+          h('small', null, owned ? t(d.name) : costText(d.cost)),
+        );
+      }),
+    );
+  return h(
+    'div',
+    { class: 'dye-panel' },
+    h('div', { class: 'sec-title' }, t('Suit')),
+    row('main'),
+    h('div', { class: 'sec-title' }, t('Trim')),
+    row('trim'),
+    h('p', { class: 'muted tiny' }, t('Dyes work with every suit. Unlock them once with materials from your planets.')),
+  );
+}
+
+function costText(cost?: Partial<Record<Mat, number>>) {
+  return Object.entries(cost ?? {})
+    .map(([m, n]) => `${MAT_EMOJI[m as Mat]}${n}`)
+    .join(' ');
+}
+
 /** Three outfit slots: tap to wear, 💾 to save the current look. */
-function presetRow(app: App, slot: Slot) {
+function presetRow(app: App, slot: Tab) {
   const p = app.p;
   return h(
     'div',
@@ -137,13 +197,13 @@ function presetRow(app: App, slot: Slot) {
   );
 }
 
-export function showWorkshop(app: App, slot: Slot = lastSlot, tryOn?: string) {
+export function showWorkshop(app: App, slot: Tab = lastSlot, tryOn?: string) {
   lastSlot = slot;
   const p = app.p;
   const worn = currentLook(p);
   const preview: Look = { ...worn };
   if (tryOn && COSMETIC_BY_ID[tryOn]) preview[COSMETIC_BY_ID[tryOn].slot] = tryOn;
-  const sel = tryOn ?? worn[slot];
+  const sel = tryOn ?? worn[slot === 'dye' ? 'suit' : slot];
   const item = COSMETIC_BY_ID[sel];
   const canvas = h('canvas', { class: 'ws-stage' }) as HTMLCanvasElement;
 
@@ -198,28 +258,35 @@ export function showWorkshop(app: App, slot: Slot = lastSlot, tryOn?: string) {
   const tabs = h(
     'div',
     { class: 'tabs' },
-    ...SLOTS.map((s) =>
-      h('button', { class: `tab${s === slot ? ' on' : ''}`, onclick: () => (sfx.click(), showWorkshop(app, s)) }, t(SLOT_NAMES[s])),
+    ...[...SLOTS, 'dye' as const].map((s) =>
+      h(
+        'button',
+        { class: `tab${s === slot ? ' on' : ''}`, onclick: () => (sfx.click(), showWorkshop(app, s)) },
+        s === 'dye' ? t('Dye') : t(SLOT_NAMES[s]),
+      ),
     ),
   );
-  const grid = h(
-    'div',
-    { class: 'ws-grid' },
-    ...COSMETICS.filter((x) => x.slot === slot).map((x) => {
-      const have = owns(p, x.id);
-      const on = worn[slot] === x.id;
-      return h(
-        'button',
-        {
-          class: `ws-item t-${x.tier}${have ? '' : ' locked'}${on ? ' on' : ''}${x.id === sel ? ' sel' : ''}`,
-          onclick: () => (sfx.click(), haptic.light(), showWorkshop(app, slot, x.id)),
-        },
-        itemCanvas(x.id, worn, 64),
-        h('b', null, t(x.name)),
-        h('small', null, on ? t('Equipped') : have ? t('Owned') : sourceText(x)),
-      );
-    }),
-  );
+  const grid =
+    slot === 'dye'
+      ? dyePanel(app)
+      : h(
+          'div',
+          { class: 'ws-grid' },
+          ...COSMETICS.filter((x) => x.slot === slot).map((x) => {
+            const have = owns(p, x.id);
+            const on = worn[x.slot] === x.id;
+            return h(
+              'button',
+              {
+                class: `ws-item t-${x.tier}${have ? '' : ' locked'}${on ? ' on' : ''}${x.id === sel ? ' sel' : ''}`,
+                onclick: () => (sfx.click(), haptic.light(), showWorkshop(app, slot, x.id)),
+              },
+              itemCanvas(x.id, worn, 64),
+              h('b', null, t(x.name)),
+              h('small', null, on ? t('Equipped') : have ? t('Owned') : sourceText(x)),
+            );
+          }),
+        );
   const stop = stage(
     canvas,
     () => preview,

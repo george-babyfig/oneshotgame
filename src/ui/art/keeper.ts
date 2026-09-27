@@ -71,8 +71,8 @@ export function drawKeeper(g: G, look: Look, x: number, y: number, size: number,
   }
   const bob = Math.sin(t * 3) * size * 0.015 - cheer * size * 0.08;
   const body = look.suit;
-  const main = col(body, 0, '#6ec8ff');
-  const trim = col(body, 1, '#ffffff');
+  const main = look.dyeMain ?? col(body, 0, '#6ec8ff');
+  const trim = (look.dyeTrim === 'aurora' ? '#e6dcff' : look.dyeTrim) ?? col(body, 1, '#ffffff');
   const visor = col(body, 2, '#1d2a5e');
   const set = fullSet(look);
   g.save();

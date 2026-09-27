@@ -6,6 +6,7 @@ import type { Profile } from './profile';
 import { STAR_ROAD } from './progression';
 import { t } from '../i18n';
 import { HABITATS } from './habitats';
+import { dyeColors } from './dyes';
 
 export type Slot = 'suit' | 'hat' | 'launcher' | 'trail' | 'emote';
 export const SLOTS: Slot[] = ['suit', 'hat', 'launcher', 'trail', 'emote'];
@@ -212,7 +213,8 @@ export const COSMETICS: Cosmetic[] = [
 
 export const COSMETIC_BY_ID: Record<string, Cosmetic> = Object.fromEntries(COSMETICS.map((x) => [x.id, x]));
 
-export type Look = Record<Slot, string>;
+/** Items per slot, plus optional suit dye colours. */
+export type Look = Record<Slot, string> & { dyeMain?: string; dyeTrim?: string };
 export const DEFAULT_LOOK: Look = { suit: 'suit_sky', hat: 'hat_antenna', launcher: 'l_pad', trail: 'tr_dots', emote: 'em_cheer' };
 
 /** Star Road tier index (free or pass lane) that grants an item. */
@@ -254,11 +256,14 @@ export function owns(p: Profile, id: string): boolean {
 
 /** The look to actually draw: anything not owned (e.g. after a reset) falls back to the default. */
 export function currentLook(p: Profile): Look {
-  const out = { ...DEFAULT_LOOK };
+  const out: Look = { ...DEFAULT_LOOK };
   for (const s of SLOTS) {
     const id = p.look?.[s];
     if (id && COSMETIC_BY_ID[id]?.slot === s && owns(p, id)) out[s] = id;
   }
+  const d = dyeColors(p);
+  if (d.main) out.dyeMain = d.main;
+  if (d.trim) out.dyeTrim = d.trim;
   return out;
 }
 
@@ -332,7 +337,9 @@ export function savePreset(p: Profile, i: number) {
   if (i < 0 || i >= PRESETS) return;
   const list = [...(p.presets ?? [])];
   while (list.length < PRESETS) list.push(null);
-  list[i] = { ...currentLook(p) };
+  // presets remember items; dyes stay as they are
+  const { dyeMain: _m, dyeTrim: _t, ...items } = currentLook(p);
+  list[i] = items;
   p.presets = list;
 }
 

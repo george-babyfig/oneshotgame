@@ -50,3 +50,22 @@ describe('constellations', () => {
     }
   });
 });
+
+describe('dyes', async () => {
+  const D = await import('../src/meta/dyes');
+  const C = await import('../src/meta/cosmetics');
+  it('unlock with materials once, then recolour any suit', () => {
+    const p = defaultProfile();
+    expect(D.applyDye(p, 'main', 'coral')).toBe(false); // locked
+    expect(D.unlockDye(p, 'coral')).toBe(false); // no materials
+    addDrops(p, { dew: 5 });
+    expect(D.unlockDye(p, 'coral')).toBe(true);
+    expect(p.mats.dew).toBe(1);
+    expect(D.unlockDye(p, 'coral')).toBe(false); // already owned
+    expect(D.applyDye(p, 'main', 'coral')).toBe(true);
+    expect(D.applyDye(p, 'trim', 'snow')).toBe(true); // free dye
+    expect(C.currentLook(p).dyeMain).toBe('#ff7a8a');
+    D.applyDye(p, 'main', null);
+    expect(C.currentLook(p).dyeMain).toBeUndefined();
+  });
+});

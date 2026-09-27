@@ -130,6 +130,9 @@ export interface Profile {
   mats: Partial<Record<'stone' | 'dew' | 'leaf' | 'ember' | 'frost', number>>;
   bundles: string[];
   constellations: string[];
+  /** Suit dyes: unlocked ids and the ones applied. */
+  dyes: string[];
+  dye: { main: string | null; trim: string | null };
 }
 
 const KEY = 'pp.profile';
@@ -201,6 +204,8 @@ export function defaultProfile(now = Date.now()): Profile {
     mats: {},
     bundles: [],
     constellations: [],
+    dyes: [],
+    dye: { main: null, trim: null },
   };
 }
 
