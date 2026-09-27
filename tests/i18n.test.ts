@@ -12,6 +12,11 @@ import { RANK_TITLES, RANK_UNLOCKS } from '../src/meta/rank';
 import { CHAPTER_NAMES } from '../src/meta/progression';
 import { ITEMS } from '../src/meta/visitors';
 import { COACH } from '../src/meta/coach';
+import { COSMETICS, SLOT_NAMES } from '../src/meta/cosmetics';
+import { BANNERS } from '../src/meta/passport';
+import { ACHIEVEMENTS } from '../src/meta/achievements';
+import { BUILDINGS } from '../src/meta/homeworld';
+import { REASON } from '../src/ui/screens/homeworld';
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
@@ -51,6 +56,13 @@ export function allKeys(): string[] {
   CHAPTER_NAMES.forEach(add);
   Object.values(COACH).forEach((tips) => Object.values(tips).forEach(add));
   ITEMS.forEach(add);
+  COSMETICS.forEach((c) => add(c.name));
+  Object.values(SLOT_NAMES).forEach(add);
+  BANNERS.forEach((b) => (add(b.name), add(b.how)));
+  ACHIEVEMENTS.forEach((a) => add(a.title));
+  add('Star Captain');
+  Object.values(BUILDINGS).forEach((b) => (add(b.name), add(b.desc)));
+  Object.values(REASON).forEach(add);
   // mode names/descriptions live in a UI module (src/ui/flows/modes.ts)
   [
     'Daily Planet',

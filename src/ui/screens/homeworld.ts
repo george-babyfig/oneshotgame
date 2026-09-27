@@ -86,7 +86,7 @@ function structIcon(type: BuildingType, lv: number, px: number) {
   return cv;
 }
 
-const REASON: Record<BuildCheck, string> = {
+export const REASON: Record<BuildCheck, string> = {
   ok: '',
   ring: 'Expand your planet first',
   max: 'You have the most of these',
@@ -521,8 +521,9 @@ export function showHomeworld(app: App) {
       );
       if (building) kids.push(h('div', { class: 'hw-timer' }, t('🛸 Building… {time} left', { time: fmtTime(b.done! - now) })));
       else if (PRODUCES[b.type]) {
-        const unit = { dust: t('stardust'), gem: t('gems'), booster: t('boosters') }[PRODUCES[b.type]!];
+        const kind = PRODUCES[b.type]!;
         const perH = rateOf(b);
+        const every = fmtTime(3600e3 / perH);
         kids.push(
           h(
             'div',
@@ -530,9 +531,11 @@ export function showHomeworld(app: App) {
             h(
               'span',
               null,
-              perH >= 1
-                ? t('{n} {unit} / hour', { n: perH, unit })
-                : t('1 {unit} every {time}', { unit: unit.replace(/s$/, ''), time: fmtTime(3600e3 / perH) }),
+              kind === 'dust'
+                ? t('{n} stardust / hour', { n: perH })
+                : kind === 'gem'
+                  ? t('1 gem every {time}', { time: every })
+                  : t('1 booster every {time}', { time: every }),
             ),
             h('span', null, t('Holds {h}h', { h: capHours(home) })),
           ),
