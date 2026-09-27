@@ -51,7 +51,7 @@ export function showShop(app: App) {
         h(
           'div',
           { class: 'row' },
-          btn(t('See rewards'), 'ghost', () => app.showRoad()),
+          btn(t('See rewards'), 'ghost', () => app.showPass()),
           btn(app.priceOf('pass'), 'buy-real', () => app.buy('pass')),
         ),
       )

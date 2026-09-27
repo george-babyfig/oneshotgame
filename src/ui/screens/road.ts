@@ -6,11 +6,14 @@ import { totalStars } from '../../meta/profile';
 import { STAR_ROAD, PASS_GEMS, claimRoad, rewardText, type Reward } from '../../meta/progression';
 import type { App } from '../app';
 import { t } from '../../i18n';
+import { currentLook, type Look } from '../../meta/cosmetics';
+import { itemCanvas } from '../art/keeper';
 
-function cell(r: Reward, state: 'claimed' | 'ready' | 'locked', premium: boolean) {
+function cell(r: Reward, state: 'claimed' | 'ready' | 'locked', premium: boolean, look: Look) {
   return h(
     'div',
-    { class: `rc ${state}${premium ? ' prem' : ''}` },
+    { class: `rc ${state}${premium ? ' prem' : ''}${r.item ? ' has-item' : ''}` },
+    r.item ? itemCanvas(r.item, look, 44) : null,
     ...rewardText(r).map((x) => h('span', null, x)),
     state === 'claimed' ? h('i', { class: 'tick' }, '✓') : null,
     premium && state === 'locked' ? h('i', { class: 'lock' }, '🔒') : null,
@@ -20,6 +23,7 @@ function cell(r: Reward, state: 'claimed' | 'ready' | 'locked', premium: boolean
 export function showRoad(app: App) {
   const p = app.p;
   const stars = totalStars(p);
+  const look = currentLook(p);
   const nextTier = STAR_ROAD.find((tier) => tier.stars > stars);
   const rows = STAR_ROAD.map((tier, i) => {
     const reached = stars >= tier.stars;
@@ -29,7 +33,7 @@ export function showRoad(app: App) {
     return h(
       'div',
       { class: `rrow${reached ? ' reached' : ''}` },
-      cell(tier.reward, free, false),
+      cell(tier.reward, free, false, look),
       h(
         'div',
         { class: 'rmid' },
@@ -49,14 +53,14 @@ export function showRoad(app: App) {
             })
           : h('b', null, `${tier.stars}★`),
       ),
-      cell(tier.pass, prem, true),
+      cell(tier.pass, prem, true, look),
     );
   });
   const pitch = p.pass
     ? h('div', { class: 'pass-owned' }, t('🌌 Cosmic Pass active — you get both lanes!'))
     : h(
-        'div',
-        { class: 'offer pass' },
+        'button',
+        { class: 'offer pass pass-cta', onclick: () => (sfx.click(), app.showPass()) },
         h('div', { class: 'offer-t' }, t('🌌 Cosmic Pass')),
         h(
           'p',
@@ -66,7 +70,7 @@ export function showRoad(app: App) {
             { n: PASS_GEMS.toLocaleString('en-US') },
           ),
         ),
-        btn(app.priceOf('pass'), 'buy-real wide', () => app.buy('pass')),
+        h('span', { class: 'btn buy-real wide' }, t('See the Cosmic Pass ›')),
       );
   const pct = nextTier ? Math.min(100, (stars / nextTier.stars) * 100) : 100;
   app.mount(

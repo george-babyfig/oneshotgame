@@ -564,6 +564,9 @@ export function itemCanvas(id: string, look: Look, px: number, t = 0.3): HTMLCan
     g.beginPath();
     g.arc(pts[15].x + px * 0.04, pts[15].y - px * 0.03, px * 0.08, 0, Math.PI * 2);
     g.fill();
+  } else if (x.slot === 'hat') {
+    const size = px * 1.15;
+    drawKeeper(g, { ...look, hat: id }, px / 2, px * 0.6 + size * 0.72, size, t);
   } else {
     drawKeeper(g, { ...look, [x.slot]: id }, px / 2, px * 0.97, px * 0.95, t);
   }

@@ -42,6 +42,7 @@ import { fixClock } from '../meta/economy';
 import { currentLook, masteryLevel, MASTERY_STEPS } from '../meta/cosmetics';
 import { showWorkshop } from './screens/workshop';
 import { showPassport } from './screens/passport';
+import { showPass } from './screens/pass';
 import { keeperHead } from './art/keeper';
 
 export type ScreenName =
@@ -177,6 +178,7 @@ export class App {
       road: () => this.showRoad(),
       workshop: () => this.showWorkshop(),
       passport: () => this.showPassport(),
+      pass: () => this.showPass(),
     };
     this.refreshing = true;
     try {
@@ -212,7 +214,7 @@ export class App {
     showPassport(this);
   }
   showPass() {
-    showRoad(this);
+    showPass(this);
   }
   settings() {
     settingsFlow(this);
