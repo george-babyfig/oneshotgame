@@ -101,7 +101,13 @@ Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · 
 - ✅ Music that changes with each chapter
 - ✅ Chest, level-up, callout and finale sounds
 
-## 10. Ship
+## 10. Localization
+
+- ✅ English, Spanish, French, German, Brazilian Portuguese and Japanese (automatic or chosen in Settings)
+- ✅ CI test: every string translated in every language, with matching placeholders
+- ⏳ Localized App Store listing and screenshots
+
+## 11. Ship
 
 - ✅ Framed App Store screenshots, listing copy, privacy policy page
 - ✅ Automated tests (world, recipes, economy, progression)
