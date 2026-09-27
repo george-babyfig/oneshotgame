@@ -70,6 +70,21 @@ npm run ios:open
 
 CI runs formatting, the typecheck, the tests and the build on every push.
 
+## Play it in the iOS Simulator (no build needed)
+
+Every CI run on `main` compiles a Simulator build. On a Mac with Xcode installed:
+
+1. Open the repo's **Actions** tab, pick the latest **CI** run on `main` (or press _Run workflow_), and download **PocketPlanet-Simulator** from _Artifacts_.
+2. Unzip it, then run:
+
+```bash
+open -a Simulator                         # boots the default iPhone
+xcrun simctl install booted App.app       # from the unzipped folder
+xcrun simctl launch booted com.pocketplanet.game
+```
+
+Purchases need a StoreKit configuration, which only applies when you run from Xcode (step 4 below). To build it yourself instead: `npm install && npm run ios:sync && npx cap run ios`.
+
 ## Shipping to the App Store
 
 1. **You need** a Mac with Xcode 16+ and an [Apple Developer Program](https://developer.apple.com/programs/) membership ($99/year).

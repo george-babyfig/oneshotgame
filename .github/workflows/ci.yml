@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   verify:
@@ -47,3 +48,12 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build | tail -n 80
           exit ${PIPESTATUS[0]}
+      # Zipped Simulator build: download it from the run's Artifacts section and
+      # install with `xcrun simctl install booted App.app` (see README).
+      - name: Package Simulator app
+        run: ditto -c -k --keepParent build/Build/Products/Debug-iphonesimulator/App.app PocketPlanet-Simulator.zip
+      - uses: actions/upload-artifact@v5
+        with:
+          name: PocketPlanet-Simulator
+          path: PocketPlanet-Simulator.zip
+          retention-days: 30
