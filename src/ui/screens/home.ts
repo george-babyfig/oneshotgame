@@ -14,12 +14,13 @@ import { rankReady } from '../../meta/rank';
 import { modesBadge } from '../flows/modes';
 import { PIGGY_FROM_LEVEL, PIGGY_MIN } from './shop';
 import type { App } from '../app';
+import { icon as iconEl } from '../icons';
 
 export function navBtn(icon: string, label: string, badge: string | number, fn: () => void, cls = '') {
   return h(
     'button',
     { class: `nav-btn ${cls}`, onclick: () => (sfx.click(), haptic.light(), fn()) },
-    h('span', { class: 'ni' }, icon),
+    h('span', { class: 'ni' }, iconEl(icon)),
     h('span', { class: 'nl' }, label),
     badge ? h('span', { class: `nb${typeof badge === 'number' ? ' dot' : ''}` }, String(badge)) : null,
   );
@@ -78,16 +79,16 @@ export function showHome(app: App) {
       h(
         'div',
         { class: 'side side-l' },
-        navBtn('📜', 'Quests', questBadge, () => app.quests(), 'side-btn'),
-        navBtn('🛣️', 'Star Road', roadBadge, () => app.showRoad(), 'side-btn'),
-        navBtn('🏅', `Rank ${p.rank}`, rankReady(p) ? 1 : 0, () => app.rank(), 'side-btn'),
+        navBtn('scroll', 'Quests', questBadge, () => app.quests(), 'side-btn'),
+        navBtn('road', 'Star Road', roadBadge, () => app.showRoad(), 'side-btn'),
+        navBtn('medal', `Rank ${p.rank}`, rankReady(p) ? 1 : 0, () => app.rank(), 'side-btn'),
       ),
       h(
         'div',
         { class: 'side side-r' },
-        navBtn('🎮', 'Modes', modesBadge(app), () => app.modes(), 'side-btn'),
+        navBtn('pad', 'Modes', modesBadge(app), () => app.modes(), 'side-btn'),
         eventActive(p) ? navBtn(ensureEvent(p).emoji, 'Event', eventReady(p).length, () => app.events(), 'side-btn event-btn') : null,
-        p.level > PIGGY_FROM_LEVEL && p.piggy >= PIGGY_MIN ? navBtn('🐷', `💎${p.piggy}`, '', () => app.showShop(), 'side-btn') : null,
+        p.level > PIGGY_FROM_LEVEL && p.piggy >= PIGGY_MIN ? navBtn('pig', `💎${p.piggy}`, '', () => app.showShop(), 'side-btn') : null,
       ),
     ),
     p.galaxy.length
@@ -121,10 +122,10 @@ export function showHome(app: App) {
     h(
       'div',
       { class: 'nav' },
-      navBtn('🗺️', 'Star Map', `${stars}★`, () => app.showStarMap()),
-      navBtn('📖', 'Lifebook', `${p.seen.length}/${SPECIES.length}`, () => app.showLifebook()),
-      navBtn('⬆️', 'Upgrades', '', () => app.showUpgrades()),
-      navBtn('🛍️', 'Shop', p.starter ? '' : 'OFFER', () => app.showShop()),
+      navBtn('map', 'Star Map', `${stars}★`, () => app.showStarMap()),
+      navBtn('book', 'Lifebook', `${p.seen.length}/${SPECIES.length}`, () => app.showLifebook()),
+      navBtn('up', 'Upgrades', '', () => app.showUpgrades()),
+      navBtn('bag', 'Shop', p.starter ? '' : 'OFFER', () => app.showShop()),
     ),
   );
   const view = drawGalaxy(canvas, p.galaxy, {

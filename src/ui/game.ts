@@ -13,6 +13,7 @@ import {
 } from '../core/world';
 import { starsFor, type LevelDef } from '../core/levels';
 import { h, btn, fmt, modal, type Modal } from './dom';
+import { icon } from './icons';
 import { renderPlanet, surfaceK } from './art/planet';
 import { critterCanvas, drawCreature } from './art/critters';
 import { drawProjectile, projectileCanvas } from './art/projectiles';
@@ -249,7 +250,7 @@ export class LevelScene {
       h(
         'div',
         { class: 'hud-top' },
-        h('button', { class: 'icon', 'aria-label': 'Pause', onclick: () => this.pause() }, 'Ⅱ'),
+        h('button', { class: 'icon', 'aria-label': 'Pause', onclick: () => this.pause() }, icon('pause', 22)),
         h(
           'div',
           { class: 'hud-title' },

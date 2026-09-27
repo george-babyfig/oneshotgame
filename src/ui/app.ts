@@ -3,6 +3,7 @@
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
+import { icon } from './icons';
 import { h, fmt, mountOverlays, closeModals, toast } from './dom';
 import { sfx, setAudio, unlockAudio, pauseAudio, setMusicTheme, chapterTheme } from './audio';
 import { haptic, setHaptics } from './haptics';
@@ -227,8 +228,8 @@ export class App {
       'div',
       { class: 'topbar' },
       back
-        ? h('button', { class: 'icon', 'aria-label': 'Back', onclick: () => (sfx.click(), this.showHome()) }, '‹')
-        : h('button', { class: 'icon', 'aria-label': 'Settings', onclick: () => this.settings() }, '⚙'),
+        ? h('button', { class: 'icon', 'aria-label': 'Back', onclick: () => (sfx.click(), this.showHome()) }, icon('back', 24))
+        : h('button', { class: 'icon', 'aria-label': 'Settings', onclick: () => this.settings() }, icon('gear', 26)),
       h('div', { class: 'grow' }),
       h('button', { class: 'pill dust', 'aria-label': 'Stardust', onclick: () => this.showUpgrades() }, `✨ ${fmt(this.p.dust)}`),
       h(

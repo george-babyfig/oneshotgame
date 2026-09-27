@@ -2219,3 +2219,10 @@ button.lb {
   opacity: 0;
   transition: opacity 0.3s;
 }
+.ni svg {
+  display: block;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.3));
+}
+.icon svg {
+  display: block;
+}
