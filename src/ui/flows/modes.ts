@@ -233,7 +233,7 @@ function challengeMenu(app: App) {
         return toast(t("That code doesn't look right — check it and try again"), 'bad');
       }
       m.close();
-      play(app, challengeLevel(c.seed), 'challenge', { code: input.value.trim().toUpperCase(), seed: c.seed, score: c.score });
+      play(app, challengeLevel(c.seed), 'challenge', { code: encodeChallenge(c.seed, c.score), seed: c.seed, score: c.score });
     }),
   ]);
   setTimeout(() => input.focus(), 250);

@@ -13,12 +13,16 @@ import { t, tp } from '../../i18n';
 import { kindDesc, kindName } from '../text';
 
 export function preLevel(app: App, n: number) {
+  if (document.querySelector('.modal.pre')) return;
   const p = app.p;
   const L = makeLevel(n);
   const chosen: Boosters = { shower: false, spark: false, scope: false };
   const kinds = Object.values(KINDS).filter((k) => k.unlock <= n);
   const newKind = kinds.find((k) => k.unlock === n);
   const row = h('div', { class: 'boosters' });
+  // Boosters that Momentum already gives for free can't be (wastefully) selected.
+  const perk = momentumActive(p) ? MOMENTUM_PERKS[p.momentum.streak] : null;
+  const free = (id: BoosterId) => (id === 'spark' && !!perk?.spark) || (id === 'scope' && !!perk?.scope);
   const renderBoosters = () => {
     row.replaceChildren(
       ...(Object.keys(BOOSTERS) as BoosterId[]).map((id) => {
@@ -26,13 +30,14 @@ export function preLevel(app: App, n: number) {
         const owned = p.boosters[id];
         const el = h(
           'button',
-          { class: `booster${chosen[id] ? ' on' : ''}` },
+          { class: `booster${chosen[id] || free(id) ? ' on' : ''}` },
           h('span', { class: 'be' }, b.emoji),
           h('span', { class: 'bn' }, t(b.name)),
-          h('span', { class: 'bc' }, owned > 0 ? `×${owned}` : `✨${b.dust}`),
+          h('span', { class: 'bc' }, free(id) ? t('Free') : owned > 0 ? `×${owned}` : `✨${b.dust}`),
         );
         el.addEventListener('click', () => {
           sfx.click();
+          if (free(id)) return toast(t('Already free with Momentum!'), 'good');
           if (chosen[id]) chosen[id] = false;
           else if (owned > 0) chosen[id] = true;
           else if (spendDust(p, b.dust)) {

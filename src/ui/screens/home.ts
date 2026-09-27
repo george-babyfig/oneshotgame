@@ -137,4 +137,5 @@ export function showHome(app: App) {
     },
   });
   app.mount(el, 'home', view.stop);
+  if (!app.launched && p.tutorial) app.daily();
 }

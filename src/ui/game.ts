@@ -21,6 +21,7 @@ import { sfx } from './audio';
 import { haptic } from './haptics';
 import { t, tp } from '../i18n';
 import { rarityName } from './text';
+import { toast } from './dom';
 
 export interface SceneOpts {
   scopeLevel: number; // 0..3 aim guide length
@@ -207,7 +208,8 @@ export class LevelScene {
     this.g = this.canvas.getContext('2d')!;
     this.el = h('div', { class: 'screen level' }, this.canvas, this.buildHud());
     this.bindInput();
-    requestAnimationFrame(() => {
+    this.raf = requestAnimationFrame(() => {
+      if (this.destroyed) return;
       this.resize();
       this.renderHud();
       this.showCoach(0);
@@ -363,9 +365,10 @@ export class LevelScene {
       this.finishEl.classList.add('hidden');
       return;
     }
-    const show = this.starsGot > 0 && this.throwsLeft > 0 && !this.ended && !this.finishing;
+    const now = starsFor(this.score, this.L.stars);
+    const show = now > 0 && this.throwsLeft > 0 && !this.ended && !this.finishing;
     this.finishEl.classList.toggle('hidden', !show);
-    this.finishEl.classList.toggle('hot', this.starsGot >= 3);
+    this.finishEl.classList.toggle('hot', now >= 3);
     (this.finishEl.lastChild as HTMLElement).textContent = t('+✨{d} for {n} left', {
       d: this.throwsLeft * FINISH_DUST_PER_THROW,
       n: this.throwsLeft,
@@ -374,7 +377,7 @@ export class LevelScene {
 
   /** "Meteor finale": leftover throws rain down as a stardust bonus. */
   private finishEarly() {
-    if (this.shot || this.ended || this.finishing || this.modalOpen || this.starsGot === 0) return;
+    if (this.shot || this.ended || this.finishing || this.modalOpen || starsFor(this.score, this.L.stars) === 0) return;
     this.finishing = true;
     clearTimeout(this.endTimer);
     this.renderFinish();
@@ -398,15 +401,14 @@ export class LevelScene {
         120 + k * 160,
       );
     }
-    setTimeout(
-      () => {
-        if (this.ended) return;
-        this.finishing = false;
-        this.leftover = n;
-        this.endModal(starsFor(this.score, this.L.stars));
-      },
-      400 + n * 160,
-    );
+    const done = () => {
+      if (this.ended) return;
+      if (this.paused) return void setTimeout(done, 300);
+      this.finishing = false;
+      this.leftover = n;
+      this.endModal(starsFor(this.score, this.L.stars));
+    };
+    setTimeout(done, 400 + n * 160);
   }
 
   private swap() {
@@ -462,13 +464,14 @@ export class LevelScene {
       return { x: e.clientX - r.left, y: e.clientY - r.top };
     };
     this.canvas.addEventListener('pointerdown', (e) => {
-      if (this.shot || this.ended || this.paused || this.modalOpen || this.finishing || (this.o.timeLimit && this.timeLeft <= 0)) return;
+      if (this.aimPointer !== null || !this.canAim()) return;
+      this.aimPointer = e.pointerId;
       this.canvas.setPointerCapture(e.pointerId);
       this.aimFrom = pos(e);
       this.aimTo = pos(e);
     });
     this.canvas.addEventListener('pointermove', (e) => {
-      if (!this.aimFrom) return;
+      if (!this.aimFrom || e.pointerId !== this.aimPointer) return;
       this.aimTo = pos(e);
       const p = this.pull();
       const k = Math.floor((p.len / MAX_PULL) * 8);
@@ -478,15 +481,29 @@ export class LevelScene {
         haptic.tick();
       }
     });
-    const release = () => {
+    const release = (e: PointerEvent) => {
+      if (e.pointerId !== this.aimPointer) return;
+      this.aimPointer = null;
       if (!this.aimFrom) return;
       const p = this.pull();
       this.aimFrom = this.aimTo = null;
-      if (p.len < 18) return; // treat as a tap
+      if (p.len < 18 || !this.canAim()) return; // a tap, or the level ended mid-drag
       this.fire(p.vx, p.vy);
     };
     this.canvas.addEventListener('pointerup', release);
-    this.canvas.addEventListener('pointercancel', () => (this.aimFrom = this.aimTo = null));
+    this.canvas.addEventListener('pointercancel', (e) => {
+      if (e.pointerId !== this.aimPointer) return;
+      this.aimPointer = null;
+      this.aimFrom = this.aimTo = null;
+    });
+  }
+
+  private aimPointer: number | null = null;
+  private destroyed = false;
+
+  /** Can the player start or release a throw right now? */
+  private canAim() {
+    return !this.shot && !this.ended && !this.paused && !this.modalOpen && !this.finishing && !this.over;
   }
 
   private pull() {
@@ -705,6 +722,7 @@ export class LevelScene {
 
   private announce(id: string, at: number) {
     const sp = SPECIES_BY_ID[id];
+    if (!sp) return;
     this.spawnAnim.set(at, 0.9);
     const [x, y] = this.sectorPoint(at, 1.55);
     const rare = sp.rarity === 'rare' || sp.rarity === 'legendary';
@@ -727,6 +745,7 @@ export class LevelScene {
     const id = this.discoverQueue.shift();
     if (!id) return;
     const sp = SPECIES_BY_ID[id];
+    if (!sp) return;
     this.discoverBusy = true;
     const label = rarityName(sp.rarity);
     this.discoverEl.className = `discover show r-${sp.rarity}`;
@@ -790,8 +809,8 @@ export class LevelScene {
   }
 
   private checkEnd() {
-    if (this.ended || this.modalOpen || !this.over) return;
-    if (this.shot) {
+    if (this.ended || (this.modalOpen && !this.paused) || !this.over) return;
+    if (this.shot || this.paused) {
       this.endTimer = window.setTimeout(() => this.checkEnd(), 300);
       return;
     }
@@ -812,9 +831,8 @@ export class LevelScene {
     };
     const cont = () => {
       if (!this.o.spendGems(cost)) {
-        m.close();
-        this.modalOpen = null;
-        this.o.onShop();
+        sfx.error();
+        toast(t('Not enough gems — grab a pack in the Shop!'), 'bad');
         return;
       }
       m.close();
@@ -884,10 +902,13 @@ export class LevelScene {
     }
   }
 
+  private exitRaf = 0;
+
   private finish(stars: number) {
     if (this.ended) return;
     this.ended = true;
     const send = () =>
+      !this.destroyed &&
       this.o.onEnd({
         level: this.L,
         score: this.score,
@@ -905,32 +926,42 @@ export class LevelScene {
     const step = (now: number) => {
       this.exitK = Math.min(1, (now - t0) / 750);
       if (Math.random() < 0.8) this.burst(this.cx, this.cy + this.R, '#ffd76a', 2, 2);
-      if (this.exitK < 1) requestAnimationFrame(step);
+      if (this.destroyed) return;
+      if (this.exitK < 1) this.exitRaf = requestAnimationFrame(step);
       else send();
     };
-    requestAnimationFrame(step);
+    this.exitRaf = requestAnimationFrame(step);
   }
 
   private pause() {
     if (this.ended || this.modalOpen) return;
     this.paused = true;
+    this.aimFrom = this.aimTo = null;
     const m = modal(
       [
         h('div', { class: 'end-title' }, t('Paused')),
         btn(t('Resume'), 'primary wide', () => m.close()),
-        btn(this.o.momentum ? t('Restart (ends Momentum)') : t('Restart planet'), 'ghost wide', () => {
+        btn(t('Restart planet'), 'ghost wide', () => {
+          if (this.ended) return;
           m.close();
           this.ended = true;
           this.o.onEnd({ level: this.L, score: 0, stars: 0, planet: this.planet, won: false, throwsUsed: -1, leftover: 0 });
         }),
         btn(t('Leave to galaxy'), 'ghost wide', () => {
+          if (this.ended) return;
           m.close();
           this.ended = true;
           this.o.onQuit();
         }),
       ],
-      { onClose: () => (this.paused = false) },
+      {
+        onClose: () => {
+          this.paused = false;
+          if (this.modalOpen === m) this.modalOpen = null;
+        },
+      },
     );
+    this.modalOpen = m;
   }
 
   // ---------------------------------------------------------------- fx helpers
@@ -980,9 +1011,12 @@ export class LevelScene {
   private frame = (now: number) => {
     const dt = Math.min(0.033, (now - (this.last || now)) / 1000);
     this.last = now;
-    if (!this.paused) this.update(dt);
-    this.draw();
-    this.raf = requestAnimationFrame(this.frame);
+    try {
+      if (!this.paused) this.update(dt);
+      this.draw();
+    } finally {
+      if (!this.destroyed) this.raf = requestAnimationFrame(this.frame);
+    }
   };
 
   private draw() {
@@ -1083,6 +1117,7 @@ export class LevelScene {
       flash: (i) => (this.flash.find((f) => f.i === i)?.t ?? 0) * 1.4,
       creature: (g, i, x, y, a) => {
         const sp = SPECIES_BY_ID[this.planet.sectors[i].species!];
+        if (!sp) return;
         const anim = this.spawnAnim.get(i) ?? 0;
         const pop = anim > 0 ? 1 + Math.sin((anim / 0.9) * Math.PI) * 0.8 : 1;
         const size = this.R * (sp.rarity === 'common' ? 0.2 : sp.rarity === 'uncommon' ? 0.24 : 0.3) * pop;
@@ -1164,12 +1199,13 @@ export class LevelScene {
         for (let k = 0; k < steps; k++) {
           for (let j = 0; j < 3; j++) this.step(s, 1 / 90);
           const d = Math.hypot(s.x - this.cx, s.y - this.cy);
-          if (d < this.R * 1.02) {
-            // where will it land, allowing for the spin during the flight?
-            const t = ((k + 1) * 3) / 90;
-            const ang = Math.atan2(s.y - this.cy, s.x - this.cx) - (this.rot + this.L.spin * t);
-            const tt = ((ang % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-            hit = Math.floor(tt / ((Math.PI * 2) / SECTORS)) % SECTORS;
+          // where will it land, allowing for the spin during the flight? (same test as a real throw)
+          const ft = ((k + 1) * 3) / 90;
+          const ang = Math.atan2(s.y - this.cy, s.x - this.cx) - (this.rot + this.L.spin * ft);
+          const tt = ((ang % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+          const si = Math.floor(tt / ((Math.PI * 2) / SECTORS)) % SECTORS;
+          if (d <= this.surfaceR(si) + 6) {
+            hit = si;
             break;
           }
           g.globalAlpha = 0.85 * (1 - k / steps);
@@ -1196,7 +1232,9 @@ export class LevelScene {
   destroy() {
     clearTimeout(this.endTimer);
     this.ended = true;
+    this.destroyed = true;
     cancelAnimationFrame(this.raf);
+    cancelAnimationFrame(this.exitRaf);
     window.removeEventListener('resize', this.resize);
     this.modalOpen?.close();
   }

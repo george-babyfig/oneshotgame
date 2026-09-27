@@ -179,14 +179,27 @@ export function migrate(raw: Record<string, unknown>): Profile {
   if ((raw.v as number | undefined) === undefined || (raw.v as number) < 2) {
     // v1 → v2: galaxy entries gained colours; stats gained counters.
     p.galaxy = p.galaxy.map((g) => ({ ...g, colors: g.colors ?? [] }));
+    p.stats.threeStars = Math.max(p.stats.threeStars, Object.values(p.stars).filter((s) => s === 3).length);
+    p.stats.wins = Math.max(p.stats.wins, Object.keys(p.stars).length);
   }
   p.v = PROFILE_VERSION;
   return p;
 }
 
+/** Set when storage could not be read: we then never overwrite what's on disk this session. */
+let readOnly = false;
+export const storageReadOnly = () => readOnly;
+
 export async function loadProfile(): Promise<Profile> {
+  let failedReads = 0;
   for (const key of [KEY, BACKUP_KEY]) {
-    const raw = await loadKey(key);
+    let raw: string | null;
+    try {
+      raw = await loadKey(key);
+    } catch {
+      failedReads++;
+      continue;
+    }
     if (!raw) continue;
     try {
       return migrate(JSON.parse(raw));
@@ -194,12 +207,15 @@ export async function loadProfile(): Promise<Profile> {
       /* corrupted: try the backup */
     }
   }
+  // Storage errored (not merely empty): play on, but don't clobber a save we couldn't read.
+  if (failedReads) readOnly = true;
   return defaultProfile();
 }
 
 let saves = 0;
 /** Save the profile; every few saves also refresh a backup copy. */
 export async function saveProfile(p: Profile) {
+  if (readOnly) return;
   const json = JSON.stringify(p);
   await saveKey(KEY, json);
   if (saves++ % 5 === 0) await saveKey(BACKUP_KEY, json);

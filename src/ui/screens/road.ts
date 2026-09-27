@@ -40,10 +40,11 @@ export function showRoad(app: App) {
               sfx.chest();
               haptic.success();
               app.save();
+              showRoad(app);
               const m = modal([
                 h('div', { class: 'm-title' }, t('{n}★ reward', { n: tier.stars })),
                 h('div', { class: 'reward-list' }, ...got.flatMap(rewardText).map((x) => h('span', null, x))),
-                btn(t('Nice!'), 'primary wide', () => (m.close(), showRoad(app))),
+                btn(t('Nice!'), 'primary wide', () => m.close()),
               ]);
             })
           : h('b', null, `${tier.stars}★`),

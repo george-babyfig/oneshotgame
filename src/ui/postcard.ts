@@ -85,7 +85,9 @@ export async function sharePostcard(planet: Planet, info: PostcardInfo, text: st
       await Share.share({ title: 'Pocket Planet', text, files: [file.uri] });
       return;
     }
-    const blob = await (await fetch(dataUrl)).blob();
+    // build the file synchronously so the share keeps the tap's user activation
+    const bytes = Uint8Array.from(atob(dataUrl.split(',')[1]), (c) => c.charCodeAt(0));
+    const blob = new Blob([bytes], { type: 'image/png' });
     const f = new File([blob], 'pocket-planet.png', { type: 'image/png' });
     if (navigator.canShare?.({ files: [f] })) {
       await navigator.share({ files: [f], text });

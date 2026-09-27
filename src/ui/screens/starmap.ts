@@ -48,12 +48,16 @@ export function showStarMap(app: App) {
           sfx.chest();
           haptic.success();
           app.save();
-          const m = modal([
-            h('div', { class: 'chest-anim' }, '🎁'),
-            h('div', { class: 'm-title' }, t('{name} complete!', { name: t(ch.name) })),
-            h('div', { class: 'reward-list' }, ...rewardText(r).map((x) => h('span', null, x))),
-            btn(t('Awesome'), 'primary wide', () => (m.close(), showStarMap(app), maybeStarterOffer(app))),
-          ]);
+          showStarMap(app);
+          const m = modal(
+            [
+              h('div', { class: 'chest-anim' }, '🎁'),
+              h('div', { class: 'm-title' }, t('{name} complete!', { name: t(ch.name) })),
+              h('div', { class: 'reward-list' }, ...rewardText(r).map((x) => h('span', null, x))),
+              btn(t('Awesome'), 'primary wide', () => m.close()),
+            ],
+            { onClose: () => maybeStarterOffer(app) },
+          );
         })
       : p.chapters.includes(n)
         ? h('div', { class: 'chest-done' }, t('✓ Chest opened'))

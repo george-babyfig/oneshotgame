@@ -16,6 +16,8 @@ export interface Iap {
   prices(): Promise<Record<string, string>>;
   purchase(p: ProductDef): Promise<PurchaseOutcome>;
   restore(): Promise<string[]>;
+  /** One-time purchases this Apple ID already owns (no sign-in prompt). */
+  owned(): Promise<string[]>;
 }
 
 // StoreKit 2 via @capgo/native-purchases (no server or third-party account needed).
@@ -56,6 +58,13 @@ const nativeIap: Iap = {
   async restore() {
     try {
       await NativePurchases.restorePurchases();
+    } catch {
+      /* fall through to what StoreKit already knows */
+    }
+    return this.owned();
+  },
+  async owned() {
+    try {
       const { purchases } = await NativePurchases.getPurchases({ productType: PURCHASE_TYPE.INAPP });
       return purchases
         .filter((t) => !t.revocationDate && PRODUCT_BY_ID[t.productIdentifier] && !PRODUCT_BY_ID[t.productIdentifier].consumable)
@@ -80,6 +89,9 @@ const mockIap: Iap = {
   async restore() {
     return [];
   },
+  async owned() {
+    return [];
+  },
 };
 
 const noIap: Iap = {
@@ -90,6 +102,9 @@ const noIap: Iap = {
     return { ok: false, error: 'Purchases are available in the iOS app.' };
   },
   async restore() {
+    return [];
+  },
+  async owned() {
     return [];
   },
 };

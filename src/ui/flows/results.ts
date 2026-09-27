@@ -38,8 +38,7 @@ export function levelResults(app: App, r: LevelResult) {
   const home = () => {
     m.close();
     app.showHome();
-    if (wasTutorial) app.daily();
-    else if (p.galaxy.length >= 2) askForReminders(p, () => app.save());
+    if (!wasTutorial && p.galaxy.length >= 2) askForReminders(p, () => app.save());
   };
   maybeAskReview(p, () => app.save(), r.stars, n);
   const m = modal(

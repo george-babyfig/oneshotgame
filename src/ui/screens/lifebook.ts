@@ -6,11 +6,12 @@ import { GEMS_PER_NEW_SPECIES } from '../../meta/config';
 import type { App } from '../app';
 import { btn, toast } from '../dom';
 import { HABITATS, habitatProgress } from '../../meta/habitats';
-import { applyReward, rewardText } from '../../meta/progression';
+import { rewardText } from '../../meta/progression';
 import { critterCanvas } from '../art/critters';
 import { mementoName } from '../../meta/visitors';
 import { t } from '../../i18n';
 import { rarityName, speciesHint } from '../text';
+import { claimHabitat } from '../../meta/habitats';
 
 const ORDER: Rarity[] = ['common', 'uncommon', 'rare', 'legendary'];
 
@@ -97,8 +98,7 @@ export function showLifebook(app: App) {
               ),
               ready
                 ? btn(t('Claim'), 'primary small', () => {
-                    app.p.habitats.push(hb.id);
-                    applyReward(app.p, hb.reward);
+                    if (!claimHabitat(app.p, hb.id)) return;
                     app.syncGameCenter();
                     app.save();
                     sfx.chest();

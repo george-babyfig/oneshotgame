@@ -128,7 +128,7 @@ export function showShop(app: App) {
             else {
               if (p.gems < s.gems) return app.needGems();
               if (!(await confirmBox(t('Buy {name} for 💎{n}?', { name: t(s.name), n: s.gems }), t('Buy')))) return;
-              spendGems(p, s.gems);
+              if (!spendGems(p, s.gems)) return app.needGems();
               p.skins.push(s.id);
               p.skin = s.id;
             }

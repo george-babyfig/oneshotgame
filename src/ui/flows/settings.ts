@@ -7,6 +7,8 @@ import type { App } from '../app';
 import { askForReminders, scheduleReminders } from '../platform';
 import { LANGS, detectLang, t } from '../../i18n';
 import { gcAvailable, gcDashboard } from '../gamecenter';
+import { ensureQuests } from '../../meta/progression';
+import { today } from '../../meta/profile';
 
 type Toggle = 'sound' | 'music' | 'haptics' | 'reduceMotion' | 'notifications';
 
@@ -61,6 +63,7 @@ export function settingsFlow(app: App) {
       const keep = { processedTx: app.p.processedTx, starter: app.p.starter, pass: app.p.pass, settings: app.p.settings };
       app.p = { ...defaultProfile(), ...keep };
       if (keep.starter) app.p.skins.push('aurora');
+      ensureQuests(app.p, today());
       await saveProfile(app.p);
       app.startLevel(1, { tutorial: true });
     }),

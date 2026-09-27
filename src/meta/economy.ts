@@ -19,6 +19,11 @@ export function vaultHours(p: Profile) {
   return VAULT_HOURS[Math.min(p.upgrades.vault, VAULT_HOURS.length - 1)];
 }
 
+/** If the device clock went backwards, don't freeze the vault until it catches up. */
+export function fixClock(p: Profile, now = Date.now()) {
+  if (p.lastCollect > now) p.lastCollect = now;
+}
+
 export function pendingDust(p: Profile, now = Date.now()) {
   const hours = Math.min(vaultHours(p), Math.max(0, now - p.lastCollect) / 3600000);
   return Math.floor(galaxyRate(p) * hours);
@@ -121,6 +126,7 @@ export function discoverSpecies(p: Profile, id: string): boolean {
 /** Daily login streak. Returns the gift to show, or null if already claimed today. */
 export function dailyGift(p: Profile, day: string): { streak: number; index: number; gems: number } | null {
   if (p.daily.last === day) return null;
+  if (p.daily.last && dayGap(p.daily.last, day) < 0) return null; // clock/time zone moved back
   const gap = p.daily.last ? dayGap(p.daily.last, day) : 99;
   const streak = gap === 1 ? p.daily.streak + 1 : 1;
   const index = (streak - 1) % DAILY_GEMS.length;

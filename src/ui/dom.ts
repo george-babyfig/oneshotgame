@@ -62,6 +62,7 @@ export function modal(content: Child[], opts: { cls?: string; dismiss?: boolean;
     if (done) return;
     done = true;
     scrim.classList.add('out');
+    scrim.style.pointerEvents = 'none';
     setTimeout(() => scrim.remove(), 200);
     opts.onClose?.();
   };

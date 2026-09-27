@@ -150,3 +150,36 @@ describe('game center', async () => {
     expect(A.pendingAchievements(p)).toEqual([]);
   });
 });
+
+describe('review fixes', async () => {
+  const E = await import('../src/meta/economy');
+  const Hb = await import('../src/meta/habitats');
+  const P = await import('../src/meta/profile');
+  it('daily gift ignores a clock that moved backwards', () => {
+    const p = defaultProfile(0);
+    E.claimDailyGift(p, '2026-09-28');
+    expect(E.dailyGift(p, '2026-09-27')).toBeNull();
+    expect(E.dailyGift(p, '2026-09-29')?.streak).toBe(2);
+  });
+  it('vault recovers when lastCollect is in the future', () => {
+    const p = defaultProfile(0);
+    p.lastCollect = 10_000_000;
+    E.fixClock(p, 5_000);
+    expect(p.lastCollect).toBe(5_000);
+  });
+  it('habitat rewards can only be claimed once, and only when complete', () => {
+    const p = defaultProfile(0);
+    const h = Hb.HABITATS[0];
+    expect(Hb.claimHabitat(p, h.id)).toBeNull();
+    p.seen = [...h.species];
+    const g = p.gems;
+    expect(Hb.claimHabitat(p, h.id)).not.toBeNull();
+    expect(Hb.claimHabitat(p, h.id)).toBeNull();
+    expect(p.gems).toBe(g + (h.reward.gems ?? 0));
+  });
+  it('v1 saves backfill wins and 3-star counts', () => {
+    const p = P.migrate({ level: 4, stars: { 1: 3, 2: 3, 3: 1 } });
+    expect(p.stats.threeStars).toBe(2);
+    expect(p.stats.wins).toBe(3);
+  });
+});

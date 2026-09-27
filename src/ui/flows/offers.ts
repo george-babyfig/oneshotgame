@@ -49,8 +49,11 @@ export function welcomeBackFlow(app: App, awayMs: number, then?: () => void) {
   app.save();
   sfx.gem();
   haptic.success();
+  let collected = false;
   const collect = (mult: number) => {
-    if (mult === 2 && !spendGems(p, DOUBLE_DUST_GEMS)) return app.needGems();
+    if (collected) return;
+    if (mult === 2 && pendingDust(p) > 0 && !spendGems(p, DOUBLE_DUST_GEMS)) return app.needGems();
+    collected = true;
     const d = collectDust(p, Date.now(), mult);
     if (d) sfx.coin();
     app.save();

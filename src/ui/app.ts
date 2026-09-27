@@ -38,6 +38,7 @@ import { questsFlow } from './flows/quests';
 import { setLang, t, type Lang } from '../i18n';
 import { COACH } from '../meta/coach';
 import { gcSignIn, gcSync } from './gamecenter';
+import { fixClock } from '../meta/economy';
 
 export type ScreenName = 'home' | 'lifebook' | 'upgrades' | 'shop' | 'map' | 'road' | 'level';
 export type Boosters = Record<BoosterId, boolean>;
@@ -69,6 +70,7 @@ export class App {
     this.p.meta.sessions++;
     this.applySettings();
     ensureQuests(this.p, today());
+    fixClock(this.p);
     addVisitors(this.p, Date.now());
     this.awayMs = Date.now() - this.p.meta.lastSeen;
     this.p.meta.lastSeen = Date.now();
@@ -88,11 +90,12 @@ export class App {
       CapApp.addListener('resume', () => {
         pauseAudio(false);
         ensureQuests(this.p, today());
+        fixClock(this.p);
         if (addVisitors(this.p, Date.now())) this.save();
         this.awayMs = Date.now() - this.p.meta.lastSeen;
         this.p.meta.lastSeen = Date.now();
         if (this.screen === 'home') this.showHome();
-        this.daily();
+        if (this.screen !== 'level') this.daily();
       });
     }
     document.addEventListener('visibilitychange', () => {
@@ -102,6 +105,7 @@ export class App {
     });
     this.iap
       .init((pid, tx) => this.grant(pid, tx))
+      .then(() => this.syncOwned())
       .then(() => this.iap.prices())
       .then((pr) => {
         this.prices = pr;
@@ -109,10 +113,7 @@ export class App {
       })
       .catch(() => {});
     if (!this.p.tutorial) this.startLevel(1, { tutorial: true });
-    else {
-      this.showHome();
-      this.daily();
-    }
+    else this.showHome(); // the first home screen of a session runs the daily-gift sequence
     this.save();
     gcSignIn().then((ok) => ok && this.syncGameCenter());
   }
@@ -144,7 +145,7 @@ export class App {
     this.teardown = teardown;
     this.scene?.destroy();
     this.scene = null;
-    closeModals();
+    if (!this.refreshing) closeModals();
     el.classList.add('enter');
     this.host.replaceChildren(el);
     this.screen = name;
@@ -152,15 +153,23 @@ export class App {
   }
 
   /** Re-render whatever non-level screen is showing (after currencies change). */
+  private refreshing = false;
+
   refresh() {
     const map: Partial<Record<ScreenName, () => void>> = {
       home: () => this.showHome(),
+      lifebook: () => this.showLifebook(),
       shop: () => this.showShop(),
       upgrades: () => this.showUpgrades(),
       map: () => this.showStarMap(),
       road: () => this.showRoad(),
     };
-    map[this.screen]?.();
+    this.refreshing = true;
+    try {
+      map[this.screen]?.();
+    } finally {
+      this.refreshing = false;
+    }
   }
 
   // ------------------------------------------------------------------ navigation
@@ -201,8 +210,10 @@ export class App {
     modesFlow(this);
   }
   /** Launch sequence: daily gift, then any visitors' gifts. */
+  launched = false;
   daily() {
     if (!this.p.tutorial) return;
+    this.launched = true;
     const away = this.awayMs;
     this.awayMs = 0;
     dailyGiftFlow(this, () =>
@@ -301,7 +312,8 @@ export class App {
   }
 
   private levelEnded(r: LevelResult) {
-    if (r.throwsUsed === -1 || !r.won) {
+    if (r.throwsUsed === -1) return this.startLevel(r.level.n); // restart: no penalty, same as leaving
+    if (!r.won) {
       const res = momentumLoss(this.p, today());
       this.save();
       this.startLevel(r.level.n);
@@ -354,8 +366,8 @@ export class App {
     this.refresh();
   }
 
-  async restore() {
-    const owned = await this.iap.restore();
+  /** Mark one-time purchases as owned (flags only — gems are never re-granted). */
+  private applyOwned(owned: string[]) {
     let restored = 0;
     for (const id of owned) {
       const key = PRODUCT_BY_ID[id]?.key;
@@ -369,10 +381,18 @@ export class App {
         restored++;
       }
     }
-    if (restored) {
-      this.saveNow();
-      toast(t('Purchases restored!'), 'good');
-    } else toast(this.iap.kind === 'native' ? t('Nothing to restore') : t('Restore works in the iOS app'));
+    if (restored) this.saveNow();
+    return restored;
+  }
+
+  private async syncOwned() {
+    if (this.applyOwned(await this.iap.owned())) this.refresh();
+  }
+
+  async restore() {
+    const restored = this.applyOwned(await this.iap.restore());
+    if (restored) toast(t('Purchases restored!'), 'good');
+    else toast(this.iap.kind === 'native' ? t('Nothing to restore') : t('Restore works in the iOS app'));
     this.refresh();
   }
 }

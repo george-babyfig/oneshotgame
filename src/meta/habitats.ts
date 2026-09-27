@@ -1,6 +1,6 @@
 // Lifebook habitat sets: discover every creature in a set for a reward.
 import type { Profile } from './profile';
-import type { Reward } from './progression';
+import { applyReward, type Reward } from './progression';
 
 export interface Habitat {
   id: string;
@@ -45,6 +45,15 @@ export const HABITATS: Habitat[] = [
 
 export function habitatProgress(p: Profile, h: Habitat) {
   return h.species.filter((s) => p.seen.includes(s)).length;
+}
+
+/** Claim a completed habitat once. */
+export function claimHabitat(p: Profile, id: string) {
+  const h = HABITATS.find((x) => x.id === id);
+  if (!h || p.habitats.includes(id) || habitatProgress(p, h) < h.species.length) return null;
+  p.habitats.push(id);
+  applyReward(p, h.reward);
+  return h.reward;
 }
 
 export function habitatsReady(p: Profile): Habitat[] {

@@ -35,7 +35,7 @@ export function dailyGiftFlow(app: App, then?: () => void) {
         ),
       ),
       btn(t('Collect {n} 💎', { n: g.gems }), 'primary wide', () => {
-        claimDailyGift(app.p, day);
+        if (!claimDailyGift(app.p, day)) return;
         app.save();
         sfx.gem();
         haptic.success();

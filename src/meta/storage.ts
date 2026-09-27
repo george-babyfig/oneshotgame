@@ -5,11 +5,14 @@ import { Preferences } from '@capacitor/preferences';
 // evict web view storage. In a browser we use localStorage.
 const native = Capacitor.isNativePlatform();
 
+/** Thrown when storage can't be read (as opposed to the key simply not existing). */
+export class StorageReadError extends Error {}
+
 export async function loadKey(key: string): Promise<string | null> {
   try {
     return native ? (await Preferences.get({ key })).value : localStorage.getItem(key);
-  } catch {
-    return null;
+  } catch (e) {
+    throw new StorageReadError(String(e));
   }
 }
 
