@@ -45,7 +45,7 @@ function seasonChip(hemi: 'north' | 'south') {
   );
 }
 
-export function showHome(app: App) {
+export function showHome(app: App, quiet = false) {
   const p = app.p;
   if (checkMail(p)) app.save();
   const next = makeLevel(p.level);
@@ -159,6 +159,7 @@ export function showHome(app: App) {
     },
   });
   app.mount(el, 'home', view.stop);
+  if (quiet) return;
   if (!app.launched && p.tutorial) app.daily();
   // One-time Passport setup once the first planet is done (after any launch pop-ups).
   else if (p.stats.wins >= 1 && !p.passport.set && !setupAsked && !document.querySelector('.modal')) {

@@ -43,6 +43,7 @@ function openLetter(app: App, m: Mail) {
         sfx.chest();
         haptic.success();
         app.save();
+        app.refresh();
       }
       box.close();
       inboxFlow(app);
@@ -65,8 +66,11 @@ export function inboxFlow(app: App) {
       L.gift && !m.claimed ? h('span', { class: 'mail-gift' }, '🎁') : pending ? h('span', { class: 'mail-dot' }) : null,
     );
   });
-  const list = modal([
-    h('div', { class: 'm-title' }, t('Inbox')),
-    rows.some((r) => r) ? h('div', { class: 'mail-list' }, ...rows) : h('p', { class: 'muted' }, t('No letters yet.')),
-  ]);
+  const list = modal(
+    [
+      h('div', { class: 'm-title' }, t('Inbox')),
+      rows.some((r) => r) ? h('div', { class: 'mail-list' }, ...rows) : h('p', { class: 'muted' }, t('No letters yet.')),
+    ],
+    { onClose: () => app.refresh() },
+  );
 }

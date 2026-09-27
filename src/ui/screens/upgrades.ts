@@ -66,7 +66,7 @@ function labCard(app: App, kind: Kind) {
         h(
           'li',
           { class: pk.lv <= lv ? 'got' : pk.lv === lv + 1 ? 'next' : '' },
-          h('b', null, `${pk.lv <= lv ? '✓' : `Lv${pk.lv}`} ${pk.name}`),
+          h('b', null, `${pk.lv <= lv ? '✓' : t('Lv {n}', { n: pk.lv })} ${pk.name}`),
           ` ${pk.desc}`,
         ),
       ),

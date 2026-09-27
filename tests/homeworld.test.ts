@@ -101,8 +101,8 @@ describe('homeworld', () => {
     expand(p);
     upgrade(p, 0, T0 + H);
     const done = p.home.plots[0]!.done!;
-    expect(speedUpBuilds(p.home)).toBe(1);
-    expect(p.home.plots[0]!.done).toBe(done - WIN_SPEEDUP);
+    expect(speedUpBuilds(p.home, WIN_SPEEDUP, T0 + H)).toBe(1);
+    expect(p.home.plots[0]!.done).toBe(Math.max(T0 + H, done - WIN_SPEEDUP));
   });
 
   it('moves buildings to empty plots', () => {
@@ -118,9 +118,9 @@ describe('homeworld', () => {
     p.seen = ['otter', 'fox', 'deer'];
     expect(invite(p, 'otter')).toBe(false); // no den yet
     build(p, 0, 'den', T0);
-    expect(denCapacity(p.home)).toBe(0); // still under construction
+    expect(denCapacity(p.home, T0)).toBe(0); // still under construction
     tickBuilds(p.home, T0 + H);
-    expect(denCapacity(p.home)).toBe(2);
+    expect(denCapacity(p.home, T0 + H)).toBe(2);
     expect(invite(p, 'otter')).toBe(true);
     expect(invite(p, 'unicorn')).toBe(false); // not discovered
     const r = p.home.residents[0];
@@ -194,5 +194,58 @@ describe('resident dress-up and outfit presets', async () => {
     C.loadPreset(p, 1);
     expect(C.currentLook(p).hat).toBe(C.DEFAULT_LOOK.hat);
     expect(C.loadPreset(p, 2)).toBe(false);
+  });
+});
+
+describe('homeworld exploit fixes', async () => {
+  const Hw = await import('../src/meta/homeworld');
+  it('saying goodbye and re-inviting does not reset friendship or requests', () => {
+    const p = rich();
+    p.seen = ['bunny'];
+    Hw.build(p, 0, 'den', T0);
+    Hw.tickBuilds(p.home, T0 + H);
+    Hw.invite(p, 'bunny');
+    const r = p.home.residents[0];
+    r.fp = 4;
+    r.rewarded = 2;
+    r.lastReq = Hw.period(T0 + H);
+    Hw.sendHome(p, 'bunny');
+    Hw.invite(p, 'bunny');
+    expect(p.home.residents[0]).toMatchObject({ fp: 4, rewarded: 2, lastReq: Hw.period(T0 + H) });
+    expect(Hw.requestOf(p.home.residents[0], T0 + H)).toBeNull();
+  });
+  it('win speed-ups only shorten builds still running, never into the past', () => {
+    const p = rich();
+    Hw.build(p, 0, 'mill', T0); // done at T0 + 30s
+    expect(Hw.speedUpBuilds(p.home, Hw.WIN_SPEEDUP, T0 + H)).toBe(0);
+    Hw.tickBuilds(p.home, T0 + H);
+    expect(p.home.plots[0]!.since).toBe(T0 + BUILD_TIME[1]);
+  });
+  it('upgrading keeps the previous level working until done', () => {
+    const p = rich();
+    p.level = 45;
+    Hw.expand(p);
+    Hw.build(p, 0, 'den', T0);
+    Hw.tickBuilds(p.home, T0 + H);
+    expect(Hw.denCapacity(p.home, T0 + H)).toBe(2);
+    Hw.upgrade(p, 0, T0 + H);
+    expect(Hw.denCapacity(p.home, T0 + H + 1)).toBe(2);
+    Hw.tickBuilds(p.home, T0 + 3 * H);
+    expect(Hw.denCapacity(p.home, T0 + 3 * H)).toBe(3);
+  });
+  it('a level-1 greenhouse produces within its cap', () => {
+    const p = rich();
+    p.level = 45;
+    Hw.expand(p);
+    Hw.build(p, 0, 'greenhouse', T0);
+    Hw.tickBuilds(p.home, T0 + H);
+    expect(Hw.ready(p.home, 0, T0 + 100 * H)).toBeGreaterThan(0);
+  });
+  it('friendship from expeditions pays each level once', () => {
+    const p = rich();
+    const r = { species: 'otter', fp: 0, lastReq: -1, rewarded: 1 };
+    const g = p.gems;
+    Hw.addFriendship(p, r, 9); // level 1 -> 3
+    expect(p.gems).toBe(g + 10 + 15);
   });
 });

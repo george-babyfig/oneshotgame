@@ -19,7 +19,7 @@ function hero(canvas: HTMLCanvasElement, reduceMotion: boolean) {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const w = canvas.clientWidth;
     const hh = canvas.clientHeight;
-    if (canvas.width !== Math.round(w * dpr)) {
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(hh * dpr)) {
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(hh * dpr);
     }

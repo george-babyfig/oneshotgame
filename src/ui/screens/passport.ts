@@ -89,7 +89,6 @@ export function showPassport(app: App) {
           class: `trophy${done ? '' : ' locked'}${pinned.has(a.id) ? ' pinned' : ''}`,
           onclick: () => {
             if (!done) return toast(t('Not earned yet'));
-            if (!p.passport.badges.length) p.passport.badges = [...pinned];
             toggleBadge(p, a.id);
             sfx.click();
             haptic.light();
@@ -203,7 +202,8 @@ export function editPassport(app: App, first = false) {
     first ? null : h('div', { class: 'sec-title' }, t('Banner')),
     first ? null : swatches,
     btn(first ? t('Looks good!') : t('Save'), 'primary wide', () => {
-      p.passport = { ...p.passport, first: a, second: b, set: true, title, banner };
+      // the first-time sheet has no title picker: keep following the rank title automatically
+      p.passport = { ...p.passport, first: a, second: b, set: true, title: first ? p.passport.title : title, banner };
       sfx.chest();
       haptic.success();
       app.save();

@@ -15,7 +15,7 @@ import { t, tp } from '../../i18n';
 import { kindDesc, kindName } from '../text';
 
 export function preLevel(app: App, n: number) {
-  if (document.querySelector('.modal.pre')) return;
+  if (document.querySelector('.scrim:not(.out) .modal.pre')) return;
   const p = app.p;
   const L = makeLevel(n);
   const chosen: Boosters = { shower: false, spark: false, scope: false };

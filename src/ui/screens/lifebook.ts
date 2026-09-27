@@ -9,7 +9,7 @@ import { HABITATS, habitatProgress } from '../../meta/habitats';
 import { rewardText } from '../../meta/progression';
 import { critterCanvas } from '../art/critters';
 import { mementoName } from '../../meta/visitors';
-import { t } from '../../i18n';
+import { t, tp } from '../../i18n';
 import { rarityName, speciesHint } from '../text';
 import { claimHabitat } from '../../meta/habitats';
 import { LORE, LORE_AT, STUDIED_AT, loreUnlocked, sightings, studied } from '../../meta/lore';
@@ -28,14 +28,22 @@ function card(p: Profile, s: SpeciesDef, got: boolean) {
       ? h(
           'div',
           { class: 'lore' },
-          h('small', null, t('📓 Field notes · seen {n} times', { n })),
+          h('small', null, tp(n, '📓 Field notes · seen {n} time', '📓 Field notes · seen {n} times')),
           loreUnlocked(p, s.id)
             ? h('p', null, t(LORE[s.id] ?? ''))
-            : h('p', { class: 'muted' }, t('See it {n} more times to unlock its story.', { n: LORE_AT - n })),
+            : h(
+                'p',
+                { class: 'muted' },
+                tp(LORE_AT - n, 'See it {n} more time to unlock its story.', 'See it {n} more times to unlock its story.'),
+              ),
           studied(p, s.id)
             ? h('b', { class: 'studied-tag' }, t('✦ Studied'))
             : n >= LORE_AT
-              ? h('small', { class: 'muted' }, t('{n} more sightings for a gold frame', { n: STUDIED_AT - n }))
+              ? h(
+                  'small',
+                  { class: 'muted' },
+                  tp(STUDIED_AT - n, '{n} more sighting for a gold frame', '{n} more sightings for a gold frame'),
+                )
               : null,
         )
       : null,

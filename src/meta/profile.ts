@@ -111,7 +111,7 @@ export interface Profile {
   /** Flings per launcher, for launcher mastery. */
   mastery: Record<string, number>;
   /** Planet Passport: name parts, title, banner and pinned badges. */
-  passport: { first: number; second: number; set: boolean; title: string; banner: number; badges: string[] };
+  passport: { first: number; second: number; set: boolean; title: string; banner: number; badges: string[]; badgesSet: boolean };
   /** Homeworld: the planet you build on between levels. */
   home: HomeState;
   /** Object Lab levels per flingable (missing = 1). */
@@ -120,8 +120,9 @@ export interface Profile {
   flings: Partial<Record<Kind, number>>;
   /** Times each creature was seen appearing (Lifebook field notes). */
   sightings: Record<string, number>;
-  /** Inbox letters. */
+  /** Inbox letters, and every letter id ever delivered (so trimming never re-sends one). */
   mail: Mail[];
+  mailSeen: string[];
   /** Planets whose Comet Guardian has been defeated (first-time reward paid). */
   bosses: number[];
   /** Saved Keeper outfits (Workshop presets). */
@@ -137,7 +138,7 @@ export interface Profile {
 
 const KEY = 'pp.profile';
 const BACKUP_KEY = 'pp.profile.bak';
-export const PROFILE_VERSION = 2;
+export const PROFILE_VERSION = 3;
 
 export function defaultProfile(now = Date.now()): Profile {
   return {
@@ -193,12 +194,13 @@ export function defaultProfile(now = Date.now()): Profile {
     look: { suit: 'suit_sky', hat: 'hat_antenna', launcher: 'l_pad', trail: 'tr_dots', emote: 'em_cheer' },
     wardrobe: [],
     mastery: {},
-    passport: { first: -1, second: -1, set: false, title: '', banner: 0, badges: [] },
+    passport: { first: -1, second: -1, set: false, title: '', banner: 0, badges: [], badgesSet: false },
     home: defaultHome(now),
     lab: {},
     flings: {},
     sightings: {},
     mail: [],
+    mailSeen: [],
     bosses: [],
     presets: [null, null, null],
     mats: {},
@@ -229,6 +231,10 @@ export function migrate(raw: Record<string, unknown>): Profile {
     p.galaxy = p.galaxy.map((g) => ({ ...g, colors: g.colors ?? [] }));
     p.stats.threeStars = Math.max(p.stats.threeStars, Object.values(p.stars).filter((s) => s === 3).length);
     p.stats.wins = Math.max(p.stats.wins, Object.keys(p.stars).length);
+  }
+  if ((raw.v as number | undefined) !== undefined && (raw.v as number) < 3) {
+    // v2 → v3: the daily streak became Star Calendar stamps; start the calendar fresh
+    p.daily.streak = 0;
   }
   p.v = PROFILE_VERSION;
   return p;

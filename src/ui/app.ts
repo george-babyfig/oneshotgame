@@ -111,7 +111,7 @@ export class App {
         tickHome(this.p);
         this.awayMs = Date.now() - this.p.meta.lastSeen;
         this.p.meta.lastSeen = Date.now();
-        if (this.screen === 'home') this.showHome();
+        if (this.screen === 'home') this.refresh();
         if (this.screen !== 'level') this.daily();
       });
     }
@@ -126,7 +126,7 @@ export class App {
       .then(() => this.iap.prices())
       .then((pr) => {
         this.prices = pr;
-        if (this.screen === 'shop') this.showShop();
+        if (this.screen === 'shop') this.refresh();
       })
       .catch(() => {});
     if (!this.p.tutorial) this.startLevel(1, { tutorial: true });
@@ -202,8 +202,8 @@ export class App {
   }
 
   // ------------------------------------------------------------------ navigation
-  showHome() {
-    showHome(this);
+  showHome(quiet = false) {
+    showHome(this, quiet);
   }
   showLifebook() {
     showLifebook(this);
@@ -356,7 +356,8 @@ export class App {
       // Object Lab levels apply to the campaign and Zen, not to the score-competitive modes
       lab: extra.competitive ? undefined : labLevels(this.p),
       season: seasonOf(new Date(), this.p.settings.hemi),
-      shower: !!skyEventOn(new Date()),
+      // the meteor-shower bonus stays out of score-competitive modes
+      shower: !extra.competitive && !!skyEventOn(new Date()),
       ...extra,
     };
   }
@@ -389,7 +390,7 @@ export class App {
       this.save();
       // campaign retries go through the pre-level sheet, where boosters can help
       if (r.level.n === this.p.level && r.level.n >= 4) {
-        this.showHome();
+        this.showHome(true);
         this.preLevel(r.level.n);
       } else this.startLevel(r.level.n);
       if (res === 'shield') toast(t('🛡️ Your daily shield kept your Momentum!'), 'good');

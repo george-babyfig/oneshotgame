@@ -237,6 +237,8 @@ export interface HomeState {
   paint: { ground: string; sea: string };
   /** Paints bought with gems. */
   paints: string[];
+  /** Friendship remembered for creatures that moved out. */
+  friends: Record<string, Omit<Resident, 'species'>>;
   /** Resident accessories bought with gems (shared by all residents). */
   accs: string[];
 }
@@ -307,6 +309,7 @@ export function defaultHome(now = Date.now()): HomeState {
     intro: false,
     paint: { ground: 'meadow', sea: 'blue' },
     paints: [],
+    friends: {},
     accs: [],
   };
 }
@@ -395,15 +398,21 @@ export function tickBuilds(h: HomeState, now = Date.now()): number[] {
 }
 
 /** A campaign win speeds every active build up. */
-export function speedUpBuilds(h: HomeState, ms = WIN_SPEEDUP) {
+export function speedUpBuilds(h: HomeState, ms = WIN_SPEEDUP, now = Date.now()) {
   let n = 0;
   for (const b of h.plots) {
-    if (b?.done) {
-      b.done -= ms;
+    // only builds still in progress, and never into the past (no free production)
+    if (b?.done && b.done > now) {
+      b.done = Math.max(now, b.done - ms);
       n++;
     }
   }
   return n;
+}
+
+/** Level whose effects apply: while upgrading, the previous level still counts. */
+export function effLevel(b: Building, now = Date.now()) {
+  return b.done && b.done > now ? b.lv - 1 : b.lv;
 }
 
 /** Move a building to an empty plot (free, instant). */
@@ -444,14 +453,14 @@ export const PRODUCES: Partial<Record<BuildingType, Produce>> = { mill: 'dust', 
 /** Units per hour at each level. */
 const RATE: Record<Produce, number[]> = {
   dust: [0, 40, 70, 110, 160, 230],
-  booster: [0, 1 / 8, 1 / 6, 1 / 5, 1 / 4, 1 / 3],
+  booster: [0, 1 / 6, 1 / 5, 1 / 4, 1 / 3.5, 1 / 3],
   gem: [0, 1 / 6, 1 / 5, 1 / 4, 1 / 3, 1 / 2.5],
 };
 const BASE_CAP_HOURS = 6;
 
-export function capHours(h: HomeState) {
-  const obs = h.plots.find((b) => b?.type === 'observatory' && !b.done);
-  return BASE_CAP_HOURS + (obs ? obs.lv * 2 : 0);
+export function capHours(h: HomeState, now = Date.now()) {
+  const obs = h.plots.find((b) => b?.type === 'observatory');
+  return BASE_CAP_HOURS + (obs ? Math.max(0, effLevel(obs, now)) * 2 : 0);
 }
 
 export function rateOf(b: Building) {
@@ -523,8 +532,11 @@ export function anyReady(h: HomeState, now = Date.now()) {
 // ------------------------------------------------------------------ residents
 export const FRIEND_LEVELS = [0, 3, 8, 15, 25];
 
-export function denCapacity(h: HomeState) {
-  return h.plots.reduce((a, b) => a + (b?.type === 'den' && !(b.done && b.lv === 1) ? b.lv + 1 : 0), 0);
+export function denCapacity(h: HomeState, now = Date.now()) {
+  return h.plots.reduce((a, b) => {
+    const lv = b?.type === 'den' ? effLevel(b, now) : 0;
+    return a + (lv > 0 ? lv + 1 : 0);
+  }, 0);
 }
 
 export function charm(h: HomeState) {
@@ -545,7 +557,9 @@ export function invite(p: Profile, species: string): boolean {
   const h = p.home;
   if (!p.seen.includes(species) || h.residents.some((r) => r.species === species)) return false;
   if (h.residents.length >= denCapacity(h)) return false;
-  h.residents.push({ species, fp: 0, lastReq: -1, rewarded: 1 });
+  // a creature that lived here before remembers you (and its friendship, rewards and today's request)
+  const old = h.friends?.[species];
+  h.residents.push(old ? { ...old, species } : { species, fp: 0, lastReq: -1, rewarded: 1 });
   return true;
 }
 
@@ -554,8 +568,22 @@ export function sendHome(p: Profile, species: string): boolean {
   if (h.expedition?.species === species) return false;
   const i = h.residents.findIndex((r) => r.species === species);
   if (i < 0) return false;
-  h.residents.splice(i, 1);
+  const [r] = h.residents.splice(i, 1);
+  h.friends = { ...h.friends, [species]: { ...r } };
   return true;
+}
+
+/** Add friendship points, paying each newly reached level exactly once. */
+export function addFriendship(p: Profile, r: Resident, pts: number): { levelUp?: number; gems?: number } {
+  r.fp += pts;
+  const lv = friendLevel(r.fp);
+  if (lv <= r.rewarded) return {};
+  let gems = 0;
+  for (let l = r.rewarded + 1; l <= lv; l++) gems += 5 * l;
+  p.gems += gems;
+  r.rewarded = lv;
+  if (lv >= FRIEND_LEVELS.length && !p.mementos.includes(r.species)) p.mementos.push(r.species);
+  return { levelUp: lv, gems };
 }
 
 export type RequestKind = 'treat' | 'pat' | 'decor';
@@ -603,17 +631,8 @@ export function fulfil(p: Profile, species: string, now = Date.now()): { result:
   if (req.kind === 'decor' && !countOf(h, req.decor!)) return { result: 'decor' };
   r.lastReq = period(now);
   // charm makes friends faster: +1 bonus point per 4 charm
-  r.fp += (req.kind === 'treat' ? 2 : 1) + Math.floor(charm(h) / 4);
-  const lv = friendLevel(r.fp);
-  if (lv > r.rewarded) {
-    const gems = (lv - r.rewarded) * 5 * lv;
-    p.gems += gems;
-    const levelUp = lv;
-    r.rewarded = lv;
-    if (lv >= FRIEND_LEVELS.length && !p.mementos.includes(species)) p.mementos.push(species);
-    return { result: 'ok', levelUp, gems };
-  }
-  return { result: 'ok' };
+  const up = addFriendship(p, r, (req.kind === 'treat' ? 2 : 1) + Math.floor(charm(h) / 4));
+  return { result: 'ok', ...up };
 }
 
 export function requestsWaiting(h: HomeState, now = Date.now()) {
@@ -623,9 +642,9 @@ export function requestsWaiting(h: HomeState, now = Date.now()) {
 // ------------------------------------------------------------------ expeditions
 export const EXPEDITION_HOURS = [1, 4, 8];
 
-export function towerLevel(h: HomeState) {
+export function towerLevel(h: HomeState, now = Date.now()) {
   const t = h.plots.find((b) => b?.type === 'tower');
-  return t && !(t.done && t.lv === 1) ? t.lv : 0;
+  return t ? Math.max(0, effLevel(t, now)) : 0;
 }
 
 export function expeditionOptions(h: HomeState) {
@@ -665,7 +684,7 @@ export function finishExpedition(p: Profile, now = Date.now()) {
   p.gems += loot.gems;
   for (const [k, v] of Object.entries(loot.boosters)) p.boosters[k as BoosterId] += v ?? 0;
   const r = h.residents.find((x) => x.species === e.species);
-  if (r) r.fp += Math.ceil(e.hours / 4) + 1;
+  if (r) addFriendship(p, r, Math.ceil(e.hours / 4) + 1);
   h.expedition = null;
   return { ...loot, species: e.species, planet: e.planet, hours: e.hours };
 }

@@ -54,13 +54,27 @@ export interface Modal {
   close: () => void;
 }
 
-export function modal(content: Child[], opts: { cls?: string; dismiss?: boolean; onClose?: () => void } = {}): Modal {
+/** Abort hooks of open modals, run when navigation wipes them (see closeModals). */
+const aborts = new Set<() => void>();
+
+/**
+ * `onAbort` runs only if the modal is wiped by navigation rather than closed
+ * (use it to settle promises, e.g. the parental gate), so nothing is left hanging.
+ */
+export function modal(content: Child[], opts: { cls?: string; dismiss?: boolean; onClose?: () => void; onAbort?: () => void } = {}): Modal {
   const box = h('div', { class: `modal ${opts.cls ?? ''}` }, ...content);
   const scrim = h('div', { class: 'scrim' }, box);
   let done = false;
+  const abort = () => {
+    if (done) return;
+    done = true;
+    opts.onAbort?.();
+  };
+  if (opts.onAbort) aborts.add(abort);
   const close = () => {
     if (done) return;
     done = true;
+    aborts.delete(abort);
     scrim.classList.add('out');
     scrim.style.pointerEvents = 'none';
     setTimeout(() => scrim.remove(), 200);
@@ -72,6 +86,9 @@ export function modal(content: Child[], opts: { cls?: string; dismiss?: boolean;
 }
 
 export function closeModals() {
+  const pending = [...aborts];
+  aborts.clear();
+  pending.forEach((f) => f());
   overlay.replaceChildren();
 }
 
@@ -96,7 +113,7 @@ export function confirmBox(text: string, yes: string, no = t('Cancel')): Promise
           }),
         ),
       ],
-      { onClose: () => !answered && res(false) },
+      { onClose: () => !answered && res(false), onAbort: () => !answered && res(false) },
     );
   });
 }

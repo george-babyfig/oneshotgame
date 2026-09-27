@@ -164,11 +164,17 @@ export function earnedBadges(p: Profile) {
 export function pinnedBadges(p: Profile) {
   const earned = earnedBadges(p);
   const pinned = p.passport.badges.map((id) => earned.find((a) => a.id === id)).filter((a) => !!a);
-  if (pinned.length) return pinned.slice(0, BADGE_SLOTS);
+  // once the player has chosen (even an empty shelf), respect it
+  if (p.passport.badgesSet || pinned.length) return pinned.slice(0, BADGE_SLOTS);
   return earned.slice(-BADGE_SLOTS).reverse();
 }
 
 export function toggleBadge(p: Profile, id: string): boolean {
+  if (!earnedBadges(p).some((a) => a.id === id)) return false;
+  if (!p.passport.badgesSet) {
+    p.passport.badges = pinnedBadges(p).map((a) => a.id);
+    p.passport.badgesSet = true;
+  }
   const i = p.passport.badges.indexOf(id);
   if (i >= 0) {
     p.passport.badges.splice(i, 1);

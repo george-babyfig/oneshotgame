@@ -123,7 +123,7 @@ describe('progression', () => {
 
   it('migrates v1 saves', () => {
     const p = migrate({ gems: 99, level: 5, stars: { 1: 3, 2: 2 }, galaxy: [{ n: 1, name: 'a', hue: 1, stars: 3, species: [], life: 9 }] });
-    expect(p.v).toBe(2);
+    expect(p.v).toBe(3);
     expect(p.gems).toBe(99);
     expect(p.galaxy[0].colors).toEqual([]);
     expect(p.settings.reduceMotion).toBe(false);

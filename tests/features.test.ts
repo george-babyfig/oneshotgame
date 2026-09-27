@@ -184,3 +184,24 @@ describe('review fixes', async () => {
     expect(p.stats.wins).toBe(3);
   });
 });
+
+describe('inbox fixes', async () => {
+  const I = await import('../src/meta/inbox');
+  it('never re-delivers a letter after the inbox is trimmed', () => {
+    const p = defaultProfile(0);
+    p.tutorial = true;
+    I.checkMail(p, new Date(2026, 0, 10));
+    expect(p.mail.some((m) => m.id === 'welcome')).toBe(true);
+    p.mail = [];
+    I.checkMail(p, new Date(2026, 0, 11));
+    expect(p.mail.some((m) => m.id === 'welcome')).toBe(false);
+  });
+  it('one winter letter per winter, across the new year', () => {
+    const p = defaultProfile(0);
+    p.tutorial = true;
+    I.checkMail(p, new Date(2025, 11, 20));
+    const n = p.mail.length;
+    I.checkMail(p, new Date(2026, 0, 5));
+    expect(p.mail.length).toBe(n);
+  });
+});

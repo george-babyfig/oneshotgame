@@ -104,9 +104,13 @@ describe('planet passport', () => {
     p.chapters = [1];
     const earned = ['first_planet', 'planets_10', 'planets_50', 'first_creature', 'chapter_1'].map((x) => `com.pocketplanet.game.ach.${x}`);
     expect(toggleBadge(p, 'com.pocketplanet.game.ach.lifebook_full')).toBe(false);
+    p.passport.badgesSet = true; // start from an empty shelf
     earned.forEach((id) => toggleBadge(p, id));
     expect(p.passport.badges.length).toBe(BADGE_SLOTS);
     expect(pinnedBadges(p).map((a) => a.id)).toEqual(earned.slice(-BADGE_SLOTS));
+    // unpinning everything keeps the shelf empty instead of refilling it
+    [...p.passport.badges].forEach((id) => toggleBadge(p, id));
+    expect(pinnedBadges(p)).toEqual([]);
   });
 });
 

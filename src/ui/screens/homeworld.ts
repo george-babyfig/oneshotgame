@@ -46,6 +46,7 @@ import {
   sendHome,
   startExpedition,
   tickHome,
+  requestsWaiting,
   RESIDENT_ACCS,
   accAvailable,
   wearAcc,
@@ -74,7 +75,7 @@ import { SEASON_EMOJI, SEASON_NAMES, nightness, seasonOf } from '../../meta/seas
 import { drawMeteors, drawSeason } from '../art/seasons';
 import { passportName } from '../../meta/passport';
 import type { App } from '../app';
-import { t, tp } from '../../i18n';
+import { getLang, t, tp } from '../../i18n';
 
 const TAU = Math.PI * 2;
 
@@ -481,9 +482,44 @@ export function showHomeworld(app: App) {
   canvas.addEventListener('pointercancel', () => (drag = null));
 
   // ---------------------------------------------------------------- panel
+  /** Things that only need their text refreshed each second (timers). */
+  let live: (() => void)[] = [];
+  let lastSig = '';
+  /** Everything the panel shows except countdown text; a change means re-render. */
+  const signature = () => {
+    const now = Date.now();
+    return JSON.stringify([
+      selected,
+      moving,
+      p.dust,
+      p.gems,
+      home.ring,
+      home.debris,
+      home.residents.length,
+      requestsWaiting(home, now),
+      !!home.expedition,
+      expeditionBack(home, now),
+      home.plots.map((b, i) => (b ? [b.type, b.lv, !!b.done && b.done > now, ready(home, i, now)] : 0)),
+    ]);
+  };
+  const tickPanel = () => {
+    tickHome(p);
+    if (signature() !== lastSig) renderPanel();
+    else live.forEach((f) => f());
+  };
+  const liveText = (el: HTMLElement, text: () => string) => {
+    live.push(() => (el.textContent = text()));
+    return el;
+  };
+
   function renderPanel() {
     const now = Date.now();
     tickHome(p, now);
+    live = [];
+    lastSig = signature();
+    // keep the top bar's stardust/gems in step with what the panel just did
+    const bar = canvas.parentElement?.querySelector('.topbar');
+    if (bar) bar.replaceWith(app.topBar(true));
     ringLbl.textContent = ` ${t('Ring {n}', { n: home.ring })}`;
     const kids: (HTMLElement | null)[] = [];
     const i = selected;
@@ -526,7 +562,10 @@ export function showHomeworld(app: App) {
         h(
           'div',
           { class: 'row' },
-          btn(expeditionLabel(), expeditionBack(home, now) ? 'gem' : 'ghost', () => expeditionSheet(app, renderPanel)),
+          liveText(
+            btn(expeditionLabel(), expeditionBack(home, now) ? 'gem' : 'ghost', () => expeditionSheet(app, renderPanel)),
+            expeditionLabel,
+          ),
           btn(home.ring >= MAX_RING ? t('Max size') : t('Expand'), 'ghost', () => expandSheet(app, () => showHomeworld(app))),
         ),
       );
@@ -603,8 +642,11 @@ export function showHomeworld(app: App) {
           ),
         ),
       );
-      if (building) kids.push(h('div', { class: 'hw-timer' }, t('🛸 Building… {time} left', { time: fmtTime(b.done! - now) })));
-      else if (PRODUCES[b.type]) {
+      if (building) {
+        const done = b.done!;
+        const label = () => t('🛸 Building… {time} left', { time: fmtTime(done - Date.now()) });
+        kids.push(liveText(h('div', { class: 'hw-timer' }, label()), label));
+      } else if (PRODUCES[b.type]) {
         const kind = PRODUCES[b.type]!;
         const perH = rateOf(b);
         const every = fmtTime(3600e3 / perH);
@@ -632,7 +674,7 @@ export function showHomeworld(app: App) {
             { class: 'hw-prod' },
             t('Expeditions: {list}', {
               list: expeditionOptions(home)
-                .map((x) => `${x}h`)
+                .map((x) => t('{h}h', { h: x }))
                 .join(' · '),
             }),
           ),
@@ -668,7 +710,13 @@ export function showHomeworld(app: App) {
         } else if (b.lv >= MAX_LEVEL) row.push(h('div', { class: 'ws-state' }, t('✓ Max level')));
       }
       if (b.type === 'den') row.push(btn(t('Residents'), 'ghost', () => residentsSheet(app, renderPanel)));
-      if (b.type === 'tower' && !building) row.push(btn(expeditionLabel(), 'ghost', () => expeditionSheet(app, renderPanel)));
+      if (b.type === 'tower' && !building)
+        row.push(
+          liveText(
+            btn(expeditionLabel(), 'ghost', () => expeditionSheet(app, renderPanel)),
+            expeditionLabel,
+          ),
+        );
       row.push(btn(t('Move'), 'ghost', () => ((moving = i), renderPanel())));
       kids.push(h('div', { class: 'row hw-actions' }, ...row));
     }
@@ -694,7 +742,7 @@ export function showHomeworld(app: App) {
   }
 
   renderPanel();
-  const tick = setInterval(renderPanel, 1000);
+  const tick = setInterval(tickPanel, 1000);
   raf = requestAnimationFrame(frame);
 
   app.mount(
@@ -780,18 +828,23 @@ function residentsSheet(app: App, after: () => void) {
         'div',
         { class: 'grow' },
         h(
-          'button',
-          { class: 'nick', onclick: () => (m.close(), nickSheet(app, r.species, () => residentsSheet(app, after))) },
-          r.nick ? h('b', null, r.nick) : null,
-          h('small', null, r.nick ? ` · ${t(sp.name)}` : t(sp.name)),
-          ' ✏️',
+          'div',
+          { class: 'nick-row' },
           h(
-            'span',
+            'button',
+            { class: 'nick', onclick: () => (m.close(), nickSheet(app, r.species, () => residentsSheet(app, after))) },
+            r.nick ? h('b', null, r.nick) : null,
+            h('small', null, r.nick ? ` · ${t(sp.name)}` : t(sp.name)),
+            ' ✏️',
+          ),
+          h(
+            'button',
             {
               class: 'dress',
-              onclick: (e: Event) => (e.stopPropagation(), m.close(), accSheet(app, r.species, () => residentsSheet(app, after))),
+              'aria-label': t('Dress up {name}', { name: r.nick ?? t(sp.name) }),
+              onclick: () => (m.close(), accSheet(app, r.species, () => residentsSheet(app, after))),
             },
-            ' 👒',
+            '👒',
           ),
           isBestFriend(r) ? h('span', { class: 'ribbon' }, t('🎀 Best friends')) : null,
         ),
@@ -1148,7 +1201,7 @@ function renderPhoto(app: App, src: HTMLCanvasElement, frame: Frame): HTMLCanvas
   g.font = font(500, 36);
   g.fillStyle = frame === 'polaroid' ? '#6a6480' : '#c9c2ff';
   g.fillText(
-    `${SEASON_EMOJI[season]} ${t(SEASON_NAMES[season])} · ${t('Ring {n}', { n: p.home.ring })} · ${new Date().toLocaleDateString()}`,
+    `${SEASON_EMOJI[season]} ${t(SEASON_NAMES[season])} · ${t('Ring {n}', { n: p.home.ring })} · ${new Date().toLocaleDateString(getLang() || undefined)}`,
     W / 2,
     pad + 40 + size + 150,
   );
@@ -1156,6 +1209,10 @@ function renderPhoto(app: App, src: HTMLCanvasElement, frame: Frame): HTMLCanvas
   g.fillStyle = frame === 'polaroid' ? '#3fae6a' : '#5ef2b0';
   g.fillText('Pocket Planet', W / 2, H - 40);
   return c;
+}
+
+function liveCanvas(fallback: HTMLCanvasElement) {
+  return (document.querySelector('.hw-canvas') as HTMLCanvasElement | null) ?? fallback;
 }
 
 function photoMode(app: App, src: HTMLCanvasElement) {
@@ -1197,7 +1254,8 @@ function photoMode(app: App, src: HTMLCanvasElement) {
     preview,
     frames,
     btn(t('📤 Share photo'), 'primary wide', () =>
-      shareCanvas(renderPhoto(app, src, frame), t('My Homeworld in Pocket Planet 🪐'), 'homeworld-photo'),
+      // use the live canvas (the screen may have re-rendered while this sheet was open)
+      shareCanvas(renderPhoto(app, liveCanvas(src), frame), t('My Homeworld in Pocket Planet 🪐'), 'homeworld-photo'),
     ),
   ]);
 }

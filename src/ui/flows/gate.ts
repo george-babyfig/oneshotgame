@@ -34,7 +34,7 @@ export function parentalGate(rnd = Math.random): Promise<boolean> {
         ),
         btn(t('Cancel'), 'ghost wide', () => finish(false)),
       ],
-      { onClose: () => finish(false) },
+      { onClose: () => finish(false), onAbort: () => finish(false) },
     );
   });
 }

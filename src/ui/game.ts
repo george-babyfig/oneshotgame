@@ -390,6 +390,24 @@ export class LevelScene {
     this.hudThrows.classList.toggle('low', secs <= 10);
   }
 
+  /** Celebrate newly earned stars (from score rising, or goals completing). */
+  private checkStars() {
+    const got = this.starsNow(this.shownScore);
+    if (got <= this.starsGot) return;
+    this.starsGot = got;
+    sfx.star(got - 1);
+    haptic.success();
+    if (got === 3) {
+      this.confetti();
+      this.popup(this.cx, this.cy - this.R * 1.9, t('★★★ Perfect planet!'), '#ffd84a', 24, 2);
+    }
+    this.renderFinish();
+    const s = this.hudStars[got - 1];
+    s.classList.remove('pop');
+    void s.offsetWidth;
+    s.classList.add('pop');
+  }
+
   /** Stars that count: every goal must be met first. */
   private starsNow(score = this.score) {
     return goalsMet(this.planet, this.L.goals) ? starsFor(score, this.L.stars) : 0;
@@ -420,8 +438,8 @@ export class LevelScene {
       this.goalsDone = n;
       const all = n === this.L.goals.length;
       if (all) {
-        this.starsGot = this.starsNow(this.shownScore);
         this.renderScore();
+        this.checkStars();
       }
       setTimeout(() => {
         this.popup(this.cx, this.cy - this.R * 1.6, all ? t('All goals complete!') : t('Goal complete!'), '#9dffb0', 24, 1.6);
@@ -536,14 +554,15 @@ export class LevelScene {
       const r = this.R * 0.3;
       // an ellipse that always stays on screen
       const dx = Math.min(this.R * 2.15, this.w / 2 - r * 1.3);
-      const dy = this.R * 1.75;
+      const dy = Math.max(this.R * 1.2, Math.min(this.R * 1.75, this.launch.y - this.cy - r - 60));
       return [{ x: this.cx + Math.cos(a) * dx, y: this.cy + Math.sin(a) * dy, r }];
     }
     if (this.L.twist !== 'moon' && this.L.twist !== 'twin') return [];
     const out = [];
     const a = this.time * 0.8;
     const d = this.R * 2.05;
-    out.push({ x: this.cx + Math.cos(a) * d, y: this.cy + Math.sin(a) * d, r: this.R * 0.28 });
+    const dyMax = Math.max(this.R * 1.3, Math.min(d, this.launch.y - this.cy - this.R * 0.28 - 50));
+    out.push({ x: this.cx + Math.cos(a) * d, y: this.cy + Math.sin(a) * dyMax, r: this.R * 0.28 });
     if (this.L.twist === 'twin') {
       const b = -this.time * 0.6 + Math.PI;
       const e = this.R * 1.6;
@@ -635,7 +654,6 @@ export class LevelScene {
     const nova = this.charge >= NOVA_CHARGE;
     this.shot = { kind: this.cur, x, y, vx, vy, t: 0, trail: [], nova };
     if (nova) {
-      this.charge = 0;
       sfx.combo(6);
       haptic.heavy();
     }
@@ -698,21 +716,7 @@ export class LevelScene {
       const d = this.score - this.shownScore;
       this.shownScore += Math.sign(d) * Math.max(1, Math.ceil(Math.abs(d) * 0.12));
       if (Math.abs(this.score - this.shownScore) < 1) this.shownScore = this.score;
-      const got = this.starsNow(this.shownScore);
-      if (got > this.starsGot) {
-        this.starsGot = got;
-        sfx.star(got - 1);
-        haptic.success();
-        if (got === 3) {
-          this.confetti();
-          this.popup(this.cx, this.cy - this.R * 1.9, t('★★★ Perfect planet!'), '#ffd84a', 24, 2);
-        }
-        this.renderFinish();
-        const s = this.hudStars[got - 1];
-        s.classList.remove('pop');
-        void s.offsetWidth;
-        s.classList.add('pop');
-      }
+      this.checkStars();
       this.renderScore();
     }
     const sh = this.shot;
@@ -725,6 +729,11 @@ export class LevelScene {
         const i = this.hitSector(sh.x, sh.y);
         const m = this.moons.find((mm) => Math.hypot(sh.x - mm.x, sh.y - mm.y) < mm.r + 8);
         if (m && this.L.twist === 'boss') {
+          // a Supernova hits the Guardian twice as hard
+          if (sh.nova) {
+            this.charge = 0;
+            this.bossHp = Math.max(1, this.bossHp - 1);
+          }
           this.hitBoss(sh.x, sh.y);
           this.shot = null;
           this.afterShot();
@@ -799,12 +808,14 @@ export class LevelScene {
     this.bonus += bonus;
     if (bonus) setTimeout(() => this.popup(sh.x - 34, sh.y + 16, t('🧪 +{n}', { n: bonus }), '#c9a8ff', 16, 1.2), 380);
     if (sh.nova) {
+      this.charge = 0;
       this.ring(sh.x, sh.y, '#ffd24a', this.R * 1.6);
       this.burst(sh.x, sh.y, '#fff2b8', 50, 9);
       setTimeout(() => this.popup(this.cx, this.cy - this.R * 1.5, t('SUPERNOVA!'), '#ffd24a', 32, 1.4), 120);
     } else {
       const before = this.charge;
-      this.charge = Math.min(NOVA_CHARGE, this.charge + novaCharge(res.changed.length, res.spawned.length, lv) * (this.o.shower ? 2 : 1));
+      if (this.novaOn)
+        this.charge = Math.min(NOVA_CHARGE, this.charge + novaCharge(res.changed.length, res.spawned.length, lv) * (this.o.shower ? 2 : 1));
       if (before < NOVA_CHARGE && this.charge >= NOVA_CHARGE) {
         setTimeout(() => {
           const L = this.launch;
@@ -965,7 +976,11 @@ export class LevelScene {
     this.endModal(this.starsNow());
   }
 
+  /** Stars already won before buying "+5 throws" (a continue can't lose them). */
+  private minStars = 0;
+
   private endModal(stars: number) {
+    stars = Math.max(stars, this.minStars);
     const cost = this.o.continueCost(this.continues);
     const canCont = this.continues < 3 && this.leftover === 0 && !this.o.competitive && !this.o.timeLimit;
     const won = stars > 0;
@@ -983,6 +998,7 @@ export class LevelScene {
       m.close();
       this.modalOpen = null;
       this.continues++;
+      this.minStars = Math.max(this.minStars, stars);
       this.throwsLeft += 5;
       sfx.gem();
       haptic.success();
@@ -1468,8 +1484,13 @@ export class LevelScene {
   }
 
   /** Supernova meter: a ring around the launcher that fills as you transform land. */
+  /** The Supernova is introduced after the first tutorial planets. */
+  private get novaOn() {
+    return !(this.o.tutorial && this.L.n < 3);
+  }
+
   private drawNovaMeter(x: number, y: number, aiming: boolean) {
-    if (this.o.tutorial && this.L.n < 3) return;
+    if (!this.novaOn) return;
     const g = this.g;
     const k = this.charge / NOVA_CHARGE;
     const full = k >= 1;

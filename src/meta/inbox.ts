@@ -84,10 +84,10 @@ const RULES: Rule[] = [
   {
     kind: 'best',
     key: (p) => {
-      const best = p.home.residents.find((r) => friendLevel(r.fp) >= FRIEND_LEVELS.length);
-      return best ? `best-${best.species}` : null;
+      const best = newBestFriend(p);
+      return best ? `best-${best}` : null;
     },
-    vars: (p) => ({ c: p.home.residents.find((r) => friendLevel(r.fp) >= FRIEND_LEVELS.length)?.species ?? '' }),
+    vars: (p) => ({ c: newBestFriend(p) ?? '' }),
     letter: () => ({
       from: '{c}',
       face: '{c}',
@@ -98,7 +98,7 @@ const RULES: Rule[] = [
   },
   {
     kind: 'season',
-    key: (p, now) => (p.tutorial ? `season-${now.getFullYear()}-${seasonOf(now, p.settings.hemi)}` : null),
+    key: (p, now) => (p.tutorial ? seasonKey(now) : null),
     vars: (p, now) => ({ s: seasonOf(now, p.settings.hemi) }),
     letter: (v) => ({
       from: MC,
@@ -154,15 +154,38 @@ const SEASON_BODIES: Record<string, string> = {
 };
 
 /** Deliver any letters whose moment has come. Returns how many arrived. */
+/** A best friend who hasn't sent their letter yet. */
+function newBestFriend(p: Profile) {
+  const seen = (s: string) => p.mailSeen.includes(`best-${s}`) || p.mail.some((m) => m.id === `best-${s}`);
+  return p.home.residents.find((r) => friendLevel(r.fp) >= FRIEND_LEVELS.length && !seen(r.species))?.species ?? null;
+}
+
+/**
+ * One key per quarter of the year, independent of hemisphere, and counted from
+ * the year the quarter starts (so Dec–Feb is one season, not two).
+ */
+function seasonKey(d: Date) {
+  const m = d.getMonth();
+  const q = m === 11 || m <= 1 ? 0 : m <= 4 ? 1 : m <= 7 ? 2 : 3;
+  const year = m <= 1 ? d.getFullYear() - 1 : d.getFullYear();
+  return `season-${year}-q${q}`;
+}
+
 export function checkMail(p: Profile, now = new Date()): number {
   let n = 0;
   for (const r of RULES) {
     const id = r.key(p, now);
-    if (!id || p.mail.some((m) => m.id === id)) continue;
+    if (!id || p.mailSeen.includes(id) || p.mail.some((m) => m.id === id)) continue;
     p.mail.unshift({ id, kind: r.kind, at: now.getTime(), read: false, claimed: false, vars: r.vars?.(p, now) });
+    p.mailSeen = [...p.mailSeen, id];
     n++;
   }
-  if (p.mail.length > 60) p.mail.length = 60;
+  // keep the inbox short: drop old letters that are read and have no gift waiting
+  while (p.mail.length > 60) {
+    let i = p.mail.length - 1;
+    while (i >= 0 && !(p.mail[i].read && (p.mail[i].claimed || !letterOf(p.mail[i])?.gift))) i--;
+    p.mail.splice(i >= 0 ? i : p.mail.length - 1, 1);
+  }
   return n;
 }
 
