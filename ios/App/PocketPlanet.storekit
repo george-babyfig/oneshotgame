@@ -1,0 +1,117 @@
+{
+  "identifier": "B8D2E1F3",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "0.99",
+      "familyShareable": false,
+      "internalID": "6600000001",
+      "localizations": [
+        {
+          "description": "80 gems",
+          "displayName": "Handful of Gems",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.pocketplanet.game.gems80",
+      "referenceName": "Handful of Gems",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "4.99",
+      "familyShareable": false,
+      "internalID": "6600000002",
+      "localizations": [
+        {
+          "description": "500 gems",
+          "displayName": "Pouch of Gems",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.pocketplanet.game.gems500",
+      "referenceName": "Pouch of Gems",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "9.99",
+      "familyShareable": false,
+      "internalID": "6600000003",
+      "localizations": [
+        {
+          "description": "1200 gems",
+          "displayName": "Chest of Gems",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.pocketplanet.game.gems1200",
+      "referenceName": "Chest of Gems",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "19.99",
+      "familyShareable": false,
+      "internalID": "6600000004",
+      "localizations": [
+        {
+          "description": "2800 gems",
+          "displayName": "Galaxy of Gems",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.pocketplanet.game.gems2800",
+      "referenceName": "Galaxy of Gems",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "1.99",
+      "familyShareable": false,
+      "internalID": "6600000005",
+      "localizations": [
+        {
+          "description": "All the gems saved in your piggy bank",
+          "displayName": "Gem Piggy Bank",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.pocketplanet.game.piggy",
+      "referenceName": "Gem Piggy Bank",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "2.99",
+      "familyShareable": false,
+      "internalID": "6600000006",
+      "localizations": [
+        {
+          "description": "300 gems, 5 of every booster and the Aurora atmosphere",
+          "displayName": "Starter Pack",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.pocketplanet.game.starter",
+      "referenceName": "Starter Pack",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "4.99",
+      "familyShareable": false,
+      "internalID": "6600000007",
+      "localizations": [
+        {
+          "description": "Unlock the premium Star Road lane forever",
+          "displayName": "Cosmic Pass",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.pocketplanet.game.cosmicpass",
+      "referenceName": "Cosmic Pass",
+      "type": "NonConsumable"
+    }
+  ],
+  "settings": {},
+  "subscriptionGroups": [],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}

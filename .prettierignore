@@ -1,0 +1,7 @@
+dist
+ios
+node_modules
+package-lock.json
+resources/*.png
+store/screenshots
+src/locales
