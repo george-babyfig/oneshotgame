@@ -1,6 +1,7 @@
 // Pure game-economy rules. Everything here mutates a Profile and returns what
 // happened, so the UI can celebrate it and tests can pin it down.
 import { BIOMES, type Planet } from '../core/world';
+import { DIFFICULTY_DUST, type Difficulty } from '../core/levels';
 import { PIGGY_MAX, PIGGY_PER_WIN, PRODUCT_BY_ID, VAULT_HOURS, DAILY_GEMS, GEMS_PER_NEW_SPECIES } from './config';
 import { dayGap, type GalaxyPlanet, type Profile } from './profile';
 import { questEvent, type QuestEvent } from './progression';
@@ -55,33 +56,39 @@ export function planetColors(planet: Planet) {
     .map(([c]) => c);
 }
 
+export interface WinInput {
+  n: number;
+  stars: number;
+  score: number;
+  planet: Planet;
+  name: string;
+  hue: number;
+  difficulty?: Difficulty;
+  /** Meteor-finale stardust for unused throws. */
+  bonusDust?: number;
+}
+
 /** Record a won campaign level. */
-export function applyLevelWin(
-  p: Profile,
-  n: number,
-  stars: number,
-  score: number,
-  planet: Planet,
-  name: string,
-  hue: number,
-  bonusDust = 0,
-): LevelOutcome {
+export function applyLevelWin(p: Profile, w: WinInput): LevelOutcome {
+  const { n, stars, score, planet } = w;
+  const difficulty = w.difficulty ?? 'normal';
   const prev = p.stars[n] ?? 0;
   const firstClear = prev === 0;
   const newStars = Math.max(0, stars - prev);
-  const dust = 25 + stars * 15 + (firstClear ? 40 : 0) + bonusDust;
-  const gems = stars === 3 && prev < 3 ? 2 : 0;
+  const dust = (25 + stars * 15 + (firstClear ? 40 : 0)) * DIFFICULTY_DUST[difficulty] + (w.bonusDust ?? 0);
+  const gems = (stars === 3 && prev < 3 ? 2 : 0) + (firstClear && difficulty === 'super' ? 5 : 0);
   p.stars[n] = Math.max(prev, stars);
   p.dust += dust;
   p.gems += gems;
   p.piggy = Math.min(PIGGY_MAX, p.piggy + PIGGY_PER_WIN);
   p.stats.wins++;
+  if (difficulty !== 'normal') p.stats.hardWins++;
   p.stats.bestLife = Math.max(p.stats.bestLife, score);
   if (stars === 3 && prev < 3) p.stats.threeStars++;
   const entry: GalaxyPlanet = {
     n,
-    name,
-    hue,
+    name: w.name,
+    hue: w.hue,
     stars: p.stars[n],
     species: [...planet.speciesFound],
     life: score,

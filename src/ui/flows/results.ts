@@ -10,7 +10,16 @@ import type { App } from '../app';
 export function levelResults(app: App, r: LevelResult) {
   const p = app.p;
   const n = r.level.n;
-  const out = applyLevelWin(p, n, r.stars, r.score, r.planet, r.level.name, r.level.hue, r.leftover * FINISH_DUST_PER_THROW);
+  const out = applyLevelWin(p, {
+    n,
+    stars: r.stars,
+    score: r.score,
+    planet: r.planet,
+    name: r.level.name,
+    hue: r.level.hue,
+    difficulty: r.level.difficulty,
+    bonusDust: r.leftover * FINISH_DUST_PER_THROW,
+  });
   const wasTutorial = !p.tutorial;
   p.tutorial = true;
   app.saveNow();

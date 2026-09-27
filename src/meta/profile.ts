@@ -1,5 +1,6 @@
 import { loadKey, saveKey } from './storage';
 import type { BoosterId, UpgradeId } from './config';
+import type { Planet } from '../core/world';
 
 export interface GalaxyPlanet {
   n: number;
@@ -32,6 +33,21 @@ export interface Stats {
   bestLife: number;
   creatures: number;
   threeStars: number;
+  dailies: number;
+  rushBest: number;
+  rushPlays: number;
+  zenThrows: number;
+  challenges: number;
+  hardWins: number;
+  bestStreak: number;
+}
+
+export interface VisitorGift {
+  species: string;
+  dust: number;
+  gems: number;
+  /** Memento id (= species id) if this visitor left its keepsake. */
+  memento: string | null;
 }
 
 export interface Profile {
@@ -67,6 +83,18 @@ export interface Profile {
   tutorial: boolean;
   meta: { installed: number; lastSeen: number; sessions: number; rated: boolean; starterOffered: boolean; notifAsked: boolean };
   stats: Stats;
+  /** Momentum win streak (0..3) and the day the free shield was last used. */
+  momentum: { streak: number; shieldDay: string };
+  /** Gifts left by visiting creatures, waiting to be opened. */
+  visitors: VisitorGift[];
+  mementos: string[];
+  /** Explorer Rank (1-based) and habitat sets already rewarded. */
+  rank: number;
+  habitats: string[];
+  /** Personal best per mode and challenge history. */
+  challengeLog: { code: string; score: number; stars: number; vs: number }[];
+  /** The persistent Zen Garden world. */
+  zen: Planet | null;
 }
 
 const KEY = 'pp.profile';
@@ -99,7 +127,28 @@ export function defaultProfile(now = Date.now()): Profile {
     settings: { sound: true, music: true, haptics: true, reduceMotion: false, notifications: true },
     tutorial: false,
     meta: { installed: now, lastSeen: now, sessions: 0, rated: false, starterOffered: false, notifAsked: false },
-    stats: { throws: 0, plays: 0, wins: 0, bestLife: 0, creatures: 0, threeStars: 0 },
+    stats: {
+      throws: 0,
+      plays: 0,
+      wins: 0,
+      bestLife: 0,
+      creatures: 0,
+      threeStars: 0,
+      dailies: 0,
+      rushBest: 0,
+      rushPlays: 0,
+      zenThrows: 0,
+      challenges: 0,
+      hardWins: 0,
+      bestStreak: 0,
+    },
+    momentum: { streak: 0, shieldDay: '' },
+    visitors: [],
+    mementos: [],
+    rank: 1,
+    habitats: [],
+    challengeLog: [],
+    zen: null,
   };
 }
 

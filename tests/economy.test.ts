@@ -17,7 +17,7 @@ import { clonePlanet } from '../src/core/world';
 
 const win = (p = defaultProfile(0), n = 1, stars = 2) => {
   const L = makeLevel(n);
-  return { p, out: applyLevelWin(p, n, stars, 100, clonePlanet(L.start), L.name, L.hue) };
+  return { p, out: applyLevelWin(p, { n, stars, score: 100, planet: clonePlanet(L.start), name: L.name, hue: L.hue }) };
 };
 
 describe('economy', () => {
@@ -26,7 +26,7 @@ describe('economy', () => {
     expect(out.firstClear).toBe(true);
     expect(out.dust).toBe(25 + 2 * 15 + 40);
     expect(p.level).toBe(2);
-    const again = applyLevelWin(p, 1, 3, 150, clonePlanet(makeLevel(1).start), 'x', 0);
+    const again = applyLevelWin(p, { n: 1, stars: 3, score: 150, planet: clonePlanet(makeLevel(1).start), name: 'x', hue: 0 });
     expect(again.firstClear).toBe(false);
     expect(again.gems).toBe(2);
     expect(p.level).toBe(2);

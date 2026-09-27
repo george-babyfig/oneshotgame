@@ -7,6 +7,8 @@ import type { App } from '../app';
 
 const PACK_ICONS = ['💎', '👝', '🧰', '🌌'];
 export const PIGGY_MIN = 40;
+/** The piggy bank appears from chapter 2, once players are invested. */
+export const PIGGY_FROM_LEVEL = 10;
 
 export function skinSwatch(glow: string) {
   if (glow === 'aurora') return 'conic-gradient(#ff8fc8,#6ec8ff,#b8ff6e,#ffd24a,#ff8fc8)';
@@ -142,7 +144,7 @@ export function showShop(app: App) {
         'div',
         { class: 'scroll' },
         starter,
-        piggy,
+        p.level > PIGGY_FROM_LEVEL ? piggy : null,
         h('div', { class: 'sec-title' }, 'Gems'),
         packs,
         pass,

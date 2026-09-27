@@ -3,6 +3,7 @@ import { h, btn, modal } from '../dom';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
 import { totalStars } from '../../meta/profile';
+import { difficultyOf } from '../../core/levels';
 import { chapterOf, chapterReward, chestsReady, openChest, rewardText, LEVELS_PER_CHAPTER } from '../../meta/progression';
 import type { App } from '../app';
 
@@ -22,15 +23,17 @@ export function showStarMap(app: App) {
       chStars += s;
       const open = lv <= p.level;
       const k = lv - ch.first;
+      const diff = difficultyOf(lv);
       nodes.push(
         h(
           'button',
           {
-            class: `node${open ? '' : ' locked'}${lv === p.level ? ' current' : ''}${s === 3 ? ' gold' : ''}`,
+            class: `node ${diff}${open ? '' : ' locked'}${lv === p.level ? ' current' : ''}${s === 3 ? ' gold' : ''}`,
             style: `--x:${[18, 50, 82, 66, 34][k % 5]}%`,
             disabled: !open,
             onclick: () => (sfx.click(), haptic.light(), app.preLevel(lv)),
           },
+          diff !== 'normal' ? h('span', { class: 'skull' }, diff === 'super' ? '💀' : '🔥') : null,
           h('b', null, String(lv)),
           h('small', null, open ? '★'.repeat(s) + '☆'.repeat(3 - s) : '🔒'),
         ),

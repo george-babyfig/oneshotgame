@@ -13,6 +13,20 @@ export interface SceneOpts {
   seen: Set<string>;
   tutorial: boolean;
   reduceMotion?: boolean;
+  /** Momentum tier (0-3) active this level. */
+  momentum?: number;
+  /** HUD title override (modes). */
+  label?: string;
+  /** Meteor Rush: seconds on the clock, unlimited throws. */
+  timeLimit?: number;
+  /** Zen Garden: never ends, no targets. */
+  endless?: boolean;
+  /** Competitive modes (daily, rush, challenge): no paid continues, no early finish. */
+  competitive?: boolean;
+  /** Called after every landed throw (Zen saves the planet). */
+  onPlanet?: (p: Planet) => void;
+  /** Label for the win button on the end card. */
+  endLabel?: string;
   gems: () => number;
   spendGems: (n: number) => boolean;
   continueCost: (i: number) => number;
@@ -130,6 +144,7 @@ export class LevelScene {
   private o: SceneOpts;
   planet: Planet;
   private throwsLeft: number;
+  private timeLeft = 0;
   private throwsUsed = 0;
   private qi = 0; // index of the next object to deal
   private cur: Kind;
@@ -185,6 +200,8 @@ export class LevelScene {
       settle(this.planet);
     }
     this.throwsLeft = level.throws + opts.extraThrows + (opts.boosters.shower ? 3 : 0);
+    if (opts.timeLimit) this.timeLeft = opts.timeLimit;
+    if (opts.timeLimit || opts.endless) this.throwsLeft = Infinity;
     this.cur = level.queue[0];
     this.next = level.queue[1];
     this.qi = 2;
@@ -241,8 +258,12 @@ export class LevelScene {
         h(
           'div',
           { class: 'hud-title' },
-          h('div', { class: 'hud-level' }, `Planet ${this.L.n}`),
+          h('div', { class: 'hud-level' }, this.o.label ?? `Planet ${this.L.n}`),
           h('div', { class: 'hud-name' }, this.L.name),
+          this.L.difficulty !== 'normal'
+            ? h('div', { class: `hud-diff ${this.L.difficulty}` }, this.L.difficulty === 'super' ? '💀 SUPER HARD' : '🔥 HARD')
+            : null,
+          this.o.momentum ? h('div', { class: 'hud-diff momentum-tag' }, `⚡ Momentum ×${this.o.momentum}`) : null,
         ),
         this.hudThrows,
       ),
@@ -282,8 +303,14 @@ export class LevelScene {
   }
 
   private renderHud() {
-    this.hudThrows.replaceChildren(h('span', { class: 'n' }, String(this.throwsLeft)), h('span', { class: 'l' }, 'throws'));
-    this.hudThrows.classList.toggle('low', this.throwsLeft <= 2);
+    if (this.o.timeLimit) {
+      this.renderClock();
+    } else if (this.o.endless) {
+      this.hudThrows.replaceChildren(h('span', { class: 'n' }, '∞'), h('span', { class: 'l' }, 'zen'));
+    } else {
+      this.hudThrows.replaceChildren(h('span', { class: 'n' }, String(this.throwsLeft)), h('span', { class: 'l' }, 'throws'));
+      this.hudThrows.classList.toggle('low', this.throwsLeft <= 2);
+    }
     const k = KINDS[this.cur];
     const n = KINDS[this.next];
     this.curEl.textContent = k.emoji;
@@ -302,7 +329,25 @@ export class LevelScene {
     this.hudStars.forEach((s, i) => s.classList.toggle('on', this.shownScore >= this.L.stars[i]));
   }
 
+  private lastClock = -1;
+  private renderClock() {
+    const t = Math.max(0, Math.ceil(this.timeLeft));
+    if (t === this.lastClock) return;
+    if (t <= 5 && t > 0 && this.lastClock !== t) sfx.click();
+    this.lastClock = t;
+    this.hudThrows.replaceChildren(h('span', { class: 'n' }, `${t}`), h('span', { class: 'l' }, 'seconds'));
+    this.hudThrows.classList.toggle('low', t <= 10);
+  }
+
+  private get over() {
+    return this.o.timeLimit ? this.timeLeft <= 0 : this.throwsLeft <= 0;
+  }
+
   private renderFinish() {
+    if (this.o.competitive || this.o.endless || this.o.timeLimit) {
+      this.finishEl.classList.add('hidden');
+      return;
+    }
     const show = this.starsGot > 0 && this.throwsLeft > 0 && !this.ended && !this.finishing;
     this.finishEl.classList.toggle('hidden', !show);
     this.finishEl.classList.toggle('hot', this.starsGot >= 3);
@@ -396,7 +441,7 @@ export class LevelScene {
       return { x: e.clientX - r.left, y: e.clientY - r.top };
     };
     this.canvas.addEventListener('pointerdown', (e) => {
-      if (this.shot || this.ended || this.paused || this.modalOpen || this.finishing) return;
+      if (this.shot || this.ended || this.paused || this.modalOpen || this.finishing || (this.o.timeLimit && this.timeLeft <= 0)) return;
       this.canvas.setPointerCapture(e.pointerId);
       this.aimFrom = pos(e);
       this.aimTo = pos(e);
@@ -439,7 +484,7 @@ export class LevelScene {
   private fire(vx: number, vy: number) {
     const { x, y } = this.launch;
     this.shot = { kind: this.cur, x, y, vx, vy, t: 0, trail: [] };
-    this.throwsLeft--;
+    if (Number.isFinite(this.throwsLeft)) this.throwsLeft--;
     this.throwsUsed++;
     sfx.launch();
     haptic.medium();
@@ -482,6 +527,16 @@ export class LevelScene {
 
   private update(dt: number) {
     this.time += dt;
+    if (this.o.timeLimit && !this.ended && !this.modalOpen && this.timeLeft > 0) {
+      this.timeLeft -= dt;
+      this.renderClock();
+      if (this.timeLeft <= 0) {
+        this.aimFrom = this.aimTo = null;
+        sfx.whoosh();
+        this.popup(this.cx, this.cy - this.R * 1.6, "Time's up!", '#ffd84a', 32, 1.6);
+        this.afterShot();
+      }
+    }
     this.rot += this.L.spin * dt;
     if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 30);
     // score tween
@@ -598,6 +653,7 @@ export class LevelScene {
     }
     this.score = res.after;
     if (res.changed.length) this.o.onTransform?.(res.changed.length);
+    this.o.onPlanet?.(this.planet);
     if (delta !== 0) this.popup(sh.x, sh.y - 20, `${delta > 0 ? '+' : ''}${delta}`, delta > 0 ? '#9dffb0' : '#ff9db0', 26);
     // name up to two newly formed biomes
     const shown = new Set<string>();
@@ -671,14 +727,19 @@ export class LevelScene {
   private endTimer = 0;
   private afterShot() {
     this.renderHud();
-    if (this.throwsLeft <= 0) {
+    if (this.o.endless) return;
+    if (this.over) {
       clearTimeout(this.endTimer);
       this.endTimer = window.setTimeout(() => this.checkEnd(), 1400);
     }
   }
 
   private checkEnd() {
-    if (this.shot || this.ended || this.modalOpen || this.throwsLeft > 0) return;
+    if (this.ended || this.modalOpen || !this.over) return;
+    if (this.shot) {
+      this.endTimer = window.setTimeout(() => this.checkEnd(), 300);
+      return;
+    }
     this.shownScore = this.score;
     this.renderScore();
     const stars = starsFor(this.score, this.L.stars);
@@ -687,7 +748,7 @@ export class LevelScene {
 
   private endModal(stars: number) {
     const cost = this.o.continueCost(this.continues);
-    const canCont = this.continues < 3 && this.leftover === 0;
+    const canCont = this.continues < 3 && this.leftover === 0 && !this.o.competitive && !this.o.timeLimit;
     const won = stars > 0;
     const finish = () => {
       m.close();
@@ -712,7 +773,11 @@ export class LevelScene {
     const need = won ? (stars < 3 ? this.L.stars[stars] - this.score : 0) : this.L.stars[0] - this.score;
     const m = modal(
       [
-        h('div', { class: 'end-title' + (won ? '' : ' lost') }, won ? 'Planet complete!' : 'Out of throws'),
+        h(
+          'div',
+          { class: 'end-title' + (won ? '' : ' lost') },
+          won ? (this.o.timeLimit ? "Time's up!" : 'Planet complete!') : this.o.timeLimit ? "Time's up!" : 'Out of throws',
+        ),
         h('div', { class: 'end-stars' }, ...[0, 1, 2].map((i) => h('span', { class: i < stars ? 'on' : '' }, '★'))),
         h('div', { class: 'end-score' }, `${fmt(this.score)} life`),
         this.leftover
@@ -728,8 +793,8 @@ export class LevelScene {
               cont,
             )
           : null,
-        won
-          ? btn('Collect', 'primary wide', finish)
+        won || this.o.competitive || this.o.timeLimit
+          ? btn(this.o.endLabel ?? 'Collect', 'primary wide', finish)
           : btn('Try again', 'primary wide', () => {
               m.close();
               this.modalOpen = null;
@@ -770,7 +835,7 @@ export class LevelScene {
       [
         h('div', { class: 'end-title' }, 'Paused'),
         btn('Resume', 'primary wide', () => m.close()),
-        btn('Restart planet', 'ghost wide', () => {
+        btn(this.o.momentum ? 'Restart (ends Momentum)' : 'Restart planet', 'ghost wide', () => {
           m.close();
           this.ended = true;
           this.o.onEnd({ level: this.L, score: 0, stars: 0, planet: this.planet, won: false, throwsUsed: -1, leftover: 0 });

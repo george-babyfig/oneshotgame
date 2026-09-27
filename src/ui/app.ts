@@ -13,6 +13,11 @@ import { createIap } from '../meta/iap';
 import { CONTINUE_COSTS, PRODUCT_BY_ID, PRODUCT_BY_KEY, SKINS, type BoosterId } from '../meta/config';
 import { discoverSpecies, grantProduct, spendGems, track } from '../meta/economy';
 import { ensureQuests } from '../meta/progression';
+import { MOMENTUM_PERKS, momentumActive, momentumLoss, momentumWin } from '../meta/momentum';
+import { addVisitors } from '../meta/visitors';
+import { rankFlow } from './flows/rank';
+import { visitorsFlow } from './flows/visitors';
+import { modesFlow } from './flows/modes';
 import { showHome } from './screens/home';
 import { showLifebook } from './screens/lifebook';
 import { showUpgrades } from './screens/upgrades';
@@ -54,6 +59,8 @@ export class App {
     this.p.meta.sessions++;
     this.applySettings();
     ensureQuests(this.p, today());
+    addVisitors(this.p, Date.now());
+    this.p.meta.lastSeen = Date.now();
     const unlock = () => {
       unlockAudio();
       removeEventListener('pointerdown', unlock);
@@ -69,6 +76,8 @@ export class App {
       CapApp.addListener('resume', () => {
         pauseAudio(false);
         ensureQuests(this.p, today());
+        if (addVisitors(this.p, Date.now())) this.save();
+        this.p.meta.lastSeen = Date.now();
         if (this.screen === 'home') this.showHome();
         this.daily();
       });
@@ -158,8 +167,21 @@ export class App {
   quests() {
     questsFlow(this);
   }
+  rank() {
+    rankFlow(this);
+  }
+  visitors() {
+    visitorsFlow(this);
+  }
+  modes() {
+    modesFlow(this);
+  }
+  /** Launch sequence: daily gift, then any visitors' gifts. */
   daily() {
-    if (this.p.tutorial) dailyGiftFlow(this);
+    if (!this.p.tutorial) return;
+    dailyGiftFlow(this, () => {
+      if (this.p.visitors.length && this.screen === 'home') this.visitors();
+    });
   }
   preLevel(n: number) {
     preLevel(this, n);
@@ -227,13 +249,26 @@ export class App {
     const boosters = o.boosters ?? NO_BOOSTERS;
     if (Object.values(boosters).some(Boolean)) track(this.p, 'booster');
     this.p.stats.plays++;
-    const scene = new LevelScene(L, this.sceneOpts({ onEnd: (r) => this.levelEnded(r) }, boosters, !!o.tutorial || n === 1));
+    const tier = momentumActive(this.p) ? this.p.momentum.streak : 0;
+    const perk = MOMENTUM_PERKS[tier];
+    const merged: Boosters = { shower: boosters.shower, spark: boosters.spark || perk.spark, scope: boosters.scope || perk.scope };
+    const opts = this.sceneOpts({ onEnd: (r) => this.levelEnded(r), momentum: tier }, merged, !!o.tutorial || n === 1);
+    opts.extraThrows += perk.throws;
+    const scene = new LevelScene(L, opts);
     this.mount(scene.el, 'level');
     this.scene = scene;
   }
 
   private levelEnded(r: LevelResult) {
-    if (r.throwsUsed === -1 || !r.won) return this.startLevel(r.level.n);
+    if (r.throwsUsed === -1 || !r.won) {
+      const res = momentumLoss(this.p, today());
+      this.save();
+      this.startLevel(r.level.n);
+      if (res === 'shield') toast('🛡️ Your daily shield kept your Momentum!', 'good');
+      if (res === 'lost') toast('Momentum lost — win to build it back up', 'bad');
+      return;
+    }
+    momentumWin(this.p);
     levelResults(this, r);
   }
 

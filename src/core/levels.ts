@@ -40,7 +40,20 @@ export interface LevelDef {
   start: Planet;
   name: string;
   hue: number;
+  difficulty: Difficulty;
 }
+
+export type Difficulty = 'normal' | 'hard' | 'super';
+
+/** Every 5th planet is Hard; the 9th of every chapter is Super Hard (Royal Match style). */
+export function difficultyOf(n: number, seedPrefix = 'PP'): Difficulty {
+  if (seedPrefix !== 'PP') return 'normal';
+  if (n >= 9 && n % 10 === 9) return 'super';
+  if (n >= 5 && n % 5 === 0) return 'hard';
+  return 'normal';
+}
+
+export const DIFFICULTY_DUST: Record<Difficulty, number> = { normal: 1, hard: 2, super: 3 };
 
 const NAMES_A = [
   'Pebble',
@@ -146,9 +159,11 @@ export function makeLevel(n: number, seedPrefix = 'PP'): LevelDef {
   const base = lifeScore(start);
   // Star targets as a share of the greedy optimum; gentle early, tighter later.
   const ease = Math.min(1, (n - 1) / 25);
-  const f1 = 0.4 + 0.2 * ease;
-  const f2 = 0.6 + 0.16 * ease;
-  const f3 = 0.8 + 0.11 * ease;
+  const difficulty = difficultyOf(n, seedPrefix);
+  const bump = { normal: [0, 0, 0], hard: [0.05, 0.04, 0.03], super: [0.09, 0.07, 0.05] }[difficulty];
+  const f1 = 0.4 + 0.2 * ease + bump[0];
+  const f2 = 0.6 + 0.16 * ease + bump[1];
+  const f3 = Math.min(0.95, 0.8 + 0.11 * ease + bump[2]);
   const t = (f: number) => Math.max(base + 5, Math.round((base + (best - base) * f) / 5) * 5);
   const stars: [number, number, number] = [t(f1), t(f2), t(f3)];
   if (stars[1] <= stars[0]) stars[1] = stars[0] + 5;
@@ -165,7 +180,8 @@ export function makeLevel(n: number, seedPrefix = 'PP'): LevelDef {
     stars,
     start,
     name: `${NAMES_A[Math.floor(rnd() * NAMES_A.length)]} ${NAMES_B[Math.floor(rnd() * NAMES_B.length)]}`,
-    hue: 200 + Math.floor(rnd() * 110), // blues through violets: keeps space looking like space
+    hue: difficulty === 'super' ? 285 : difficulty === 'hard' ? 15 : 200 + Math.floor(rnd() * 110), // space blues; warm for hard
+    difficulty,
   };
 }
 

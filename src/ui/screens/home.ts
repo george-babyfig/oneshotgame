@@ -8,6 +8,9 @@ import { totalStars } from '../../meta/profile';
 import { collectDust, galaxyRate, pendingDust, planetRate, vaultHours } from '../../meta/economy';
 import { chapterOf, chestsReady, questsClaimable, roadReady } from '../../meta/progression';
 import { drawGalaxy } from './galaxy';
+import { rankReady } from '../../meta/rank';
+import { modesBadge } from '../flows/modes';
+import { PIGGY_FROM_LEVEL, PIGGY_MIN } from './shop';
 import type { App } from '../app';
 
 export function navBtn(icon: string, label: string, badge: string | number, fn: () => void, cls = '') {
@@ -68,8 +71,15 @@ export function showHome(app: App) {
         { class: 'side side-l' },
         navBtn('📜', 'Quests', questBadge, () => app.quests(), 'side-btn'),
         navBtn('🛣️', 'Star Road', roadBadge, () => app.showRoad(), 'side-btn'),
+        navBtn('🏅', `Rank ${p.rank}`, rankReady(p) ? 1 : 0, () => app.rank(), 'side-btn'),
       ),
-      h('div', { class: 'side side-r' }, p.piggy >= 40 ? navBtn('🐷', `${p.piggy}`, '', () => app.showShop(), 'side-btn') : null),
+      h(
+        'div',
+        { class: 'side side-r' },
+        navBtn('🎮', 'Modes', modesBadge(app), () => app.modes(), 'side-btn'),
+        p.visitors.length ? navBtn('🛸', 'Visitors', p.visitors.length, () => app.visitors(), 'side-btn visitors-btn') : null,
+        p.level > PIGGY_FROM_LEVEL && p.piggy >= PIGGY_MIN ? navBtn('🐷', `💎${p.piggy}`, '', () => app.showShop(), 'side-btn') : null,
+      ),
     ),
     p.galaxy.length ? collect : null,
     btn(

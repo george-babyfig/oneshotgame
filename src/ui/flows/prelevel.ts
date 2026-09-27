@@ -1,7 +1,8 @@
 // Pre-level sheet: star targets, objects in play, and optional boosters.
 import { h, btn, fmt, modal, toast } from '../dom';
 import { sfx } from '../audio';
-import { makeLevel, TWISTS } from '../../core/levels';
+import { DIFFICULTY_DUST, makeLevel, TWISTS } from '../../core/levels';
+import { MOMENTUM_PERKS, momentumActive, momentumPerkText } from '../../meta/momentum';
 import { KINDS } from '../../core/world';
 import { BOOSTERS, type BoosterId } from '../../meta/config';
 import { spendDust } from '../../meta/economy';
@@ -52,6 +53,15 @@ export function preLevel(app: App, n: number) {
     [
       h('div', { class: 'm-sub' }, `${chapterOf(n).name} · Planet ${n}`),
       h('div', { class: 'm-title' }, L.name),
+      L.difficulty !== 'normal'
+        ? h(
+            'div',
+            { class: `diff-chip ${L.difficulty}` },
+            L.difficulty === 'super'
+              ? `💀 Super Hard planet · ×${DIFFICULTY_DUST.super} stardust`
+              : `🔥 Hard planet · ×${DIFFICULTY_DUST.hard} stardust`,
+          )
+        : null,
       L.twist !== 'none' ? h('div', { class: 'twist-chip' }, `${TWISTS[L.twist].name}: ${TWISTS[L.twist].desc}`) : null,
       h(
         'div',
@@ -68,14 +78,28 @@ export function preLevel(app: App, n: number) {
         ),
       ),
       newKind ? h('p', { class: 'newkind' }, `New: ${newKind.emoji} ${newKind.name} — ${newKind.desc}`) : null,
+      momentumActive(p)
+        ? h(
+            'div',
+            { class: `momentum${p.momentum.streak ? '' : ' off'}` },
+            h('span', { class: 'halo' }, '⚡'),
+            p.momentum.streak
+              ? `Momentum ×${p.momentum.streak}: ${momentumPerkText(p.momentum.streak)} free`
+              : 'Win in a row to build Momentum and get free head-starts',
+          )
+        : null,
       h('div', { class: 'm-sub' }, 'Boosters'),
       row,
-      btn(`Launch! · ${L.throws + p.upgrades.throws} throws`, 'primary big wide', () => {
-        for (const id of Object.keys(chosen) as BoosterId[]) if (chosen[id]) p.boosters[id]--;
-        app.save();
-        m.close();
-        app.startLevel(n, { boosters: { ...chosen }, level: L });
-      }),
+      btn(
+        `Launch! · ${L.throws + p.upgrades.throws + (momentumActive(p) ? MOMENTUM_PERKS[p.momentum.streak].throws : 0)} throws`,
+        'primary big wide',
+        () => {
+          for (const id of Object.keys(chosen) as BoosterId[]) if (chosen[id]) p.boosters[id]--;
+          app.save();
+          m.close();
+          app.startLevel(n, { boosters: { ...chosen }, level: L });
+        },
+      ),
     ],
     { cls: 'pre' },
   );
