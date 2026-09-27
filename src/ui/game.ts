@@ -17,6 +17,8 @@ import { icon } from './icons';
 import { renderPlanet, surfaceK } from './art/planet';
 import { critterCanvas, drawCreature } from './art/critters';
 import { drawProjectile, projectileCanvas } from './art/projectiles';
+import { drawKeeper, drawLauncher, drawTrail } from './art/keeper';
+import { DEFAULT_LOOK, type Look } from '../meta/cosmetics';
 import { sfx } from './audio';
 import { haptic } from './haptics';
 import { t, tp } from '../i18n';
@@ -25,6 +27,10 @@ import { toast } from './dom';
 
 export interface SceneOpts {
   scopeLevel: number; // 0..3 aim guide length
+  /** The player's Keeper outfit, launcher and trail. */
+  look?: Look;
+  /** The launcher is fully mastered (gold glow). */
+  mastered?: boolean;
   splash: number; // 0..1
   extraThrows: number;
   boosters: { shower: boolean; spark: boolean; scope: boolean };
@@ -718,7 +724,10 @@ export class LevelScene {
     }
     this.score = res.after;
     this.heat(res.after - res.before);
-    if (res.changed.length) this.o.onTransform?.(res.changed.length);
+    if (res.changed.length) {
+      this.o.onTransform?.(res.changed.length);
+      this.cheerUntil = Math.max(this.cheerUntil, this.time + 0.9);
+    }
     this.o.onPlanet?.(this.planet);
     const tokens = this.o.onLand?.(
       res.changed.map((ci) => this.planet.sectors[ci].biome),
@@ -1025,7 +1034,13 @@ export class LevelScene {
     this.rings.push({ x, y, t: 0, max: 0.55, r, color });
   }
 
+  private cheerUntil = 0;
+  private get look(): Look {
+    return this.o.look ?? DEFAULT_LOOK;
+  }
+
   private confetti() {
+    this.cheerUntil = this.time + 2.5;
     if (this.o.reduceMotion) return;
     const cols = ['#ffd84a', '#5ef2b0', '#ff8fc8', '#6ec8ff', '#b58cff'];
     for (let k = 0; k < 90; k++) {
@@ -1112,13 +1127,7 @@ export class LevelScene {
     // shot
     const sh = this.shot;
     if (sh) {
-      sh.trail.forEach((p, k) => {
-        g.globalAlpha = (k / sh.trail.length) * 0.5;
-        g.fillStyle = KINDS[sh.kind].color;
-        g.beginPath();
-        g.arc(p.x, p.y, 3 + k * 0.4, 0, Math.PI * 2);
-        g.fill();
-      });
+      drawTrail(g, this.look.trail, sh.trail, this.time, KINDS[sh.kind].color);
       g.globalAlpha = 1;
       drawProjectile(g, sh.kind, sh.x, sh.y, 30, this.time, sh.t * 6);
     }
@@ -1223,19 +1232,22 @@ export class LevelScene {
   private drawAim() {
     const g = this.g;
     const L = this.launch;
-    // launcher pad
-    g.fillStyle = 'rgba(255,255,255,0.08)';
-    g.beginPath();
-    g.arc(L.x, L.y, 34, 0, Math.PI * 2);
-    g.fill();
-    g.strokeStyle = 'rgba(255,255,255,0.25)';
-    g.lineWidth = 2;
-    g.stroke();
-    if (!this.shot && !this.ended) {
-      const p = this.pull();
+    const aiming = !this.shot && !this.ended;
+    const p = this.pull();
+    const ox = aiming && this.aimFrom ? -p.vx / PULL_TO_SPEED / 3 : 0;
+    const oy = aiming && this.aimFrom ? -p.vy / PULL_TO_SPEED / 3 : 0;
+    // the Keeper stands beside its launcher, leaning back as you pull
+    const kx = L.x - Math.min(96, this.w * 0.24);
+    const ky = L.y + 46;
+    const cheer = this.cheerUntil > this.time ? Math.min(1, (this.cheerUntil - this.time) * 3) : 0;
+    drawKeeper(g, this.look, kx, ky, 62, this.time, {
+      lean: aiming && this.aimFrom ? Math.min(1, p.len / MAX_PULL) : 0,
+      cheer,
+      look: Math.atan2(this.cy - (ky - 45), this.cx - kx),
+    });
+    drawLauncher(g, this.look.launcher, L.x, L.y, this.time, { x: ox, y: oy }, KINDS[this.cur].color, this.o.mastered);
+    if (aiming) {
       const bounce = this.aimFrom ? 0 : Math.sin(this.time * 3) * 3;
-      const ox = this.aimFrom ? -p.vx / PULL_TO_SPEED / 3 : 0;
-      const oy = this.aimFrom ? -p.vy / PULL_TO_SPEED / 3 : 0;
       drawProjectile(this.g, this.cur, L.x + ox, L.y + oy + bounce, 36, this.time);
       if (this.aimFrom && p.len >= 18) {
         // trajectory preview
@@ -1262,16 +1274,6 @@ export class LevelScene {
         }
         g.globalAlpha = 1;
         if (hit >= 0) this.drawLanding(hit);
-        // rubber band
-        g.strokeStyle = KINDS[this.cur].color;
-        g.lineWidth = 3;
-        g.globalAlpha = 0.6;
-        g.beginPath();
-        g.moveTo(L.x - 26, L.y);
-        g.lineTo(L.x + ox, L.y + oy);
-        g.lineTo(L.x + 26, L.y);
-        g.stroke();
-        g.globalAlpha = 1;
       }
     }
   }

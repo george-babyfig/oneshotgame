@@ -39,8 +39,13 @@ import { setLang, t, type Lang } from '../i18n';
 import { COACH } from '../meta/coach';
 import { gcSignIn, gcSync } from './gamecenter';
 import { fixClock } from '../meta/economy';
+import { currentLook, masteryLevel, MASTERY_STEPS } from '../meta/cosmetics';
+import { showWorkshop } from './screens/workshop';
+import { showPassport } from './screens/passport';
+import { keeperHead } from './art/keeper';
 
-export type ScreenName = 'home' | 'lifebook' | 'upgrades' | 'shop' | 'map' | 'road' | 'level';
+export type ScreenName =
+  'home' | 'lifebook' | 'upgrades' | 'shop' | 'map' | 'road' | 'level' | 'workshop' | 'pass' | 'passport' | 'homeworld';
 export type Boosters = Record<BoosterId, boolean>;
 export const NO_BOOSTERS: Boosters = { shower: false, spark: false, scope: false };
 
@@ -146,8 +151,15 @@ export class App {
     this.scene?.destroy();
     this.scene = null;
     if (!this.refreshing) closeModals();
-    el.classList.add('enter');
+    // Re-rendering the same screen (after a tap) keeps its scroll position and skips the entrance animation.
+    const same = name === this.screen && name !== 'level';
+    const scrollTop = same ? (this.host.querySelector('.scroll')?.scrollTop ?? 0) : 0;
+    if (!same) el.classList.add('enter');
     this.host.replaceChildren(el);
+    if (scrollTop) {
+      const sc = el.querySelector('.scroll');
+      if (sc) sc.scrollTop = scrollTop;
+    }
     this.screen = name;
     if (name !== 'level') setMusicTheme('home');
   }
@@ -163,6 +175,8 @@ export class App {
       upgrades: () => this.showUpgrades(),
       map: () => this.showStarMap(),
       road: () => this.showRoad(),
+      workshop: () => this.showWorkshop(),
+      passport: () => this.showPassport(),
     };
     this.refreshing = true;
     try {
@@ -189,6 +203,15 @@ export class App {
     showStarMap(this);
   }
   showRoad() {
+    showRoad(this);
+  }
+  showWorkshop() {
+    showWorkshop(this);
+  }
+  showPassport() {
+    showPassport(this);
+  }
+  showPass() {
     showRoad(this);
   }
   settings() {
@@ -234,6 +257,17 @@ export class App {
       back
         ? h('button', { class: 'icon', 'aria-label': t('Back'), onclick: () => (sfx.click(), this.showHome()) }, icon('back', 24))
         : h('button', { class: 'icon', 'aria-label': t('Settings'), onclick: () => this.settings() }, icon('gear', 26)),
+      back
+        ? null
+        : h(
+            'button',
+            {
+              class: `icon avatar${this.p.pass ? ' gold' : ''}`,
+              'aria-label': t('Planet Passport'),
+              onclick: () => (sfx.click(), this.showPassport()),
+            },
+            keeperHead(currentLook(this.p), 40),
+          ),
       h('div', { class: 'grow' }),
       h('button', { class: 'pill dust', 'aria-label': t('Stardust'), onclick: () => this.showUpgrades() }, `✨ ${fmt(this.p.dust)}`),
       h(
@@ -248,7 +282,10 @@ export class App {
   // ------------------------------------------------------------------ level flow
   sceneOpts(extra: Partial<SceneOpts> & Pick<SceneOpts, 'onEnd'>, boosters: Boosters = NO_BOOSTERS, tutorial = false): SceneOpts {
     const skin = SKINS.find((s) => s.id === this.p.skin) ?? SKINS[0];
+    const look = currentLook(this.p);
     return {
+      look,
+      mastered: masteryLevel(this.p.mastery[look.launcher] ?? 0) >= MASTERY_STEPS.length,
       scopeLevel: tutorial ? 3 : this.p.upgrades.scope,
       splash: this.p.upgrades.splash,
       extraThrows: this.p.upgrades.throws,
@@ -274,6 +311,8 @@ export class App {
       },
       onThrow: () => {
         this.p.stats.throws++;
+        const l = currentLook(this.p).launcher;
+        this.p.mastery[l] = (this.p.mastery[l] ?? 0) + 1;
         track(this.p, 'throw');
       },
       onTransform: (n) => track(this.p, 'land', n),

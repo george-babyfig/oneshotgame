@@ -73,12 +73,16 @@ export function renderPostcard(planet: Planet, info: PostcardInfo): HTMLCanvasEl
 }
 
 export async function sharePostcard(planet: Planet, info: PostcardInfo, text: string) {
-  const canvas = renderPostcard(planet, info);
+  return shareCanvas(renderPostcard(planet, info), text);
+}
+
+/** Hand any rendered image to the share sheet (or download it on the web). */
+export async function shareCanvas(canvas: HTMLCanvasElement, text: string, name = 'pocket-planet') {
   const dataUrl = canvas.toDataURL('image/png');
   try {
     if (Capacitor.isNativePlatform()) {
       const file = await Filesystem.writeFile({
-        path: `postcard-${Date.now()}.png`,
+        path: `${name}-${Date.now()}.png`,
         data: dataUrl.split(',')[1],
         directory: Directory.Cache,
       });
@@ -88,16 +92,16 @@ export async function sharePostcard(planet: Planet, info: PostcardInfo, text: st
     // build the file synchronously so the share keeps the tap's user activation
     const bytes = Uint8Array.from(atob(dataUrl.split(',')[1]), (c) => c.charCodeAt(0));
     const blob = new Blob([bytes], { type: 'image/png' });
-    const f = new File([blob], 'pocket-planet.png', { type: 'image/png' });
+    const f = new File([blob], `${name}.png`, { type: 'image/png' });
     if (navigator.canShare?.({ files: [f] })) {
       await navigator.share({ files: [f], text });
       return;
     }
     const a = document.createElement('a');
     a.href = dataUrl;
-    a.download = 'pocket-planet.png';
+    a.download = `${name}.png`;
     a.click();
-    toast(t('Postcard saved'), 'good');
+    toast(t('Image saved'), 'good');
   } catch (e) {
     if (!/cancel|abort/i.test(String((e as Error)?.message ?? e))) shareText(text);
   }

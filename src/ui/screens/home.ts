@@ -16,6 +16,7 @@ import { PIGGY_FROM_LEVEL, PIGGY_MIN } from './shop';
 import type { App } from '../app';
 import { icon as iconEl } from '../icons';
 import { t, tp } from '../../i18n';
+import { editPassport } from './passport';
 
 export function navBtn(icon: string, label: string, badge: string | number, fn: () => void, cls = '') {
   return h(
@@ -26,6 +27,8 @@ export function navBtn(icon: string, label: string, badge: string | number, fn: 
     badge ? h('span', { class: `nb${typeof badge === 'number' ? ' dot' : ''}` }, String(badge)) : null,
   );
 }
+
+let setupAsked = false;
 
 export function showHome(app: App) {
   const p = app.p;
@@ -138,4 +141,9 @@ export function showHome(app: App) {
   });
   app.mount(el, 'home', view.stop);
   if (!app.launched && p.tutorial) app.daily();
+  // One-time Passport setup once the first planet is done (after any launch pop-ups).
+  else if (p.stats.wins >= 1 && !p.passport.set && !setupAsked && !document.querySelector('.modal')) {
+    setupAsked = true;
+    editPassport(app, true);
+  }
 }

@@ -3,6 +3,7 @@ import { rngFrom } from '../core/levels';
 import type { BoosterId } from './config';
 import type { Profile, QuestState } from './profile';
 import { t } from '../i18n';
+import { COSMETIC_BY_ID } from './cosmetics';
 
 // ------------------------------------------------------------------ chapters
 export const LEVELS_PER_CHAPTER = 10;
@@ -43,6 +44,8 @@ export interface Reward {
   dust?: number;
   boosters?: Partial<Record<BoosterId, number>>;
   skin?: string;
+  /** Keeper cosmetic (ownership is derived from the claimed tier, see cosmetics.ts). */
+  item?: string;
 }
 
 export function chapterReward(n: number): Reward {
@@ -78,20 +81,20 @@ export interface RoadTier {
 }
 
 export const STAR_ROAD: RoadTier[] = [
-  { stars: 5, reward: { gems: 15 }, pass: { skin: 'cosmic', gems: 30 } },
+  { stars: 5, reward: { gems: 15 }, pass: { skin: 'cosmic', gems: 30, item: 'l_orbit' } },
   { stars: 12, reward: { boosters: { shower: 2 } }, pass: { gems: 40 } },
   { stars: 20, reward: { dust: 400 }, pass: { boosters: { shower: 2, spark: 2, scope: 2 } } },
-  { stars: 30, reward: { skin: 'rose', gems: 10 }, pass: { gems: 50 } },
+  { stars: 30, reward: { skin: 'rose', gems: 10 }, pass: { gems: 50, item: 'hat_halo' } },
   { stars: 42, reward: { gems: 30 }, pass: { dust: 1500 } },
-  { stars: 55, reward: { boosters: { spark: 2, scope: 2 } }, pass: { gems: 60 } },
+  { stars: 55, reward: { boosters: { spark: 2, scope: 2 }, item: 'l_crystal' }, pass: { gems: 60 } },
   { stars: 70, reward: { dust: 1200 }, pass: { boosters: { shower: 3, spark: 3, scope: 3 } } },
-  { stars: 85, reward: { skin: 'lime', gems: 20 }, pass: { gems: 80 } },
+  { stars: 85, reward: { skin: 'lime', gems: 20 }, pass: { gems: 80, item: 'tr_cosmic' } },
   { stars: 100, reward: { gems: 50 }, pass: { dust: 4000 } },
-  { stars: 120, reward: { boosters: { shower: 3, spark: 3, scope: 3 } }, pass: { gems: 100 } },
+  { stars: 120, reward: { boosters: { shower: 3, spark: 3, scope: 3 }, item: 'tr_rainbow' }, pass: { gems: 100 } },
   { stars: 140, reward: { dust: 3000 }, pass: { boosters: { shower: 5, spark: 5, scope: 5 } } },
-  { stars: 165, reward: { skin: 'gold', gems: 40 }, pass: { gems: 120 } },
+  { stars: 165, reward: { skin: 'gold', gems: 40 }, pass: { gems: 120, item: 'suit_star' } },
   { stars: 190, reward: { gems: 80 }, pass: { dust: 8000 } },
-  { stars: 220, reward: { dust: 6000, gems: 50 }, pass: { gems: 150 } },
+  { stars: 220, reward: { dust: 6000, gems: 50, item: 'hat_crown' }, pass: { gems: 150 } },
   { stars: 260, reward: { gems: 120 }, pass: { gems: 250 } },
 ];
 
@@ -213,5 +216,6 @@ export function rewardText(r: Reward): string[] {
   const bEmoji: Record<string, string> = { shower: '🌠', spark: '✨', scope: '🔭' };
   for (const [k, v] of Object.entries(r.boosters ?? {})) if (v) out.push(`${bEmoji[k]} ×${v}`);
   if (r.skin) out.push(t('🌈 New atmosphere'));
+  if (r.item) out.push(t('🧑‍🚀 {name}', { name: t(COSMETIC_BY_ID[r.item]?.name ?? '') }));
   return out;
 }

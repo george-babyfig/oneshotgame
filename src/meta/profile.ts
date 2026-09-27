@@ -101,6 +101,13 @@ export interface Profile {
   event: { week: string; tokens: number; claimed: number[] };
   /** Game Center achievement ids already reported. */
   gcReported: string[];
+  /** Keeper outfit (see meta/cosmetics.ts) and items bought with gems. */
+  look: Record<'suit' | 'hat' | 'launcher' | 'trail', string>;
+  wardrobe: string[];
+  /** Flings per launcher, for launcher mastery. */
+  mastery: Record<string, number>;
+  /** Planet Passport: name parts, title, banner and pinned badges. */
+  passport: { first: number; second: number; set: boolean; title: string; banner: number; badges: string[] };
 }
 
 const KEY = 'pp.profile';
@@ -158,6 +165,10 @@ export function defaultProfile(now = Date.now()): Profile {
     zen: null,
     event: { week: '', tokens: 0, claimed: [] },
     gcReported: [],
+    look: { suit: 'suit_sky', hat: 'hat_antenna', launcher: 'l_pad', trail: 'tr_dots' },
+    wardrobe: [],
+    mastery: {},
+    passport: { first: -1, second: -1, set: false, title: '', banner: 0, badges: [] },
   };
 }
 
