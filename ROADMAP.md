@@ -63,9 +63,13 @@ Sources: Animal Crossing (Pocket Camp, New Horizons), Cats & Soup, Sky: Children
 | Records instead of grind                                 | Brawl Stars Records                                         | ✅ **Object records** (50/200/500/1000 flings) with Passport titles                                                                                                                          |
 | Bonds with named creatures                               | Pokémon GO buddies, Cats & Soup                             | ✅ Resident **nicknames** (kid-safe list) and a **Best Friends** ribbon                                                                                                                      |
 | Boss levels every chapter                                | Royal Match / Angry Birds 2 boss stages                     | ✅ **Comet Guardian** on every 10th planet: blocks shots, 3 hits defeats it for a first-time bonus                                                                                           |
+| Community-center bundles fed by level drops              | Stardew Valley bundles                                      | ✅ **Star Atlas**: planets drop materials from their lands; fill bundles to relight 6 constellations in the Homeworld sky, each with an exclusive item                                       |
+| Dye system                                               | Stardew dyes, Pocket Camp paint                             | ✅ 16 **suit dyes** (body + trim), unlocked with materials                                                                                                                                   |
+| Creature cosmetics                                       | Cats & Soup equipment                                       | ✅ Resident **accessories** (friendship-earned, two for gems)                                                                                                                                |
+| Loadout presets                                          | Fortnite locker presets                                     | ✅ Three **outfit presets** in the Workshop                                                                                                                                                  |
 | Fortune cookies / random paid rewards                    | Pocket Camp, Angry Birds 2                                  | ❌ Never: every paid item is fixed-price and previewable                                                                                                                                     |
 
-Next up from this research: creature cosmetics, dye system, loadout presets, community-center style bundles fed by level drops, monthly themed events, a non-random sticker album.
+Next up from this research: monthly themed events with creature variants, a non-random sticker album, a weekly 7-planet mini-chapter, and an optional New Game+.
 
 ## 1. Foundation
 
