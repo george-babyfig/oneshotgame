@@ -8,6 +8,7 @@ import { sfx, setAudio, unlockAudio, pauseAudio } from './audio';
 import { haptic, setHaptics } from './haptics';
 import { LevelScene, type LevelResult, type SceneOpts } from './game';
 import { makeLevel, type LevelDef } from '../core/levels';
+import { KINDS, type Kind } from '../core/world';
 import { loadProfile, saveProfile, today, type Profile } from '../meta/profile';
 import { createIap } from '../meta/iap';
 import { CONTINUE_COSTS, PRODUCT_BY_ID, PRODUCT_BY_KEY, SKINS, type BoosterId } from '../meta/config';
@@ -18,6 +19,7 @@ import { addVisitors } from '../meta/visitors';
 import { rankFlow } from './flows/rank';
 import { visitorsFlow } from './flows/visitors';
 import { modesFlow } from './flows/modes';
+import { welcomeBackFlow } from './flows/offers';
 import { showHome } from './screens/home';
 import { showLifebook } from './screens/lifebook';
 import { showUpgrades } from './screens/upgrades';
@@ -29,6 +31,23 @@ import { preLevel } from './flows/prelevel';
 import { levelResults } from './flows/results';
 import { settingsFlow } from './flows/settings';
 import { questsFlow } from './flows/quests';
+
+/** Coach tips for the first planets, keyed by level then by throws used. */
+const COACH: Record<number, Record<number, string>> = {
+  1: {
+    1: 'Rock raised the land! Next up: the Ice Comet makes oceans.',
+    2: 'Creatures move in where lands meet. Tap the small bubble to swap objects.',
+    4: 'Fill the life bar past the ★ marks to earn stars.',
+  },
+  2: {
+    0: 'New: Seed Pods grow meadows and forests. Try one on land!',
+    2: 'A forest next to an ocean brings otters. The Lifebook lists every recipe.',
+  },
+  3: {
+    0: 'The planet spins while your throw flies — aim a little ahead.',
+    2: 'While aiming, the label shows what that spot will become.',
+  },
+};
 
 export type ScreenName = 'home' | 'lifebook' | 'upgrades' | 'shop' | 'map' | 'road' | 'level';
 export type Boosters = Record<BoosterId, boolean>;
@@ -45,6 +64,7 @@ export class App {
   /** Cleanup for the current screen (animation loops etc). */
   private teardown: (() => void) | null = null;
   private saveTimer = 0;
+  private awayMs = 0;
   private busy = false;
 
   constructor(root: HTMLElement) {
@@ -60,6 +80,7 @@ export class App {
     this.applySettings();
     ensureQuests(this.p, today());
     addVisitors(this.p, Date.now());
+    this.awayMs = Date.now() - this.p.meta.lastSeen;
     this.p.meta.lastSeen = Date.now();
     const unlock = () => {
       unlockAudio();
@@ -77,6 +98,7 @@ export class App {
         pauseAudio(false);
         ensureQuests(this.p, today());
         if (addVisitors(this.p, Date.now())) this.save();
+        this.awayMs = Date.now() - this.p.meta.lastSeen;
         this.p.meta.lastSeen = Date.now();
         if (this.screen === 'home') this.showHome();
         this.daily();
@@ -179,9 +201,13 @@ export class App {
   /** Launch sequence: daily gift, then any visitors' gifts. */
   daily() {
     if (!this.p.tutorial) return;
-    dailyGiftFlow(this, () => {
-      if (this.p.visitors.length && this.screen === 'home') this.visitors();
-    });
+    const away = this.awayMs;
+    this.awayMs = 0;
+    dailyGiftFlow(this, () =>
+      welcomeBackFlow(this, away, () => {
+        if (this.p.visitors.length && this.screen === 'home') this.visitors();
+      }),
+    );
   }
   preLevel(n: number) {
     preLevel(this, n);
@@ -252,7 +278,12 @@ export class App {
     const tier = momentumActive(this.p) ? this.p.momentum.streak : 0;
     const perk = MOMENTUM_PERKS[tier];
     const merged: Boosters = { shower: boosters.shower, spark: boosters.spark || perk.spark, scope: boosters.scope || perk.scope };
-    const opts = this.sceneOpts({ onEnd: (r) => this.levelEnded(r), momentum: tier }, merged, !!o.tutorial || n === 1);
+    const debut = (Object.values(KINDS) as { id: Kind; unlock: number }[]).find((k) => k.unlock === n && n > 2);
+    const opts = this.sceneOpts(
+      { onEnd: (r) => this.levelEnded(r), momentum: tier, coach: COACH[n], intro: debut && n === this.p.level ? debut.id : undefined },
+      merged,
+      !!o.tutorial || n === 1,
+    );
     opts.extraThrows += perk.throws;
     const scene = new LevelScene(L, opts);
     this.mount(scene.el, 'level');

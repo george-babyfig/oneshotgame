@@ -6,6 +6,7 @@ import { totalStars } from '../../meta/profile';
 import { difficultyOf } from '../../core/levels';
 import { chapterOf, chapterReward, chestsReady, openChest, rewardText, LEVELS_PER_CHAPTER } from '../../meta/progression';
 import type { App } from '../app';
+import { maybeStarterOffer } from '../flows/offers';
 
 export function showStarMap(app: App) {
   const p = app.p;
@@ -50,7 +51,7 @@ export function showStarMap(app: App) {
             h('div', { class: 'chest-anim' }, '🎁'),
             h('div', { class: 'm-title' }, `${ch.name} complete!`),
             h('div', { class: 'reward-list' }, ...rewardText(r).map((t) => h('span', null, t))),
-            btn('Awesome', 'primary wide', () => (m.close(), showStarMap(app))),
+            btn('Awesome', 'primary wide', () => (m.close(), showStarMap(app), maybeStarterOffer(app))),
           ]);
         })
       : p.chapters.includes(n)

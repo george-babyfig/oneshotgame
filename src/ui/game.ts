@@ -18,6 +18,10 @@ export interface SceneOpts {
   reduceMotion?: boolean;
   /** Momentum tier (0-3) active this level. */
   momentum?: number;
+  /** Coach tips keyed by throws used (0 = at the start). */
+  coach?: Record<number, string>;
+  /** Object introduced on this level (shows an intro card). */
+  intro?: Kind;
   /** HUD title override (modes). */
   label?: string;
   /** Meteor Rush: seconds on the clock, unlimited throws. */
@@ -161,6 +165,7 @@ export class LevelScene {
   private descEl!: HTMLElement;
   private hintEl!: HTMLElement;
   private finishEl!: HTMLElement;
+  private coachEl!: HTMLElement;
   private discoverEl!: HTMLElement;
 
   constructor(level: LevelDef, opts: SceneOpts) {
@@ -187,6 +192,8 @@ export class LevelScene {
     requestAnimationFrame(() => {
       this.resize();
       this.renderHud();
+      this.showCoach(0);
+      if (opts.intro) this.introCard(opts.intro);
       this.raf = requestAnimationFrame(this.frame);
     });
     window.addEventListener('resize', this.resize);
@@ -220,6 +227,7 @@ export class LevelScene {
       h('small', null, ''),
     );
     this.discoverEl = h('div', { class: 'discover' });
+    this.coachEl = h('div', { class: 'coach' });
     return h(
       'div',
       { class: 'hud' },
@@ -241,7 +249,7 @@ export class LevelScene {
       ),
       h('div', { class: 'life' }, bar, this.hudScore),
       twist,
-      this.discoverEl,
+      h('div', { class: 'banners' }, this.coachEl, this.discoverEl),
       this.finishEl,
       h(
         'div',
@@ -616,7 +624,7 @@ export class LevelScene {
     if (call) {
       const text = this.chain >= 3 ? `${call[1]} ×${this.chain}` : call[1];
       setTimeout(() => {
-        this.popup(this.cx, this.cy - this.R * 1.55, text, call[2], 34, 1.4);
+        this.popup(this.cx, this.cy + this.R * 1.45, text, call[2], 34, 1.4);
         sfx.combo(CALLOUTS.length - CALLOUTS.indexOf(call) + Math.min(this.chain, 4));
         haptic.success();
       }, 260);
@@ -694,9 +702,39 @@ export class LevelScene {
     }, 2300);
   }
 
+  private showCoach(k: number) {
+    const text = this.o.coach?.[k];
+    if (!text) {
+      this.coachEl.classList.remove('show');
+      return;
+    }
+    this.coachEl.replaceChildren(h('span', { class: 'coach-ic' }, '💡'), h('span', null, text));
+    this.coachEl.classList.remove('show');
+    void this.coachEl.offsetWidth;
+    this.coachEl.classList.add('show');
+  }
+
+  private introCard(kind: Kind) {
+    const k = KINDS[kind];
+    this.paused = true;
+    const m = modal(
+      [
+        h('div', { class: 'm-sub' }, 'New object!'),
+        h('div', { class: 'intro-art' }, projectileCanvas(kind, 110)),
+        h('div', { class: 'm-title' }, k.name),
+        h('p', null, k.desc),
+        btn('Got it!', 'primary wide', () => m.close()),
+      ],
+      { onClose: () => ((this.paused = false), (this.modalOpen = null)) },
+    );
+    this.modalOpen = m;
+    sfx.levelUp();
+  }
+
   private endTimer = 0;
   private afterShot() {
     this.renderHud();
+    this.showCoach(this.throwsUsed);
     if (this.o.endless) return;
     if (this.over) {
       clearTimeout(this.endTimer);
@@ -751,7 +789,11 @@ export class LevelScene {
         h('div', { class: 'end-stars' }, ...[0, 1, 2].map((i) => h('span', { class: i < stars ? 'on' : '' }, '★'))),
         h('div', { class: 'end-score' }, `${fmt(this.score)} life`),
         this.leftover
-          ? h('p', { class: 'end-need' }, `Meteor finale: +✨${this.leftover * FINISH_DUST_PER_THROW} for ${this.leftover} unused throws`)
+          ? h(
+              'p',
+              { class: 'end-need' },
+              `Meteor finale: +✨${this.leftover * FINISH_DUST_PER_THROW} for ${this.leftover} unused throw${this.leftover > 1 ? 's' : ''}`,
+            )
           : null,
         need > 0 && !this.leftover
           ? h('p', { class: 'end-need' }, won ? `Only ${fmt(need)} life from the next star!` : `Just ${fmt(need)} life short of a star.`)

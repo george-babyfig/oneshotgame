@@ -5,7 +5,8 @@ import { haptic } from '../haptics';
 import { makeLevel, TWISTS } from '../../core/levels';
 import { SPECIES } from '../../core/world';
 import { totalStars } from '../../meta/profile';
-import { collectDust, galaxyRate, pendingDust, planetRate, vaultHours } from '../../meta/economy';
+import { collectDust, galaxyRate, pendingDust, planetRate, spendGems, vaultHours } from '../../meta/economy';
+import { DOUBLE_DUST_GEMS } from '../flows/offers';
 import { chapterOf, chestsReady, questsClaimable, roadReady } from '../../meta/progression';
 import { drawGalaxy } from './galaxy';
 import { rankReady } from '../../meta/rank';
@@ -81,7 +82,24 @@ export function showHome(app: App) {
         p.level > PIGGY_FROM_LEVEL && p.piggy >= PIGGY_MIN ? navBtn('🐷', `💎${p.piggy}`, '', () => app.showShop(), 'side-btn') : null,
       ),
     ),
-    p.galaxy.length ? collect : null,
+    p.galaxy.length
+      ? h(
+          'div',
+          { class: 'collect-row' },
+          collect,
+          pending >= 100
+            ? btn(h('span', { class: 'stack' }, h('b', null, '×2'), h('small', null, `💎${DOUBLE_DUST_GEMS}`)), 'gem double', () => {
+                if (!spendGems(p, DOUBLE_DUST_GEMS)) return app.needGems();
+                const d = collectDust(p, Date.now(), 2);
+                sfx.coin();
+                haptic.success();
+                toast(`+${fmt(d)} stardust (doubled!)`, 'good');
+                app.save();
+                showHome(app);
+              })
+            : null,
+        )
+      : null,
     btn(
       h(
         'span',
