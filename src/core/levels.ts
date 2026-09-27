@@ -1,4 +1,17 @@
-import { KINDS, SECTORS, clonePlanet, impact, lifeScore, newPlanet, settle, type Kind, type Planet, type Sector } from './world';
+import {
+  KINDS,
+  SECTORS,
+  SPECIES_BY_ID,
+  clonePlanet,
+  impact,
+  lifeScore,
+  newPlanet,
+  settle,
+  type BiomeId,
+  type Kind,
+  type Planet,
+  type Sector,
+} from './world';
 
 // ------------------------------------------------------------------ rng
 export function rngFrom(seed: string) {
@@ -55,14 +68,40 @@ export interface LevelDef {
   name: string;
   hue: number;
   difficulty: Difficulty;
+  /** Extra goals that must be met (with at least 1★) to win. */
+  goals: Goal[];
 }
+
+/** A level goal: have N regions of a land type, or a creature living on the planet. */
+export interface Goal {
+  type: 'biome' | 'species';
+  id: string;
+  count: number;
+}
+
+export function goalProgress(p: Planet, g: Goal): number {
+  if (g.type === 'biome') return p.sectors.filter((s) => s.biome === g.id).length;
+  return p.sectors.filter((s) => s.species === g.id).length;
+}
+
+export function goalsMet(p: Planet, goals: Goal[]) {
+  return goals.every((g) => goalProgress(p, g) >= g.count);
+}
+
+/** Stars actually earned: goals must be met for any star to count. */
+export function starsEarned(p: Planet, score: number, L: Pick<LevelDef, 'stars' | 'goals'>) {
+  return goalsMet(p, L.goals) ? starsFor(score, L.stars) : 0;
+}
+
+/** The first campaign level with goals. */
+export const GOALS_FROM = 6;
 
 export type Difficulty = 'normal' | 'hard' | 'super';
 
-/** Every 5th planet is Hard; the 9th of every chapter is Super Hard (Royal Match style). */
+/** Every 5th planet is Hard; from chapter 2, the 9th of every chapter is Super Hard (Royal Match style). */
 export function difficultyOf(n: number, seedPrefix = 'PP'): Difficulty {
   if (seedPrefix !== 'PP') return 'normal';
-  if (n >= 9 && n % 10 === 9) return 'super';
+  if (n >= 19 && n % 10 === 9) return 'super';
   if (n >= 5 && n % 5 === 0) return 'hard';
   return 'normal';
 }
@@ -119,6 +158,11 @@ function startFor(twist: Twist, rnd: () => number): Planet {
  * Used to set star targets so every generated level is beatable.
  */
 export function greedyScore(start: Planet, queue: Kind[], throws: number, splash = 0): number {
+  return lifeScore(greedyPlan(start, queue, throws, splash));
+}
+
+/** The planet the greedy solver ends up with (used to set targets and goals). */
+export function greedyPlan(start: Planet, queue: Kind[], throws: number, splash = 0): Planet {
   const p = clonePlanet(start);
   for (let t = 0; t < throws; t++) {
     const kind = queue[t];
@@ -134,7 +178,57 @@ export function greedyScore(start: Planet, queue: Kind[], throws: number, splash
     }
     impact(p, kind, bestAt, splash);
   }
-  return lifeScore(p);
+  return p;
+}
+
+/** Difficulty knobs (tuned with a skill-level simulation; see tests/levels.test.ts). */
+export const TUNE = {
+  rampLevels: 20,
+  f1: [0.42, 0.22],
+  f2: [0.66, 0.15],
+  f3: [0.84, 0.09],
+  saw: 0.05,
+  bump: { normal: [0, 0, 0], hard: [0.06, 0.04, 0.02], super: [0.09, 0.06, 0.03] } as Record<Difficulty, number[]>,
+};
+
+/**
+ * Goals are taken from what the greedy solver actually built, so the level stays
+ * beatable: a land type it grew (asking for a bit less than it made) and a
+ * creature that moved in.
+ */
+function pickGoals(n: number, difficulty: Difficulty, start: Planet, plan: Planet, rnd: () => number): Goal[] {
+  if (n < GOALS_FROM) return [];
+  const want = difficulty === 'super' ? 2 : difficulty === 'hard' ? 1 : rnd() < 0.6 ? 1 : 0;
+  if (!want) return [];
+  const count = (p: Planet, id: string) => p.sectors.filter((s) => s.biome === id).length;
+  const biomes = [...new Set(plan.sectors.map((s) => s.biome))]
+    .filter((b) => b !== 'barren' && count(plan, b) > count(start, b))
+    .map((b) => ({ id: b as BiomeId, have: count(plan, b), from: count(start, b) }));
+  const rank = { common: 0, uncommon: 1, rare: 2, legendary: 3 };
+  const species = plan.sectors
+    .map((s) => s.species)
+    .filter((id): id is string => !!id && !start.sectors.some((s) => s.species === id))
+    .sort((a, b) => rank[SPECIES_BY_ID[b].rarity] - rank[SPECIES_BY_ID[a].rarity]);
+  const out: Goal[] = [];
+  const takeSpecies = () => {
+    if (!species.length) return;
+    // prefer the rarest creature on harder planets, any on normal ones
+    const id = difficulty === 'super' ? species[0] : species[Math.floor(rnd() * species.length)];
+    out.push({ type: 'species', id, count: 1 });
+  };
+  const takeBiome = () => {
+    if (!biomes.length) return;
+    const b = biomes.splice(Math.floor(rnd() * biomes.length), 1)[0];
+    const k = difficulty === 'super' ? 0.8 : 0.7;
+    out.push({ type: 'biome', id: b.id, count: Math.max(b.from + 1, Math.round(b.have * k)) });
+  };
+  if (want >= 2) {
+    takeSpecies();
+    takeBiome();
+  } else if (rnd() < 0.5) takeSpecies();
+  else takeBiome();
+  if (!out.length) takeBiome();
+  return out;
 }
 
 export function makeLevel(n: number, seedPrefix = 'PP'): LevelDef {
@@ -170,20 +264,24 @@ export function makeLevel(n: number, seedPrefix = 'PP'): LevelDef {
   }
   const start = startFor(twist, rnd);
   settle(start); // creatures that already fit the starting planet are there from the start
-  const best = greedyScore(start, queue, throws);
+  const plan = greedyPlan(start, queue, throws);
+  const best = lifeScore(plan);
   const base = lifeScore(start);
-  // Star targets as a share of the greedy optimum; gentle early, tighter later.
-  const ease = Math.min(1, (n - 1) / 25);
+  // Star targets as a share of the greedy optimum: gentle for the first chapter,
+  // then a sawtooth inside every chapter (easier after a chest, harder near the end).
+  const ease = Math.min(1, (n - 1) / TUNE.rampLevels);
+  const saw = seedPrefix === 'PP' ? ((n - 1) % 10) / 9 : 0.5;
   const difficulty = difficultyOf(n, seedPrefix);
-  const bump = { normal: [0, 0, 0], hard: [0.05, 0.04, 0.03], super: [0.09, 0.07, 0.05] }[difficulty];
-  const f1 = 0.4 + 0.2 * ease + bump[0];
-  const f2 = 0.6 + 0.16 * ease + bump[1];
-  const f3 = Math.min(0.95, 0.8 + 0.11 * ease + bump[2]);
+  const bump = TUNE.bump[difficulty];
+  const f1 = TUNE.f1[0] + TUNE.f1[1] * ease + TUNE.saw * saw + bump[0];
+  const f2 = TUNE.f2[0] + TUNE.f2[1] * ease + TUNE.saw * 0.7 * saw + bump[1];
+  const f3 = Math.min(0.97, TUNE.f3[0] + TUNE.f3[1] * ease + bump[2]);
   const t = (f: number) => Math.max(base + 5, Math.round((base + (best - base) * f) / 5) * 5);
   const stars: [number, number, number] = [t(f1), t(f2), t(f3)];
   if (stars[1] <= stars[0]) stars[1] = stars[0] + 5;
   if (stars[2] <= stars[1]) stars[2] = stars[1] + 5;
   const spin = (twist === 'fast' ? 0.9 : 0.35 + Math.min(0.3, n * 0.012)) * (rnd() < 0.5 ? 1 : -1);
+  const goals = seedPrefix === 'PP' ? pickGoals(n, difficulty, start, plan, rngFrom(`${seed}-goals`)) : [];
   return {
     n,
     seed,
@@ -197,6 +295,7 @@ export function makeLevel(n: number, seedPrefix = 'PP'): LevelDef {
     name: `${NAMES_A[Math.floor(rnd() * NAMES_A.length)]} ${NAMES_B[Math.floor(rnd() * NAMES_B.length)]}`,
     hue: difficulty === 'super' ? 285 : difficulty === 'hard' ? 15 : 200 + Math.floor(rnd() * 110), // space blues; warm for hard
     difficulty,
+    goals,
   };
 }
 

@@ -103,7 +103,7 @@ describe('modes', () => {
 
   it('hard planets follow the rhythm and have tougher targets', () => {
     expect(difficultyOf(5)).toBe('hard');
-    expect(difficultyOf(9)).toBe('super');
+    expect(difficultyOf(9)).toBe('normal'); // no Super Hard in chapter one
     expect(difficultyOf(19)).toBe('super');
     expect(difficultyOf(7)).toBe('normal');
     expect(difficultyOf(5, 'DAY-x')).toBe('normal');

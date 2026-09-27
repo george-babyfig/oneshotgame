@@ -12,7 +12,8 @@
     "format:check": "prettier --check .",
     "icon": "node resources/render-art.cjs",
     "ios:sync": "npm run build && npx cap sync ios",
-    "ios:open": "npx cap open ios"
+    "ios:open": "npx cap open ios",
+    "sim": "SIM=1 vitest run"
   },
   "dependencies": {
     "@capacitor-community/in-app-review": "^8.0.0",
@@ -36,7 +37,7 @@
     "vite": "^8.3.1",
     "vitest": "^5.0.2"
   },
-  "description": "Pocket Planet — fling, terraform and populate tiny worlds. iOS game built with Capacitor.",
+  "description": "Pocket Planet \u2014 fling, terraform and populate tiny worlds. iOS game built with Capacitor.",
   "engines": {
     "node": ">=20"
   }

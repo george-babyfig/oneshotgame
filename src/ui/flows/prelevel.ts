@@ -9,6 +9,8 @@ import { spendDust } from '../../meta/economy';
 import { chapterOf } from '../../meta/progression';
 import { projectileCanvas } from '../art/projectiles';
 import type { App, Boosters } from '../app';
+import { critterCanvas } from '../art/critters';
+import { BIOMES, SPECIES_BY_ID, type BiomeId } from '../../core/world';
 import { t, tp } from '../../i18n';
 import { kindDesc, kindName } from '../text';
 
@@ -71,6 +73,27 @@ export function preLevel(app: App, n: number) {
           )
         : null,
       L.twist !== 'none' ? h('div', { class: 'twist-chip' }, `${t(TWISTS[L.twist].name)}: ${t(TWISTS[L.twist].desc)}`) : null,
+      L.goals.length
+        ? h(
+            'div',
+            { class: 'pre-goals' },
+            h('small', null, t('Goals')),
+            ...L.goals.map((g) =>
+              h(
+                'span',
+                { class: 'goal' },
+                g.type === 'species' ? critterCanvas(g.id, 30) : h('span', { class: 'gi' }, BIOMES[g.id as BiomeId].deco),
+                h(
+                  'b',
+                  null,
+                  g.type === 'species'
+                    ? t(SPECIES_BY_ID[g.id].name)
+                    : t('{n}× {name}', { n: g.count, name: t(BIOMES[g.id as BiomeId].name) }),
+                ),
+              ),
+            ),
+          )
+        : null,
       h(
         'div',
         { class: 'targets' },

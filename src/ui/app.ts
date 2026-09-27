@@ -365,7 +365,11 @@ export class App {
     if (!r.won) {
       const res = momentumLoss(this.p, today());
       this.save();
-      this.startLevel(r.level.n);
+      // campaign retries go through the pre-level sheet, where boosters can help
+      if (r.level.n === this.p.level && r.level.n >= 4) {
+        this.showHome();
+        this.preLevel(r.level.n);
+      } else this.startLevel(r.level.n);
       if (res === 'shield') toast(t('🛡️ Your daily shield kept your Momentum!'), 'good');
       if (res === 'lost') toast(t('Momentum lost — win to build it back up'), 'bad');
       return;

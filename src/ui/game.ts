@@ -11,7 +11,7 @@ import {
   type Kind,
   type Planet,
 } from '../core/world';
-import { starsFor, type LevelDef } from '../core/levels';
+import { goalProgress, goalsMet, starsFor, type Goal, type LevelDef } from '../core/levels';
 import { h, btn, fmt, modal, type Modal } from './dom';
 import { icon } from './icons';
 import { renderPlanet, surfaceK } from './art/planet';
@@ -185,6 +185,8 @@ export class LevelScene {
   private hudFill!: HTMLElement;
   private hudScore!: HTMLElement;
   private hudStars: HTMLElement[] = [];
+  private goalsEl!: HTMLElement;
+  private goalsDone = 0;
   private curEl!: HTMLElement;
   private nextEl!: HTMLElement;
   private descEl!: HTMLElement;
@@ -244,6 +246,7 @@ export class LevelScene {
       this.swap();
     });
     this.descEl = h('div', { class: 'obj-desc' });
+    this.goalsEl = h('div', { class: `goals${this.L.goals.length ? '' : ' hidden'}` });
     this.hintEl = h('div', { class: 'hint' }, h('div', { class: 'hint-hand' }, '👆'), h('div', null, t('Pull back & release to fling')));
     const twist = this.L.twist !== 'none' ? h('div', { class: 'twist' }, this.twistLabel()) : null;
     this.finishEl = h(
@@ -274,6 +277,7 @@ export class LevelScene {
         this.hudThrows,
       ),
       h('div', { class: 'life' }, bar, this.hudScore),
+      this.goalsEl,
       twist,
       h('div', { class: 'banners' }, this.coachEl, this.discoverEl),
       this.finishEl,
@@ -329,6 +333,7 @@ export class LevelScene {
     this.nextEl.style.setProperty('--c', n.color);
     this.descEl.replaceChildren(h('b', null, t(k.name)), ` — ${t(k.desc)}`);
     this.renderScore();
+    this.renderGoals();
     this.renderFinish();
   }
 
@@ -353,7 +358,11 @@ export class LevelScene {
     const max = this.barMax();
     this.hudFill.style.width = `${Math.min(100, (this.shownScore / max) * 100)}%`;
     this.hudScore.textContent = t('{n} life', { n: fmt(this.shownScore) });
-    this.hudStars.forEach((s, i) => s.classList.toggle('on', this.shownScore >= this.L.stars[i]));
+    const met = goalsMet(this.planet, this.L.goals);
+    this.hudStars.forEach((s, i) => {
+      s.classList.toggle('on', met && this.shownScore >= this.L.stars[i]);
+      s.classList.toggle('wait', !met && this.shownScore >= this.L.stars[i]);
+    });
   }
 
   private lastClock = -1;
@@ -366,6 +375,50 @@ export class LevelScene {
     this.hudThrows.classList.toggle('low', secs <= 10);
   }
 
+  /** Stars that count: every goal must be met first. */
+  private starsNow(score = this.score) {
+    return goalsMet(this.planet, this.L.goals) ? starsFor(score, this.L.stars) : 0;
+  }
+
+  private goalIcon(g: Goal) {
+    return g.type === 'species' ? critterCanvas(g.id, 26) : h('span', { class: 'gi' }, BIOMES[g.id as BiomeId].deco || '⬤');
+  }
+
+  private renderGoals() {
+    if (!this.L.goals.length) return;
+    this.goalsEl.replaceChildren(
+      h('span', { class: 'goals-l' }, t('Goals')),
+      ...this.L.goals.map((g) => {
+        const have = Math.min(g.count, goalProgress(this.planet, g));
+        const done = have >= g.count;
+        const name = g.type === 'species' ? t(SPECIES_BY_ID[g.id].name) : t(BIOMES[g.id as BiomeId].name);
+        return h(
+          'span',
+          { class: `goal${done ? ' done' : ''}`, title: name },
+          this.goalIcon(g),
+          h('b', null, done ? '✓' : `${have}/${g.count}`),
+        );
+      }),
+    );
+    const n = this.L.goals.filter((g) => goalProgress(this.planet, g) >= g.count).length;
+    if (n > this.goalsDone) {
+      this.goalsDone = n;
+      const all = n === this.L.goals.length;
+      if (all) {
+        this.starsGot = this.starsNow(this.shownScore);
+        this.renderScore();
+      }
+      setTimeout(() => {
+        this.popup(this.cx, this.cy - this.R * 1.6, all ? t('All goals complete!') : t('Goal complete!'), '#9dffb0', 24, 1.6);
+        sfx.star(all ? 2 : 0);
+        haptic.success();
+      }, 500);
+      this.goalsEl.classList.remove('pop');
+      void this.goalsEl.offsetWidth;
+      this.goalsEl.classList.add('pop');
+    } else this.goalsDone = n;
+  }
+
   private get over() {
     return this.o.timeLimit ? this.timeLeft <= 0 : this.throwsLeft <= 0;
   }
@@ -375,7 +428,7 @@ export class LevelScene {
       this.finishEl.classList.add('hidden');
       return;
     }
-    const now = starsFor(this.score, this.L.stars);
+    const now = this.starsNow();
     const show = now > 0 && this.throwsLeft > 0 && !this.ended && !this.finishing;
     this.finishEl.classList.toggle('hidden', !show);
     this.finishEl.classList.toggle('hot', now >= 3);
@@ -387,7 +440,7 @@ export class LevelScene {
 
   /** "Meteor finale": leftover throws rain down as a stardust bonus. */
   private finishEarly() {
-    if (this.shot || this.ended || this.finishing || this.modalOpen || starsFor(this.score, this.L.stars) === 0) return;
+    if (this.shot || this.ended || this.finishing || this.modalOpen || this.starsNow() === 0) return;
     this.finishing = true;
     clearTimeout(this.endTimer);
     this.renderFinish();
@@ -416,7 +469,7 @@ export class LevelScene {
       if (this.paused) return void setTimeout(done, 300);
       this.finishing = false;
       this.leftover = n;
-      this.endModal(starsFor(this.score, this.L.stars));
+      this.endModal(this.starsNow());
     };
     setTimeout(done, 400 + n * 160);
   }
@@ -615,7 +668,7 @@ export class LevelScene {
       const d = this.score - this.shownScore;
       this.shownScore += Math.sign(d) * Math.max(1, Math.ceil(Math.abs(d) * 0.12));
       if (Math.abs(this.score - this.shownScore) < 1) this.shownScore = this.score;
-      const got = starsFor(this.shownScore, this.L.stars);
+      const got = this.starsNow(this.shownScore);
       if (got > this.starsGot) {
         this.starsGot = got;
         sfx.star(got - 1);
@@ -854,8 +907,7 @@ export class LevelScene {
     }
     this.shownScore = this.score;
     this.renderScore();
-    const stars = starsFor(this.score, this.L.stars);
-    this.endModal(stars);
+    this.endModal(this.starsNow());
   }
 
   private endModal(stars: number) {
@@ -881,7 +933,25 @@ export class LevelScene {
       haptic.success();
       this.renderHud();
     };
-    const need = won ? (stars < 3 ? this.L.stars[stars] - this.score : 0) : this.L.stars[0] - this.score;
+    const need = won ? (stars < 3 ? this.L.stars[stars] - this.score : 0) : Math.max(0, this.L.stars[0] - this.score);
+    const missing = this.L.goals.filter((g) => goalProgress(this.planet, g) < g.count);
+    const missingEl =
+      !won && missing.length
+        ? h(
+            'div',
+            { class: 'end-missing' },
+            h('small', null, t('Still needed:')),
+            ...missing.map((g) =>
+              h('span', { class: 'goal' }, this.goalIcon(g), h('b', null, `${goalProgress(this.planet, g)}/${g.count}`)),
+            ),
+          )
+        : null;
+    // how close was it? (0..1) — drives the "so close" framing on the continue button
+    const lifeK = Math.min(1, this.score / this.L.stars[0]);
+    const goalK = this.L.goals.length
+      ? this.L.goals.reduce((a, g) => a + Math.min(1, goalProgress(this.planet, g) / g.count), 0) / this.L.goals.length
+      : 1;
+    const close = Math.min(lifeK, goalK);
     const m = modal(
       [
         h(
@@ -907,6 +977,8 @@ export class LevelScene {
               won ? t('Only {n} life from the next star!', { n: fmt(need) }) : t('Just {n} life short of a star.', { n: fmt(need) }),
             )
           : null,
+        missingEl,
+        !won && close >= 0.75 ? h('div', { class: 'so-close' }, h('i', { style: `width:${Math.round(close * 100)}%` }), h('span', null, t('So close! {p}% there', { p: Math.round(close * 100) }))) : null,
         canCont && (need > 0 || !won)
           ? btn(
               h(
