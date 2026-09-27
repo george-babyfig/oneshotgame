@@ -40,7 +40,7 @@ Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · 
 - ✅ "Critters": all creatures drawn as vector art in one house style
 - ✅ Hand-drawn biome props, projectile sprites, planet surface detail (clouds, shimmer, atmosphere)
 - ✅ New app icon and splash (rendered from the game's art code)
-- ⏳ Custom UI icon set (menus still use system emoji)
+- ✅ Custom SVG icon set for navigation and menus (emoji remain only inline in reward text)
 
 ## 3. Game feel
 
@@ -50,7 +50,7 @@ Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · 
 - ✅ Meteor finale (finish early, and leftover throws become stardust)
 - ✅ Screen transitions, reduce-motion setting
 - ✅ Score counter that heats up
-- ⏳ Level-complete fly-to-galaxy sequence
+- ✅ Level-complete sequence: the planet shrinks and flies off to join your galaxy
 
 ## 4. Progression
 
@@ -59,6 +59,7 @@ Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · 
 - ✅ Daily quests (3 per day + completion bonus)
 - ✅ Momentum win streak
 - ✅ Hard / Super Hard planets
+- ✅ Physics twists for later chapters: solar wind, heavy gravity, wobbling spin, twin moons
 - ✅ Explorer Rank (3 standing goals; rank-ups unlock modes)
 - ✅ Lifebook habitat sets
 
@@ -93,7 +94,7 @@ Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · 
 - ✅ Local notifications: vault full, daily gift ready (opt-in, never at night)
 - ✅ App Store rating prompt at a happy moment
 - ✅ Share Daily Planet results and challenge codes
-- ⏳ Share a rendered planet postcard image
+- ✅ Share a rendered planet postcard image
 - ✅ Settings: reduce motion, reminders, credits
 
 ## 9. Audio
