@@ -46,6 +46,9 @@ import {
   sendHome,
   startExpedition,
   tickHome,
+  NICKNAMES,
+  setNick,
+  isBestFriend,
   currentPaint,
   applyPaint,
   ownsPaint,
@@ -746,7 +749,14 @@ function residentsSheet(app: App, after: () => void) {
       h(
         'div',
         { class: 'grow' },
-        h('b', null, t(sp.name)),
+        h(
+          'button',
+          { class: 'nick', onclick: () => (m.close(), nickSheet(app, r.species, () => residentsSheet(app, after))) },
+          r.nick ? h('b', null, r.nick) : null,
+          h('small', null, r.nick ? ` · ${t(sp.name)}` : t(sp.name)),
+          ' ✏️',
+          isBestFriend(r) ? h('span', { class: 'ribbon' }, t('🎀 Best friends')) : null,
+        ),
         h(
           'div',
           { class: 'hearts' },
@@ -1038,7 +1048,7 @@ function paintSheet(app: App) {
 
 // ---------------------------------------------------------------- photo mode
 type Frame = 'clean' | 'polaroid' | 'stars' | 'season' | 'gold';
-const FRAMES: { id: Frame; name: string; pass?: boolean }[] = [
+export const FRAMES: { id: Frame; name: string; pass?: boolean }[] = [
   { id: 'polaroid', name: 'Instant' },
   { id: 'clean', name: 'Clean' },
   { id: 'stars', name: 'Starry' },
@@ -1151,5 +1161,25 @@ function photoMode(app: App, src: HTMLCanvasElement) {
     btn(t('📤 Share photo'), 'primary wide', () =>
       shareCanvas(renderPhoto(app, src, frame), t('My Homeworld in Pocket Planet 🪐'), 'homeworld-photo'),
     ),
+  ]);
+}
+
+function nickSheet(app: App, species: string, back: () => void) {
+  const p = app.p;
+  const r = p.home.residents.find((x) => x.species === species);
+  if (!r) return;
+  const pick = (nick: string | undefined) => {
+    setNick(p, species, nick);
+    sfx.click();
+    haptic.light();
+    app.save();
+    m.close();
+    back();
+  };
+  const m = modal([
+    h('div', { class: 'm-title' }, t('Name your {name}', { name: t(SPECIES_BY_ID[species].name) })),
+    h('div', { class: 'pe-av' }, critterCanvas(species, 80)),
+    h('div', { class: 'nick-grid' }, ...NICKNAMES.map((n) => btn(n, `ghost small${r.nick === n ? ' on' : ''}`, () => pick(n)))),
+    r.nick ? btn(t('No nickname'), 'ghost wide', () => pick(undefined)) : null,
   ]);
 }

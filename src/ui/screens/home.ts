@@ -17,6 +17,7 @@ import type { App } from '../app';
 import { icon as iconEl } from '../icons';
 import { t, tp } from '../../i18n';
 import { editPassport } from './passport';
+import { checkMail, unread } from '../../meta/inbox';
 import { SEASON_EMOJI, SEASON_NAMES, seasonOf, skyEventOn } from '../../meta/seasons';
 import { homeBadge, homeUnlocked } from '../../meta/homeworld';
 
@@ -46,6 +47,7 @@ function seasonChip(hemi: 'north' | 'south') {
 
 export function showHome(app: App) {
   const p = app.p;
+  if (checkMail(p)) app.save();
   const next = makeLevel(p.level);
   const ch = chapterOf(p.level);
   const pending = pendingDust(p);
@@ -101,6 +103,7 @@ export function showHome(app: App) {
         navBtn('scroll', t('Quests'), questBadge, () => app.quests(), 'side-btn'),
         navBtn('road', t('Star Road'), roadBadge, () => app.showRoad(), 'side-btn'),
         navBtn('medal', t('Rank {n}', { n: p.rank }), rankReady(p) ? 1 : 0, () => app.rank(), 'side-btn'),
+        navBtn('mail', t('Inbox'), unread(p), () => app.inbox(), 'side-btn'),
       ),
       h(
         'div',

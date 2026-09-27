@@ -45,8 +45,11 @@ import { showPassport } from './screens/passport';
 import { showPass } from './screens/pass';
 import { showHomeworld } from './screens/homeworld';
 import { parentalGate } from './flows/gate';
+import { inboxFlow } from './flows/inbox';
 import { tickHome } from '../meta/homeworld';
 import { labLevels } from '../meta/lab';
+import { addFling } from '../meta/records';
+import { sight } from '../meta/lore';
 import { seasonOf, skyEventOn } from '../meta/seasons';
 import { keeperHead } from './art/keeper';
 
@@ -224,6 +227,9 @@ export class App {
   showPass() {
     showPass(this);
   }
+  inbox() {
+    inboxFlow(this);
+  }
   showHomeworld() {
     showHomeworld(this);
   }
@@ -281,6 +287,7 @@ export class App {
             },
             keeperHead(currentLook(this.p), 40),
           ),
+
       h('div', { class: 'grow' }),
       h('button', { class: 'pill dust', 'aria-label': t('Stardust'), onclick: () => this.showUpgrades() }, `✨ ${fmt(this.p.dust)}`),
       h(
@@ -318,12 +325,15 @@ export class App {
         discoverSpecies(this.p, id);
         this.save();
       },
-      onSpecies: () => {
+      onSpecies: (id) => {
         this.p.stats.creatures++;
+        sight(this.p, id);
         track(this.p, 'creature');
       },
-      onThrow: () => {
+      onThrow: (kind) => {
         this.p.stats.throws++;
+        const star = addFling(this.p, kind);
+        if (star) toast(t('{name} record: {stars}', { name: t(KINDS[kind].name), stars: '★'.repeat(star) }), 'good');
         const l = currentLook(this.p).launcher;
         this.p.mastery[l] = (this.p.mastery[l] ?? 0) + 1;
         track(this.p, 'throw');

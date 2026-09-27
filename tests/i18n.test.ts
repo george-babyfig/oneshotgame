@@ -16,7 +16,12 @@ import { COSMETICS, SLOT_NAMES } from '../src/meta/cosmetics';
 import { BANNERS } from '../src/meta/passport';
 import { ACHIEVEMENTS } from '../src/meta/achievements';
 import { BUILDINGS } from '../src/meta/homeworld';
-import { REASON } from '../src/ui/screens/homeworld';
+import { FRAMES, REASON } from '../src/ui/screens/homeworld';
+import { PAINTS } from '../src/meta/homeworld';
+import { letterStrings } from '../src/meta/inbox';
+import { LORE } from '../src/meta/lore';
+import { OBJECT_TITLES } from '../src/meta/records';
+import { SEASON_NAMES, SKY_EVENTS } from '../src/meta/seasons';
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
@@ -63,6 +68,13 @@ export function allKeys(): string[] {
   add('Star Captain');
   Object.values(BUILDINGS).forEach((b) => (add(b.name), add(b.desc)));
   Object.values(REASON).forEach(add);
+  PAINTS.forEach((x) => add(x.name));
+  FRAMES.forEach((x) => add(x.name));
+  letterStrings().forEach(add);
+  Object.values(LORE).forEach(add);
+  Object.values(OBJECT_TITLES).forEach(add);
+  Object.values(SEASON_NAMES).forEach(add);
+  SKY_EVENTS.forEach((e) => add(e.name));
   // mode names/descriptions live in a UI module (src/ui/flows/modes.ts)
   [
     'Daily Planet',

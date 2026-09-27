@@ -9,6 +9,7 @@ import { t } from '../../i18n';
 import { KINDS, type Kind } from '../../core/world';
 import { LAB_COST, LAB_MAX, canLab, labLevel, perks, upgradeLab } from '../../meta/lab';
 import { projectileCanvas } from '../art/projectiles';
+import { RECORD_STEPS, flings, recordStars } from '../../meta/records';
 
 function labCard(app: App, kind: Kind) {
   const p = app.p;
@@ -28,6 +29,16 @@ function labCard(app: App, kind: Kind) {
         { class: 'grow' },
         h('b', null, t(k.name)),
         h('small', null, locked ? t('Unlocks at planet {n}', { n: k.unlock }) : t('Lv {n}', { n: lv })),
+        locked
+          ? null
+          : h(
+              'small',
+              { class: 'rec' },
+              t('Record {stars} · {n} flung', {
+                stars: '★'.repeat(recordStars(flings(p, kind))) + '☆'.repeat(RECORD_STEPS.length - recordStars(flings(p, kind))),
+                n: fmt(flings(p, kind)),
+              }),
+            ),
       ),
       check === 'max'
         ? h('div', { class: 'up-max' }, t('MAX'))

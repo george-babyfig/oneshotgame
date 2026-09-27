@@ -125,7 +125,54 @@ export interface Resident {
   lastReq: number;
   /** Friendship levels already rewarded. */
   rewarded: number;
+  /** Nickname (from NICKNAMES; kid-safe, no free text). */
+  nick?: string;
 }
+
+/** Pet names for residents: proper nouns, the same in every language. */
+export const NICKNAMES = [
+  'Pip',
+  'Mochi',
+  'Bean',
+  'Nova',
+  'Biscuit',
+  'Pebbles',
+  'Comet',
+  'Luna',
+  'Sprout',
+  'Ziggy',
+  'Maple',
+  'Button',
+  'Pudding',
+  'Echo',
+  'Dot',
+  'Kiwi',
+  'Toffee',
+  'Pixel',
+  'Twig',
+  'Bubbles',
+  'Coco',
+  'Fizz',
+  'Juniper',
+  'Waffles',
+  'Clover',
+  'Nugget',
+  'Sunny',
+  'Marble',
+  'Peanut',
+  'Orbit',
+  'Jellybean',
+  'Noodle',
+];
+
+export function setNick(p: Profile, species: string, nick: string | undefined) {
+  const r = p.home.residents.find((x) => x.species === species);
+  if (!r || (nick && !NICKNAMES.includes(nick))) return false;
+  r.nick = nick;
+  return true;
+}
+
+export const isBestFriend = (r: Resident) => friendLevel(r.fp) >= FRIEND_LEVELS.length;
 
 export interface Expedition {
   species: string;

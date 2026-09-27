@@ -71,7 +71,7 @@ export interface SceneOpts {
   continueCost: (i: number) => number;
   onNewSpecies: (id: string) => void;
   onSpecies?: (id: string) => void;
-  onThrow?: () => void;
+  onThrow?: (kind: Kind) => void;
   onTransform?: (regions: number) => void;
   /** Weekly event hook: returns event tokens earned by this landing. */
   onLand?: (changed: BiomeId[], spawned: number) => number;
@@ -631,7 +631,7 @@ export class LevelScene {
     this.throwsUsed++;
     sfx.launch();
     haptic.medium();
-    this.o.onThrow?.();
+    this.o.onThrow?.(this.shot.kind);
     if (this.hintShown) {
       this.hintShown = false;
       this.hintEl.remove();

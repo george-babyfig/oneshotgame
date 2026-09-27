@@ -2,6 +2,7 @@ import { loadKey, saveKey } from './storage';
 import type { BoosterId, UpgradeId } from './config';
 import type { Kind, Planet } from '../core/world';
 import { defaultHome, type HomeState } from './homeworld';
+import type { Mail } from './inbox';
 
 export interface GalaxyPlanet {
   n: number;
@@ -115,6 +116,12 @@ export interface Profile {
   home: HomeState;
   /** Object Lab levels per flingable (missing = 1). */
   lab: Partial<Record<Kind, number>>;
+  /** Flings per object (object records). */
+  flings: Partial<Record<Kind, number>>;
+  /** Times each creature was seen appearing (Lifebook field notes). */
+  sightings: Record<string, number>;
+  /** Inbox letters. */
+  mail: Mail[];
 }
 
 const KEY = 'pp.profile';
@@ -178,6 +185,9 @@ export function defaultProfile(now = Date.now()): Profile {
     passport: { first: -1, second: -1, set: false, title: '', banner: 0, badges: [] },
     home: defaultHome(now),
     lab: {},
+    flings: {},
+    sightings: {},
+    mail: [],
   };
 }
 

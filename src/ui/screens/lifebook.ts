@@ -12,15 +12,33 @@ import { mementoName } from '../../meta/visitors';
 import { t } from '../../i18n';
 import { rarityName, speciesHint } from '../text';
 import { claimHabitat } from '../../meta/habitats';
+import { LORE, LORE_AT, STUDIED_AT, loreUnlocked, sightings, studied } from '../../meta/lore';
+import type { Profile } from '../../meta/profile';
 
 const ORDER: Rarity[] = ['common', 'uncommon', 'rare', 'legendary'];
 
-function card(s: SpeciesDef, got: boolean) {
+function card(p: Profile, s: SpeciesDef, got: boolean) {
+  const n = sightings(p, s.id);
   modal([
-    h('div', { class: `lb-big r-${s.rarity}${got ? '' : ' locked'}` }, critterCanvas(s.id, 120)),
+    h('div', { class: `lb-big r-${s.rarity}${got ? '' : ' locked'}${studied(p, s.id) ? ' studied' : ''}` }, critterCanvas(s.id, 120)),
     h('div', { class: 'm-sub' }, rarityName(s.rarity)),
     h('div', { class: 'm-title' }, got ? t(s.name) : t('Undiscovered')),
     h('p', { class: 'muted' }, t('Lives: {hint}', { hint: speciesHint(s) })),
+    got
+      ? h(
+          'div',
+          { class: 'lore' },
+          h('small', null, t('📓 Field notes · seen {n} times', { n })),
+          loreUnlocked(p, s.id)
+            ? h('p', null, t(LORE[s.id] ?? ''))
+            : h('p', { class: 'muted' }, t('See it {n} more times to unlock its story.', { n: LORE_AT - n })),
+          studied(p, s.id)
+            ? h('b', { class: 'studied-tag' }, t('✦ Studied'))
+            : n >= LORE_AT
+              ? h('small', { class: 'muted' }, t('{n} more sightings for a gold frame', { n: STUDIED_AT - n }))
+              : null,
+        )
+      : null,
   ]);
 }
 
@@ -40,7 +58,10 @@ export function showLifebook(app: App) {
           const got = seen.has(s.id);
           return h(
             'button',
-            { class: `lb r-${r}${got ? '' : ' locked'}`, onclick: () => (sfx.click(), card(s, got)) },
+            {
+              class: `lb r-${r}${got ? '' : ' locked'}${studied(app.p, s.id) ? ' studied' : ''}`,
+              onclick: () => (sfx.click(), card(app.p, s, got)),
+            },
             h('div', { class: 'lbe' }, critterCanvas(s.id, 56)),
             h('div', { class: 'lbn' }, got ? t(s.name) : '???'),
             h('div', { class: 'lbh' }, speciesHint(s)),
