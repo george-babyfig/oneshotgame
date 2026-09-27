@@ -1,6 +1,6 @@
 // Modes hub: Daily Planet, Meteor Rush, Zen Garden and Challenge a Friend.
 import { h, btn, fmt, modal, toast } from '../dom';
-import { sfx } from '../audio';
+import { sfx, setMusicTheme } from '../audio';
 import { haptic } from '../haptics';
 import { LevelScene, type LevelResult } from '../game';
 import { starsFor, type LevelDef } from '../../core/levels';
@@ -111,6 +111,7 @@ function play(app: App, L: LevelDef, mode: Mode, vs?: { code: string; seed: stri
   const scene = new LevelScene(L, opts);
   app.mount(scene.el, 'level');
   app.scene = scene;
+  setMusicTheme({ daily: 'tide', rush: 'rush', zen: 'zen', challenge: 'storm' }[mode]);
 }
 
 function modeEnded(app: App, mode: Mode, r: LevelResult, vs?: { code: string; seed: string; score: number }) {

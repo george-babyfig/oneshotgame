@@ -4,7 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { h, fmt, mountOverlays, closeModals, toast } from './dom';
-import { sfx, setAudio, unlockAudio, pauseAudio } from './audio';
+import { sfx, setAudio, unlockAudio, pauseAudio, setMusicTheme, chapterTheme } from './audio';
 import { haptic, setHaptics } from './haptics';
 import { LevelScene, type LevelResult, type SceneOpts } from './game';
 import { makeLevel, type LevelDef } from '../core/levels';
@@ -13,7 +13,7 @@ import { loadProfile, saveProfile, today, type Profile } from '../meta/profile';
 import { createIap } from '../meta/iap';
 import { CONTINUE_COSTS, PRODUCT_BY_ID, PRODUCT_BY_KEY, SKINS, type BoosterId } from '../meta/config';
 import { discoverSpecies, grantProduct, spendGems, track } from '../meta/economy';
-import { ensureQuests } from '../meta/progression';
+import { chapterOf, ensureQuests } from '../meta/progression';
 import { MOMENTUM_PERKS, momentumActive, momentumLoss, momentumWin } from '../meta/momentum';
 import { addVisitors } from '../meta/visitors';
 import { rankFlow } from './flows/rank';
@@ -152,6 +152,7 @@ export class App {
     el.classList.add('enter');
     this.host.replaceChildren(el);
     this.screen = name;
+    if (name !== 'level') setMusicTheme('home');
   }
 
   /** Re-render whatever non-level screen is showing (after currencies change). */
@@ -289,6 +290,7 @@ export class App {
     opts.extraThrows += perk.throws;
     const scene = new LevelScene(L, opts);
     this.mount(scene.el, 'level');
+    setMusicTheme(chapterTheme(chapterOf(n).n));
     this.scene = scene;
   }
 

@@ -138,13 +138,143 @@ export const sfx = {
   combo: (n: number) => [0, 4, 7].forEach((s, i) => tone(semi(523, s + Math.min(n, 8) * 2), 0.18, 'square', 0.05, i * 0.05)),
 };
 
-// Slow, spacey pad loop.
-const CHORDS = [
-  [60, 64, 67, 71],
-  [57, 60, 64, 67],
-  [53, 57, 60, 64],
-  [55, 59, 62, 67],
-];
+// Generative ambient music. Each theme is a chord loop plus a gentle arpeggio;
+// the home screen, each chapter and each mode get their own.
+interface Theme {
+  chords: number[][];
+  len: number; // seconds per chord
+  arp: number[]; // chord-tone indices, one per step
+  step: number; // seconds per arp step
+  wave: OscillatorType;
+  bells?: boolean;
+  pulse?: boolean;
+}
+
+export const THEMES: Record<string, Theme> = {
+  home: {
+    chords: [
+      [60, 64, 67, 71],
+      [57, 60, 64, 67],
+      [53, 57, 60, 64],
+      [55, 59, 62, 67],
+    ],
+    len: 3.2,
+    arp: [0, 2, 3],
+    step: 1.05,
+    wave: 'sine',
+  },
+  dawn: {
+    chords: [
+      [60, 64, 67, 72],
+      [65, 69, 72, 76],
+      [62, 65, 69, 74],
+      [67, 71, 74, 79],
+    ],
+    len: 3,
+    arp: [0, 1, 2, 3, 2, 1],
+    step: 0.5,
+    wave: 'triangle',
+  },
+  cinder: {
+    chords: [
+      [57, 60, 64, 67],
+      [55, 59, 62, 66],
+      [53, 57, 60, 64],
+      [52, 55, 59, 62],
+    ],
+    len: 3.4,
+    arp: [0, 2, 1, 3],
+    step: 0.85,
+    wave: 'triangle',
+  },
+  tide: {
+    chords: [
+      [62, 66, 69, 73],
+      [64, 68, 71, 74],
+      [62, 66, 69, 73],
+      [59, 62, 66, 69],
+    ],
+    len: 3.6,
+    arp: [3, 2, 1, 0, 1, 2],
+    step: 0.6,
+    wave: 'sine',
+    bells: true,
+  },
+  frost: {
+    chords: [
+      [57, 60, 64, 69],
+      [53, 57, 60, 65],
+      [55, 58, 62, 67],
+      [52, 56, 59, 64],
+    ],
+    len: 4,
+    arp: [3, 1, 2],
+    step: 1.3,
+    wave: 'sine',
+    bells: true,
+  },
+  verdant: {
+    chords: [
+      [60, 62, 67, 69],
+      [57, 60, 64, 67],
+      [62, 65, 69, 72],
+      [55, 60, 62, 67],
+    ],
+    len: 3,
+    arp: [0, 1, 2, 3, 1, 2],
+    step: 0.5,
+    wave: 'triangle',
+  },
+  storm: {
+    chords: [
+      [62, 67, 69, 74],
+      [60, 65, 67, 72],
+      [58, 63, 65, 70],
+      [60, 65, 67, 72],
+    ],
+    len: 3.2,
+    arp: [0, 3, 1, 2],
+    step: 0.4,
+    wave: 'triangle',
+  },
+  rush: {
+    chords: [
+      [57, 60, 64, 69],
+      [60, 64, 67, 72],
+      [55, 59, 62, 67],
+      [53, 57, 60, 65],
+    ],
+    len: 1.8,
+    arp: [0, 1, 2, 3, 2, 1, 0, 2],
+    step: 0.225,
+    wave: 'square',
+    pulse: true,
+  },
+  zen: {
+    chords: [
+      [60, 67, 72, 76],
+      [57, 64, 69, 72],
+      [53, 60, 65, 69],
+      [55, 62, 67, 71],
+    ],
+    len: 5,
+    arp: [3, 2],
+    step: 2.2,
+    wave: 'sine',
+    bells: true,
+  },
+};
+const CHAPTER_THEMES = ['dawn', 'cinder', 'tide', 'frost', 'verdant', 'storm'];
+let theme: Theme = THEMES.home;
+
+/** Switch music theme; takes effect at the next chord. */
+export function setMusicTheme(name: string) {
+  theme = THEMES[name] ?? THEMES.home;
+}
+export function chapterTheme(chapter: number) {
+  return CHAPTER_THEMES[(chapter - 1) % CHAPTER_THEMES.length];
+}
+
 const midi = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
 
 function startMusic() {
@@ -152,17 +282,31 @@ function startMusic() {
   if (!c || !musicBus) return;
   musicBus.gain.setTargetAtTime(0.3, c.currentTime, 2);
   let bar = 0;
-  const len = 3.2;
   let next = c.currentTime + 0.1;
   const tick = () => {
     if (!ctx) return;
-    while (next < ctx.currentTime + len * 1.5) {
-      const ch = CHORDS[bar % CHORDS.length];
+    while (next < ctx.currentTime + 4) {
+      const th = theme;
+      const ch = th.chords[bar % th.chords.length];
       const w = next - ctx.currentTime;
-      ch.forEach((n) => tone(midi(n), len * 1.05, 'sine', 0.03, w, undefined, musicBus));
-      tone(midi(ch[0] - 24), len, 'triangle', 0.04, w, undefined, musicBus);
-      for (let k = 0; k < 3; k++) tone(midi(ch[(k + bar) % 4] + 12), 0.8, 'sine', 0.015, w + k * 1.05 + 0.4, undefined, musicBus);
-      next += len;
+      ch.forEach((n) => tone(midi(n), th.len * 1.05, 'sine', 0.026, w, undefined, musicBus));
+      tone(midi(ch[0] - 24), th.len, 'triangle', 0.04, w, undefined, musicBus);
+      const steps = Math.max(1, Math.floor(th.len / th.step));
+      for (let k = 0; k < steps; k++) {
+        const note = ch[th.arp[(k + bar) % th.arp.length] % ch.length] + 12;
+        tone(
+          midi(note),
+          Math.min(0.9, th.step * 1.6),
+          th.wave,
+          th.wave === 'square' ? 0.008 : 0.016,
+          w + k * th.step + 0.05,
+          undefined,
+          musicBus,
+        );
+      }
+      if (th.bells && bar % 2 === 0) tone(midi(ch[3] + 24), 1.6, 'sine', 0.012, w + th.len * 0.5, undefined, musicBus);
+      if (th.pulse) for (let k = 0; k < 4; k++) tone(midi(ch[0] - 12), 0.12, 'triangle', 0.035, w + k * (th.len / 4), undefined, musicBus);
+      next += th.len;
       bar++;
     }
   };

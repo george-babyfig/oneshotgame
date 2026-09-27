@@ -98,6 +98,7 @@ export interface Profile {
 }
 
 const KEY = 'pp.profile';
+const BACKUP_KEY = 'pp.profile.bak';
 export const PROFILE_VERSION = 2;
 
 export function defaultProfile(now = Date.now()): Profile {
@@ -176,17 +177,24 @@ export function migrate(raw: Record<string, unknown>): Profile {
 }
 
 export async function loadProfile(): Promise<Profile> {
-  const raw = await loadKey(KEY);
-  if (!raw) return defaultProfile();
-  try {
-    return migrate(JSON.parse(raw));
-  } catch {
-    return defaultProfile();
+  for (const key of [KEY, BACKUP_KEY]) {
+    const raw = await loadKey(key);
+    if (!raw) continue;
+    try {
+      return migrate(JSON.parse(raw));
+    } catch {
+      /* corrupted: try the backup */
+    }
   }
+  return defaultProfile();
 }
 
-export function saveProfile(p: Profile) {
-  return saveKey(KEY, JSON.stringify(p));
+let saves = 0;
+/** Save the profile; every few saves also refresh a backup copy. */
+export async function saveProfile(p: Profile) {
+  const json = JSON.stringify(p);
+  await saveKey(KEY, json);
+  if (saves++ % 5 === 0) await saveKey(BACKUP_KEY, json);
 }
 
 export function today(d = new Date()) {
