@@ -47,6 +47,10 @@ import { showHomeworld } from './screens/homeworld';
 import { parentalGate } from './flows/gate';
 import { inboxFlow } from './flows/inbox';
 import { showSky } from './screens/sky';
+import { showVoyage } from './screens/voyage';
+import { showAlbum } from './screens/album';
+import { festivalFlow } from './flows/festival';
+import { ensureFestival, festivalActive, spotFestival } from '../meta/festivals';
 import { tickHome } from '../meta/homeworld';
 import { labLevels } from '../meta/lab';
 import { addFling } from '../meta/records';
@@ -55,7 +59,20 @@ import { seasonOf, skyEventOn } from '../meta/seasons';
 import { keeperHead } from './art/keeper';
 
 export type ScreenName =
-  'home' | 'lifebook' | 'upgrades' | 'shop' | 'map' | 'road' | 'level' | 'workshop' | 'pass' | 'passport' | 'homeworld' | 'sky';
+  | 'home'
+  | 'lifebook'
+  | 'upgrades'
+  | 'shop'
+  | 'map'
+  | 'road'
+  | 'level'
+  | 'workshop'
+  | 'pass'
+  | 'passport'
+  | 'homeworld'
+  | 'sky'
+  | 'voyage'
+  | 'album';
 export type Boosters = Record<BoosterId, boolean>;
 export const NO_BOOSTERS: Boosters = { shower: false, spark: false, scope: false };
 
@@ -192,6 +209,8 @@ export class App {
       pass: () => this.showPass(),
       homeworld: () => this.showHomeworld(),
       sky: () => this.showSky(),
+      voyage: () => this.showVoyage(),
+      album: () => this.showAlbum(),
     };
     this.refreshing = true;
     try {
@@ -231,6 +250,15 @@ export class App {
   }
   showSky() {
     showSky(this);
+  }
+  showVoyage() {
+    showVoyage(this);
+  }
+  showAlbum() {
+    showAlbum(this);
+  }
+  festival() {
+    festivalFlow(this);
   }
   inbox() {
     inboxFlow(this);
@@ -333,6 +361,7 @@ export class App {
       onSpecies: (id) => {
         this.p.stats.creatures++;
         sight(this.p, id);
+        spotFestival(this.p);
         track(this.p, 'creature');
       },
       onThrow: (kind) => {
@@ -356,6 +385,7 @@ export class App {
       // Object Lab levels apply to the campaign and Zen, not to the score-competitive modes
       lab: extra.competitive ? undefined : labLevels(this.p),
       season: seasonOf(new Date(), this.p.settings.hemi),
+      festAcc: festivalActive(this.p) ? ensureFestival(this.p).acc : undefined,
       // the meteor-shower bonus stays out of score-competitive modes
       shower: !extra.competitive && !!skyEventOn(new Date()),
       ...extra,

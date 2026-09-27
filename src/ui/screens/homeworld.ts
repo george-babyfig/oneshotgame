@@ -1287,7 +1287,10 @@ function accSheet(app: App, species: string, back: () => void) {
   const pick = (id: string | undefined) => {
     const res = wearAcc(p, species, id);
     if (res === 'gems') return app.needGems();
-    if (res === 'locked') return toast(t('Become better friends to unlock it'));
+    if (res === 'locked')
+      return toast(
+        RESIDENT_ACCS.find((a) => a.id === id)?.fest ? t('Earn it in a monthly festival') : t('Become better friends to unlock it'),
+      );
     sfx.click();
     haptic.light();
     app.save();
@@ -1307,7 +1310,7 @@ function accSheet(app: App, species: string, back: () => void) {
           { class: `acc${r.acc === a.id ? ' on' : ''}${ok ? '' : ' locked'}`, onclick: () => pick(a.id) },
           critterCanvas(species, 54, 0.4, a.id),
           h('small', null, t(a.name)),
-          h('b', null, ok ? '' : a.friend ? `💖${a.friend}` : `💎${a.gems}`),
+          h('b', null, ok ? '' : a.friend ? `💖${a.friend}` : a.fest ? '🎪' : `💎${a.gems}`),
         );
       }),
     ),

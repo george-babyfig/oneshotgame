@@ -1,5 +1,8 @@
 // Every translatable string must exist in every locale, with the same {placeholders}.
 // Run with DUMP_KEYS=1 to write the key list to src/locales/_keys.json.
+import { FESTIVALS } from '../src/meta/festivals';
+import { ALBUM_PAGES, SCRAP_BGS, STICKERS } from '../src/meta/stickers';
+import { PORTS, VOYAGE_NAMES } from '../src/meta/voyage';
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -81,6 +84,12 @@ export function allKeys(): string[] {
   Object.values(OBJECT_TITLES).forEach(add);
   Object.values(SEASON_NAMES).forEach(add);
   SKY_EVENTS.forEach((e) => add(e.name));
+  FESTIVALS.forEach((f) => add(f.name));
+  STICKERS.forEach((s) => (add(s.name), add(s.hint[0])));
+  ALBUM_PAGES.forEach((pg) => add(pg.name));
+  SCRAP_BGS.forEach((b) => add(b.name));
+  PORTS.forEach(add);
+  VOYAGE_NAMES.forEach(add);
   // mode names/descriptions live in a UI module (src/ui/flows/modes.ts)
   [
     'Daily Planet',

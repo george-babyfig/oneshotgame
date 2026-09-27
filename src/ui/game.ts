@@ -37,6 +37,8 @@ export interface SceneOpts {
   /** Real-calendar season weather, and a meteor shower tonight (Supernova charges 2×). */
   season?: Season;
   shower?: boolean;
+  /** This month's festival costume, worn by every creature on the planet. */
+  festAcc?: string;
   /** Object Lab level per object (campaign/Zen only). */
   lab?: Partial<Record<Kind, number>>;
   /** The launcher is fully mastered (gold glow). */
@@ -1431,7 +1433,7 @@ export class LevelScene {
         const anim = this.spawnAnim.get(i) ?? 0;
         const pop = anim > 0 ? 1 + Math.sin((anim / 0.9) * Math.PI) * 0.8 : 1;
         const size = this.R * (sp.rarity === 'common' ? 0.2 : sp.rarity === 'uncommon' ? 0.24 : 0.3) * pop;
-        drawCreature(g, sp.id, x, y, a + Math.PI / 2, size, this.time + i);
+        drawCreature(g, sp.id, x, y, a + Math.PI / 2, size, this.time + i, this.o.festAcc);
       },
     });
   }

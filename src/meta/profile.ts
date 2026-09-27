@@ -134,6 +134,18 @@ export interface Profile {
   /** Suit dyes: unlocked ids and the ones applied. */
   dyes: string[];
   dye: { main: string | null; trim: string | null };
+  /** This month's festival: costumed critters spotted and tiers claimed. */
+  festival: { key: string; spotted: number; claimed: number[] };
+  /** This week's Voyage: difficulty base, stops cleared, best stars per stop; and voyages ever finished. */
+  voyage: { week: string; base: number; cleared: number; stars: number[] };
+  voyageDone: number;
+  /** Sticker Album: festival stickers kept, milestones and pages claimed, and the scrapbook pages. */
+  album: {
+    fest: string[];
+    milestones: number;
+    pagesClaimed: string[];
+    pages: { bg: number; items: { id: string; x: number; y: number; r: number; s: number }[] }[];
+  };
 }
 
 const KEY = 'pp.profile';
@@ -208,6 +220,19 @@ export function defaultProfile(now = Date.now()): Profile {
     constellations: [],
     dyes: [],
     dye: { main: null, trim: null },
+    festival: { key: '', spotted: 0, claimed: [] },
+    voyage: { week: '', base: 8, cleared: 0, stars: [] },
+    voyageDone: 0,
+    album: {
+      fest: [],
+      milestones: 0,
+      pagesClaimed: [],
+      pages: [
+        { bg: 0, items: [] },
+        { bg: 1, items: [] },
+        { bg: 0, items: [] },
+      ],
+    },
   };
 }
 

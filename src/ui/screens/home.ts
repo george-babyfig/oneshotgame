@@ -20,6 +20,8 @@ import { editPassport } from './passport';
 import { checkMail, unread } from '../../meta/inbox';
 import { SEASON_EMOJI, SEASON_NAMES, seasonOf, skyEventOn } from '../../meta/seasons';
 import { homeBadge, homeUnlocked } from '../../meta/homeworld';
+import { FESTIVAL_TIERS, ensureFestival, festivalActive, festivalReady } from '../../meta/festivals';
+import { VOYAGE_LEN, ensureVoyage, voyageActive } from '../../meta/voyage';
 
 export function navBtn(icon: string, label: string, badge: string | number, fn: () => void, cls = '') {
   return h(
@@ -32,6 +34,27 @@ export function navBtn(icon: string, label: string, badge: string | number, fn: 
 }
 
 let setupAsked = false;
+
+/** This month's festival: tap for its tiers. */
+function festivalChip(app: App) {
+  const p = app.p;
+  if (!festivalActive(p)) return null;
+  const f = ensureFestival(p);
+  const max = FESTIVAL_TIERS[FESTIVAL_TIERS.length - 1].spot;
+  const ready = festivalReady(p).length;
+  return h(
+    'button',
+    { class: `fest-chip${ready ? ' ready' : ''}`, style: `--c:${f.color}`, onclick: () => (sfx.click(), app.festival()) },
+    `${f.emoji} ${t(f.name)} · ${Math.min(p.festival.spotted, max)}/${max}`,
+    ready ? h('span', { class: 'nb dot' }, String(ready)) : null,
+  );
+}
+
+/** Dot when the next stop is open and not yet cleared this week. */
+function voyageBadge(p: App['p']) {
+  const v = ensureVoyage(p);
+  return v.cleared < VOYAGE_LEN ? 1 : 0;
+}
 
 /** Today's season, and a banner on real meteor-shower days. */
 function seasonChip(hemi: 'north' | 'south') {
@@ -84,7 +107,7 @@ export function showHome(app: App, quiet = false) {
     { class: 'screen home' },
     app.topBar(),
     h('div', { class: 'title' }, h('span', null, t('Pocket')), h('span', null, t('Planet'))),
-    seasonChip(p.settings.hemi),
+    h('div', { class: 'chip-row' }, seasonChip(p.settings.hemi), festivalChip(app)),
     h(
       'div',
       { class: 'galaxy-wrap' },
@@ -110,6 +133,7 @@ export function showHome(app: App, quiet = false) {
         { class: 'side side-r' },
         homeUnlocked(p) ? navBtn('world', t('Homeworld'), homeBadge(p), () => app.showHomeworld(), 'side-btn world-btn') : null,
         navBtn('pad', t('Modes'), modesBadge(app), () => app.modes(), 'side-btn'),
+        voyageActive(p) ? navBtn('rocket', t('Voyage'), voyageBadge(p), () => app.showVoyage(), 'side-btn') : null,
         eventActive(p) ? navBtn(ensureEvent(p).emoji, t('Event'), eventReady(p).length, () => app.events(), 'side-btn event-btn') : null,
         p.level > PIGGY_FROM_LEVEL && p.piggy >= PIGGY_MIN ? navBtn('pig', `💎${p.piggy}`, '', () => app.showShop(), 'side-btn') : null,
       ),

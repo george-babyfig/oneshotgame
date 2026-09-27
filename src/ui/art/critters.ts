@@ -662,5 +662,171 @@ function drawAccessory(g: G, id: string, hx: number, hy: number, top: number, hr
       ell(g, hx + 0.02 * u, y - 0.42 * u, 0.05 * u, 0.05 * u, '#ff6aa8');
       break;
     }
+    // ---- festival costumes (meta/festivals.ts)
+    case 'heart': {
+      // a bobbing heart on a springy stalk
+      const bx = hx + Math.sin(t * 2.4) * 0.04 * u;
+      const by = top - 0.3 * u;
+      line(g, [hx, top + 0.02 * u, (hx + bx) / 2 + 0.03 * u, top - 0.14 * u, bx, by], '#3a2a4a', 0.025 * u);
+      heart(g, bx, by, 0.1 * u, '#ff5a9a');
+      break;
+    }
+    case 'leaf': {
+      const y = top + 0.02 * u;
+      line(g, [hx, y, hx + 0.01 * u, y - 0.14 * u], '#3f8f2a', 0.03 * u);
+      const sway = Math.sin(t * 1.6) * 0.15;
+      ell(g, hx - 0.08 * u, y - 0.16 * u, 0.1 * u, 0.05 * u, '#6fd65a', -0.5 + sway);
+      ell(g, hx + 0.09 * u, y - 0.18 * u, 0.1 * u, 0.05 * u, '#8ae66e', 0.5 + sway);
+      break;
+    }
+    case 'rainhat': {
+      const y = top + 0.06 * u;
+      ell(g, hx, y, hr * 1.05, 0.07 * u, '#f0b820');
+      g.fillStyle = '#ffd24a';
+      g.beginPath();
+      g.ellipse(hx, y - 0.02 * u, hr * 0.62, 0.2 * u, 0, Math.PI, 0);
+      g.fill();
+      ell(g, hx - hr * 0.2, y - 0.12 * u, 0.05 * u, 0.025 * u, 'rgba(255,255,255,0.6)', -0.3);
+      break;
+    }
+    case 'wreath': {
+      const y = top + 0.05 * u;
+      const cols = ['#ff8fc8', '#ffe066', '#ffffff', '#b58cff', '#ff9a4a'];
+      for (let k = 0; k < 7; k++) {
+        const a = Math.PI + (k / 6) * Math.PI;
+        const px = hx + Math.cos(a) * hr * 0.75;
+        const py = y + Math.sin(a) * 0.1 * u;
+        ell(g, px, py + 0.02 * u, 0.05 * u, 0.03 * u, '#5ec85a', a);
+        ell(g, px, py, 0.05 * u, 0.05 * u, cols[k % cols.length]);
+        ell(g, px, py, 0.02 * u, 0.02 * u, '#ffb13d');
+      }
+      break;
+    }
+    case 'star': {
+      const x = hx + hr * 0.5;
+      const y = top + hr * 0.12;
+      star5(g, x, y, 0.1 * u, t, '#ffd84a');
+      ell(g, x - 0.02 * u, y - 0.02 * u, 0.02 * u, 0.015 * u, 'rgba(255,255,255,0.8)');
+      break;
+    }
+    case 'lantern': {
+      // a tiny paper lantern hanging from a stick over the head
+      const sx = hx + hr * 0.2;
+      const y = top - 0.22 * u;
+      line(g, [hx - hr * 0.3, top + 0.02 * u, sx + 0.1 * u, y], '#8a5a30', 0.03 * u);
+      const swing = Math.sin(t * 2) * 0.03 * u;
+      line(g, [sx + 0.1 * u, y, sx + 0.1 * u + swing, y + 0.08 * u], '#3a2a4a', 0.015 * u);
+      const lx = sx + 0.1 * u + swing;
+      const ly = y + 0.16 * u;
+      const gl = g.createRadialGradient(lx, ly, 0, lx, ly, 0.2 * u);
+      gl.addColorStop(0, 'rgba(255,200,90,0.55)');
+      gl.addColorStop(1, 'rgba(255,200,90,0)');
+      g.fillStyle = gl;
+      g.beginPath();
+      g.arc(lx, ly, 0.2 * u, 0, Math.PI * 2);
+      g.fill();
+      ell(g, lx, ly, 0.07 * u, 0.09 * u, '#ff6a3d');
+      ell(g, lx, ly, 0.04 * u, 0.07 * u, '#ffb13d');
+      g.fillStyle = '#5a2a1a';
+      g.fillRect(lx - 0.04 * u, ly - 0.1 * u, 0.08 * u, 0.02 * u);
+      g.fillRect(lx - 0.04 * u, ly + 0.08 * u, 0.08 * u, 0.02 * u);
+      break;
+    }
+    case 'acorn': {
+      const y = top + 0.07 * u;
+      g.fillStyle = '#9a6a3a';
+      g.beginPath();
+      g.ellipse(hx, y, hr * 0.62, 0.16 * u, 0, Math.PI, 0);
+      g.fill();
+      g.strokeStyle = 'rgba(90,50,20,0.6)';
+      g.lineWidth = 0.015 * u;
+      for (let k = -2; k <= 2; k++) {
+        g.beginPath();
+        g.moveTo(hx + k * hr * 0.2, y);
+        g.lineTo(hx + k * hr * 0.12, y - 0.13 * u);
+        g.stroke();
+      }
+      line(g, [hx, y - 0.15 * u, hx + 0.04 * u, y - 0.24 * u], '#6a4020', 0.035 * u);
+      break;
+    }
+    case 'pumpkin': {
+      const y = top - 0.02 * u;
+      for (const [dx, c] of [
+        [-0.08, '#f07a1a'],
+        [0.08, '#f07a1a'],
+        [0, '#ff9a3a'],
+      ] as [number, string][])
+        ell(g, hx + dx * u, y, 0.11 * u, 0.12 * u, c);
+      line(g, [hx, y - 0.11 * u, hx + 0.03 * u, y - 0.2 * u], '#3f8f2a', 0.04 * u);
+      ell(g, hx + 0.07 * u, y - 0.17 * u, 0.05 * u, 0.025 * u, '#6fd65a', 0.4);
+      // a friendly face
+      ell(g, hx - 0.04 * u, y - 0.02 * u, 0.018 * u, 0.018 * u, '#5a2a0a');
+      ell(g, hx + 0.04 * u, y - 0.02 * u, 0.018 * u, 0.018 * u, '#5a2a0a');
+      g.strokeStyle = '#5a2a0a';
+      g.lineWidth = 0.015 * u;
+      g.beginPath();
+      g.arc(hx, y + 0.02 * u, 0.04 * u, 0.2, Math.PI - 0.2);
+      g.stroke();
+      break;
+    }
+    case 'knit': {
+      const y = top + 0.08 * u;
+      g.fillStyle = '#b58cff';
+      g.beginPath();
+      g.ellipse(hx, y, hr * 0.7, 0.22 * u, 0, Math.PI, 0);
+      g.fill();
+      g.fillStyle = '#8a5ae0';
+      g.beginPath();
+      g.roundRect(hx - hr * 0.74, y - 0.05 * u, hr * 1.48, 0.08 * u, 0.04 * u);
+      g.fill();
+      g.strokeStyle = 'rgba(255,255,255,0.35)';
+      g.lineWidth = 0.015 * u;
+      for (let k = -2; k <= 2; k++) {
+        g.beginPath();
+        g.moveTo(hx + k * hr * 0.2, y - 0.06 * u);
+        g.lineTo(hx + k * hr * 0.14, y - 0.18 * u);
+        g.stroke();
+      }
+      ell(g, hx, y - 0.25 * u, 0.07 * u, 0.07 * u, '#ffe066');
+      break;
+    }
+    case 'pom': {
+      const y = top + 0.06 * u;
+      const tip = Math.sin(t * 2) * 0.03 * u;
+      g.fillStyle = '#ff4a5a';
+      g.beginPath();
+      g.moveTo(hx - hr * 0.6, y);
+      g.quadraticCurveTo(hx - 0.02 * u, y - 0.4 * u, hx + 0.26 * u + tip, y - 0.2 * u);
+      g.quadraticCurveTo(hx + 0.1 * u, y - 0.14 * u, hx + hr * 0.6, y);
+      g.closePath();
+      g.fill();
+      g.fillStyle = '#ffffff';
+      g.beginPath();
+      g.roundRect(hx - hr * 0.68, y - 0.05 * u, hr * 1.36, 0.09 * u, 0.045 * u);
+      g.fill();
+      ell(g, hx + 0.27 * u + tip, y - 0.2 * u, 0.06 * u, 0.06 * u, '#ffffff');
+      break;
+    }
   }
+}
+
+function heart(g: G, x: number, y: number, r: number, color: string) {
+  g.fillStyle = color;
+  g.beginPath();
+  g.moveTo(x, y + r * 0.9);
+  g.bezierCurveTo(x - r * 1.4, y - r * 0.1, x - r * 0.6, y - r * 1.1, x, y - r * 0.4);
+  g.bezierCurveTo(x + r * 0.6, y - r * 1.1, x + r * 1.4, y - r * 0.1, x, y + r * 0.9);
+  g.fill();
+}
+
+function star5(g: G, x: number, y: number, r: number, t: number, color: string) {
+  g.fillStyle = color;
+  g.beginPath();
+  for (let k = 0; k < 10; k++) {
+    const a = -Math.PI / 2 + (k * Math.PI) / 5 + Math.sin(t) * 0.1;
+    const rr = k % 2 ? r * 0.45 : r;
+    g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  g.closePath();
+  g.fill();
 }

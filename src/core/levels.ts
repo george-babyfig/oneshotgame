@@ -243,7 +243,8 @@ function pickGoals(n: number, difficulty: Difficulty, start: Planet, plan: Plane
   return out;
 }
 
-export function makeLevel(n: number, seedPrefix = 'PP'): LevelDef {
+/** `o.goals` / `o.boss` give non-campaign planets (the weekly Voyage) goals and a Comet Guardian. */
+export function makeLevel(n: number, seedPrefix = 'PP', o: { goals?: boolean; boss?: boolean } = {}): LevelDef {
   const seed = `${seedPrefix}-${n}`;
   const rnd = rngFrom(seed);
   const kinds = availableKinds(n);
@@ -256,7 +257,7 @@ export function makeLevel(n: number, seedPrefix = 'PP'): LevelDef {
     twist = pool[Math.floor(rnd() * pool.length)];
   }
   // every chapter ends with a Comet Guardian
-  if (seedPrefix === 'PP' && n >= 10 && n % 10 === 0) twist = 'boss';
+  if ((seedPrefix === 'PP' && n >= 10 && n % 10 === 0) || o.boss) twist = 'boss';
   const throws = n === 1 ? 6 : n === 2 ? 8 : Math.min(16, 9 + Math.floor(n / 4));
   // weighted deal: new kinds show up a bit more on their debut level
   const weights: Record<Kind, number> = { rock: 4, ice: 4, seed: 4, magma: 3, storm: 2, sun: 1.5 };
@@ -295,7 +296,7 @@ export function makeLevel(n: number, seedPrefix = 'PP'): LevelDef {
   if (stars[1] <= stars[0]) stars[1] = stars[0] + 5;
   if (stars[2] <= stars[1]) stars[2] = stars[1] + 5;
   const spin = (twist === 'fast' ? 0.9 : 0.35 + Math.min(0.3, n * 0.012)) * (rnd() < 0.5 ? 1 : -1);
-  const goals = seedPrefix === 'PP' ? pickGoals(n, difficulty, start, plan, rngFrom(`${seed}-goals`)) : [];
+  const goals = seedPrefix === 'PP' || o.goals ? pickGoals(n, difficulty, start, plan, rngFrom(`${seed}-goals`)) : [];
   return {
     n,
     seed,

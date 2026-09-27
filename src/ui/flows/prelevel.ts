@@ -1,7 +1,7 @@
 // Pre-level sheet: star targets, objects in play, and optional boosters.
 import { h, btn, fmt, modal, toast } from '../dom';
 import { sfx } from '../audio';
-import { DIFFICULTY_DUST, makeLevel, TWISTS } from '../../core/levels';
+import { DIFFICULTY_DUST, makeLevel, TWISTS, type LevelDef } from '../../core/levels';
 import { MOMENTUM_PERKS, momentumActive, momentumPerkText } from '../../meta/momentum';
 import { KINDS } from '../../core/world';
 import { BOOSTERS, type BoosterId } from '../../meta/config';
@@ -13,6 +13,28 @@ import { critterCanvas } from '../art/critters';
 import { BIOMES, SPECIES_BY_ID, type BiomeId } from '../../core/world';
 import { t, tp } from '../../i18n';
 import { kindDesc, kindName } from '../text';
+
+/** The level's goals as chips (pre-level and Voyage sheets). */
+export function goalChips(L: LevelDef) {
+  if (!L.goals.length) return null;
+  return h(
+    'div',
+    { class: 'pre-goals' },
+    h('small', null, t('Goals')),
+    ...L.goals.map((g) =>
+      h(
+        'span',
+        { class: 'goal' },
+        g.type === 'species' ? critterCanvas(g.id, 30) : h('span', { class: 'gi' }, BIOMES[g.id as BiomeId].deco),
+        h(
+          'b',
+          null,
+          g.type === 'species' ? t(SPECIES_BY_ID[g.id].name) : t('{n}× {name}', { n: g.count, name: t(BIOMES[g.id as BiomeId].name) }),
+        ),
+      ),
+    ),
+  );
+}
 
 export function preLevel(app: App, n: number) {
   if (document.querySelector('.scrim:not(.out) .modal.pre')) return;
@@ -73,27 +95,7 @@ export function preLevel(app: App, n: number) {
           )
         : null,
       L.twist !== 'none' ? h('div', { class: 'twist-chip' }, `${t(TWISTS[L.twist].name)}: ${t(TWISTS[L.twist].desc)}`) : null,
-      L.goals.length
-        ? h(
-            'div',
-            { class: 'pre-goals' },
-            h('small', null, t('Goals')),
-            ...L.goals.map((g) =>
-              h(
-                'span',
-                { class: 'goal' },
-                g.type === 'species' ? critterCanvas(g.id, 30) : h('span', { class: 'gi' }, BIOMES[g.id as BiomeId].deco),
-                h(
-                  'b',
-                  null,
-                  g.type === 'species'
-                    ? t(SPECIES_BY_ID[g.id].name)
-                    : t('{n}× {name}', { n: g.count, name: t(BIOMES[g.id as BiomeId].name) }),
-                ),
-              ),
-            ),
-          )
-        : null,
+      goalChips(L),
       h(
         'div',
         { class: 'targets' },

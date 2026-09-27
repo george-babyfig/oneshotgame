@@ -14,6 +14,8 @@ import { rarityName, speciesHint } from '../text';
 import { claimHabitat } from '../../meta/habitats';
 import { LORE, LORE_AT, STUDIED_AT, loreUnlocked, sightings, studied } from '../../meta/lore';
 import type { Profile } from '../../meta/profile';
+import { STICKERS, albumReady, ownedStickers } from '../../meta/stickers';
+import { icon } from '../icons';
 
 const ORDER: Rarity[] = ['common', 'uncommon', 'rare', 'legendary'];
 
@@ -103,6 +105,22 @@ export function showLifebook(app: App) {
       h(
         'div',
         { class: 'scroll' },
+        h(
+          'button',
+          { class: 'album-link', onclick: () => (sfx.click(), app.showAlbum()) },
+          icon('album', 40),
+          h(
+            'span',
+            { class: 'stack' },
+            h('b', null, t('Sticker Album')),
+            h(
+              'small',
+              null,
+              t('{have}/{total} stickers · decorate your scrapbook', { have: ownedStickers(app.p).length, total: STICKERS.length }),
+            ),
+          ),
+          albumReady(app.p) ? h('span', { class: 'nb dot' }, String(albumReady(app.p))) : null,
+        ),
         h('p', { class: 'muted' }, t('Each new creature gives 💎{n}. Tap a card for its hint.', { n: GEMS_PER_NEW_SPECIES })),
         ...sections,
         h('div', { class: 'sec-title' }, t('Habitat sets')),

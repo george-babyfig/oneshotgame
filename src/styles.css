@@ -3555,3 +3555,292 @@ button.lb {
     height: 34px !important;
   }
 }
+
+/* ---------------------------------------------------------------- round 5: festivals, voyage, album */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: -6px;
+  padding: 0 12px;
+}
+.chip-row .season-chip {
+  margin-top: 0;
+}
+.fest-chip {
+  position: relative;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: #2a1600;
+  background: linear-gradient(90deg, #fff4d6, var(--c));
+  border: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fest-chip.ready {
+  animation: nodePulse2 1.4s ease-in-out infinite;
+  overflow: visible;
+}
+.fest-chip .nb {
+  top: -6px;
+  right: -6px;
+}
+@keyframes nodePulse2 {
+  50% {
+    transform: scale(1.05);
+  }
+}
+.fest-models {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+.fest-rew {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.muted.small {
+  font-size: 12px;
+}
+
+.voy-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  margin: 0 12px 6px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(94, 200, 255, 0.18), rgba(181, 140, 255, 0.18));
+  border: 1px solid var(--line);
+}
+.voy-head b {
+  font-size: 18px;
+}
+.vroute {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0 12px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(94, 200, 255, 0.08), transparent 70%);
+}
+.vstop {
+  position: relative;
+  left: var(--x);
+  transform: translateX(-50%);
+  width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+}
+.vstop canvas {
+  border-radius: 50%;
+}
+.vstop b {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.vstop small {
+  font-size: 11px;
+  color: var(--sun);
+}
+.vstop.locked b {
+  color: var(--muted);
+}
+.vstop.current canvas {
+  box-shadow:
+    0 0 0 3px var(--life),
+    0 0 18px rgba(94, 242, 176, 0.6);
+  animation: nodePulse2 1.4s ease-in-out infinite;
+}
+.vstop .vboss {
+  position: absolute;
+  top: 2px;
+  right: 16px;
+  font-size: 20px;
+}
+.vthumb {
+  display: flex;
+  justify-content: center;
+}
+.center {
+  text-align: center;
+}
+
+.album-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  margin: 4px 0 8px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 143, 200, 0.4);
+  background: linear-gradient(135deg, rgba(255, 143, 200, 0.22), rgba(181, 140, 255, 0.16));
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+.album-link small {
+  color: var(--muted);
+}
+.album-link .nb {
+  top: 6px;
+  right: 8px;
+}
+.stk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 6px;
+}
+.stk {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font: inherit;
+}
+.stk small {
+  font-size: 10px;
+  line-height: 1.1;
+  text-align: center;
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stk.locked small {
+  color: var(--muted);
+}
+.stk.mini {
+  flex: 0 0 auto;
+  padding: 2px;
+}
+.stk-done {
+  color: var(--life);
+  margin-left: 6px;
+}
+.stk-big {
+  display: flex;
+  justify-content: center;
+}
+.stk-tray {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 4px 0 8px;
+  -webkit-overflow-scrolling: touch;
+}
+.scrap {
+  position: relative;
+  margin: 8px auto 6px;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  touch-action: none;
+}
+.scrap > canvas {
+  position: absolute;
+  inset: 0;
+}
+.scrap-layer {
+  position: absolute;
+  inset: 0;
+}
+.pst {
+  position: absolute;
+  left: 0;
+  top: 0;
+  touch-action: none;
+  cursor: grab;
+}
+.pst canvas {
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: none;
+}
+.pst.sel {
+  outline: 2px dashed rgba(255, 255, 255, 0.9);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+.scrap-tools {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.stool {
+  width: 42px;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 18px;
+}
+.stool:disabled {
+  opacity: 0.35;
+}
+.scrap-bgs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.sbg {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  font-size: 14px;
+}
+.sbg.on {
+  border-color: #fff;
+}
+.sbg.locked {
+  opacity: 0.55;
+}
+.vpath {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+.vpath polyline {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.vpath .todo {
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-dasharray: 2 10;
+}
+.vpath .done {
+  stroke: var(--life);
+  stroke-dasharray: 2 10;
+}
+.vstop + .vstop {
+  margin-top: -14px;
+}

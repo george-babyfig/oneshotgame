@@ -132,13 +132,24 @@ export interface Resident {
 }
 
 /** Resident accessories: earned with friendship, or a couple bought with gems. */
-export const RESIDENT_ACCS: { id: string; name: string; friend?: number; gems?: number }[] = [
+export const RESIDENT_ACCS: { id: string; name: string; friend?: number; gems?: number; fest?: boolean }[] = [
   { id: 'bow', name: 'Bow', friend: 2 },
   { id: 'flower', name: 'Flower', friend: 3 },
   { id: 'scarf', name: 'Scarf', friend: 4 },
   { id: 'crown', name: 'Tiny Crown', friend: 5 },
   { id: 'shades', name: 'Sunglasses', gems: 40 },
   { id: 'party', name: 'Party Hat', gems: 40 },
+  // festival keepsakes (see meta/festivals.ts), never sold
+  { id: 'heart', name: 'Heart Bopper', fest: true },
+  { id: 'leaf', name: 'Sprout', fest: true },
+  { id: 'rainhat', name: 'Rain Hat', fest: true },
+  { id: 'wreath', name: 'Flower Crown', fest: true },
+  { id: 'star', name: 'Star Clip', fest: true },
+  { id: 'lantern', name: 'Lantern', fest: true },
+  { id: 'acorn', name: 'Acorn Cap', fest: true },
+  { id: 'pumpkin', name: 'Pumpkin Hat', fest: true },
+  { id: 'knit', name: 'Knit Beanie', fest: true },
+  { id: 'pom', name: 'Pom-pom Hat', fest: true },
 ];
 
 export function accAvailable(p: Profile, r: Resident, id: string) {
@@ -159,7 +170,7 @@ export function wearAcc(p: Profile, species: string, id: string | undefined): 'o
   const a = RESIDENT_ACCS.find((x) => x.id === id);
   if (!a) return 'locked';
   if (!accAvailable(p, r, id)) {
-    if (a.friend) return 'locked';
+    if (a.friend || a.fest) return 'locked';
     if (p.gems < (a.gems ?? 0)) return 'gems';
     p.gems -= a.gems ?? 0;
     p.home.accs.push(id);

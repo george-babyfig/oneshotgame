@@ -71,6 +71,21 @@ Sources: Animal Crossing (Pocket Camp, New Horizons), Cats & Soup, Sky: Children
 
 Next up from this research: monthly themed events with creature variants, a non-random sticker album, a weekly 7-planet mini-chapter, and an optional New Game+.
 
+## Round 5: festivals, a weekly voyage and a sticker album
+
+Sources: Animal Crossing (monthly events and seasonal items), Pokémon GO (costumed Pokémon during events), Royal Match and Candy Crush (weekly mini-chapters and Kingdom/Treasure Hunt style short routes), Panini and Pikmin Bloom (sticker albums and postcards), Toca Boca and Sanrio games (free-form sticker scrapbooks).
+
+| Finding                                                 | Where it comes from                            | What we built                                                                                                                                                 |
+| ------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Costumed creature variants make events feel special     | Pokémon GO event costumes, Animal Crossing     | ✅ **Monthly festivals**: every creature wears the month's costume (10 new drawn accessories); spot them for a sticker, gems and a costume for your residents |
+| Events that return every year beat one-off FOMO         | Animal Crossing seasonal calendar              | ✅ All 12 festivals come back each year; nothing is lost if you miss one                                                                                      |
+| A short weekly route gives a mid-term goal              | Royal Match / Candy Crush weekly mini-chapters | ✅ **Weekly Voyage**: 7 seeded planets with goals, scaled to your progress, a Comet Guardian at the end, rewards per stop                                     |
+| Collecting is fun when there are no duplicates or packs | Criticism of loot-box sticker packs            | ✅ **Sticker Album**: 63 stickers, each earned by a specific deed (creatures, festivals, voyages, feats); page and every-10 bonuses                           |
+| Kids love decorating                                    | Toca Boca, sticker scrapbook apps              | ✅ **Scrapbook**: 3 pages to place, turn, resize and layer stickers on 8 unlockable papers, shared as a picture                                               |
+| Random sticker packs for money                          | Many collectible games                         | ❌ Never: stickers are only earned by playing                                                                                                                 |
+
+Next up: an optional New Game+ (replay the campaign with remixed planets), sticker packs for iMessage, and festival music themes.
+
 ## 1. Foundation
 
 - ✅ Clean repository (`main` + feature branch + PR), CI (format, typecheck, tests, build)
