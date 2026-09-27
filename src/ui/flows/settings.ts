@@ -4,6 +4,7 @@ import { sfx } from '../audio';
 import { defaultProfile, saveProfile, type Settings } from '../../meta/profile';
 import { GAME_NAME, VERSION } from '../../meta/config';
 import type { App } from '../app';
+import { askForReminders, scheduleReminders } from '../platform';
 
 export function settingsFlow(app: App) {
   const s = app.p.settings;
@@ -16,6 +17,10 @@ export function settingsFlow(app: App) {
       app.applySettings();
       app.save();
       sfx.click();
+      if (key === 'notifications') {
+        if (s.notifications && !app.p.meta.notifAsked) askForReminders(app.p, () => app.save());
+        else scheduleReminders(app.p);
+      }
     });
     return b;
   };

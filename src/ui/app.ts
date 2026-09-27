@@ -20,6 +20,7 @@ import { rankFlow } from './flows/rank';
 import { visitorsFlow } from './flows/visitors';
 import { modesFlow } from './flows/modes';
 import { welcomeBackFlow } from './flows/offers';
+import { scheduleReminders } from './platform';
 import { showHome } from './screens/home';
 import { showLifebook } from './screens/lifebook';
 import { showUpgrades } from './screens/upgrades';
@@ -92,6 +93,7 @@ export class App {
       CapApp.addListener('pause', () => {
         this.p.meta.lastSeen = Date.now();
         saveProfile(this.p);
+        scheduleReminders(this.p);
         pauseAudio(true);
       });
       CapApp.addListener('resume', () => {
