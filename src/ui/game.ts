@@ -302,6 +302,23 @@ export class LevelScene {
     this.renderFinish();
   }
 
+  /** Score counter "heats up" on big gains (Balatro-style escalation). */
+  private heat(delta: number) {
+    const lv = delta >= 40 ? 3 : delta >= 22 ? 2 : delta >= 10 ? 1 : 0;
+    if (!lv) return;
+    const el = this.hudScore;
+    el.classList.remove('heat1', 'heat2', 'heat3');
+    void el.offsetWidth;
+    el.classList.add(`heat${lv}`);
+    this.hudFill.classList.toggle('blaze', lv >= 2);
+    clearTimeout(this.heatTimer);
+    this.heatTimer = window.setTimeout(() => {
+      el.classList.remove('heat1', 'heat2', 'heat3');
+      this.hudFill.classList.remove('blaze');
+    }, 1400);
+  }
+  private heatTimer = 0;
+
   private renderScore() {
     const max = this.barMax();
     this.hudFill.style.width = `${Math.min(100, (this.shownScore / max) * 100)}%`;
@@ -630,6 +647,7 @@ export class LevelScene {
       }, 260);
     }
     this.score = res.after;
+    this.heat(res.after - res.before);
     if (res.changed.length) this.o.onTransform?.(res.changed.length);
     this.o.onPlanet?.(this.planet);
     if (delta !== 0) this.popup(sh.x, sh.y - 20, `${delta > 0 ? '+' : ''}${delta}`, delta > 0 ? '#9dffb0' : '#ff9db0', 26);

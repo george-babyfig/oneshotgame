@@ -2073,3 +2073,41 @@ button.lb {
 .hab-grid .hab-body small {
   font-size: 11px;
 }
+.life-score.heat1 {
+  color: #9fe6ff;
+  animation: scoreShake 0.4s;
+}
+.life-score.heat2 {
+  color: #ffd84a;
+  text-shadow: 0 0 10px rgba(255, 216, 74, 0.8);
+  animation: scoreShake 0.5s;
+}
+.life-score.heat3 {
+  color: #ff8fe0;
+  text-shadow:
+    0 0 14px rgba(255, 143, 224, 0.9),
+    0 0 4px #fff;
+  animation: scoreShake 0.6s;
+}
+@keyframes scoreShake {
+  20% {
+    transform: translateX(-3px) scale(1.2) rotate(-3deg);
+  }
+  40% {
+    transform: translateX(3px) scale(1.25) rotate(3deg);
+  }
+  60% {
+    transform: translateX(-2px) scale(1.15);
+  }
+}
+.life-fill.blaze {
+  background: linear-gradient(90deg, #ffd84a, #ff8fe0, #6ec8ff);
+  background-size: 200% 100%;
+  animation: blaze 0.6s linear infinite;
+  box-shadow: 0 0 16px rgba(255, 216, 74, 0.8);
+}
+@keyframes blaze {
+  to {
+    background-position: 200% 0;
+  }
+}

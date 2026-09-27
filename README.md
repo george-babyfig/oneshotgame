@@ -1,78 +1,84 @@
 # 🪐 Pocket Planet
 
-Fling rocks, ice comets, magma and seeds at a tiny spinning planet. Gravity bends every shot, so aiming is part of the fun. Each place you hit changes the land: rock raises mountains, ice fills oceans, magma builds volcanoes and seeds grow forests. When the right lands sit next to each other, creatures move in. A forest beside an ocean brings otters, and a volcano beside the sea brings obsidian turtles.
+Fling rocks, ice comets, magma and seeds at a tiny spinning planet. Gravity bends every shot, so aiming is part of the fun. Each hit changes the land: rock raises mountains, ice fills oceans, magma builds volcanoes and seeds grow forests. When the right lands sit next to each other, critters move in. A forest beside an ocean brings otters, and a volcano beside the sea brings obsidian turtles.
 
 <p align="center"><img src="resources/icon.png" width="160" alt="App icon" /></p>
 
-## Why people keep playing
+<p align="center"><img src="store/screenshots/1-level.png" width="150" /> <img src="store/screenshots/3-lifebook.png" width="150" /> <img src="store/screenshots/2-home.png" width="150" /> <img src="store/screenshots/4-modes.png" width="150" /></p>
 
-| Hook                    | How it works                                                                                                                                                    |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **One-minute levels**   | Each planet is a level with a limited number of throws and a 1–3★ life target. It fits in a waiting room.                                                       |
-| **Satisfying to touch** | Slingshot aiming with a dotted trajectory, haptics, particles, screen shake and synthesized sound that rises in pitch.                                          |
-| **Discovery**           | 37 creatures in the Lifebook, from common to legendary (Leviathan, World Tree Spirit). Every new one is a "NEW!" moment and pays gems.                          |
-| **Your galaxy grows**   | Finished planets orbit your sun and earn stardust **while you're away**, up to a vault limit. Coming back to collect is the daily habit.                        |
-| **Upgrades**            | Stardust buys a longer aim guide, extra throws, wider impacts and a bigger vault.                                                                               |
-| **Variety**             | Levels are generated from a seed with twists (Fast Spin, Tiny World, Moon Guard, Scorched, Snowball, Water World). New objects unlock at levels 2, 4, 7 and 11. |
-| **Daily gift**          | A 7-day gem streak.                                                                                                                                             |
+See [ROADMAP.md](ROADMAP.md) for the production roadmap and the research behind it.
 
-Levels are **auto-balanced**. Each level's star targets are set from a solver that plays the level's own throw sequence, so every level is provably beatable and gets harder at a steady rate.
+## What's in the game
 
-## How it makes money (Apple in-app purchases, StoreKit 2)
+| Area                 | Features                                                                                                                                                                                                                                                              |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Core play**        | One-minute levels, slingshot aiming with gravity, a landing-spot preview ("⛰️ Mountain 🐐 +13"), tiered callouts and a chain counter, shockwaves, confetti, and a score that heats up. The **Meteor finale** turns unused throws into stardust.                       |
+| **Art**              | 36 vector critters in one house style, a procedural planet renderer (terrain, shallows, soil, clouds, lighting), biome props and six projectile characters. No emoji in the game world.                                                                               |
+| **Progression**      | Star Map chapters of 10 planets with chests. The **Star Road** reward track has a free lane and a **Cosmic Pass** lane. Also: daily quests, **Explorer Rank** (3 standing goals), Lifebook habitat sets, **Momentum** win streaks, and **Hard / Super Hard** planets. |
+| **Modes**            | **Daily Planet** (seeded, with Wordle-style emoji share), **Meteor Rush** (60 s), **Zen Garden** (a persistent sandbox) and **Challenge a Friend** (share codes with a check letter). None of these need a server.                                                    |
+| **Idle & retention** | Your galaxy earns stardust while you're away. **Visitors** leave gifts and mementos. There is a daily gift streak, a welcome-back gift, opt-in reminders (daytime only), and a rating prompt after a 3★ clear.                                                        |
+| **Onboarding**       | Coach tips on the first planets, intro cards for new objects, and the Starter Pack offered once after the first chapter chest.                                                                                                                                        |
+| **Audio**            | Synthesized sound effects plus generative music themes for home, each chapter and each mode. Respects the silent switch.                                                                                                                                              |
+| **Accessibility**    | Reduce-motion setting and separate toggles for sound, music and haptics.                                                                                                                                                                                              |
 
-| Product ID                       | Type           | Price  | What you get                                                                                            |
-| -------------------------------- | -------------- | ------ | ------------------------------------------------------------------------------------------------------- |
-| `com.pocketplanet.game.gems80`   | Consumable     | $0.99  | 80 💎                                                                                                   |
-| `com.pocketplanet.game.gems500`  | Consumable     | $4.99  | 500 💎                                                                                                  |
-| `com.pocketplanet.game.gems1200` | Consumable     | $9.99  | 1,200 💎                                                                                                |
-| `com.pocketplanet.game.gems2800` | Consumable     | $19.99 | 2,800 💎                                                                                                |
-| `com.pocketplanet.game.piggy`    | Consumable     | $1.99  | Breaks your **piggy bank**. Every level you finish drops 💎4 in it (max 250), and you buy to keep them. |
-| `com.pocketplanet.game.starter`  | Non-consumable | $2.99  | 300 💎, 5 of every booster, and the Aurora atmosphere                                                   |
+## How it makes money (StoreKit 2, no server)
 
-Where players spend gems:
+| Product ID                         | Type           | Price  | What you get                                                                                                       |
+| ---------------------------------- | -------------- | ------ | ------------------------------------------------------------------------------------------------------------------ |
+| `com.pocketplanet.game.gems80`     | Consumable     | $0.99  | 80 💎                                                                                                              |
+| `com.pocketplanet.game.gems500`    | Consumable     | $4.99  | 500 💎                                                                                                             |
+| `com.pocketplanet.game.gems1200`   | Consumable     | $9.99  | 1,200 💎                                                                                                           |
+| `com.pocketplanet.game.gems2800`   | Consumable     | $19.99 | 2,800 💎                                                                                                           |
+| `com.pocketplanet.game.piggy`      | Consumable     | $1.99  | Breaks the piggy bank. Each planet you finish adds 💎4, up to 250. It appears from chapter 2.                      |
+| `com.pocketplanet.game.starter`    | Non-consumable | $2.99  | 300 💎, 5 of every booster, and the Aurora atmosphere                                                              |
+| `com.pocketplanet.game.cosmicpass` | Non-consumable | $4.99  | Premium Star Road lane (880 💎 in total, the Cosmic atmosphere, stardust and boosters). It pays out retroactively. |
 
-- **+5 throws** when a level ends: 40 / 70 / 110 💎. It's shown at the moment you're "only 7 life from the next star."
-- **Boosters** before a level: Comet Shower (+3 throws), Life Spark (start with meadows), Star Scope (full aim guide). These can also be bought with stardust.
-- **Atmosphere skins.**
+Gem sinks: +5 throws (40 / 70 / 110 💎), boosters, atmospheres, and doubling offline stardust (💎10).
 
-Players earn gems for free from new creatures (💎3 each), 3-star clears, and the daily streak. There are no ads, no tracking and no loot boxes.
+The game has no ads, no lives or energy timers, no loot boxes and no tracking. Every purchase shows exactly what you get.
 
 ## Tech
 
-TypeScript + Vite + Canvas 2D, wrapped as a native iOS app with **Capacitor 8** (Swift Package Manager, no CocoaPods). In-app purchases use `@capgo/native-purchases` (StoreKit 2, no server needed). All sound is synthesized with WebAudio, and it respects the silent switch.
+TypeScript + Vite + Canvas 2D, wrapped as a native iOS app with **Capacitor 8** (Swift Package Manager, no CocoaPods). Plugins: native-purchases (StoreKit 2), haptics, preferences, local notifications, in-app review, share, splash screen, status bar.
 
 ```
-src/core/world.ts    planet simulation: biomes, creatures, impacts, life score
-src/core/levels.ts   seeded level generator + auto-balancing solver
-src/meta/            profile/saves, product & balance config, purchases
-src/ui/game.ts       the level: gravity physics, aiming, rendering, effects
-src/ui/app.ts        galaxy home, level flow, Lifebook, upgrades, shop
-ios/                 Xcode project
-resources/           app icon (HTML source + PNG)
+src/core/        simulation (world.ts) and seeded level generator + solver (levels.ts)
+src/meta/        pure game logic: profile/saves, economy, progression, momentum,
+                 visitors, rank, habitats, modes, config (all prices & tuning)
+src/ui/app.ts    app shell: screens, level flow, purchases
+src/ui/screens/  home, galaxy, star map, star road, lifebook, upgrades, shop
+src/ui/flows/    modals: pre-level, results, daily gift, quests, rank, visitors,
+                 modes, offers, settings
+src/ui/art/      procedural planet, critters, props, projectiles
+src/ui/game.ts   the level scene: physics, aiming, effects, HUD, modes
+tests/           world, recipes, economy, progression, features, level balance
+store/           App Store listing copy and framed screenshots
+docs/            privacy policy (host with GitHub Pages)
+resources/       icon/splash renderer (uses the game's own art code)
+ios/             Xcode project
 ```
 
 ```bash
 npm install
-npm run dev        # play in a browser; purchases are simulated in dev
-npm test           # simulation tests (including "every Lifebook recipe is true")
-npm run build
-npm run ios:sync   # build + copy into Xcode project
+npm run dev          # play in a browser; purchases are simulated in dev
+npm test             # includes "every level in the first six chapters is beatable"
+npm run typecheck && npm run format:check
+npm run icon         # re-render icon + splash (needs `npm run dev` running)
+npm run ios:sync     # build + copy into Xcode project
 npm run ios:open
 ```
 
-All tuning (prices, rewards, boosters, upgrades) lives in `src/meta/config.ts`. Creatures and biomes are in `src/core/world.ts`, and level difficulty is in `src/core/levels.ts`.
+CI runs formatting, the typecheck, the tests and the build on every push.
 
 ## Shipping to the App Store
 
 1. **You need** a Mac with Xcode 16+ and an [Apple Developer Program](https://developer.apple.com/programs/) membership ($99/year).
 2. **Make it yours:** change `appId` in `capacitor.config.ts` and the bundle ID in Xcode to one you own. If you change the product IDs, update them in `src/meta/config.ts`.
 3. **Build:** run `npm install`, `npm run ios:sync` and `npm run ios:open`. In Xcode, pick your Team under _Signing & Capabilities_ and add the **In-App Purchase** capability.
-4. **Test purchases in the Simulator:** go to _Product → Scheme → Edit Scheme → Run → Options → StoreKit Configuration_ and choose `PocketPlanet.storekit`.
-5. **App Store Connect:**
-   - Sign the **Paid Apps** agreement and add banking and tax details.
-   - Create the app.
-   - Create the 6 in-app purchases with the exact IDs above: 5 consumables and 1 non-consumable. Each needs a price, a description and a review screenshot.
-6. **App Privacy:** answer "Data Not Collected". `ios/App/App/PrivacyInfo.xcprivacy` is included, and export compliance is already set in Info.plist. You also need a privacy policy URL; a one-line "we collect nothing" page is enough.
-7. **Upload:** _Product → Archive → Distribute → App Store Connect_, test through TestFlight with a Sandbox account, then submit with the in-app purchases attached.
+4. **Test purchases in the Simulator:** go to _Product → Scheme → Edit Scheme → Run → Options → StoreKit Configuration_ and choose `PocketPlanet.storekit`. It includes all 7 products.
+5. **App Store Connect:** sign the Paid Apps agreement, create the app, then create the 7 in-app purchases listed above. Copy for the listing and the IAP review notes is in [`store/listing.md`](store/listing.md).
+6. **Privacy:** answer "Data Not Collected". `PrivacyInfo.xcprivacy` is included. For the privacy policy URL, enable GitHub Pages on `/docs` and use `…/privacy.html`.
+7. **Screenshots:** upload `store/screenshots/*.png` (1290 × 2796).
+8. **Upload:** _Product → Archive → Distribute → App Store Connect_, test through TestFlight with a Sandbox account, then submit with the in-app purchases attached.
 
-The app is iPhone-only and portrait-only, so you only need iPhone screenshots.
+The app is iPhone-only and portrait-only.

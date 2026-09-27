@@ -3,3 +3,4 @@ ios
 node_modules
 package-lock.json
 resources/*.png
+store/screenshots
