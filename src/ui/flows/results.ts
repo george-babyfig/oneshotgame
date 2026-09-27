@@ -4,13 +4,13 @@ import { sfx } from '../audio';
 import { planetRate, applyLevelWin } from '../../meta/economy';
 import { chestsReady, questsClaimable, roadReady } from '../../meta/progression';
 import { totalStars } from '../../meta/profile';
-import type { LevelResult } from '../game';
+import { FINISH_DUST_PER_THROW, type LevelResult } from '../game';
 import type { App } from '../app';
 
 export function levelResults(app: App, r: LevelResult) {
   const p = app.p;
   const n = r.level.n;
-  const out = applyLevelWin(p, n, r.stars, r.score, r.planet, r.level.name, r.level.hue);
+  const out = applyLevelWin(p, n, r.stars, r.score, r.planet, r.level.name, r.level.hue, r.leftover * FINISH_DUST_PER_THROW);
   const wasTutorial = !p.tutorial;
   p.tutorial = true;
   app.saveNow();

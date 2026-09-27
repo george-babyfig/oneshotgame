@@ -64,11 +64,12 @@ export function applyLevelWin(
   planet: Planet,
   name: string,
   hue: number,
+  bonusDust = 0,
 ): LevelOutcome {
   const prev = p.stars[n] ?? 0;
   const firstClear = prev === 0;
   const newStars = Math.max(0, stars - prev);
-  const dust = 25 + stars * 15 + (firstClear ? 40 : 0);
+  const dust = 25 + stars * 15 + (firstClear ? 40 : 0) + bonusDust;
   const gems = stars === 3 && prev < 3 ? 2 : 0;
   p.stars[n] = Math.max(prev, stars);
   p.dust += dust;
