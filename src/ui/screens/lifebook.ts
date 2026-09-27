@@ -73,35 +73,40 @@ export function showLifebook(app: App) {
         'div',
         { class: 'scroll' },
         h('p', { class: 'muted' }, `Each new creature gives 💎${GEMS_PER_NEW_SPECIES}. Tap a card for its hint.`),
-        h('div', { class: 'sec-title' }, 'Habitats'),
-        ...HABITATS.map((hb) => {
-          const have = habitatProgress(app.p, hb);
-          const done = app.p.habitats.includes(hb.id);
-          const ready = !done && have === hb.species.length;
-          return h(
-            'div',
-            { class: `hab${done ? ' done' : ''}` },
-            h('div', { class: 'hab-ic' }, hb.emoji),
-            h(
-              'div',
-              { class: 'hab-body' },
-              h('b', null, `${hb.name} ${have}/${hb.species.length}`),
-              h('div', { class: 'qbar' }, h('i', { style: `width:${(have / hb.species.length) * 100}%` })),
-              h('small', null, done ? 'Complete!' : `Reward: ${rewardText(hb.reward).join('  ')}`),
-            ),
-            ready
-              ? btn('Claim', 'primary small', () => {
-                  app.p.habitats.push(hb.id);
-                  applyReward(app.p, hb.reward);
-                  app.save();
-                  sfx.chest();
-                  toast(`${hb.name} complete! ${rewardText(hb.reward).join(' ')}`, 'good');
-                  showLifebook(app);
-                })
-              : null,
-          );
-        }),
         ...sections,
+        h('div', { class: 'sec-title' }, 'Habitat sets'),
+        h(
+          'div',
+          { class: 'hab-grid' },
+          ...HABITATS.map((hb) => {
+            const have = habitatProgress(app.p, hb);
+            const done = app.p.habitats.includes(hb.id);
+            const ready = !done && have === hb.species.length;
+            return h(
+              'div',
+              { class: `hab${done ? ' done' : ''}` },
+              h('div', { class: 'hab-ic' }, hb.emoji),
+              h(
+                'div',
+                { class: 'hab-body' },
+                h('b', null, hb.name),
+                h('span', { class: 'hab-n' }, `${have}/${hb.species.length}`),
+                h('div', { class: 'qbar' }, h('i', { style: `width:${(have / hb.species.length) * 100}%` })),
+                h('small', null, done ? 'Complete ✓' : rewardText(hb.reward).join(' ')),
+              ),
+              ready
+                ? btn('Claim', 'primary small', () => {
+                    app.p.habitats.push(hb.id);
+                    applyReward(app.p, hb.reward);
+                    app.save();
+                    sfx.chest();
+                    toast(`${hb.name} complete! ${rewardText(hb.reward).join(' ')}`, 'good');
+                    showLifebook(app);
+                  })
+                : null,
+            );
+          }),
+        ),
         h('div', { class: 'sec-title' }, `Mementos ${app.p.mementos.length}/${SPECIES.length}`),
         app.p.mementos.length
           ? h('div', { class: 'memento-grid' }, ...app.p.mementos.map((id) => h('div', null, `🎀 ${mementoName(id)}`)))

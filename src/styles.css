@@ -2047,3 +2047,29 @@ button.lb {
 .btn.double {
   padding: 8px 12px;
 }
+.hab-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.hab-grid .hab {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 10px;
+  text-align: center;
+}
+.hab-grid .hab-ic {
+  font-size: 22px;
+}
+.hab-grid .hab-body b {
+  font-size: 14px;
+}
+.hab-n {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.hab-grid .hab-body small {
+  font-size: 11px;
+}
