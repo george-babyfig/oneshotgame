@@ -10,6 +10,7 @@ import { sharePostcard } from '../postcard';
 import { addTokens, ensureEvent, eventActive, eventReady } from '../../meta/events';
 import { askForReminders, maybeAskReview } from '../platform';
 import { t, tp } from '../../i18n';
+import { homeUnlocked, speedUpBuilds } from '../../meta/homeworld';
 
 export function levelResults(app: App, r: LevelResult) {
   const p = app.p;
@@ -35,6 +36,11 @@ export function levelResults(app: App, r: LevelResult) {
   if (eventActive(p) && eventReady(p).length)
     extras.push(h('div', { class: 'nudge' }, t('{emoji} Event reward ready!', { emoji: ensureEvent(p).emoji })));
   if (questsClaimable(p)) extras.push(h('div', { class: 'nudge' }, t('📜 A quest is complete!')));
+  // every campaign win nudges the Homeworld's drones along
+  if (homeUnlocked(p) && speedUpBuilds(p.home)) {
+    app.save();
+    extras.push(h('div', { class: 'nudge' }, t('🛸 Your drones built 10 minutes faster!')));
+  }
   const home = () => {
     m.close();
     app.showHome();

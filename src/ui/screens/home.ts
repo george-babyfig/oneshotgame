@@ -17,6 +17,7 @@ import type { App } from '../app';
 import { icon as iconEl } from '../icons';
 import { t, tp } from '../../i18n';
 import { editPassport } from './passport';
+import { homeBadge, homeUnlocked } from '../../meta/homeworld';
 
 export function navBtn(icon: string, label: string, badge: string | number, fn: () => void, cls = '') {
   return h(
@@ -90,6 +91,7 @@ export function showHome(app: App) {
       h(
         'div',
         { class: 'side side-r' },
+        homeUnlocked(p) ? navBtn('world', t('Homeworld'), homeBadge(p), () => app.showHomeworld(), 'side-btn world-btn') : null,
         navBtn('pad', t('Modes'), modesBadge(app), () => app.modes(), 'side-btn'),
         eventActive(p) ? navBtn(ensureEvent(p).emoji, t('Event'), eventReady(p).length, () => app.events(), 'side-btn event-btn') : null,
         p.level > PIGGY_FROM_LEVEL && p.piggy >= PIGGY_MIN ? navBtn('pig', `💎${p.piggy}`, '', () => app.showShop(), 'side-btn') : null,

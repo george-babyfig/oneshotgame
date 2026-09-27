@@ -43,6 +43,8 @@ import { currentLook, masteryLevel, MASTERY_STEPS } from '../meta/cosmetics';
 import { showWorkshop } from './screens/workshop';
 import { showPassport } from './screens/passport';
 import { showPass } from './screens/pass';
+import { showHomeworld } from './screens/homeworld';
+import { tickHome } from '../meta/homeworld';
 import { keeperHead } from './art/keeper';
 
 export type ScreenName =
@@ -78,6 +80,7 @@ export class App {
     ensureQuests(this.p, today());
     fixClock(this.p);
     addVisitors(this.p, Date.now());
+    tickHome(this.p);
     this.awayMs = Date.now() - this.p.meta.lastSeen;
     this.p.meta.lastSeen = Date.now();
     const unlock = () => {
@@ -98,6 +101,7 @@ export class App {
         ensureQuests(this.p, today());
         fixClock(this.p);
         if (addVisitors(this.p, Date.now())) this.save();
+        tickHome(this.p);
         this.awayMs = Date.now() - this.p.meta.lastSeen;
         this.p.meta.lastSeen = Date.now();
         if (this.screen === 'home') this.showHome();
@@ -179,6 +183,7 @@ export class App {
       workshop: () => this.showWorkshop(),
       passport: () => this.showPassport(),
       pass: () => this.showPass(),
+      homeworld: () => this.showHomeworld(),
     };
     this.refreshing = true;
     try {
@@ -215,6 +220,9 @@ export class App {
   }
   showPass() {
     showPass(this);
+  }
+  showHomeworld() {
+    showHomeworld(this);
   }
   settings() {
     settingsFlow(this);
