@@ -7,6 +7,7 @@ import { t } from '../i18n';
 
 export const DAILY_EPOCH = '2026-01-01';
 export const RUSH_SECONDS = 60;
+export const RUSH_BEST_GEMS = 5;
 
 export function dailyNumber(day: string) {
   return dayGap(DAILY_EPOCH, day) + 1;
@@ -125,7 +126,7 @@ export function recordRush(p: Profile, score: number): { dust: number; best: boo
   p.stats.rushPlays++;
   const dust = rushReward(score).dust;
   p.dust += dust;
-  if (best) p.gems += 5;
+  if (best) p.gems += RUSH_BEST_GEMS;
   return { dust, best };
 }
 
