@@ -7,6 +7,8 @@ import {
   clonePlanet,
   impact,
   lifeScore,
+  labBonus,
+  novaCharge,
   settle,
   type Kind,
   type Planet,
@@ -19,6 +21,7 @@ import { critterCanvas, drawCreature } from './art/critters';
 import { drawProjectile, projectileCanvas } from './art/projectiles';
 import { drawKeeper, drawLauncher, drawTrail } from './art/keeper';
 import { DEFAULT_LOOK, type Look } from '../meta/cosmetics';
+import { NOVA_CHARGE } from '../meta/lab';
 import { sfx } from './audio';
 import { haptic } from './haptics';
 import { t, tp } from '../i18n';
@@ -29,6 +32,8 @@ export interface SceneOpts {
   scopeLevel: number; // 0..3 aim guide length
   /** The player's Keeper outfit, launcher and trail. */
   look?: Look;
+  /** Object Lab level per object (campaign/Zen only). */
+  lab?: Partial<Record<Kind, number>>;
   /** The launcher is fully mastered (gold glow). */
   mastered?: boolean;
   splash: number; // 0..1
@@ -130,6 +135,8 @@ interface Shot {
   vy: number;
   t: number;
   trail: { x: number; y: number }[];
+  /** A charged Supernova throw. */
+  nova?: boolean;
 }
 
 const GM = 5.2e7; // gravity strength (px^3/s^2)
@@ -608,7 +615,13 @@ export class LevelScene {
 
   private fire(vx: number, vy: number) {
     const { x, y } = this.launch;
-    this.shot = { kind: this.cur, x, y, vx, vy, t: 0, trail: [] };
+    const nova = this.charge >= NOVA_CHARGE;
+    this.shot = { kind: this.cur, x, y, vx, vy, t: 0, trail: [], nova };
+    if (nova) {
+      this.charge = 0;
+      sfx.combo(6);
+      haptic.heavy();
+    }
     if (Number.isFinite(this.throwsLeft)) this.throwsLeft--;
     this.throwsUsed++;
     sfx.launch();
@@ -757,13 +770,32 @@ export class LevelScene {
 
   private land(sh: Shot, i: number) {
     this.shot = null;
-    const res = impact(this.planet, sh.kind, i, this.o.splash);
+    const lv = this.o.lab?.[sh.kind] ?? 1;
+    const res = impact(this.planet, sh.kind, i, this.o.splash, { nova: sh.nova });
+    const bonus = labBonus(lv, res.changed.length, res.spawned.length);
+    this.bonus += bonus;
+    if (bonus) setTimeout(() => this.popup(sh.x - 34, sh.y + 16, t('🧪 +{n}', { n: bonus }), '#c9a8ff', 16, 1.2), 380);
+    if (sh.nova) {
+      this.ring(sh.x, sh.y, '#ffd24a', this.R * 1.6);
+      this.burst(sh.x, sh.y, '#fff2b8', 50, 9);
+      setTimeout(() => this.popup(this.cx, this.cy - this.R * 1.5, t('SUPERNOVA!'), '#ffd24a', 32, 1.4), 120);
+    } else {
+      const before = this.charge;
+      this.charge = Math.min(NOVA_CHARGE, this.charge + novaCharge(res.changed.length, res.spawned.length, lv));
+      if (before < NOVA_CHARGE && this.charge >= NOVA_CHARGE) {
+        setTimeout(() => {
+          const L = this.launch;
+          this.popup(L.x, L.y - 70, t('Supernova charged!'), '#ffd24a', 20, 1.6);
+          sfx.levelUp();
+        }, 700);
+      }
+    }
     sfx.impact(sh.kind);
     haptic.heavy();
     this.shake = this.o.reduceMotion ? 0 : 10;
     this.burst(sh.x, sh.y, KINDS[sh.kind].color, 34, 7);
     this.ring(sh.x, sh.y, KINDS[sh.kind].color, this.R * 0.9);
-    const delta = res.after - res.before;
+    const delta = res.after - res.before + bonus;
     this.chain = delta > 0 ? this.chain + 1 : 0;
     const quality = delta + res.spawned.length * 6;
     const call = CALLOUTS.find(([min]) => quality >= min);
@@ -775,8 +807,8 @@ export class LevelScene {
         haptic.success();
       }, 260);
     }
-    this.score = res.after;
-    this.heat(res.after - res.before);
+    this.score = res.after + this.bonus;
+    this.heat(delta);
     if (res.changed.length) {
       this.o.onTransform?.(res.changed.length);
       this.cheerUntil = Math.max(this.cheerUntil, this.time + 0.9);
@@ -978,7 +1010,14 @@ export class LevelScene {
             )
           : null,
         missingEl,
-        !won && close >= 0.75 ? h('div', { class: 'so-close' }, h('i', { style: `width:${Math.round(close * 100)}%` }), h('span', null, t('So close! {p}% there', { p: Math.round(close * 100) }))) : null,
+        !won && close >= 0.75
+          ? h(
+              'div',
+              { class: 'so-close' },
+              h('i', { style: `width:${Math.round(close * 100)}%` }),
+              h('span', null, t('So close! {p}% there', { p: Math.round(close * 100) })),
+            )
+          : null,
         canCont && (need > 0 || !won)
           ? btn(
               h(
@@ -1107,6 +1146,10 @@ export class LevelScene {
   }
 
   private cheerUntil = 0;
+  /** Supernova meter (regions transformed, creatures count double). */
+  private charge = 0;
+  /** Bonus life from Object Lab perks (on top of the planet's own life). */
+  private bonus = 0;
   private get look(): Look {
     return this.o.look ?? DEFAULT_LOOK;
   }
@@ -1201,7 +1244,16 @@ export class LevelScene {
     if (sh) {
       drawTrail(g, this.look.trail, sh.trail, this.time, KINDS[sh.kind].color);
       g.globalAlpha = 1;
-      drawProjectile(g, sh.kind, sh.x, sh.y, 30, this.time, sh.t * 6);
+      if (sh.nova) {
+        const gl = g.createRadialGradient(sh.x, sh.y, 4, sh.x, sh.y, 40);
+        gl.addColorStop(0, 'rgba(255,230,140,0.9)');
+        gl.addColorStop(1, 'rgba(255,230,140,0)');
+        g.fillStyle = gl;
+        g.beginPath();
+        g.arc(sh.x, sh.y, 40, 0, Math.PI * 2);
+        g.fill();
+      }
+      drawProjectile(g, sh.kind, sh.x, sh.y, sh.nova ? 38 : 30, this.time, sh.t * 6);
     }
     // particles
     for (const p of this.particles) {
@@ -1271,16 +1323,16 @@ export class LevelScene {
     g.arc(this.cx, this.cy, r + 4, a0 - step * 0.5, a0 + step * 1.5);
     g.stroke();
     g.restore();
-    const key = `${i}|${this.cur}|${this.throwsUsed}`;
+    const key = `${i}|${this.cur}|${this.throwsUsed}|${this.charge >= NOVA_CHARGE}`;
     if (this.predictCache?.key !== key) {
       const sim = clonePlanet(this.planet);
-      const res = impact(sim, this.cur, i, this.o.splash);
+      const res = impact(sim, this.cur, i, this.o.splash, { nova: this.charge >= NOVA_CHARGE });
       const before = BIOMES[this.planet.sectors[i].biome];
       const after = BIOMES[sim.sectors[i].biome];
       this.predictCache = {
         key,
         label: after.id !== before.id ? `${after.deco} ${t(after.name)}` : '',
-        delta: res.after - res.before,
+        delta: res.after - res.before + labBonus(this.o.lab?.[this.cur] ?? 1, res.changed.length, res.spawned.length),
         spawn: res.spawned.length ? SPECIES_BY_ID[res.spawned[0].id].emoji : '',
       };
     }
@@ -1301,6 +1353,48 @@ export class LevelScene {
     g.fillText(text, cx, y + 1);
   }
 
+  /** Supernova meter: a ring around the launcher that fills as you transform land. */
+  private drawNovaMeter(x: number, y: number, aiming: boolean) {
+    if (this.o.tutorial && this.L.n < 3) return;
+    const g = this.g;
+    const k = this.charge / NOVA_CHARGE;
+    const full = k >= 1;
+    const R = 50;
+    g.save();
+    if (full && aiming) {
+      const pulse = 0.5 + Math.sin(this.time * 6) * 0.2;
+      const gl = g.createRadialGradient(x, y, 8, x, y, R + 16);
+      gl.addColorStop(0, `rgba(255,220,110,${pulse})`);
+      gl.addColorStop(1, 'rgba(255,220,110,0)');
+      g.fillStyle = gl;
+      g.beginPath();
+      g.arc(x, y, R + 16, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.lineCap = 'round';
+    g.lineWidth = 5;
+    g.strokeStyle = 'rgba(255,255,255,0.1)';
+    g.beginPath();
+    g.arc(x, y, R, 0, Math.PI * 2);
+    g.stroke();
+    if (k > 0) {
+      g.strokeStyle = full ? `hsl(${45 + Math.sin(this.time * 5) * 10},100%,65%)` : '#ffd24a';
+      g.shadowColor = '#ffd24a';
+      g.shadowBlur = full ? 14 : 4;
+      g.beginPath();
+      g.arc(x, y, R, -Math.PI / 2, -Math.PI / 2 + Math.min(1, k) * Math.PI * 2);
+      g.stroke();
+    }
+    if (full && aiming) {
+      g.shadowBlur = 0;
+      g.fillStyle = '#ffe58a';
+      g.font = '700 13px Fredoka, ui-rounded, system-ui, sans-serif';
+      g.textAlign = 'center';
+      g.fillText(t('SUPERNOVA READY'), x, y - R - 12);
+    }
+    g.restore();
+  }
+
   private drawAim() {
     const g = this.g;
     const L = this.launch;
@@ -1318,6 +1412,7 @@ export class LevelScene {
       look: Math.atan2(this.cy - (ky - 45), this.cx - kx),
     });
     drawLauncher(g, this.look.launcher, L.x, L.y, this.time, { x: ox, y: oy }, KINDS[this.cur].color, this.o.mastered);
+    this.drawNovaMeter(L.x, L.y, aiming);
     if (aiming) {
       const bounce = this.aimFrom ? 0 : Math.sin(this.time * 3) * 3;
       drawProjectile(this.g, this.cur, L.x + ox, L.y + oy + bounce, 36, this.time);

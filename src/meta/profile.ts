@@ -1,6 +1,6 @@
 import { loadKey, saveKey } from './storage';
 import type { BoosterId, UpgradeId } from './config';
-import type { Planet } from '../core/world';
+import type { Kind, Planet } from '../core/world';
 import { defaultHome, type HomeState } from './homeworld';
 
 export interface GalaxyPlanet {
@@ -111,6 +111,8 @@ export interface Profile {
   passport: { first: number; second: number; set: boolean; title: string; banner: number; badges: string[] };
   /** Homeworld: the planet you build on between levels. */
   home: HomeState;
+  /** Object Lab levels per flingable (missing = 1). */
+  lab: Partial<Record<Kind, number>>;
 }
 
 const KEY = 'pp.profile';
@@ -173,6 +175,7 @@ export function defaultProfile(now = Date.now()): Profile {
     mastery: {},
     passport: { first: -1, second: -1, set: false, title: '', banner: 0, badges: [] },
     home: defaultHome(now),
+    lab: {},
   };
 }
 

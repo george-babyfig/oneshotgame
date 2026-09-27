@@ -153,6 +153,41 @@ function touch(p: Planet, i: number, f: (s: Sector) => void) {
 
 const habitable = (s: Sector) => s.land >= 1 || s.water >= 1;
 
+/** Object Lab level (1-5) and whether the throw is a charged Supernova. */
+export interface ImpactBoost {
+  lv?: number;
+  nova?: boolean;
+}
+
+/** A Supernova adds +1 radius and +1 life everywhere it touches. */
+function applyBoost(p: Planet, at: number, r: number, b: ImpactBoost) {
+  if (b.nova) for (let d = -r; d <= r; d++) touch(p, at + d, (s) => habitable(s) && (s.life += 1));
+}
+
+/**
+ * Object Lab perks never change the terrain (so an upgrade can't spoil a goal);
+ * they add bonus life on top of the planet's own:
+ * Lv2 Bloom +2 per region it transforms · Lv3 Charge (Supernova meter 50% faster)
+ * Lv4 Magnet +6 per creature it brings · Lv5 Starfall +3 on every landing.
+ */
+export function labBonus(lv: number, changed: number, spawned: number) {
+  let b = 0;
+  if (lv >= 2) b += changed * 2;
+  if (lv >= 4) b += spawned * 6;
+  if (lv >= 5) b += 3;
+  return b;
+}
+
+export function boostRadius(b: ImpactBoost = {}) {
+  return b.nova ? 1 : 0;
+}
+
+/** Supernova charge a landing earns (Lab Lv3+ objects charge 50% faster). */
+export function novaCharge(changed: number, spawned: number, lv = 1) {
+  const base = changed + spawned * 2;
+  return lv >= 3 ? Math.ceil(base * 1.5) : base;
+}
+
 /** Mutate sectors for an impact. `splash` = extra neighbour radius (upgrade). */
 function applyKind(p: Planet, kind: Kind, at: number, splash: number) {
   const r = 1 + splash;
@@ -373,10 +408,12 @@ export interface ImpactResult {
   lost: string[];
 }
 
-export function impact(p: Planet, kind: Kind, at: number, splash = 0): ImpactResult {
+export function impact(p: Planet, kind: Kind, at: number, splash = 0, boost: ImpactBoost = {}): ImpactResult {
   const before = lifeScore(p);
   const prev = p.sectors.map((s) => s.biome);
-  applyKind(p, kind, wrap(at), splash);
+  const extra = boostRadius(boost);
+  applyKind(p, kind, wrap(at), splash + extra);
+  if (boost.nova) applyBoost(p, wrap(at), 1 + splash + extra, boost);
   const { spawned, lost } = settle(p);
   const changed = p.sectors.map((s, i) => (s.biome !== prev[i] ? i : -1)).filter((i) => i >= 0);
   return { before, after: lifeScore(p), changed, spawned, lost };

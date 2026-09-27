@@ -5,6 +5,7 @@ import {
   clonePlanet,
   impact,
   lifeScore,
+  novaCharge,
   newPlanet,
   settle,
   type BiomeId,
@@ -164,22 +165,29 @@ export function greedyScore(start: Planet, queue: Kind[], throws: number, splash
 /** The planet the greedy solver ends up with (used to set targets and goals). */
 export function greedyPlan(start: Planet, queue: Kind[], throws: number, splash = 0): Planet {
   const p = clonePlanet(start);
+  // the solver charges and fires Supernovas exactly like a player does
+  let charge = 0;
   for (let t = 0; t < throws; t++) {
     const kind = queue[t];
+    const boost = { nova: charge >= NOVA_CHARGE };
     let best = -1;
     let bestAt = 0;
     for (let i = 0; i < SECTORS; i++) {
       const q = clonePlanet(p);
-      const r = impact(q, kind, i, splash);
+      const r = impact(q, kind, i, splash, boost);
       if (r.after > best) {
         best = r.after;
         bestAt = i;
       }
     }
-    impact(p, kind, bestAt, splash);
+    const res = impact(p, kind, bestAt, splash, boost);
+    charge = boost.nova ? 0 : Math.min(NOVA_CHARGE, charge + novaCharge(res.changed.length, res.spawned.length));
   }
   return p;
 }
+
+/** Regions transformed (+2 per creature) needed to charge a Supernova. */
+export const NOVA_CHARGE = 10;
 
 /** Difficulty knobs (tuned with a skill-level simulation; see tests/levels.test.ts). */
 export const TUNE = {

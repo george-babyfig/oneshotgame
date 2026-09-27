@@ -109,3 +109,37 @@ describe('planet passport', () => {
     expect(pinnedBadges(p).map((a) => a.id)).toEqual(earned.slice(-BADGE_SLOTS));
   });
 });
+
+describe('object lab and supernova', async () => {
+  const { LAB_COST, canLab, labLevel, upgradeLab } = await import('../src/meta/lab');
+  const W = await import('../src/core/world');
+  it('levels objects with stardust, respecting unlocks', () => {
+    const p = defaultProfile();
+    p.level = 3;
+    p.dust = 10000;
+    expect(canLab(p, 'sun')).toBe('locked');
+    expect(upgradeLab(p, 'rock')).toBe('ok');
+    expect(labLevel(p, 'rock')).toBe(2);
+    expect(p.dust).toBe(10000 - LAB_COST[2]);
+    p.dust = 1e6;
+    for (let i = 0; i < 5; i++) upgradeLab(p, 'rock');
+    expect(labLevel(p, 'rock')).toBe(5);
+    expect(canLab(p, 'rock')).toBe('max');
+  });
+
+  it('lab perks only ever add life and never change the terrain', () => {
+    expect(W.labBonus(1, 3, 1)).toBe(0);
+    expect(W.labBonus(2, 3, 1)).toBe(6);
+    expect(W.labBonus(5, 3, 1)).toBe(6 + 6 + 3);
+    expect(W.novaCharge(4, 1)).toBe(6);
+    expect(W.novaCharge(4, 1, 3)).toBe(9);
+  });
+
+  it('a supernova reaches further and grows more life', () => {
+    const a = W.newPlanet((i) => ({ land: 2, water: i % 2 }));
+    const b = W.clonePlanet(a);
+    const plain = W.impact(a, 'seed', 5);
+    const nova = W.impact(b, 'seed', 5, 0, { nova: true });
+    expect(nova.after).toBeGreaterThan(plain.after);
+  });
+});

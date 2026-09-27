@@ -2959,3 +2959,52 @@ button.lb {
   color: var(--muted);
   font-weight: 700;
 }
+
+/* ---------------------------------------------------------------- object lab */
+.lab-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lab-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--c) 22%, transparent), var(--panel) 55%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent);
+}
+.lab-card.locked {
+  opacity: 0.5;
+}
+.lab-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lab-head .grow {
+  display: flex;
+  flex-direction: column;
+}
+.lab-head small {
+  color: var(--muted);
+}
+.lab-perks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.lab-perks li.got {
+  color: var(--life);
+}
+.lab-perks li.next {
+  color: var(--text);
+}
+.lab-perks b {
+  font-weight: 700;
+}

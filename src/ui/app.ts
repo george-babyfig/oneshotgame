@@ -45,6 +45,7 @@ import { showPassport } from './screens/passport';
 import { showPass } from './screens/pass';
 import { showHomeworld } from './screens/homeworld';
 import { tickHome } from '../meta/homeworld';
+import { labLevels } from '../meta/lab';
 import { keeperHead } from './art/keeper';
 
 export type ScreenName =
@@ -335,6 +336,8 @@ export class App {
       },
       onQuit: () => this.showHome(),
       onShop: () => this.showShop(),
+      // Object Lab levels apply to the campaign and Zen, not to the score-competitive modes
+      lab: extra.competitive ? undefined : labLevels(this.p),
       ...extra,
     };
   }
