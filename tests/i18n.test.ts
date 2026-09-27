@@ -68,7 +68,7 @@ export function allKeys(): string[] {
 }
 
 /** Locales that are complete; each must fully cover the key list. */
-const LANGS_DONE = ['de', 'pt'];
+const LANGS_DONE = ['de', 'pt', 'es', 'ja'];
 
 const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 
