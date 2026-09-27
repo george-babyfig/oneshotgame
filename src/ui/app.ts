@@ -37,6 +37,7 @@ import { settingsFlow } from './flows/settings';
 import { questsFlow } from './flows/quests';
 import { setLang, t, type Lang } from '../i18n';
 import { COACH } from '../meta/coach';
+import { gcSignIn, gcSync } from './gamecenter';
 
 export type ScreenName = 'home' | 'lifebook' | 'upgrades' | 'shop' | 'map' | 'road' | 'level';
 export type Boosters = Record<BoosterId, boolean>;
@@ -113,6 +114,12 @@ export class App {
       this.daily();
     }
     this.save();
+    gcSignIn().then((ok) => ok && this.syncGameCenter());
+  }
+
+  /** Report achievements and leaderboard scores (iOS Game Center; no-op elsewhere). */
+  syncGameCenter() {
+    gcSync(this.p, () => this.save());
   }
 
   applySettings() {

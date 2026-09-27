@@ -131,3 +131,22 @@ describe('weekly events', async () => {
     expect(E.tokensForLand(E.EVENTS[0], ['volcano', 'ocean', 'springs'], 0)).toBe(2);
   });
 });
+
+describe('game center', async () => {
+  const A = await import('../src/meta/achievements');
+  it('fits Apple limits and reports each achievement once', () => {
+    const ids = A.ACHIEVEMENTS.map((x) => x.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.length).toBeLessThanOrEqual(100);
+    expect(A.ACHIEVEMENTS.reduce((s, x) => s + x.points, 0)).toBeLessThanOrEqual(1000);
+    expect(A.ACHIEVEMENTS.every((x) => x.points <= 100)).toBe(true);
+    const p = defaultProfile(0);
+    expect(A.pendingAchievements(p)).toEqual([]);
+    p.stats.wins = 1;
+    p.seen = ['bunny'];
+    const got = A.pendingAchievements(p).map((x) => x.id);
+    expect(got).toEqual(['com.pocketplanet.game.ach.first_planet', 'com.pocketplanet.game.ach.first_creature']);
+    p.gcReported = got;
+    expect(A.pendingAchievements(p)).toEqual([]);
+  });
+});

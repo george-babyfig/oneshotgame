@@ -99,6 +99,7 @@ export function showLifebook(app: App) {
                 ? btn(t('Claim'), 'primary small', () => {
                     app.p.habitats.push(hb.id);
                     applyReward(app.p, hb.reward);
+                    app.syncGameCenter();
                     app.save();
                     sfx.chest();
                     toast(t('{name} complete! {reward}', { name: t(hb.name), reward: rewardText(hb.reward).join(' ') }), 'good');

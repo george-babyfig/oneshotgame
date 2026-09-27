@@ -6,6 +6,7 @@ import { GAME_NAME, VERSION } from '../../meta/config';
 import type { App } from '../app';
 import { askForReminders, scheduleReminders } from '../platform';
 import { LANGS, detectLang, t } from '../../i18n';
+import { gcAvailable, gcDashboard } from '../gamecenter';
 
 type Toggle = 'sound' | 'music' | 'haptics' | 'reduceMotion' | 'notifications';
 
@@ -52,6 +53,7 @@ export function settingsFlow(app: App) {
     h('label', { class: 'toggle lang' }, t('Language'), lang),
     btn(t('How to play'), 'ghost wide', () => (m.close(), howTo())),
     btn(t('Restore purchases'), 'ghost wide', () => app.restore()),
+    gcAvailable() ? btn(t('Game Center'), 'ghost wide', () => gcDashboard()) : null,
     btn(t('Credits'), 'ghost wide', () => (m.close(), credits())),
     btn(t('Reset progress'), 'danger wide', async () => {
       m.close();

@@ -28,6 +28,7 @@ export function levelResults(app: App, r: LevelResult) {
   const wasTutorial = !p.tutorial;
   p.tutorial = true;
   app.saveNow();
+  app.syncGameCenter();
   const extras: HTMLElement[] = [];
   if (chestsReady(p).length) extras.push(h('div', { class: 'nudge' }, t('🎁 Chapter chest ready on the Star Map!')));
   if (roadReady(p, totalStars(p)).length) extras.push(h('div', { class: 'nudge' }, t('🛣️ New Star Road reward!')));

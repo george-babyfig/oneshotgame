@@ -99,6 +99,8 @@ export interface Profile {
   zen: Planet | null;
   /** This week's event progress. */
   event: { week: string; tokens: number; claimed: number[] };
+  /** Game Center achievement ids already reported. */
+  gcReported: string[];
 }
 
 const KEY = 'pp.profile';
@@ -155,6 +157,7 @@ export function defaultProfile(now = Date.now()): Profile {
     challengeLog: [],
     zen: null,
     event: { week: '', tokens: 0, claimed: [] },
+    gcReported: [],
   };
 }
 
