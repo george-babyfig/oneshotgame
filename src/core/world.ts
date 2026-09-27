@@ -209,6 +209,8 @@ export interface SpeciesDef {
   emoji: string;
   rarity: Rarity;
   hint: string;
+  /** Biomes in the recipe (home first) — lets the UI build a localized hint. */
+  home?: BiomeId[];
   /** Does sector i (with its neighbours) host this creature? */
   test: (p: Planet, i: number) => boolean;
 }
@@ -223,6 +225,7 @@ const single = (id: string, name: string, emoji: string, biome: BiomeId): Specie
   emoji,
   rarity: 'common',
   hint: `Lives in ${BIOMES[biome].name}`,
+  home: [biome],
   test: (p, i) => b(p, i) === biome,
 });
 const pair = (id: string, name: string, emoji: string, here: BiomeId, near: BiomeId): SpeciesDef => ({
@@ -231,6 +234,7 @@ const pair = (id: string, name: string, emoji: string, here: BiomeId, near: Biom
   emoji,
   rarity: 'uncommon',
   hint: `${BIOMES[here].name} next to ${BIOMES[near].name}`,
+  home: [here, near],
   test: (p, i) => b(p, i) === here && nextTo(p, i, near),
 });
 const trio = (id: string, name: string, emoji: string, here: BiomeId, x: BiomeId, y: BiomeId): SpeciesDef => ({
@@ -239,6 +243,7 @@ const trio = (id: string, name: string, emoji: string, here: BiomeId, x: BiomeId
   emoji,
   rarity: 'rare',
   hint: `${BIOMES[here].name} between ${BIOMES[x].name} and ${BIOMES[y].name}`,
+  home: [here, x, y],
   test: (p, i) => b(p, i) === here && between(p, i, x, y),
 });
 

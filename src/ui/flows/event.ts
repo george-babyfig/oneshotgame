@@ -7,11 +7,12 @@ import { EVENT_TIERS, claimEventTier, ensureEvent, eventEndsIn } from '../../met
 import { rewardText } from '../../meta/progression';
 import { skinSwatch } from '../screens/shop';
 import type { App } from '../app';
+import { t } from '../../i18n';
 
 function timeLeft(ms: number) {
   const d = Math.floor(ms / 86400000);
   const hr = Math.floor((ms % 86400000) / 3600000);
-  return d > 0 ? `${d}d ${hr}h left` : `${hr}h ${Math.floor((ms % 3600000) / 60000)}m left`;
+  return d > 0 ? t('{d}d {h}h left', { d, h: hr }) : t('{h}h {m}m left', { h: hr, m: Math.floor((ms % 3600000) / 60000) });
 }
 
 export function eventFlow(app: App) {
@@ -28,24 +29,24 @@ export function eventFlow(app: App) {
         h('i', { style: `width:${Math.min(100, (p.event.tokens / max) * 100)}%` }),
         h('span', null, `${ev.emoji} ${fmt(p.event.tokens)} / ${fmt(max)}`),
       ),
-      ...EVENT_TIERS.map((t, i) => {
+      ...EVENT_TIERS.map((tier, i) => {
         const claimed = p.event.claimed.includes(i);
-        const ready = !claimed && p.event.tokens >= t.tokens;
+        const ready = !claimed && p.event.tokens >= tier.tokens;
         const last = i === EVENT_TIERS.length - 1;
         return h(
           'div',
           { class: `ev-tier${claimed ? ' claimed' : ready ? ' ready' : ''}` },
-          h('b', { class: 'ev-need' }, `${ev.emoji} ${t.tokens}`),
+          h('b', { class: 'ev-need' }, `${ev.emoji} ${tier.tokens}`),
           h(
             'span',
             { class: 'ev-rew' },
-            rewardText(t.reward).join('  '),
+            rewardText(tier.reward).join('  '),
             last && skin ? h('i', { class: 'ev-skin', style: `--g:${skinSwatch(skin.glow)}` }) : null,
-            last && skin ? ` ${skin.name}` : null,
+            last && skin ? ` ${t(skin.name)}` : null,
           ),
           claimed
             ? h('span', { class: 'q-ok' }, '✓')
-            : btn('Claim', ready ? 'primary small' : 'ghost small dim', () => {
+            : btn(t('Claim'), ready ? 'primary small' : 'ghost small dim', () => {
                 if (!claimEventTier(p, i)) return;
                 sfx.chest();
                 haptic.success();
@@ -63,9 +64,13 @@ export function eventFlow(app: App) {
         'div',
         { class: 'ev-banner', style: `--ev:${ev.color}` },
         h('span', { class: 'ev-emoji' }, ev.emoji),
-        h('div', null, h('b', null, ev.name), h('small', null, timeLeft(eventEndsIn()))),
+        h('div', null, h('b', null, t(ev.name)), h('small', null, timeLeft(eventEndsIn()))),
       ),
-      h('p', { class: 'muted' }, `${ev.desc} in any mode to earn ${ev.emoji}. A new event starts every Monday.`),
+      h(
+        'p',
+        { class: 'muted' },
+        t('{desc} in any mode to earn {emoji}. A new event starts every Monday.', { desc: t(ev.desc), emoji: ev.emoji }),
+      ),
       body,
     ],
     { cls: 'tall', onClose: () => app.refresh() },

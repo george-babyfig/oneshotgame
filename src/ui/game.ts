@@ -19,6 +19,8 @@ import { critterCanvas, drawCreature } from './art/critters';
 import { drawProjectile, projectileCanvas } from './art/projectiles';
 import { sfx } from './audio';
 import { haptic } from './haptics';
+import { t, tp } from '../i18n';
+import { rarityName } from './text';
 
 export interface SceneOpts {
   scopeLevel: number; // 0..3 aim guide length
@@ -234,12 +236,12 @@ export class LevelScene {
       this.swap();
     });
     this.descEl = h('div', { class: 'obj-desc' });
-    this.hintEl = h('div', { class: 'hint' }, h('div', { class: 'hint-hand' }, '👆'), h('div', null, 'Pull back & release to fling'));
+    this.hintEl = h('div', { class: 'hint' }, h('div', { class: 'hint-hand' }, '👆'), h('div', null, t('Pull back & release to fling')));
     const twist = this.L.twist !== 'none' ? h('div', { class: 'twist' }, this.twistLabel()) : null;
     this.finishEl = h(
       'button',
       { class: 'finish hidden', onclick: () => this.finishEarly() },
-      h('b', null, 'Finish ✓'),
+      h('b', null, t('Finish ✓')),
       h('small', null, ''),
     );
     this.discoverEl = h('div', { class: 'discover' });
@@ -254,12 +256,12 @@ export class LevelScene {
         h(
           'div',
           { class: 'hud-title' },
-          h('div', { class: 'hud-level' }, this.o.label ?? `Planet ${this.L.n}`),
+          h('div', { class: 'hud-level' }, this.o.label ?? t('Planet {n}', { n: this.L.n })),
           h('div', { class: 'hud-name' }, this.L.name),
           this.L.difficulty !== 'normal'
-            ? h('div', { class: `hud-diff ${this.L.difficulty}` }, this.L.difficulty === 'super' ? '💀 SUPER HARD' : '🔥 HARD')
+            ? h('div', { class: `hud-diff ${this.L.difficulty}` }, this.L.difficulty === 'super' ? t('💀 SUPER HARD') : t('🔥 HARD'))
             : null,
-          this.o.momentum ? h('div', { class: 'hud-diff momentum-tag' }, `⚡ Momentum ×${this.o.momentum}`) : null,
+          this.o.momentum ? h('div', { class: 'hud-diff momentum-tag' }, t('⚡ Momentum ×{n}', { n: this.o.momentum })) : null,
         ),
         this.hudThrows,
       ),
@@ -274,7 +276,7 @@ export class LevelScene {
           'div',
           { class: 'queue' },
           this.curEl,
-          h('div', { class: 'next-wrap' }, this.nextEl, h('div', { class: 'swap-lbl' }, 'tap to swap')),
+          h('div', { class: 'next-wrap' }, this.nextEl, h('div', { class: 'swap-lbl' }, t('tap to swap'))),
         ),
         this.descEl,
       ),
@@ -284,12 +286,12 @@ export class LevelScene {
 
   private twistLabel() {
     const map: Record<string, string> = {
-      fast: '🌀 Fast Spin',
-      tiny: '🔹 Tiny World',
-      moon: '🌑 A moon blocks shots',
-      hot: '🔥 Scorched start',
-      frozen: '🧊 Frozen start',
-      ocean: '🌊 Water World',
+      fast: t('🌀 Fast Spin'),
+      tiny: t('🔹 Tiny World'),
+      moon: t('🌑 A moon blocks shots'),
+      hot: t('🔥 Scorched start'),
+      frozen: t('🧊 Frozen start'),
+      ocean: t('🌊 Water World'),
     };
     return map[this.L.twist] ?? '';
   }
@@ -302,9 +304,9 @@ export class LevelScene {
     if (this.o.timeLimit) {
       this.renderClock();
     } else if (this.o.endless) {
-      this.hudThrows.replaceChildren(h('span', { class: 'n' }, '∞'), h('span', { class: 'l' }, 'zen'));
+      this.hudThrows.replaceChildren(h('span', { class: 'n' }, '∞'), h('span', { class: 'l' }, t('zen')));
     } else {
-      this.hudThrows.replaceChildren(h('span', { class: 'n' }, String(this.throwsLeft)), h('span', { class: 'l' }, 'throws'));
+      this.hudThrows.replaceChildren(h('span', { class: 'n' }, String(this.throwsLeft)), h('span', { class: 'l' }, t('throws')));
       this.hudThrows.classList.toggle('low', this.throwsLeft <= 2);
     }
     const k = KINDS[this.cur];
@@ -313,7 +315,7 @@ export class LevelScene {
     this.curEl.style.setProperty('--c', k.color);
     this.nextEl.replaceChildren(projectileCanvas(this.next, 36));
     this.nextEl.style.setProperty('--c', n.color);
-    this.descEl.replaceChildren(h('b', null, k.name), ` — ${k.desc}`);
+    this.descEl.replaceChildren(h('b', null, t(k.name)), ` — ${t(k.desc)}`);
     this.renderScore();
     this.renderFinish();
   }
@@ -338,18 +340,18 @@ export class LevelScene {
   private renderScore() {
     const max = this.barMax();
     this.hudFill.style.width = `${Math.min(100, (this.shownScore / max) * 100)}%`;
-    this.hudScore.textContent = `${fmt(this.shownScore)} life`;
+    this.hudScore.textContent = t('{n} life', { n: fmt(this.shownScore) });
     this.hudStars.forEach((s, i) => s.classList.toggle('on', this.shownScore >= this.L.stars[i]));
   }
 
   private lastClock = -1;
   private renderClock() {
-    const t = Math.max(0, Math.ceil(this.timeLeft));
-    if (t === this.lastClock) return;
-    if (t <= 5 && t > 0 && this.lastClock !== t) sfx.click();
-    this.lastClock = t;
-    this.hudThrows.replaceChildren(h('span', { class: 'n' }, `${t}`), h('span', { class: 'l' }, 'seconds'));
-    this.hudThrows.classList.toggle('low', t <= 10);
+    const secs = Math.max(0, Math.ceil(this.timeLeft));
+    if (secs === this.lastClock) return;
+    if (secs <= 5 && secs > 0 && this.lastClock !== secs) sfx.click();
+    this.lastClock = secs;
+    this.hudThrows.replaceChildren(h('span', { class: 'n' }, `${secs}`), h('span', { class: 'l' }, t('seconds')));
+    this.hudThrows.classList.toggle('low', secs <= 10);
   }
 
   private get over() {
@@ -364,7 +366,10 @@ export class LevelScene {
     const show = this.starsGot > 0 && this.throwsLeft > 0 && !this.ended && !this.finishing;
     this.finishEl.classList.toggle('hidden', !show);
     this.finishEl.classList.toggle('hot', this.starsGot >= 3);
-    (this.finishEl.lastChild as HTMLElement).textContent = `+✨${this.throwsLeft * FINISH_DUST_PER_THROW} for ${this.throwsLeft} left`;
+    (this.finishEl.lastChild as HTMLElement).textContent = t('+✨{d} for {n} left', {
+      d: this.throwsLeft * FINISH_DUST_PER_THROW,
+      n: this.throwsLeft,
+    });
   }
 
   /** "Meteor finale": leftover throws rain down as a stardust bonus. */
@@ -547,7 +552,7 @@ export class LevelScene {
       if (this.timeLeft <= 0) {
         this.aimFrom = this.aimTo = null;
         sfx.whoosh();
-        this.popup(this.cx, this.cy - this.R * 1.6, "Time's up!", '#ffd84a', 32, 1.6);
+        this.popup(this.cx, this.cy - this.R * 1.6, t("Time's up!"), '#ffd84a', 32, 1.6);
         this.afterShot();
       }
     }
@@ -565,7 +570,7 @@ export class LevelScene {
         haptic.success();
         if (got === 3) {
           this.confetti();
-          this.popup(this.cx, this.cy - this.R * 1.9, '★★★ Perfect planet!', '#ffd84a', 24, 2);
+          this.popup(this.cx, this.cy - this.R * 1.9, t('★★★ Perfect planet!'), '#ffd84a', 24, 2);
         }
         this.renderFinish();
         const s = this.hudStars[got - 1];
@@ -586,7 +591,7 @@ export class LevelScene {
         const m = this.moon;
         if (m && Math.hypot(sh.x - m.x, sh.y - m.y) < m.r + 8) {
           this.burst(sh.x, sh.y, '#c9c3d6', 14, 4);
-          this.popup(sh.x, sh.y - 10, 'Blocked!', '#fff', 18);
+          this.popup(sh.x, sh.y - 10, t('Blocked!'), '#fff', 18);
           sfx.miss();
           this.shot = null;
           this.afterShot();
@@ -597,7 +602,7 @@ export class LevelScene {
           break;
         }
         if (sh.t > 5 || sh.x < -150 || sh.x > this.w + 150 || sh.y < -250 || sh.y > this.h + 150) {
-          this.popup(Math.min(Math.max(sh.x, 60), this.w - 60), Math.min(Math.max(sh.y, 120), this.h - 200), 'Missed!', '#ffb3c1', 20);
+          this.popup(Math.min(Math.max(sh.x, 60), this.w - 60), Math.min(Math.max(sh.y, 120), this.h - 200), t('Missed!'), '#ffb3c1', 20);
           sfx.miss();
           this.shot = null;
           this.afterShot();
@@ -658,7 +663,7 @@ export class LevelScene {
     const quality = delta + res.spawned.length * 6;
     const call = CALLOUTS.find(([min]) => quality >= min);
     if (call) {
-      const text = this.chain >= 3 ? `${call[1]} ×${this.chain}` : call[1];
+      const text = this.chain >= 3 ? `${t(call[1])} ×${this.chain}` : t(call[1]);
       setTimeout(() => {
         this.popup(this.cx, this.cy + this.R * 1.45, text, call[2], 34, 1.4);
         sfx.combo(CALLOUTS.length - CALLOUTS.indexOf(call) + Math.min(this.chain, 4));
@@ -679,7 +684,7 @@ export class LevelScene {
     const shown = new Set<string>();
     res.changed.forEach((ci, k) => {
       this.flash.push({ i: ci, t: 0.5 });
-      const bname = BIOMES[this.planet.sectors[ci].biome].name;
+      const bname = t(BIOMES[this.planet.sectors[ci].biome].name);
       if (!shown.has(bname) && shown.size < 2 && this.planet.sectors[ci].biome !== 'barren') {
         shown.add(bname);
         const [x, y] = this.sectorPoint(ci, 1.35);
@@ -708,7 +713,7 @@ export class LevelScene {
     sfx.creature(rare || isNew);
     haptic.success();
     this.burst(x, y, rare ? '#ffd84a' : '#ffffff', rare ? 40 : 20, rare ? 7 : 4);
-    this.popup(x, y - 16, `${sp.emoji} ${sp.name}${isNew ? ' — NEW!' : ''}`, rare ? '#ffd84a' : '#e0f7ff', rare ? 20 : 16, 2.2);
+    this.popup(x, y - 16, `${t(sp.name)}${isNew ? t(' — NEW!') : ''}`, rare ? '#ffd84a' : '#e0f7ff', rare ? 20 : 16, 2.2);
     if (isNew) {
       this.o.seen.add(id);
       this.o.onNewSpecies(id);
@@ -723,16 +728,16 @@ export class LevelScene {
     if (!id) return;
     const sp = SPECIES_BY_ID[id];
     this.discoverBusy = true;
-    const label = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', legendary: 'Legendary' }[sp.rarity];
+    const label = rarityName(sp.rarity);
     this.discoverEl.className = `discover show r-${sp.rarity}`;
     this.discoverEl.replaceChildren(
       h('div', { class: 'd-emoji' }, critterCanvas(sp.id, 56)),
       h(
         'div',
         { class: 'd-body' },
-        h('small', null, `New creature · ${label}`),
-        h('b', null, sp.name),
-        h('span', null, '+💎3 · added to your Lifebook'),
+        h('small', null, t('New creature · {r}', { r: label })),
+        h('b', null, t(sp.name)),
+        h('span', null, t('+💎3 · added to your Lifebook')),
       ),
     );
     setTimeout(() => {
@@ -750,7 +755,7 @@ export class LevelScene {
       this.coachEl.classList.remove('show');
       return;
     }
-    this.coachEl.replaceChildren(h('span', { class: 'coach-ic' }, '💡'), h('span', null, text));
+    this.coachEl.replaceChildren(h('span', { class: 'coach-ic' }, '💡'), h('span', null, t(text)));
     this.coachEl.classList.remove('show');
     void this.coachEl.offsetWidth;
     this.coachEl.classList.add('show');
@@ -761,11 +766,11 @@ export class LevelScene {
     this.paused = true;
     const m = modal(
       [
-        h('div', { class: 'm-sub' }, 'New object!'),
+        h('div', { class: 'm-sub' }, t('New object!')),
         h('div', { class: 'intro-art' }, projectileCanvas(kind, 110)),
-        h('div', { class: 'm-title' }, k.name),
-        h('p', null, k.desc),
-        btn('Got it!', 'primary wide', () => m.close()),
+        h('div', { class: 'm-title' }, t(k.name)),
+        h('p', null, t(k.desc)),
+        btn(t('Got it!'), 'primary wide', () => m.close()),
       ],
       { onClose: () => ((this.paused = false), (this.modalOpen = null)) },
     );
@@ -826,30 +831,41 @@ export class LevelScene {
         h(
           'div',
           { class: 'end-title' + (won ? '' : ' lost') },
-          won ? (this.o.timeLimit ? "Time's up!" : 'Planet complete!') : this.o.timeLimit ? "Time's up!" : 'Out of throws',
+          won ? (this.o.timeLimit ? t("Time's up!") : t('Planet complete!')) : this.o.timeLimit ? t("Time's up!") : t('Out of throws'),
         ),
         h('div', { class: 'end-stars' }, ...[0, 1, 2].map((i) => h('span', { class: i < stars ? 'on' : '' }, '★'))),
-        h('div', { class: 'end-score' }, `${fmt(this.score)} life`),
+        h('div', { class: 'end-score' }, t('{n} life', { n: fmt(this.score) })),
         this.leftover
           ? h(
               'p',
               { class: 'end-need' },
-              `Meteor finale: +✨${this.leftover * FINISH_DUST_PER_THROW} for ${this.leftover} unused throw${this.leftover > 1 ? 's' : ''}`,
+              tp(this.leftover, 'Meteor finale: +✨{d} for {n} unused throw', 'Meteor finale: +✨{d} for {n} unused throws', {
+                d: this.leftover * FINISH_DUST_PER_THROW,
+              }),
             )
           : null,
         need > 0 && !this.leftover
-          ? h('p', { class: 'end-need' }, won ? `Only ${fmt(need)} life from the next star!` : `Just ${fmt(need)} life short of a star.`)
+          ? h(
+              'p',
+              { class: 'end-need' },
+              won ? t('Only {n} life from the next star!', { n: fmt(need) }) : t('Just {n} life short of a star.', { n: fmt(need) }),
+            )
           : null,
         canCont && (need > 0 || !won)
           ? btn(
-              h('span', { class: 'stack' }, h('b', null, '+5 THROWS'), h('small', null, `💎 ${cost} · you have ${this.o.gems()}`)),
+              h(
+                'span',
+                { class: 'stack' },
+                h('b', null, t('+5 THROWS')),
+                h('small', null, t('💎 {c} · you have {g}', { c: cost, g: this.o.gems() })),
+              ),
               'gem wide',
               cont,
             )
           : null,
         won || this.o.competitive || this.o.timeLimit
-          ? btn(this.o.endLabel ?? 'Collect', 'primary wide', finish)
-          : btn('Try again', 'primary wide', () => {
+          ? btn(this.o.endLabel ?? t('Collect'), 'primary wide', finish)
+          : btn(t('Try again'), 'primary wide', () => {
               m.close();
               this.modalOpen = null;
               this.finish(0);
@@ -900,14 +916,14 @@ export class LevelScene {
     this.paused = true;
     const m = modal(
       [
-        h('div', { class: 'end-title' }, 'Paused'),
-        btn('Resume', 'primary wide', () => m.close()),
-        btn(this.o.momentum ? 'Restart (ends Momentum)' : 'Restart planet', 'ghost wide', () => {
+        h('div', { class: 'end-title' }, t('Paused')),
+        btn(t('Resume'), 'primary wide', () => m.close()),
+        btn(this.o.momentum ? t('Restart (ends Momentum)') : t('Restart planet'), 'ghost wide', () => {
           m.close();
           this.ended = true;
           this.o.onEnd({ level: this.L, score: 0, stars: 0, planet: this.planet, won: false, throwsUsed: -1, leftover: 0 });
         }),
-        btn('Leave to galaxy', 'ghost wide', () => {
+        btn(t('Leave to galaxy'), 'ghost wide', () => {
           m.close();
           this.ended = true;
           this.o.onQuit();
@@ -1100,7 +1116,7 @@ export class LevelScene {
       const after = BIOMES[sim.sectors[i].biome];
       this.predictCache = {
         key,
-        label: after.id !== before.id ? `${after.deco} ${after.name}` : '',
+        label: after.id !== before.id ? `${after.deco} ${t(after.name)}` : '',
         delta: res.after - res.before,
         spawn: res.spawned.length ? SPECIES_BY_ID[res.spawned[0].id].emoji : '',
       };

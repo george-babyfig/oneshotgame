@@ -1,5 +1,6 @@
 import { sfx } from './audio';
 import { haptic } from './haptics';
+import { t } from '../i18n';
 
 type Child = Node | string | number | null | undefined | false | Child[];
 
@@ -73,7 +74,7 @@ export function closeModals() {
   overlay.replaceChildren();
 }
 
-export function confirmBox(text: string, yes: string, no = 'Cancel'): Promise<boolean> {
+export function confirmBox(text: string, yes: string, no = t('Cancel')): Promise<boolean> {
   return new Promise((res) => {
     let answered = false;
     const m = modal(

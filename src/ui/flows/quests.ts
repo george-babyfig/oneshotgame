@@ -5,6 +5,7 @@ import { haptic } from '../haptics';
 import { today } from '../../meta/profile';
 import { QUEST_BONUS, QUEST_BY_ID, claimQuest, claimQuestBonus, ensureQuests, rewardText } from '../../meta/progression';
 import type { App } from '../app';
+import { t } from '../../i18n';
 
 function untilMidnight() {
   const d = new Date();
@@ -52,10 +53,10 @@ export function questsFlow(app: App) {
       'div',
       { class: `quest bonus${p.quests.bonusClaimed ? ' claimed' : ''}` },
       h('div', { class: 'q-ic' }, '🎁'),
-      h('div', { class: 'q-body' }, h('b', null, 'Finish all three'), h('small', null, rewardText(QUEST_BONUS).join('  '))),
+      h('div', { class: 'q-body' }, h('b', null, t('Finish all three')), h('small', null, rewardText(QUEST_BONUS).join('  '))),
       p.quests.bonusClaimed
         ? h('div', { class: 'q-ok' }, '✓')
-        : btn('Claim', allClaimed ? 'primary small' : 'ghost small dim', () => {
+        : btn(t('Claim'), allClaimed ? 'primary small' : 'ghost small dim', () => {
             if (!claimQuestBonus(p)) return;
             sfx.chest();
             haptic.success();
@@ -66,8 +67,15 @@ export function questsFlow(app: App) {
     body.replaceChildren(...rows, bonus);
   };
   render();
-  modal([h('div', { class: 'm-title' }, 'Daily quests'), h('p', { class: 'muted' }, `New quests in ${untilMidnight()}`), body], {
-    cls: 'tall',
-    onClose: () => app.refresh(),
-  });
+  modal(
+    [
+      h('div', { class: 'm-title' }, t('Daily quests')),
+      h('p', { class: 'muted' }, t('New quests in {time}', { time: untilMidnight() })),
+      body,
+    ],
+    {
+      cls: 'tall',
+      onClose: () => app.refresh(),
+    },
+  );
 }

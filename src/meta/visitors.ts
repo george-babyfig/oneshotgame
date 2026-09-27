@@ -3,12 +3,13 @@
 import { rngFrom } from '../core/levels';
 import { SPECIES, SPECIES_BY_ID } from '../core/world';
 import type { Profile, VisitorGift } from './profile';
+import { t } from '../i18n';
 
 export const VISIT_MIN_MINUTES = 20;
 export const MAX_VISITORS = 6;
 export const MEMENTO_CHANCE = 0.18;
 
-const ITEMS = [
+export const ITEMS = [
   'smooth pebble',
   'lucky feather',
   'spiral shell',
@@ -38,7 +39,7 @@ const ITEMS = [
 export function mementoName(id: string): string {
   const i = SPECIES.findIndex((s) => s.id === id);
   const sp = SPECIES_BY_ID[id];
-  return `${sp?.name ?? 'Someone'}'s ${ITEMS[(i < 0 ? 0 : i) % ITEMS.length]}`;
+  return t("{who}'s {item}", { who: t(sp?.name ?? 'Someone'), item: t(ITEMS[(i < 0 ? 0 : i) % ITEMS.length]) });
 }
 
 /** Work out who visited between lastSeen and now. Deterministic for a given time window. */

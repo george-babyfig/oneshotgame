@@ -24,6 +24,8 @@ export interface Settings {
   haptics: boolean;
   reduceMotion: boolean;
   notifications: boolean;
+  /** '' = follow the device language. */
+  lang: string;
 }
 
 export interface Stats {
@@ -127,7 +129,7 @@ export function defaultProfile(now = Date.now()): Profile {
     road: [],
     chapters: [],
     dailyPlanet: { day: '', best: 0, stars: 0, rewarded: false },
-    settings: { sound: true, music: true, haptics: true, reduceMotion: false, notifications: true },
+    settings: { sound: true, music: true, haptics: true, reduceMotion: false, notifications: true, lang: '' },
     tutorial: false,
     meta: { installed: now, lastSeen: now, sessions: 0, rated: false, starterOffered: false, notifAsked: false },
     stats: {

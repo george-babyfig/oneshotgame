@@ -6,6 +6,7 @@ import { haptic } from '../haptics';
 import { collectDust, pendingDust, spendGems } from '../../meta/economy';
 import { galaxyRate } from '../../meta/economy';
 import type { App } from '../app';
+import { t } from '../../i18n';
 
 export const WELCOME_BACK_DAYS = 3;
 export const WELCOME_BACK_GEMS = 30;
@@ -18,22 +19,22 @@ export function maybeStarterOffer(app: App, then?: () => void) {
   app.save();
   const m = modal(
     [
-      h('div', { class: 'm-sub' }, 'A gift for new explorers'),
-      h('div', { class: 'm-title' }, 'Starter Pack'),
+      h('div', { class: 'm-sub' }, t('A gift for new explorers')),
+      h('div', { class: 'm-title' }, t('Starter Pack')),
       h('div', { class: 'offer-art' }, '🎁'),
       h(
         'ul',
         { class: 'offer-list' },
-        h('li', null, '💎 300 gems'),
-        h('li', null, '🌠 ✨ 🔭 5 of every booster'),
-        h('li', null, '🌈 Aurora atmosphere'),
+        h('li', null, t('💎 {n} gems', { n: 300 })),
+        h('li', null, t('🌠 ✨ 🔭 {n} of every booster', { n: 5 })),
+        h('li', null, t('🌈 Aurora atmosphere')),
       ),
-      h('p', { class: 'muted' }, 'One time only, and it stays in the Shop if you want it later.'),
+      h('p', { class: 'muted' }, t('One time only, and it stays in the Shop if you want it later.')),
       btn(app.priceOf('starter'), 'buy-real wide', () => {
         m.close();
         app.buy('starter');
       }),
-      btn('Maybe later', 'ghost wide', () => m.close()),
+      btn(t('Maybe later'), 'ghost wide', () => m.close()),
     ],
     { onClose: () => then?.() },
   );
@@ -58,17 +59,21 @@ export function welcomeBackFlow(app: App, awayMs: number, then?: () => void) {
   const m = modal(
     [
       h('div', { class: 'gift-ic' }, '🪐'),
-      h('div', { class: 'm-title' }, 'Welcome back!'),
-      h('p', { class: 'muted' }, `You were away ${days} days. Your galaxy kept growing at ✨${fmt(galaxyRate(p))} an hour.`),
-      h('div', { class: 'reward-list' }, h('span', null, `💎 ${WELCOME_BACK_GEMS} welcome gift`)),
+      h('div', { class: 'm-title' }, t('Welcome back!')),
+      h(
+        'p',
+        { class: 'muted' },
+        t('You were away {n} days. Your galaxy kept growing at ✨{rate} an hour.', { n: days, rate: fmt(galaxyRate(p)) }),
+      ),
+      h('div', { class: 'reward-list' }, h('span', null, t('💎 {n} welcome gift', { n: WELCOME_BACK_GEMS }))),
       pending > 0
         ? h(
             'div',
             { class: 'row' },
-            btn(`Collect ✨${fmt(pending)}`, 'dust-btn', () => collect(1)),
-            btn(`×2 for 💎${DOUBLE_DUST_GEMS}`, 'gem', () => collect(2)),
+            btn(t('Collect ✨{n}', { n: fmt(pending) }), 'dust-btn', () => collect(1)),
+            btn(t('×2 for 💎{n}', { n: DOUBLE_DUST_GEMS }), 'gem', () => collect(2)),
           )
-        : btn('Let’s play!', 'primary wide', () => m.close()),
+        : btn(t('Let’s play!'), 'primary wide', () => m.close()),
     ],
     { dismiss: false, onClose: () => (app.refresh(), then?.()) },
   );

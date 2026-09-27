@@ -9,6 +9,8 @@ import { spendDust } from '../../meta/economy';
 import { chapterOf } from '../../meta/progression';
 import { projectileCanvas } from '../art/projectiles';
 import type { App, Boosters } from '../app';
+import { t, tp } from '../../i18n';
+import { kindDesc, kindName } from '../text';
 
 export function preLevel(app: App, n: number) {
   const p = app.p;
@@ -26,7 +28,7 @@ export function preLevel(app: App, n: number) {
           'button',
           { class: `booster${chosen[id] ? ' on' : ''}` },
           h('span', { class: 'be' }, b.emoji),
-          h('span', { class: 'bn' }, b.name),
+          h('span', { class: 'bn' }, t(b.name)),
           h('span', { class: 'bc' }, owned > 0 ? `×${owned}` : `✨${b.dust}`),
         );
         el.addEventListener('click', () => {
@@ -40,7 +42,7 @@ export function preLevel(app: App, n: number) {
             app.save();
           } else {
             sfx.error();
-            toast(`Needs ✨${b.dust} stardust — or 💎${b.gems} in the Shop`, 'bad');
+            toast(t('Needs ✨{dust} stardust — or 💎{gems} in the Shop', { dust: b.dust, gems: b.gems }), 'bad');
           }
           renderBoosters();
         });
@@ -52,23 +54,28 @@ export function preLevel(app: App, n: number) {
   const best = p.stars[n] ?? 0;
   const m = modal(
     [
-      h('div', { class: 'm-sub' }, `${chapterOf(n).name} · Planet ${n}`),
+      h('div', { class: 'm-sub' }, t('{chapter} · Planet {n}', { chapter: t(chapterOf(n).name), n })),
       h('div', { class: 'm-title' }, L.name),
       L.difficulty !== 'normal'
         ? h(
             'div',
             { class: `diff-chip ${L.difficulty}` },
             L.difficulty === 'super'
-              ? `💀 Super Hard planet · ×${DIFFICULTY_DUST.super} stardust`
-              : `🔥 Hard planet · ×${DIFFICULTY_DUST.hard} stardust`,
+              ? t('💀 Super Hard planet · ×{n} stardust', { n: DIFFICULTY_DUST.super })
+              : t('🔥 Hard planet · ×{n} stardust', { n: DIFFICULTY_DUST.hard }),
           )
         : null,
-      L.twist !== 'none' ? h('div', { class: 'twist-chip' }, `${TWISTS[L.twist].name}: ${TWISTS[L.twist].desc}`) : null,
+      L.twist !== 'none' ? h('div', { class: 'twist-chip' }, `${t(TWISTS[L.twist].name)}: ${t(TWISTS[L.twist].desc)}`) : null,
       h(
         'div',
         { class: 'targets' },
-        ...L.stars.map((t, i) =>
-          h('div', { class: `tg${i < best ? ' got' : ''}` }, h('b', null, '★'.repeat(i + 1)), h('span', null, `${fmt(t)} life`)),
+        ...L.stars.map((target, i) =>
+          h(
+            'div',
+            { class: `tg${i < best ? ' got' : ''}` },
+            h('b', null, '★'.repeat(i + 1)),
+            h('span', null, t('{n} life', { n: fmt(target) })),
+          ),
         ),
       ),
       h(
@@ -77,27 +84,37 @@ export function preLevel(app: App, n: number) {
         ...kinds.map((k) =>
           h(
             'span',
-            { class: `kc${k === newKind ? ' new' : ''}`, title: k.desc },
+            { class: `kc${k === newKind ? ' new' : ''}`, title: kindDesc(k.id) },
             projectileCanvas(k.id, 34),
-            k === newKind ? h('small', null, 'NEW') : null,
+            k === newKind ? h('small', null, t('NEW')) : null,
           ),
         ),
       ),
-      newKind ? h('p', { class: 'newkind' }, `New: ${newKind.emoji} ${newKind.name} — ${newKind.desc}`) : null,
+      newKind
+        ? h(
+            'p',
+            { class: 'newkind' },
+            t('New: {emoji} {name} — {desc}', { emoji: newKind.emoji, name: kindName(newKind.id), desc: kindDesc(newKind.id) }),
+          )
+        : null,
       momentumActive(p)
         ? h(
             'div',
             { class: `momentum${p.momentum.streak ? '' : ' off'}` },
             h('span', { class: 'halo' }, '⚡'),
             p.momentum.streak
-              ? `Momentum ×${p.momentum.streak}: ${momentumPerkText(p.momentum.streak)} free`
-              : 'Win in a row to build Momentum and get free head-starts',
+              ? t('Momentum ×{n}: {perks} free', { n: p.momentum.streak, perks: momentumPerkText(p.momentum.streak) })
+              : t('Win in a row to build Momentum and get free head-starts'),
           )
         : null,
-      h('div', { class: 'm-sub' }, 'Boosters'),
+      h('div', { class: 'm-sub' }, t('Boosters')),
       row,
       btn(
-        `Launch! · ${L.throws + p.upgrades.throws + (momentumActive(p) ? MOMENTUM_PERKS[p.momentum.streak].throws : 0)} throws`,
+        tp(
+          L.throws + p.upgrades.throws + (momentumActive(p) ? MOMENTUM_PERKS[p.momentum.streak].throws : 0),
+          'Launch! · {n} throw',
+          'Launch! · {n} throws',
+        ),
         'primary big wide',
         () => {
           for (const id of Object.keys(chosen) as BoosterId[]) if (chosen[id]) p.boosters[id]--;

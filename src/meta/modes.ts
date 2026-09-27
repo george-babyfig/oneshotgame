@@ -3,6 +3,7 @@
 import { greedyScore, makeLevel, rngFrom, type LevelDef } from '../core/levels';
 import { BIOMES, clonePlanet, lifeScore, settle, type Planet } from '../core/world';
 import { dayGap, type Profile } from './profile';
+import { t } from '../i18n';
 
 export const DAILY_EPOCH = '2026-01-01';
 export const RUSH_SECONDS = 60;
@@ -88,11 +89,11 @@ export function planetStrip(p: Planet, cells = 8) {
 }
 
 export function dailyShareText(day: string, stars: number, score: number, planet: Planet) {
-  return `Pocket Planet #${dailyNumber(day)} ${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}\n${planetStrip(planet)}\n🌱 ${score} life`;
+  return `Pocket Planet #${dailyNumber(day)} ${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}\n${planetStrip(planet)}\n🌱 ${t('{n} life', { n: score })}`;
 }
 
 export function challengeShareText(code: string, score: number, planet: Planet) {
-  return `🪐 I grew ${score} life on a Pocket Planet!\n${planetStrip(planet)}\nCan you beat me? Open Pocket Planet → Modes → Challenge and enter code ${code}`;
+  return `${t('🪐 I grew {n} life on a Pocket Planet!', { n: score })}\n${planetStrip(planet)}\n${t('Can you beat me? Open Pocket Planet → Modes → Challenge and enter code {code}', { code })}`;
 }
 
 // ------------------------------------------------------------------ rewards

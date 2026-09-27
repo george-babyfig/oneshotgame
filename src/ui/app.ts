@@ -35,23 +35,8 @@ import { preLevel } from './flows/prelevel';
 import { levelResults } from './flows/results';
 import { settingsFlow } from './flows/settings';
 import { questsFlow } from './flows/quests';
-
-/** Coach tips for the first planets, keyed by level then by throws used. */
-const COACH: Record<number, Record<number, string>> = {
-  1: {
-    1: 'Rock raised the land! Next up: the Ice Comet makes oceans.',
-    2: 'Creatures move in where lands meet. Tap the small bubble to swap objects.',
-    4: 'Fill the life bar past the ★ marks to earn stars.',
-  },
-  2: {
-    0: 'New: Seed Pods grow meadows and forests. Try one on land!',
-    2: 'A forest next to an ocean brings otters. The Lifebook lists every recipe.',
-  },
-  3: {
-    0: 'The planet spins while your throw flies — aim a little ahead.',
-    2: 'While aiming, the label shows what that spot will become.',
-  },
-};
+import { setLang, t, type Lang } from '../i18n';
+import { COACH } from '../meta/coach';
 
 export type ScreenName = 'home' | 'lifebook' | 'upgrades' | 'shop' | 'map' | 'road' | 'level';
 export type Boosters = Record<BoosterId, boolean>;
@@ -131,6 +116,7 @@ export class App {
   }
 
   applySettings() {
+    setLang(this.p.settings.lang as Lang);
     setAudio(this.p.settings.sound, this.p.settings.music);
     setHaptics(this.p.settings.haptics);
     document.documentElement.classList.toggle('reduce-motion', this.p.settings.reduceMotion);
@@ -228,13 +214,13 @@ export class App {
       'div',
       { class: 'topbar' },
       back
-        ? h('button', { class: 'icon', 'aria-label': 'Back', onclick: () => (sfx.click(), this.showHome()) }, icon('back', 24))
-        : h('button', { class: 'icon', 'aria-label': 'Settings', onclick: () => this.settings() }, icon('gear', 26)),
+        ? h('button', { class: 'icon', 'aria-label': t('Back'), onclick: () => (sfx.click(), this.showHome()) }, icon('back', 24))
+        : h('button', { class: 'icon', 'aria-label': t('Settings'), onclick: () => this.settings() }, icon('gear', 26)),
       h('div', { class: 'grow' }),
-      h('button', { class: 'pill dust', 'aria-label': 'Stardust', onclick: () => this.showUpgrades() }, `✨ ${fmt(this.p.dust)}`),
+      h('button', { class: 'pill dust', 'aria-label': t('Stardust'), onclick: () => this.showUpgrades() }, `✨ ${fmt(this.p.dust)}`),
       h(
         'button',
-        { class: 'pill gems', 'aria-label': 'Gems', onclick: () => this.showShop() },
+        { class: 'pill gems', 'aria-label': t('Gems'), onclick: () => this.showShop() },
         `💎 ${fmt(this.p.gems)}`,
         h('span', { class: 'plus' }, '+'),
       ),
@@ -312,8 +298,8 @@ export class App {
       const res = momentumLoss(this.p, today());
       this.save();
       this.startLevel(r.level.n);
-      if (res === 'shield') toast('🛡️ Your daily shield kept your Momentum!', 'good');
-      if (res === 'lost') toast('Momentum lost — win to build it back up', 'bad');
+      if (res === 'shield') toast(t('🛡️ Your daily shield kept your Momentum!'), 'good');
+      if (res === 'lost') toast(t('Momentum lost — win to build it back up'), 'bad');
       return;
     }
     momentumWin(this.p);
@@ -332,7 +318,7 @@ export class App {
 
   needGems() {
     sfx.error();
-    toast('Not enough gems — grab a pack in the Shop!', 'bad');
+    toast(t('Not enough gems — grab a pack in the Shop!'), 'bad');
   }
 
   async buy(key: string) {
@@ -357,7 +343,7 @@ export class App {
     this.saveNow();
     sfx.gem();
     haptic.success();
-    toast(g.gems ? `Thank you! +${fmt(g.gems)} 💎` : `${g.title} unlocked!`, 'good');
+    toast(g.gems ? t('Thank you! +{n} 💎', { n: fmt(g.gems) }) : t('{name} unlocked!', { name: t(g.title) }), 'good');
     this.refresh();
   }
 
@@ -378,8 +364,8 @@ export class App {
     }
     if (restored) {
       this.saveNow();
-      toast('Purchases restored!', 'good');
-    } else toast(this.iap.kind === 'native' ? 'Nothing to restore' : 'Restore works in the iOS app');
+      toast(t('Purchases restored!'), 'good');
+    } else toast(this.iap.kind === 'native' ? t('Nothing to restore') : t('Restore works in the iOS app'));
     this.refresh();
   }
 }

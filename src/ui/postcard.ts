@@ -7,6 +7,7 @@ import { renderPlanet } from './art/planet';
 import { drawCreature } from './art/critters';
 import { shareText } from './share';
 import { toast } from './dom';
+import { t } from '../i18n';
 
 export interface PostcardInfo {
   title: string;
@@ -94,7 +95,7 @@ export async function sharePostcard(planet: Planet, info: PostcardInfo, text: st
     a.href = dataUrl;
     a.download = 'pocket-planet.png';
     a.click();
-    toast('Postcard saved', 'good');
+    toast(t('Postcard saved'), 'good');
   } catch (e) {
     if (!/cancel|abort/i.test(String((e as Error)?.message ?? e))) shareText(text);
   }

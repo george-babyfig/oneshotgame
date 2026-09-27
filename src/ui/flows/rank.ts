@@ -5,6 +5,7 @@ import { haptic } from '../haptics';
 import { applyReward, rewardText } from '../../meta/progression';
 import { RANK_UNLOCKS, rankProgress, rankReady, rankReward, rankTitle } from '../../meta/rank';
 import type { App } from '../app';
+import { t } from '../../i18n';
 
 export function rankFlow(app: App) {
   const p = app.p;
@@ -34,9 +35,9 @@ export function rankFlow(app: App) {
       h(
         'div',
         { class: 'rank-reward' },
-        `Rank ${p.rank + 1} reward: ${rewardText(rankReward(p.rank + 1)).join('  ')}${unlock ? `  ·  🔓 ${unlock}` : ''}`,
+        `${t('Rank {n} reward: {reward}', { n: p.rank + 1, reward: rewardText(rankReward(p.rank + 1)).join('  ') })}${unlock ? `  ·  🔓 ${t(unlock)}` : ''}`,
       ),
-      btn('Rank up!', `primary wide${rankReady(p) ? '' : ' dim'}`, () => {
+      btn(t('Rank up!'), `primary wide${rankReady(p) ? '' : ' dim'}`, () => {
         if (!rankReady(p)) return;
         p.rank++;
         const r = rankReward(p.rank);
@@ -49,11 +50,11 @@ export function rankFlow(app: App) {
         const u = RANK_UNLOCKS[p.rank];
         const done = modal([
           h('div', { class: 'chest-anim' }, '🏅'),
-          h('div', { class: 'm-sub' }, `Explorer Rank ${p.rank}`),
+          h('div', { class: 'm-sub' }, t('Explorer Rank {n}', { n: p.rank })),
           h('div', { class: 'm-title' }, rankTitle(p.rank)),
-          h('div', { class: 'reward-list' }, ...rewardText(r).map((t) => h('span', null, t))),
-          u ? h('div', { class: 'nudge' }, `🔓 New mode unlocked: ${u}!`) : null,
-          btn('Onward!', 'primary wide', () => (done.close(), app.refresh())),
+          h('div', { class: 'reward-list' }, ...rewardText(r).map((s) => h('span', null, s))),
+          u ? h('div', { class: 'nudge' }, t('🔓 New mode unlocked: {mode}!', { mode: t(u) })) : null,
+          btn(t('Onward!'), 'primary wide', () => (done.close(), app.refresh())),
         ]);
       }),
     );
@@ -61,9 +62,9 @@ export function rankFlow(app: App) {
   render();
   const m = modal(
     [
-      h('div', { class: 'm-sub' }, `Explorer Rank ${p.rank}`),
+      h('div', { class: 'm-sub' }, t('Explorer Rank {n}', { n: p.rank })),
       h('div', { class: 'm-title' }, rankTitle(p.rank)),
-      h('p', { class: 'muted' }, 'Clear all three goals to rank up.'),
+      h('p', { class: 'muted' }, t('Clear all three goals to rank up.')),
       body,
     ],
     {

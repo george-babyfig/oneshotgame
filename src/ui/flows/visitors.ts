@@ -6,6 +6,7 @@ import { SPECIES_BY_ID } from '../../core/world';
 import { openVisitor, mementoName } from '../../meta/visitors';
 import { critterCanvas } from '../art/critters';
 import type { App } from '../app';
+import { t } from '../../i18n';
 
 export function visitorsFlow(app: App) {
   const p = app.p;
@@ -27,13 +28,13 @@ export function visitorsFlow(app: App) {
     haptic.success();
     const kids = [
       h('div', { class: 'visit-emoji' }, critterCanvas(v.species, 120)),
-      h('div', { class: 'm-title' }, `${sp?.name ?? 'A visitor'} dropped by!`),
+      h('div', { class: 'm-title' }, t('{name} dropped by!', { name: sp ? t(sp.name) : t('A visitor') })),
       h('div', { class: 'reward-list' }, h('span', null, `✨ ${fmt(v.dust)}`), v.gems ? h('span', null, `💎 ${v.gems}`) : null),
-      v.memento ? h('div', { class: 'memento' }, h('small', null, 'Memento'), h('b', null, `🎀 ${mementoName(v.memento)}`)) : null,
-      btn(p.visitors.length ? `Next visitor (${p.visitors.length})` : 'Lovely!', 'primary wide', next),
+      v.memento ? h('div', { class: 'memento' }, h('small', null, t('Memento')), h('b', null, `🎀 ${mementoName(v.memento)}`)) : null,
+      btn(p.visitors.length ? t('Next visitor ({n})', { n: p.visitors.length }) : t('Lovely!'), 'primary wide', next),
     ];
     stage.replaceChildren(...kids.filter((k) => k !== null));
   };
-  m = modal([h('div', { class: 'm-sub' }, 'While you were away…'), stage], { dismiss: false, cls: 'visitors' });
+  m = modal([h('div', { class: 'm-sub' }, t('While you were away…')), stage], { dismiss: false, cls: 'visitors' });
   next();
 }

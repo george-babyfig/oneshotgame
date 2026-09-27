@@ -6,6 +6,7 @@ import { InAppReview } from '@capacitor-community/in-app-review';
 import { h, btn, modal } from './dom';
 import { vaultFullAt } from '../meta/economy';
 import type { Profile } from '../meta/profile';
+import { t } from '../i18n';
 
 const native = () => Capacitor.isNativePlatform();
 const ID_VAULT = 101;
@@ -34,8 +35,8 @@ export async function scheduleReminders(p: Profile) {
     if (p.galaxy.length && full > Date.now() + 30 * 60000) {
       list.push({
         id: ID_VAULT,
-        title: 'Your stardust vault is full ✨',
-        body: 'Your planets have been busy. Come collect!',
+        title: t('Your stardust vault is full ✨'),
+        body: t('Your planets have been busy. Come collect!'),
         schedule: { at: new Date(friendlyTime(full)) },
       });
     }
@@ -44,8 +45,8 @@ export async function scheduleReminders(p: Profile) {
     tomorrow.setHours(18, 30, 0, 0);
     list.push({
       id: ID_GIFT,
-      title: 'Your daily gift is ready 🎁',
-      body: 'Keep your streak going — and see who visited your galaxy.',
+      title: t('Your daily gift is ready 🎁'),
+      body: t('Keep your streak going — and see who visited your galaxy.'),
       schedule: { at: tomorrow },
     });
     await LocalNotifications.schedule({ notifications: list });
@@ -61,13 +62,13 @@ export function askForReminders(p: Profile, save: () => void) {
   save();
   const m = modal([
     h('div', { class: 'gift-ic' }, '🔔'),
-    h('div', { class: 'm-title' }, 'Want a nudge?'),
+    h('div', { class: 'm-title' }, t('Want a nudge?')),
     h(
       'p',
       { class: 'muted' },
-      'We can let you know when your stardust vault is full and your daily gift is ready. No more than once a day, never at night.',
+      t('We can let you know when your stardust vault is full and your daily gift is ready. No more than once a day, never at night.'),
     ),
-    btn('Yes please', 'primary wide', async () => {
+    btn(t('Yes please'), 'primary wide', async () => {
       m.close();
       try {
         await LocalNotifications.requestPermissions();
@@ -76,7 +77,7 @@ export function askForReminders(p: Profile, save: () => void) {
         /* ignore */
       }
     }),
-    btn('No thanks', 'ghost wide', () => {
+    btn(t('No thanks'), 'ghost wide', () => {
       p.settings.notifications = false;
       save();
       m.close();

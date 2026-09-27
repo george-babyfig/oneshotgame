@@ -9,6 +9,7 @@ import type { App } from '../app';
 import { sharePostcard } from '../postcard';
 import { addTokens, ensureEvent, eventActive, eventReady } from '../../meta/events';
 import { askForReminders, maybeAskReview } from '../platform';
+import { t, tp } from '../../i18n';
 
 export function levelResults(app: App, r: LevelResult) {
   const p = app.p;
@@ -28,10 +29,11 @@ export function levelResults(app: App, r: LevelResult) {
   p.tutorial = true;
   app.saveNow();
   const extras: HTMLElement[] = [];
-  if (chestsReady(p).length) extras.push(h('div', { class: 'nudge' }, '🎁 Chapter chest ready on the Star Map!'));
-  if (roadReady(p, totalStars(p)).length) extras.push(h('div', { class: 'nudge' }, '🛣️ New Star Road reward!'));
-  if (eventActive(p) && eventReady(p).length) extras.push(h('div', { class: 'nudge' }, `${ensureEvent(p).emoji} Event reward ready!`));
-  if (questsClaimable(p)) extras.push(h('div', { class: 'nudge' }, '📜 A quest is complete!'));
+  if (chestsReady(p).length) extras.push(h('div', { class: 'nudge' }, t('🎁 Chapter chest ready on the Star Map!')));
+  if (roadReady(p, totalStars(p)).length) extras.push(h('div', { class: 'nudge' }, t('🛣️ New Star Road reward!')));
+  if (eventActive(p) && eventReady(p).length)
+    extras.push(h('div', { class: 'nudge' }, t('{emoji} Event reward ready!', { emoji: ensureEvent(p).emoji })));
+  if (questsClaimable(p)) extras.push(h('div', { class: 'nudge' }, t('📜 A quest is complete!')));
   const home = () => {
     m.close();
     app.showHome();
@@ -41,34 +43,42 @@ export function levelResults(app: App, r: LevelResult) {
   maybeAskReview(p, () => app.save(), r.stars, n);
   const m = modal(
     [
-      h('div', { class: 'm-title' }, out.firstClear ? 'Planet added to your galaxy!' : 'Planet improved!'),
+      h('div', { class: 'm-title' }, out.firstClear ? t('Planet added to your galaxy!') : t('Planet improved!')),
       h('div', { class: 'end-stars' }, ...[0, 1, 2].map((i) => h('span', { class: i < r.stars ? 'on' : '' }, '★'))),
       h(
         'div',
         { class: 'rewards' },
-        h('div', null, h('b', null, `✨ ${fmt(out.dust)}`), h('small', null, 'stardust')),
-        out.gems ? h('div', null, h('b', null, `💎 ${out.gems}`), h('small', null, '3-star bonus')) : null,
-        h('div', null, h('b', null, `${r.planet.speciesFound.length}`), h('small', null, 'creatures')),
+        h('div', null, h('b', null, `✨ ${fmt(out.dust)}`), h('small', null, t('stardust'))),
+        out.gems ? h('div', null, h('b', null, `💎 ${out.gems}`), h('small', null, t('3-star bonus'))) : null,
+        h('div', null, h('b', null, `${r.planet.speciesFound.length}`), h('small', null, t('creatures'))),
       ),
-      h('p', { class: 'muted' }, `It now makes ✨${planetRate(out.entry)}/hour for you, even while you're away.`),
+      h('p', { class: 'muted' }, t("It now makes ✨{rate}/hour for you, even while you're away.", { rate: planetRate(out.entry) })),
       ...extras,
-      btn('📮 Share postcard', 'ghost wide small-btn', () =>
+      btn(t('📮 Share postcard'), 'ghost wide small-btn', () =>
         sharePostcard(
           r.planet,
           {
             title: r.level.name,
-            subtitle: `Planet ${n} · ${r.planet.speciesFound.length} creatures · ${r.score} life`,
+            subtitle: tp(
+              r.planet.speciesFound.length,
+              'Planet {planet} · {n} creature · {score} life',
+              'Planet {planet} · {n} creatures · {score} life',
+              {
+                planet: n,
+                score: r.score,
+              },
+            ),
             stars: r.stars,
             glow: app.skinGlow(),
           },
-          `I grew ${r.score} life on ${r.level.name} in Pocket Planet! 🪐`,
+          t('I grew {score} life on {name} in Pocket Planet! 🪐', { score: r.score, name: r.level.name }),
         ),
       ),
       h(
         'div',
         { class: 'row' },
-        btn('Galaxy', 'ghost', home),
-        btn('Next ▶', 'primary', () => {
+        btn(t('Galaxy'), 'ghost', home),
+        btn(t('Next ▶'), 'primary', () => {
           m.close();
           if (wasTutorial) app.startLevel(p.level);
           else app.preLevel(p.level);

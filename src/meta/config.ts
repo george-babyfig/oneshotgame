@@ -1,4 +1,5 @@
 // Everything you are likely to tweak before shipping lives here.
+import { t, tp } from '../i18n';
 
 export const GAME_NAME = 'Pocket Planet';
 export const VERSION = '1.0.0';
@@ -74,20 +75,25 @@ export const UPGRADES: Record<UpgradeId, { name: string; emoji: string; desc: (l
   scope: {
     name: 'Aim Guide',
     emoji: '🎯',
-    desc: (lv) => `Aim line length ${['short', 'medium', 'long', 'full'][lv]}`,
+    desc: (lv) => t('Aim line length: {x}', { x: t(['short', 'medium', 'long', 'full'][lv]) }),
     costs: [250, 700, 1600],
   },
-  throws: { name: 'Extra Throws', emoji: '🪨', desc: (lv) => `+${lv} throw${lv === 1 ? '' : 's'} every level`, costs: [400, 1200, 3000] },
+  throws: {
+    name: 'Extra Throws',
+    emoji: '🪨',
+    desc: (lv) => tp(lv, '+{n} throw every level', '+{n} throws every level'),
+    costs: [400, 1200, 3000],
+  },
   splash: {
     name: 'Wide Impact',
     emoji: '💥',
-    desc: (lv) => (lv ? 'Impacts spread one region further' : 'Normal impact size'),
+    desc: (lv) => (lv ? t('Impacts spread one region further') : t('Normal impact size')),
     costs: [5000],
   },
   vault: {
     name: 'Stardust Vault',
     emoji: '🏦',
-    desc: (lv) => `Galaxy stores up to ${[4, 8, 12, 24][lv]}h of stardust`,
+    desc: (lv) => t('Galaxy stores up to {n}h of stardust', { n: [4, 8, 12, 24][lv] }),
     costs: [300, 900, 2500],
   },
 };

@@ -7,6 +7,7 @@ import { difficultyOf } from '../../core/levels';
 import { chapterOf, chapterReward, chestsReady, openChest, rewardText, LEVELS_PER_CHAPTER } from '../../meta/progression';
 import type { App } from '../app';
 import { maybeStarterOffer } from '../flows/offers';
+import { t } from '../../i18n';
 
 export function showStarMap(app: App) {
   const p = app.p;
@@ -41,7 +42,7 @@ export function showStarMap(app: App) {
       );
     }
     const chest = ready.includes(n)
-      ? btn('🎁 Open chapter chest', 'primary wide chest-btn', () => {
+      ? btn(t('🎁 Open chapter chest'), 'primary wide chest-btn', () => {
           const r = openChest(p, n);
           if (!r) return;
           sfx.chest();
@@ -49,14 +50,14 @@ export function showStarMap(app: App) {
           app.save();
           const m = modal([
             h('div', { class: 'chest-anim' }, '🎁'),
-            h('div', { class: 'm-title' }, `${ch.name} complete!`),
-            h('div', { class: 'reward-list' }, ...rewardText(r).map((t) => h('span', null, t))),
-            btn('Awesome', 'primary wide', () => (m.close(), showStarMap(app), maybeStarterOffer(app))),
+            h('div', { class: 'm-title' }, t('{name} complete!', { name: t(ch.name) })),
+            h('div', { class: 'reward-list' }, ...rewardText(r).map((x) => h('span', null, x))),
+            btn(t('Awesome'), 'primary wide', () => (m.close(), showStarMap(app), maybeStarterOffer(app))),
           ]);
         })
       : p.chapters.includes(n)
-        ? h('div', { class: 'chest-done' }, '✓ Chest opened')
-        : h('div', { class: 'chest-preview' }, `🎁 Finish the chapter: ${rewardText(chapterReward(n)).join('  ')}`);
+        ? h('div', { class: 'chest-done' }, t('✓ Chest opened'))
+        : h('div', { class: 'chest-preview' }, t('🎁 Finish the chapter: {reward}', { reward: rewardText(chapterReward(n)).join('  ') }));
     chapters.push(
       h(
         'div',
@@ -64,17 +65,25 @@ export function showStarMap(app: App) {
         h(
           'div',
           { class: 'ch-head' },
-          h('div', null, h('small', null, `Chapter ${n}`), h('b', null, ch.name)),
+          h('div', null, h('small', null, t('Chapter {n}', { n })), h('b', null, t(ch.name))),
           h('span', { class: 'ch-stars' }, `${chStars}/${LEVELS_PER_CHAPTER * 3}★`),
         ),
-        locked ? h('div', { class: 'ch-lock' }, `🔒 Finish ${cur.name} to unlock`) : h('div', { class: 'path' }, ...nodes),
+        locked
+          ? h('div', { class: 'ch-lock' }, t('🔒 Finish {name} to unlock', { name: t(cur.name) }))
+          : h('div', { class: 'path' }, ...nodes),
         locked ? null : chest,
       ),
     );
   }
   const scroll = h('div', { class: 'scroll map' }, ...chapters.reverse());
   app.mount(
-    h('div', { class: 'screen page' }, app.topBar(true), h('div', { class: 'page-title' }, `Star Map · ${totalStars(p)}★`), scroll),
+    h(
+      'div',
+      { class: 'screen page' },
+      app.topBar(true),
+      h('div', { class: 'page-title' }, t('Star Map · {n}★', { n: totalStars(p) })),
+      scroll,
+    ),
     'map',
   );
   // bring the current chapter into view

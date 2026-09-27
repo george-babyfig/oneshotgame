@@ -1,6 +1,7 @@
 // Explorer Rank: three standing goals at a time; clear all three to rank up (Alto's style).
 import type { Profile } from './profile';
 import type { Reward } from './progression';
+import { t, tp } from '../i18n';
 
 export type RankStat =
   'wins' | 'seen' | 'throws' | 'threeStars' | 'bestLife' | 'chapters' | 'dailies' | 'rushBest' | 'mementos' | 'bestStreak' | 'hardWins';
@@ -12,20 +13,26 @@ export interface RankGoal {
 }
 
 const T: Record<RankStat, (n: number) => string> = {
-  wins: (n) => `Complete ${n} planets`,
-  seen: (n) => `Discover ${n} creatures`,
-  throws: (n) => `Fling ${n} objects`,
-  threeStars: (n) => `Get 3★ on ${n} planets`,
-  bestLife: (n) => `Reach ${n} life on one planet`,
-  chapters: (n) => `Open ${n} chapter chest${n > 1 ? 's' : ''}`,
-  dailies: (n) => `Play ${n} Daily Planet${n > 1 ? 's' : ''}`,
-  rushBest: (n) => `Score ${n} in Meteor Rush`,
-  mementos: (n) => `Collect ${n} memento${n > 1 ? 's' : ''}`,
-  bestStreak: (n) => `Reach Momentum ×${n}`,
-  hardWins: (n) => `Beat ${n} Hard planet${n > 1 ? 's' : ''}`,
+  wins: (n) => t('Complete {n} planets', { n }),
+  seen: (n) => t('Discover {n} creatures', { n }),
+  throws: (n) => t('Fling {n} objects', { n }),
+  threeStars: (n) => t('Get 3★ on {n} planets', { n }),
+  bestLife: (n) => t('Reach {n} life on one planet', { n }),
+  chapters: (n) => tp(n, 'Open {n} chapter chest', 'Open {n} chapter chests'),
+  dailies: (n) => tp(n, 'Play {n} Daily Planet', 'Play {n} Daily Planets'),
+  rushBest: (n) => t('Score {n} in Meteor Rush', { n }),
+  mementos: (n) => tp(n, 'Collect {n} memento', 'Collect {n} mementos'),
+  bestStreak: (n) => t('Reach Momentum ×{n}', { n }),
+  hardWins: (n) => tp(n, 'Beat {n} Hard planet', 'Beat {n} Hard planets'),
 };
 
-const g = (stat: RankStat, target: number): RankGoal => ({ stat, target, text: T[stat](target) });
+const g = (stat: RankStat, target: number): RankGoal => ({
+  stat,
+  target,
+  get text() {
+    return T[stat](target);
+  },
+});
 
 // Hand-written early ranks teach the game; later ones are generated.
 const HAND: RankGoal[][] = [
@@ -98,5 +105,5 @@ export const RANK_TITLES = [
   'Cosmic Architect',
 ];
 export function rankTitle(rank: number) {
-  return RANK_TITLES[Math.min(rank, RANK_TITLES.length) - 1] + (rank > RANK_TITLES.length ? ` ${rank - RANK_TITLES.length + 1}` : '');
+  return t(RANK_TITLES[Math.min(rank, RANK_TITLES.length) - 1]) + (rank > RANK_TITLES.length ? ` ${rank - RANK_TITLES.length + 1}` : '');
 }

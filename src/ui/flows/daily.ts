@@ -6,19 +6,20 @@ import { today } from '../../meta/profile';
 import { DAILY_GEMS } from '../../meta/config';
 import { claimDailyGift, dailyGift } from '../../meta/economy';
 import type { App } from '../app';
+import { t } from '../../i18n';
 
 export function dailyGiftFlow(app: App, then?: () => void) {
-  const t = today();
-  const g = dailyGift(app.p, t);
+  const day = today();
+  const g = dailyGift(app.p, day);
   if (!g) return then?.();
   const m = modal(
     [
       h('div', { class: 'gift-ic' }, '🎁'),
-      h('div', { class: 'm-title' }, 'Daily gift'),
+      h('div', { class: 'm-title' }, t('Daily gift')),
       h(
         'p',
         { class: 'muted' },
-        g.streak > 1 ? `${g.streak}-day streak! Come back tomorrow for more.` : 'Visit every day to grow your streak.',
+        g.streak > 1 ? t('{n}-day streak! Come back tomorrow for more.', { n: g.streak }) : t('Visit every day to grow your streak.'),
       ),
       h(
         'div',
@@ -27,14 +28,14 @@ export function dailyGiftFlow(app: App, then?: () => void) {
           h(
             'div',
             { class: `sd${i < g.index ? ' done' : ''}${i === g.index ? ' today' : ''}${i === DAILY_GEMS.length - 1 ? ' big' : ''}` },
-            h('small', null, `Day ${i + 1}`),
+            h('small', null, t('Day {n}', { n: i + 1 })),
             h('b', null, String(gems)),
             i < g.index ? '✓' : '💎',
           ),
         ),
       ),
-      btn(`Collect ${g.gems} 💎`, 'primary wide', () => {
-        claimDailyGift(app.p, t);
+      btn(t('Collect {n} 💎', { n: g.gems }), 'primary wide', () => {
+        claimDailyGift(app.p, day);
         app.save();
         sfx.gem();
         haptic.success();

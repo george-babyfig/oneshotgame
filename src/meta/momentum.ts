@@ -1,6 +1,7 @@
 // Momentum: a win streak that gives free head-starts (Royal Match / Candy Crush style),
 // with one free "shield" per day so a single slip doesn't wipe it out.
 import type { Profile } from './profile';
+import { t, tp } from '../i18n';
 
 export const MOMENTUM_UNLOCK = 6;
 export const MOMENTUM_MAX = 3;
@@ -21,9 +22,9 @@ export const MOMENTUM_PERKS: MomentumPerk[] = [
 export function momentumPerkText(tier: number): string {
   const k = MOMENTUM_PERKS[tier];
   const parts: string[] = [];
-  if (k.throws) parts.push(`+${k.throws} throw${k.throws > 1 ? 's' : ''}`);
-  if (k.spark) parts.push('✨ Life Spark');
-  if (k.scope) parts.push('🔭 Star Scope');
+  if (k.throws) parts.push(tp(k.throws, '+{n} throw', '+{n} throws'));
+  if (k.spark) parts.push(`✨ ${t('Life Spark')}`);
+  if (k.scope) parts.push(`🔭 ${t('Star Scope')}`);
   return parts.join(' · ');
 }
 

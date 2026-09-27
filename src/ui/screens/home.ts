@@ -15,6 +15,7 @@ import { modesBadge } from '../flows/modes';
 import { PIGGY_FROM_LEVEL, PIGGY_MIN } from './shop';
 import type { App } from '../app';
 import { icon as iconEl } from '../icons';
+import { t, tp } from '../../i18n';
 
 export function navBtn(icon: string, label: string, badge: string | number, fn: () => void, cls = '') {
   return h(
@@ -42,8 +43,8 @@ export function showHome(app: App) {
     h(
       'span',
       { class: 'stack' },
-      h('b', null, `Collect ✨ ${fmt(pending)}`),
-      h('small', null, full ? 'Vault full! Upgrade it to store more' : `${fmt(rate)} stardust / hour`),
+      h('b', null, t('Collect ✨ {n}', { n: fmt(pending) })),
+      h('small', null, full ? t('Vault full! Upgrade it to store more') : t('{n} stardust / hour', { n: fmt(rate) })),
     ),
     `dust-btn${full ? ' full' : ''}`,
     () => {
@@ -51,7 +52,7 @@ export function showHome(app: App) {
       if (d) {
         sfx.coin();
         haptic.success();
-        toast(`+${fmt(d)} stardust`, 'good');
+        toast(t('+{n} stardust', { n: fmt(d) }), 'good');
         app.save();
       }
       showHome(app);
@@ -63,31 +64,31 @@ export function showHome(app: App) {
     'div',
     { class: 'screen home' },
     app.topBar(),
-    h('div', { class: 'title' }, h('span', null, 'Pocket'), h('span', null, 'Planet')),
+    h('div', { class: 'title' }, h('span', null, t('Pocket')), h('span', null, t('Planet'))),
     h(
       'div',
       { class: 'galaxy-wrap' },
       canvas,
-      p.galaxy.length ? null : h('div', { class: 'galaxy-empty' }, 'Your galaxy is empty.\nFinish planets to fill it!'),
+      p.galaxy.length ? null : h('div', { class: 'galaxy-empty' }, t('Your galaxy is empty.\nFinish planets to fill it!')),
       p.visitors.length
         ? h(
             'button',
             { class: 'visit-chip', onclick: () => (sfx.click(), app.visitors()) },
-            `🛸 ${p.visitors.length} visitor${p.visitors.length > 1 ? 's' : ''} left gifts!`,
+            tp(p.visitors.length, '🛸 {n} visitor left gifts!', '🛸 {n} visitors left gifts!'),
           )
         : null,
       h(
         'div',
         { class: 'side side-l' },
-        navBtn('scroll', 'Quests', questBadge, () => app.quests(), 'side-btn'),
-        navBtn('road', 'Star Road', roadBadge, () => app.showRoad(), 'side-btn'),
-        navBtn('medal', `Rank ${p.rank}`, rankReady(p) ? 1 : 0, () => app.rank(), 'side-btn'),
+        navBtn('scroll', t('Quests'), questBadge, () => app.quests(), 'side-btn'),
+        navBtn('road', t('Star Road'), roadBadge, () => app.showRoad(), 'side-btn'),
+        navBtn('medal', t('Rank {n}', { n: p.rank }), rankReady(p) ? 1 : 0, () => app.rank(), 'side-btn'),
       ),
       h(
         'div',
         { class: 'side side-r' },
-        navBtn('pad', 'Modes', modesBadge(app), () => app.modes(), 'side-btn'),
-        eventActive(p) ? navBtn(ensureEvent(p).emoji, 'Event', eventReady(p).length, () => app.events(), 'side-btn event-btn') : null,
+        navBtn('pad', t('Modes'), modesBadge(app), () => app.modes(), 'side-btn'),
+        eventActive(p) ? navBtn(ensureEvent(p).emoji, t('Event'), eventReady(p).length, () => app.events(), 'side-btn event-btn') : null,
         p.level > PIGGY_FROM_LEVEL && p.piggy >= PIGGY_MIN ? navBtn('pig', `💎${p.piggy}`, '', () => app.showShop(), 'side-btn') : null,
       ),
     ),
@@ -102,7 +103,7 @@ export function showHome(app: App) {
                 const d = collectDust(p, Date.now(), 2);
                 sfx.coin();
                 haptic.success();
-                toast(`+${fmt(d)} stardust (doubled!)`, 'good');
+                toast(t('+{n} stardust (doubled!)', { n: fmt(d) }), 'good');
                 app.save();
                 showHome(app);
               })
@@ -113,8 +114,8 @@ export function showHome(app: App) {
       h(
         'span',
         { class: 'stack' },
-        h('b', null, `▶ PLAY  Planet ${p.level}`),
-        h('small', null, `${ch.name} · ${next.twist !== 'none' ? TWISTS[next.twist].name : next.name}`),
+        h('b', null, t('▶ PLAY  Planet {n}', { n: p.level })),
+        h('small', null, `${t(ch.name)} · ${next.twist !== 'none' ? t(TWISTS[next.twist].name) : next.name}`),
       ),
       'primary big wide play',
       () => app.preLevel(p.level),
@@ -122,10 +123,10 @@ export function showHome(app: App) {
     h(
       'div',
       { class: 'nav' },
-      navBtn('map', 'Star Map', `${stars}★`, () => app.showStarMap()),
-      navBtn('book', 'Lifebook', `${p.seen.length}/${SPECIES.length}`, () => app.showLifebook()),
-      navBtn('up', 'Upgrades', '', () => app.showUpgrades()),
-      navBtn('bag', 'Shop', p.starter ? '' : 'OFFER', () => app.showShop()),
+      navBtn('map', t('Star Map'), `${stars}★`, () => app.showStarMap()),
+      navBtn('book', t('Lifebook'), `${p.seen.length}/${SPECIES.length}`, () => app.showLifebook()),
+      navBtn('up', t('Upgrades'), '', () => app.showUpgrades()),
+      navBtn('bag', t('Shop'), p.starter ? '' : t('OFFER'), () => app.showShop()),
     ),
   );
   const view = drawGalaxy(canvas, p.galaxy, {

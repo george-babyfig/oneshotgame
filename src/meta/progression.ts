@@ -2,11 +2,12 @@
 import { rngFrom } from '../core/levels';
 import type { BoosterId } from './config';
 import type { Profile, QuestState } from './profile';
+import { t } from '../i18n';
 
 // ------------------------------------------------------------------ chapters
 export const LEVELS_PER_CHAPTER = 10;
 
-const CHAPTER_NAMES = [
+export const CHAPTER_NAMES = [
   'Dawn Belt',
   'Cinder Reach',
   'Tidewater Drift',
@@ -31,7 +32,8 @@ export interface Chapter {
 
 export function chapterOf(level: number): Chapter {
   const n = Math.floor((level - 1) / LEVELS_PER_CHAPTER) + 1;
-  const name = CHAPTER_NAMES[(n - 1) % CHAPTER_NAMES.length] + (n > CHAPTER_NAMES.length ? ` ${Math.ceil(n / CHAPTER_NAMES.length)}` : '');
+  const name =
+    t(CHAPTER_NAMES[(n - 1) % CHAPTER_NAMES.length]) + (n > CHAPTER_NAMES.length ? ` ${Math.ceil(n / CHAPTER_NAMES.length)}` : '');
   const first = (n - 1) * LEVELS_PER_CHAPTER + 1;
   return { n, name, first, last: first + LEVELS_PER_CHAPTER - 1, hue: (200 + n * 37) % 360 };
 }
@@ -137,14 +139,14 @@ export interface QuestDef {
 }
 
 export const QUESTS: QuestDef[] = [
-  { id: 'throw25', event: 'throw', goal: 25, gems: 8, emoji: '🪨', text: (g) => `Fling ${g} objects` },
-  { id: 'win3', event: 'win', goal: 3, gems: 12, emoji: '🪐', text: (g) => `Complete ${g} planets` },
-  { id: 'star6', event: 'star', goal: 6, gems: 15, emoji: '⭐', text: (g) => `Earn ${g} stars` },
-  { id: 'creature8', event: 'creature', goal: 8, gems: 10, emoji: '🦊', text: (g) => `Bring ${g} creatures to life` },
-  { id: 'three1', event: 'three', goal: 1, gems: 15, emoji: '🌟', text: () => 'Get 3 stars on any planet' },
-  { id: 'booster1', event: 'booster', goal: 1, gems: 6, emoji: '🌠', text: () => 'Use a booster' },
-  { id: 'collect2', event: 'collect', goal: 2, gems: 8, emoji: '✨', text: (g) => `Collect stardust ${g} times` },
-  { id: 'land20', event: 'land', goal: 20, gems: 10, emoji: '🌍', text: (g) => `Transform ${g} regions` },
+  { id: 'throw25', event: 'throw', goal: 25, gems: 8, emoji: '🪨', text: (g) => t('Fling {n} objects', { n: g }) },
+  { id: 'win3', event: 'win', goal: 3, gems: 12, emoji: '🪐', text: (g) => t('Complete {n} planets', { n: g }) },
+  { id: 'star6', event: 'star', goal: 6, gems: 15, emoji: '⭐', text: (g) => t('Earn {n} stars', { n: g }) },
+  { id: 'creature8', event: 'creature', goal: 8, gems: 10, emoji: '🦊', text: (g) => t('Bring {n} creatures to life', { n: g }) },
+  { id: 'three1', event: 'three', goal: 1, gems: 15, emoji: '🌟', text: () => t('Get 3 stars on any planet') },
+  { id: 'booster1', event: 'booster', goal: 1, gems: 6, emoji: '🌠', text: () => t('Use a booster') },
+  { id: 'collect2', event: 'collect', goal: 2, gems: 8, emoji: '✨', text: (g) => t('Collect stardust {n} times', { n: g }) },
+  { id: 'land20', event: 'land', goal: 20, gems: 10, emoji: '🌍', text: (g) => t('Transform {n} regions', { n: g }) },
 ];
 export const QUEST_BY_ID: Record<string, QuestDef> = Object.fromEntries(QUESTS.map((q) => [q.id, q]));
 export const QUEST_BONUS: Reward = { gems: 20, boosters: { shower: 1 } };
@@ -210,6 +212,6 @@ export function rewardText(r: Reward): string[] {
   if (r.dust) out.push(`✨ ${r.dust}`);
   const bEmoji: Record<string, string> = { shower: '🌠', spark: '✨', scope: '🔭' };
   for (const [k, v] of Object.entries(r.boosters ?? {})) if (v) out.push(`${bEmoji[k]} ×${v}`);
-  if (r.skin) out.push('🌈 New atmosphere');
+  if (r.skin) out.push(t('🌈 New atmosphere'));
   return out;
 }

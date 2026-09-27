@@ -2,6 +2,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import { toast } from './dom';
+import { t } from '../i18n';
 
 export async function shareText(text: string, title = 'Pocket Planet') {
   try {
@@ -14,15 +15,15 @@ export async function shareText(text: string, title = 'Pocket Planet') {
       return;
     }
     await navigator.clipboard.writeText(text);
-    toast('Copied — paste it to a friend!', 'good');
+    toast(t('Copied — paste it to a friend!'), 'good');
   } catch (e) {
     const msg = String((e as Error)?.message ?? e);
     if (!/cancel|abort/i.test(msg)) {
       try {
         await navigator.clipboard.writeText(text);
-        toast('Copied to clipboard', 'good');
+        toast(t('Copied to clipboard'), 'good');
       } catch {
-        toast('Could not share', 'bad');
+        toast(t('Could not share'), 'bad');
       }
     }
   }

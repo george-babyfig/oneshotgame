@@ -4,6 +4,7 @@ import { sfx } from '../audio';
 import { BOOSTERS, PIGGY_MAX, PIGGY_PER_WIN, PRODUCTS, SKINS, type BoosterId } from '../../meta/config';
 import { spendGems } from '../../meta/economy';
 import type { App } from '../app';
+import { t } from '../../i18n';
 
 const PACK_ICONS = ['💎', '👝', '🧰', '🌌'];
 export const PIGGY_MIN = 40;
@@ -22,10 +23,16 @@ export function showShop(app: App) {
     ? h(
         'div',
         { class: 'offer' },
-        h('div', { class: 'ribbon' }, 'ONE-TIME'),
-        h('div', { class: 'offer-t' }, 'Starter Pack'),
-        h('ul', null, h('li', null, '💎 300 gems'), h('li', null, '🌠 ✨ 🔭 5 of every booster'), h('li', null, '🌈 Aurora atmosphere')),
-        h('div', { class: 'value' }, 'Over 5× the value of gems alone'),
+        h('div', { class: 'ribbon' }, t('ONE-TIME')),
+        h('div', { class: 'offer-t' }, t('Starter Pack')),
+        h(
+          'ul',
+          null,
+          h('li', null, t('💎 300 gems')),
+          h('li', null, t('🌠 ✨ 🔭 5 of every booster')),
+          h('li', null, t('🌈 Aurora atmosphere')),
+        ),
+        h('div', { class: 'value' }, t('Over 5× the value of gems alone')),
         btn(app.priceOf('starter'), 'buy-real wide', () => app.buy('starter')),
       )
     : null;
@@ -33,16 +40,18 @@ export function showShop(app: App) {
     ? h(
         'div',
         { class: 'offer pass' },
-        h('div', { class: 'offer-t' }, '🌌 Cosmic Pass'),
+        h('div', { class: 'offer-t' }, t('🌌 Cosmic Pass')),
         h(
           'p',
           null,
-          'Unlock the golden lane of the Star Road: a second reward at every tier, forever. Rewards you already passed are waiting for you.',
+          t(
+            'Unlock the golden lane of the Star Road: a second reward at every tier, forever. Rewards you already passed are waiting for you.',
+          ),
         ),
         h(
           'div',
           { class: 'row' },
-          btn('See rewards', 'ghost', () => app.showRoad()),
+          btn(t('See rewards'), 'ghost', () => app.showRoad()),
           btn(app.priceOf('pass'), 'buy-real', () => app.buy('pass')),
         ),
       )
@@ -54,12 +63,16 @@ export function showShop(app: App) {
     h(
       'div',
       { class: 'piggy-body' },
-      h('b', null, `Piggy bank: 💎 ${p.piggy}`),
-      h('small', null, `Every planet you finish drops 💎${PIGGY_PER_WIN} in (max ${PIGGY_MAX}). Break it to keep them all.`),
+      h('b', null, t('Piggy bank: 💎 {n}', { n: p.piggy })),
+      h(
+        'small',
+        null,
+        t('Every planet you finish drops 💎{n} in (max {max}). Break it to keep them all.', { n: PIGGY_PER_WIN, max: PIGGY_MAX }),
+      ),
       h('div', { class: 'pbar' }, h('i', { style: `width:${(p.piggy / PIGGY_MAX) * 100}%` })),
     ),
     btn(app.priceOf('piggy'), `buy-real${p.piggy >= PIGGY_MIN ? '' : ' dim'}`, () =>
-      p.piggy >= PIGGY_MIN ? app.buy('piggy') : toast(`Fill it to ${PIGGY_MIN} gems first — finish more planets!`),
+      p.piggy >= PIGGY_MIN ? app.buy('piggy') : toast(t('Fill it to {n} gems first — finish more planets!', { n: PIGGY_MIN })),
     ),
   );
   const packs = h(
@@ -69,10 +82,10 @@ export function showShop(app: App) {
       h(
         'button',
         { class: 'pack', onclick: () => app.buy(x.key) },
-        x.tag ? h('div', { class: 'tag' }, x.tag) : null,
+        x.tag ? h('div', { class: 'tag' }, t(x.tag)) : null,
         h('div', { class: 'pi' }, PACK_ICONS[i]),
         h('b', null, fmt(x.gems)),
-        h('small', null, x.title),
+        h('small', null, t(x.title)),
         h('div', { class: 'pp' }, app.priceOf(x.key)),
       ),
     ),
@@ -86,7 +99,7 @@ export function showShop(app: App) {
         'div',
         { class: 'up-row' },
         h('div', { class: 'up-ic' }, b.emoji),
-        h('div', { class: 'up-body' }, h('b', null, `${b.name} ×${p.boosters[id]}`), h('small', null, b.desc)),
+        h('div', { class: 'up-body' }, h('b', null, `${t(b.name)} ×${p.boosters[id]}`), h('small', null, t(b.desc))),
         btn(`💎${b.gems}`, 'buy', () => {
           if (!spendGems(p, b.gems)) return app.needGems();
           p.boosters[id]++;
@@ -109,12 +122,12 @@ export function showShop(app: App) {
           class: `skin${on ? ' on' : ''}`,
           onclick: async () => {
             if (owned) p.skin = s.id;
-            else if (s.starter) return toast('Included in the Starter Pack');
-            else if (s.pass) return toast('A Cosmic Pass reward on the Star Road');
-            else if (s.road) return toast('Earn it on the Star Road');
+            else if (s.starter) return toast(t('Included in the Starter Pack'));
+            else if (s.pass) return toast(t('A Cosmic Pass reward on the Star Road'));
+            else if (s.road) return toast(t('Earn it on the Star Road'));
             else {
               if (p.gems < s.gems) return app.needGems();
-              if (!(await confirmBox(`Buy ${s.name} for 💎${s.gems}?`, 'Buy'))) return;
+              if (!(await confirmBox(t('Buy {name} for 💎{n}?', { name: t(s.name), n: s.gems }), t('Buy')))) return;
               spendGems(p, s.gems);
               p.skins.push(s.id);
               p.skin = s.id;
@@ -125,11 +138,21 @@ export function showShop(app: App) {
           },
         },
         h('div', { class: 'sk-orb', style: `--g:${skinSwatch(s.glow)}` }),
-        h('b', null, s.name),
+        h('b', null, t(s.name)),
         h(
           'small',
           null,
-          on ? 'Equipped' : owned ? 'Equip' : s.starter ? 'Starter Pack' : s.pass ? 'Cosmic Pass' : s.road ? 'Star Road' : `💎${s.gems}`,
+          on
+            ? t('Equipped')
+            : owned
+              ? t('Equip')
+              : s.starter
+                ? t('Starter Pack')
+                : s.pass
+                  ? t('Cosmic Pass')
+                  : s.road
+                    ? t('Star Road')
+                    : `💎${s.gems}`,
         ),
       );
     }),
@@ -139,24 +162,24 @@ export function showShop(app: App) {
       'div',
       { class: 'screen page' },
       app.topBar(true),
-      h('div', { class: 'page-title' }, 'Shop'),
+      h('div', { class: 'page-title' }, t('Shop')),
       h(
         'div',
         { class: 'scroll' },
         starter,
         p.level > PIGGY_FROM_LEVEL ? piggy : null,
-        h('div', { class: 'sec-title' }, 'Gems'),
+        h('div', { class: 'sec-title' }, t('Gems')),
         packs,
         pass,
-        h('div', { class: 'sec-title' }, 'Boosters'),
+        h('div', { class: 'sec-title' }, t('Boosters')),
         boosters,
-        h('div', { class: 'sec-title' }, 'Atmospheres'),
+        h('div', { class: 'sec-title' }, t('Atmospheres')),
         skins,
-        btn('Restore purchases', 'ghost small', () => app.restore()),
+        btn(t('Restore purchases'), 'ghost small', () => app.restore()),
         h(
           'p',
           { class: 'tiny muted' },
-          'Payment is charged to your Apple ID. Gems have no cash value. No random rewards — you always see exactly what you get.',
+          t('Payment is charged to your Apple ID. Gems have no cash value. No random rewards — you always see exactly what you get.'),
         ),
       ),
     ),
