@@ -21,6 +21,8 @@ import { visitorsFlow } from './flows/visitors';
 import { modesFlow } from './flows/modes';
 import { welcomeBackFlow } from './flows/offers';
 import { scheduleReminders } from './platform';
+import { addTokens, ensureEvent, eventActive, tokensForLand } from '../meta/events';
+import { eventFlow } from './flows/event';
 import { showHome } from './screens/home';
 import { showLifebook } from './screens/lifebook';
 import { showUpgrades } from './screens/upgrades';
@@ -198,6 +200,9 @@ export class App {
   visitors() {
     visitorsFlow(this);
   }
+  events() {
+    eventFlow(this);
+  }
   modes() {
     modesFlow(this);
   }
@@ -267,6 +272,13 @@ export class App {
         track(this.p, 'throw');
       },
       onTransform: (n) => track(this.p, 'land', n),
+      eventEmoji: eventActive(this.p) ? ensureEvent(this.p).emoji : undefined,
+      onLand: (changed, spawned) => {
+        if (!eventActive(this.p)) return 0;
+        const n = tokensForLand(ensureEvent(this.p), changed, spawned);
+        addTokens(this.p, n);
+        return n;
+      },
       onQuit: () => this.showHome(),
       onShop: () => this.showShop(),
       ...extra,

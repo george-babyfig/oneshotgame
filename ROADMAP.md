@@ -18,7 +18,7 @@ We compared this roadmap against top-grossing and high-retention casual games (R
 | **Daily seeded challenge + spoiler-free emoji share**                                | Wordle, Mini Metro daily, Balatro seeds ([9], [10], [11])            | **Daily Planet**: same planet for everyone, based on the date. Share `Pocket Planet #212 ⭐⭐⭐ 🌊🌋🌲🪸`. **Challenge a Friend** uses seeds as codes. Seeded play never unlocks campaign progress.      |
 | **Collection sets with completion rewards** (without random packs)                   | Monopoly GO albums ([12])                                            | **Lifebook habitats**: the creatures are grouped into habitat sets, and finishing a set pays gems plus a title. Every creature comes from a known recipe, so there are no duplicates and nothing random. |
 | **Rotating limited-time events**                                                     | Two Dots Expeditions, Royal Match events ([13], [14])                | **Weekly events** chosen from the ISO week number (Volcano Week, Ocean Week, Bloom Week …). Everyone gets the same event with no server. Each event has its own reward track.                            |
-| **Escalating feedback**                                                              | Balatro, Block Blast ([15])                                          | ✅ Tiered callouts (Nice → Blooming → Thriving → Paradise) with rising pitch and a chain counter, ✅ shockwaves, ✅ confetti at 3★. ⏳ A score counter that heats up as it climbs.                       |
+| **Escalating feedback**                                                              | Balatro, Block Blast ([15])                                          | ✅ Tiered callouts (Nice → Blooming → Thriving → Paradise) with rising pitch and a chain counter, ✅ shockwaves, ✅ confetti at 3★. ✅ A score counter that heats up as it climbs.                       |
 | **Piggy bank for engaged players**                                                   | Industry analysis ([16])                                             | Hidden until chapter 2, then shown as it fills; no nagging.                                                                                                                                              |
 | **Generous first-purchase offer**                                                    | Deconstructor of Fun ([17])                                          | Starter Pack is shown after the first chapter chest, with no countdown timer.                                                                                                                            |
 | **Welcome-back screen**                                                              | GameRefinery ([18])                                                  | After 3+ days away: a recap, the visitors' gifts, and a one-time bonus.                                                                                                                                  |
@@ -33,13 +33,14 @@ Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · 
 - ✅ Clean repository (`main` + feature branch + PR), CI (format, typecheck, tests, build)
 - ✅ Code structure: per-screen modules (`src/ui/screens`, `src/ui/flows`), pure testable economy and progression (`src/meta`)
 - ✅ Versioned save data with migrations
-- ⏳ Crash-safe saves and a global error handler
+- ✅ Crash-safe saves and a global error handler
 
 ## 2. Custom art (no emoji)
 
-- ⏳ "Critters": all creatures drawn as vector art in one house style
-- ⏳ Hand-drawn biome props, projectile sprites, planet surface detail (clouds, shimmer, atmosphere)
-- ⏳ UI iconography; new app icon and splash
+- ✅ "Critters": all creatures drawn as vector art in one house style
+- ✅ Hand-drawn biome props, projectile sprites, planet surface detail (clouds, shimmer, atmosphere)
+- ✅ New app icon and splash (rendered from the game's art code)
+- ⏳ Custom UI icon set (menus still use system emoji)
 
 ## 3. Game feel
 
@@ -48,26 +49,27 @@ Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · 
 - ✅ Creature discovery card
 - ✅ Meteor finale (finish early, and leftover throws become stardust)
 - ✅ Screen transitions, reduce-motion setting
-- ⏳ Score counter that heats up; level-complete fly-to-galaxy sequence
+- ✅ Score counter that heats up
+- ⏳ Level-complete fly-to-galaxy sequence
 
 ## 4. Progression
 
 - ✅ Star Map: chapters of 10 planets with names, colors and chapter chests
 - ✅ Star Road reward track, driven by total stars
 - ✅ Daily quests (3 per day + completion bonus)
-- ⏳ Momentum win streak
-- ⏳ Hard / Super Hard planets
-- ⏳ Explorer Rank (3 standing goals; rank-ups unlock modes)
-- ⏳ Lifebook habitat sets
+- ✅ Momentum win streak
+- ✅ Hard / Super Hard planets
+- ✅ Explorer Rank (3 standing goals; rank-ups unlock modes)
+- ✅ Lifebook habitat sets
 
 ## 5. Modes
 
 - ✅ Campaign
-- ⏳ Daily Planet with emoji share
-- ⏳ Meteor Rush: 60-second time attack
-- ⏳ Zen Garden: unlimited throws, a sandbox world that persists
-- ⏳ Challenge a Friend: share a code; friends play the same planet and compare (versus without a server)
-- ⏳ Weekly events (ISO-week rotation, event reward track)
+- ✅ Daily Planet with emoji share
+- ✅ Meteor Rush: 60-second time attack
+- ✅ Zen Garden: unlimited throws, a sandbox world that persists
+- ✅ Challenge a Friend: share a code; friends play the same planet and compare (versus without a server)
+- ✅ Weekly events (six themes rotating by ISO week, 6-tier reward track, exclusive atmosphere)
 - 💭 Game Center leaderboards and achievements (needs a native plugin and App Store Connect setup)
 - ❌ Live real-time versus: needs a server and fits a two-minute casual game poorly
 
@@ -75,31 +77,32 @@ Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · 
 
 - ✅ Gem packs, Starter Pack, piggy bank, continues, boosters, atmospheres
 - ✅ Cosmic Pass: one-time purchase for the premium Star Road lane (pays out retroactively)
-- ⏳ Welcome-back offer: double your offline stardust for gems
-- ⏳ Offer timing: Starter Pack after the first chest; piggy bank from chapter 2
+- ✅ Welcome-back offer: double your offline stardust for gems
+- ✅ Offer timing: Starter Pack after the first chest; piggy bank from chapter 2
 
 ## 7. Onboarding
 
-- ⏳ Guided first levels with coach tips
-- ⏳ New-object introduction cards
-- ⏳ First-creature celebration
+- ✅ Guided first levels with coach tips
+- ✅ New-object introduction cards
+- ✅ First-creature celebration
 
 ## 8. Retention and platform
 
-- ⏳ Visitors and mementos while away
-- ⏳ Welcome-back recap
-- ⏳ Local notifications: vault full, daily gift ready (opt-in, never at night)
-- ⏳ App Store rating prompt at a happy moment
-- ⏳ Share planet postcards and challenge codes
+- ✅ Visitors and mementos while away
+- ✅ Welcome-back recap
+- ✅ Local notifications: vault full, daily gift ready (opt-in, never at night)
+- ✅ App Store rating prompt at a happy moment
+- ✅ Share Daily Planet results and challenge codes
+- ⏳ Share a rendered planet postcard image
 - ✅ Settings: reduce motion, reminders, credits
 
 ## 9. Audio
 
-- ⏳ Music that changes with each chapter
+- ✅ Music that changes with each chapter
 - ✅ Chest, level-up, callout and finale sounds
 
 ## 10. Ship
 
-- ⏳ Framed App Store screenshots, listing copy, privacy policy page
-- 🔨 Automated tests (world, recipes, economy, progression)
+- ✅ Framed App Store screenshots, listing copy, privacy policy page
+- ✅ Automated tests (world, recipes, economy, progression)
 - ⏳ Full-playthrough QA on small and large iPhones

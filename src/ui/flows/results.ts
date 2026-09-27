@@ -6,6 +6,7 @@ import { chestsReady, questsClaimable, roadReady } from '../../meta/progression'
 import { totalStars } from '../../meta/profile';
 import { FINISH_DUST_PER_THROW, type LevelResult } from '../game';
 import type { App } from '../app';
+import { addTokens, ensureEvent, eventActive, eventReady } from '../../meta/events';
 import { askForReminders, maybeAskReview } from '../platform';
 
 export function levelResults(app: App, r: LevelResult) {
@@ -21,12 +22,14 @@ export function levelResults(app: App, r: LevelResult) {
     difficulty: r.level.difficulty,
     bonusDust: r.leftover * FINISH_DUST_PER_THROW,
   });
+  if (out.newStars && eventActive(p) && ensureEvent(p).stars) addTokens(p, out.newStars * 4);
   const wasTutorial = !p.tutorial;
   p.tutorial = true;
   app.saveNow();
   const extras: HTMLElement[] = [];
   if (chestsReady(p).length) extras.push(h('div', { class: 'nudge' }, '🎁 Chapter chest ready on the Star Map!'));
   if (roadReady(p, totalStars(p)).length) extras.push(h('div', { class: 'nudge' }, '🛣️ New Star Road reward!'));
+  if (eventActive(p) && eventReady(p).length) extras.push(h('div', { class: 'nudge' }, `${ensureEvent(p).emoji} Event reward ready!`));
   if (questsClaimable(p)) extras.push(h('div', { class: 'nudge' }, '📜 A quest is complete!'));
   const home = () => {
     m.close();

@@ -110,3 +110,24 @@ describe('modes', () => {
     expect(makeLevel(10).difficulty).toBe('hard');
   });
 });
+
+describe('weekly events', async () => {
+  const E = await import('../src/meta/events');
+  it('rotates by ISO week and pays tiers once', () => {
+    expect(E.isoWeek(new Date(2026, 0, 1))).toBe('2026-W01');
+    expect(E.isoWeek(new Date(2026, 8, 27))).toBe('2026-W39');
+    const ids = new Set(Array.from({ length: 6 }, (_, i) => E.eventFor(`2026-W${10 + i}`).id));
+    expect(ids.size).toBe(6);
+    const p = defaultProfile(0);
+    p.level = E.EVENT_UNLOCK_LEVEL;
+    E.ensureEvent(p, '2026-W10');
+    E.addTokens(p, 150);
+    expect(E.eventReady(p)).toHaveLength(6);
+    for (let i = 0; i < 6; i++) expect(E.claimEventTier(p, i)).not.toBeNull();
+    expect(E.claimEventTier(p, 0)).toBeNull();
+    expect(p.skins).toContain(E.eventFor('2026-W10').skin);
+    E.ensureEvent(p, '2026-W11');
+    expect(p.event.tokens).toBe(0);
+    expect(E.tokensForLand(E.EVENTS[0], ['volcano', 'ocean', 'springs'], 0)).toBe(2);
+  });
+});

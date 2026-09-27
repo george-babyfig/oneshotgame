@@ -1,4 +1,16 @@
-import { BIOMES, KINDS, SECTORS, SPECIES_BY_ID, clonePlanet, impact, lifeScore, settle, type Kind, type Planet } from '../core/world';
+import {
+  type BiomeId,
+  BIOMES,
+  KINDS,
+  SECTORS,
+  SPECIES_BY_ID,
+  clonePlanet,
+  impact,
+  lifeScore,
+  settle,
+  type Kind,
+  type Planet,
+} from '../core/world';
 import { starsFor, type LevelDef } from '../core/levels';
 import { h, btn, fmt, modal, type Modal } from './dom';
 import { renderPlanet, surfaceK } from './art/planet';
@@ -41,6 +53,9 @@ export interface SceneOpts {
   onSpecies?: (id: string) => void;
   onThrow?: () => void;
   onTransform?: (regions: number) => void;
+  /** Weekly event hook: returns event tokens earned by this landing. */
+  onLand?: (changed: BiomeId[], spawned: number) => number;
+  eventEmoji?: string;
   onEnd: (r: LevelResult) => void;
   onQuit: () => void;
   onShop: () => void;
@@ -650,6 +665,11 @@ export class LevelScene {
     this.heat(res.after - res.before);
     if (res.changed.length) this.o.onTransform?.(res.changed.length);
     this.o.onPlanet?.(this.planet);
+    const tokens = this.o.onLand?.(
+      res.changed.map((ci) => this.planet.sectors[ci].biome),
+      res.spawned.length,
+    );
+    if (tokens) setTimeout(() => this.popup(sh.x + 30, sh.y + 10, `+${tokens} ${this.o.eventEmoji ?? '⭐'}`, '#ffd84a', 18, 1.3), 500);
     if (delta !== 0) this.popup(sh.x, sh.y - 20, `${delta > 0 ? '+' : ''}${delta}`, delta > 0 ? '#9dffb0' : '#ff9db0', 26);
     // name up to two newly formed biomes
     const shown = new Set<string>();

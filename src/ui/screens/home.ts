@@ -9,6 +9,7 @@ import { collectDust, galaxyRate, pendingDust, planetRate, spendGems, vaultHours
 import { DOUBLE_DUST_GEMS } from '../flows/offers';
 import { chapterOf, chestsReady, questsClaimable, roadReady } from '../../meta/progression';
 import { drawGalaxy } from './galaxy';
+import { ensureEvent, eventActive, eventReady } from '../../meta/events';
 import { rankReady } from '../../meta/rank';
 import { modesBadge } from '../flows/modes';
 import { PIGGY_FROM_LEVEL, PIGGY_MIN } from './shop';
@@ -67,6 +68,13 @@ export function showHome(app: App) {
       { class: 'galaxy-wrap' },
       canvas,
       p.galaxy.length ? null : h('div', { class: 'galaxy-empty' }, 'Your galaxy is empty.\nFinish planets to fill it!'),
+      p.visitors.length
+        ? h(
+            'button',
+            { class: 'visit-chip', onclick: () => (sfx.click(), app.visitors()) },
+            `🛸 ${p.visitors.length} visitor${p.visitors.length > 1 ? 's' : ''} left gifts!`,
+          )
+        : null,
       h(
         'div',
         { class: 'side side-l' },
@@ -78,7 +86,7 @@ export function showHome(app: App) {
         'div',
         { class: 'side side-r' },
         navBtn('🎮', 'Modes', modesBadge(app), () => app.modes(), 'side-btn'),
-        p.visitors.length ? navBtn('🛸', 'Visitors', p.visitors.length, () => app.visitors(), 'side-btn visitors-btn') : null,
+        eventActive(p) ? navBtn(ensureEvent(p).emoji, 'Event', eventReady(p).length, () => app.events(), 'side-btn event-btn') : null,
         p.level > PIGGY_FROM_LEVEL && p.piggy >= PIGGY_MIN ? navBtn('🐷', `💎${p.piggy}`, '', () => app.showShop(), 'side-btn') : null,
       ),
     ),

@@ -95,6 +95,8 @@ export interface Profile {
   challengeLog: { code: string; score: number; stars: number; vs: number }[];
   /** The persistent Zen Garden world. */
   zen: Planet | null;
+  /** This week's event progress. */
+  event: { week: string; tokens: number; claimed: number[] };
 }
 
 const KEY = 'pp.profile';
@@ -150,6 +152,7 @@ export function defaultProfile(now = Date.now()): Profile {
     habitats: [],
     challengeLog: [],
     zen: null,
+    event: { week: '', tokens: 0, claimed: [] },
   };
 }
 
