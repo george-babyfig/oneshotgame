@@ -2215,3 +2215,7 @@ button.lb {
     top: 8px;
   }
 }
+.hud.fade-out {
+  opacity: 0;
+  transition: opacity 0.3s;
+}

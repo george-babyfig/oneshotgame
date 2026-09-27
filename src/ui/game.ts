@@ -430,11 +430,14 @@ export class LevelScene {
   private get cx() {
     return this.w / 2;
   }
+  /** 0..1 progress of the "fly to your galaxy" exit animation. */
+  private exitK = 0;
   private get cy() {
-    return this.h * 0.43;
+    const k = this.exitK * this.exitK;
+    return this.h * 0.43 - k * this.h * 0.5;
   }
   private get R() {
-    return Math.min(this.w * 0.27, this.h * 0.17) * this.L.size;
+    return Math.min(this.w * 0.27, this.h * 0.17) * this.L.size * (1 - this.exitK * 0.85);
   }
   private get launch() {
     return { x: this.w / 2, y: this.h - 150 };
@@ -867,15 +870,28 @@ export class LevelScene {
   private finish(stars: number) {
     if (this.ended) return;
     this.ended = true;
-    this.o.onEnd({
-      level: this.L,
-      score: this.score,
-      stars,
-      planet: this.planet,
-      won: stars > 0,
-      throwsUsed: this.throwsUsed,
-      leftover: this.leftover,
-    });
+    const send = () =>
+      this.o.onEnd({
+        level: this.L,
+        score: this.score,
+        stars,
+        planet: this.planet,
+        won: stars > 0,
+        throwsUsed: this.throwsUsed,
+        leftover: this.leftover,
+      });
+    if (stars === 0 || this.o.reduceMotion || this.o.endless) return send();
+    // the finished planet shrinks and flies up to join your galaxy
+    sfx.whoosh();
+    this.el.querySelector('.hud')?.classList.add('fade-out');
+    const t0 = performance.now();
+    const step = (now: number) => {
+      this.exitK = Math.min(1, (now - t0) / 750);
+      if (Math.random() < 0.8) this.burst(this.cx, this.cy + this.R, '#ffd76a', 2, 2);
+      if (this.exitK < 1) requestAnimationFrame(step);
+      else send();
+    };
+    requestAnimationFrame(step);
   }
 
   private pause() {
