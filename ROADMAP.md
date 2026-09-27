@@ -28,6 +28,24 @@ We compared this roadmap against top-grossing and high-retention casual games (R
 
 Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · [2] candycrush.fandom.com/wiki/Candy_Necklace · [3] oldcynic.com/royal-match-gets-harder · [4] township.fandom.com/wiki/Match-3 · [5] nekoatsume.fandom.com/wiki/Mementos · [6] candycrush.fandom.com/wiki/Sugar_Crush · [7] angrybirds2.rovio.com (cards help article) · [8] altosodyssey.fandom.com/wiki/Goals · [9] x.com/powerlanguish/status/1471493886031773707 · [10] store.steampowered.com/news/app/287980 · [11] balatrowiki.org/w/Seed · [12] thegamer.com/monopoly-go-sticker-albums-faq-complete-guide · [13] twodots.fandom.com/wiki/Expeditions · [14] royalmatch.fandom.com/wiki/Sky_Race · [15] blakecrosley.com/guides/design/balatro · [16] heroiclabs.com/blog/understanding-piggy-bank-mechanics-mobile-games · [17] deconstructoroffun.com/blog/2024/4/8/free-to-play-starter-pack-pricing · [18] gamerefinery.com/four-ways-how-mobile-games-re-engage-lapsed-players · [19] developer.apple.com GameKit Guide: Achievements & Leaderboards · [20] adriancrook.com/energy-systems-lessons-top-freemium-games
 
+## Round 3 research: depth, identity and the passive side
+
+A second research pass (Clash Royale, Brawl Stars, Royal Match, Monopoly GO, Animal Crossing Pocket Camp, Neko Atsume, Viva Piñata, Pikmin Bloom, Township, Clash of Clans, Idle Miner, Cats & Soup, Duolingo, Alto's Odyssey, Marvel Snap, Stumble Guys) plus a playtest simulation of our own levels.
+
+| Finding                                                                                                                  | Where it comes from                                                             | What we built                                                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Levels were too easy: a simulated "decent" player failed ~6% of planets after the opening, so near-misses never happened | Our skill-level simulation (`npm run sim`) vs. match-3 tuning practice          | ✅ **Level goals** (grow N of a land type, bring a creature) taken from the solver's own play so they're always beatable; a **chapter sawtooth** curve; tougher Hard/Super Hard; "Still needed" + "So close!" on failure; retries go through the booster sheet |
+| Players need a character and a way to express themselves                                                                 | Brawl Stars skins, Stumble Guys customize screen, Angry Birds 2 hats            | ✅ **The Keeper** astronaut beside the launcher; **Workshop** with suit/hat/launcher/trail, live try-on, earned or bought directly (never random); launcher **mastery** glow                                                                                   |
+| A profile card players are proud to share                                                                                | Clash Royale banners, Pocket Camp Camper Card, Brawl Stars titles               | ✅ **Planet Passport**: kid-safe word-list names, earned titles and banners, 3 pinned trophies, stats page, shareable card image                                                                                                                               |
+| Season-pass presentation that feels premium                                                                              | Pass Royale, Royal Pass (gold name), Subway Surfers                             | ✅ Animated **Cosmic Pass** hero art, the exclusive Star Captain set, gold Passport for owners, "rewards already waiting" callout, shimmering golden lane                                                                                                      |
+| Upgrades that visibly make throws stronger                                                                               | Angry Birds 2 card levels, Peglin orbs                                          | ✅ **Object Lab**: each object levels 1-5 with perks that only add life (never spoil a goal)                                                                                                                                                                   |
+| A power moment you charge up by playing well                                                                             | Angry Birds 2 Destructometer, Peggle Fever                                      | ✅ **Supernova** meter around the launcher; a full meter supercharges the next throw                                                                                                                                                                           |
+| A passive home to tend between levels                                                                                    | Clash of Clans, Pocket Camp, Neko Atsume, Viva Piñata, Pikmin Bloom expeditions | ✅ **Homeworld**: rings that grow the planet, structures and upgrades, drones (no paid skips; campaign wins speed them up), producers with caps, residents with requests and friendship, expeditions with postcards, meteor rocks                              |
+| Paid timer skips                                                                                                         | Clash of Clans gem skips                                                        | ❌ Predatory for kids; wins speed builds up instead                                                                                                                                                                                                            |
+| Raids / PvP bases                                                                                                        | Clash of Clans                                                                  | ❌ Needs a server; meteor rocks are the single-player stand-in                                                                                                                                                                                                 |
+
+Next up from this research: photo mode with frames, Lifebook lore entries, a login calendar and inbox, iMessage stickers, seasonal (rotating) passes.
+
 ## 1. Foundation
 
 - ✅ Clean repository (`main` + feature branch + PR), CI (format, typecheck, tests, build)
@@ -62,6 +80,9 @@ Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · 
 - ✅ Physics twists for later chapters: solar wind, heavy gravity, wobbling spin, twin moons
 - ✅ Explorer Rank (3 standing goals; rank-ups unlock modes)
 - ✅ Lifebook habitat sets
+- ✅ Level goals and a simulation-tuned difficulty curve
+- ✅ Object Lab (per-object upgrades) and the Supernova shot
+- ✅ Homeworld (passive base building) with residents and expeditions
 
 ## 5. Modes
 
@@ -80,6 +101,8 @@ Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · 
 - ✅ Cosmic Pass: one-time purchase for the premium Star Road lane (pays out retroactively)
 - ✅ Welcome-back offer: double your offline stardust for gems
 - ✅ Offer timing: Starter Pack after the first chest; piggy bank from chapter 2
+- ✅ Workshop cosmetics bought directly with gems; Cosmic Pass hero screen
+- ⏳ Rotating seasonal passes (one purchase per season)
 
 ## 7. Onboarding
 
@@ -96,6 +119,8 @@ Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · 
 - ✅ Share Daily Planet results and challenge codes
 - ✅ Share a rendered planet postcard image
 - ✅ Settings: reduce motion, reminders, credits
+- ✅ Planet Passport profile + shareable card; expedition postcards
+- ⏳ Photo mode, login calendar, inbox
 
 ## 9. Audio
 
