@@ -70,7 +70,7 @@ Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · 
 - ✅ Zen Garden: unlimited throws, a sandbox world that persists
 - ✅ Challenge a Friend: share a code; friends play the same planet and compare (versus without a server)
 - ✅ Weekly events (six themes rotating by ISO week, 6-tier reward track, exclusive atmosphere)
-- 💭 Game Center leaderboards and achievements (needs a native plugin and App Store Connect setup)
+- ✅ Game Center: 4 leaderboards and 22 achievements through the app's own Swift plugin (IDs in `store/gamecenter.md`)
 - ❌ Live real-time versus: needs a server and fits a two-minute casual game poorly
 
 ## 6. Monetization
@@ -105,10 +105,10 @@ Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · 
 
 - ✅ English, Spanish, French, German, Brazilian Portuguese and Japanese (automatic or chosen in Settings)
 - ✅ CI test: every string translated in every language, with matching placeholders
-- ⏳ Localized App Store listing and screenshots
+- ✅ Localized App Store listing and screenshots
 
 ## 11. Ship
 
 - ✅ Framed App Store screenshots, listing copy, privacy policy page
 - ✅ Automated tests (world, recipes, economy, progression)
-- ⏳ Full-playthrough QA on small and large iPhones
+- 🔨 QA: bot playthroughs and three full code reviews in the browser; ⏳ on-device pass on small and large iPhones

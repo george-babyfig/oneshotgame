@@ -39,7 +39,7 @@ The game has no ads, no lives or energy timers, no loot boxes and no tracking. E
 
 ## Tech
 
-TypeScript + Vite + Canvas 2D, wrapped as a native iOS app with **Capacitor 8** (Swift Package Manager, no CocoaPods). Plugins: native-purchases (StoreKit 2), haptics, preferences, local notifications, in-app review, share, splash screen, status bar.
+TypeScript + Vite + Canvas 2D, wrapped as a native iOS app with **Capacitor 8** (Swift Package Manager, no CocoaPods). Plugins: native-purchases (StoreKit 2), haptics, preferences, local notifications, in-app review, share, filesystem, splash screen, status bar, plus a small built-in Game Center plugin (`ios/App/App/GameCenterPlugin.swift`).
 
 ```
 src/core/        simulation (world.ts) and seeded level generator + solver (levels.ts)
@@ -74,11 +74,11 @@ CI runs formatting, the typecheck, the tests and the build on every push.
 
 1. **You need** a Mac with Xcode 16+ and an [Apple Developer Program](https://developer.apple.com/programs/) membership ($99/year).
 2. **Make it yours:** change `appId` in `capacitor.config.ts` and the bundle ID in Xcode to one you own. If you change the product IDs, update them in `src/meta/config.ts`.
-3. **Build:** run `npm install`, `npm run ios:sync` and `npm run ios:open`. In Xcode, pick your Team under _Signing & Capabilities_ and add the **In-App Purchase** capability.
+3. **Build:** run `npm install`, `npm run ios:sync` and `npm run ios:open`. In Xcode, pick your Team under _Signing & Capabilities_ and add the **In-App Purchase** capability. **Game Center** is already enabled through `App.entitlements`.
 4. **Test purchases in the Simulator:** go to _Product → Scheme → Edit Scheme → Run → Options → StoreKit Configuration_ and choose `PocketPlanet.storekit`. It includes all 7 products.
 5. **App Store Connect:** sign the Paid Apps agreement, create the app, then create the 7 in-app purchases listed above. Copy for the listing and the IAP review notes is in [`store/listing.md`](store/listing.md).
 6. **Privacy:** answer "Data Not Collected". `PrivacyInfo.xcprivacy` is included. For the privacy policy URL, enable GitHub Pages on `/docs` and use `…/privacy.html`.
-7. **Screenshots:** upload `store/screenshots/*.png` (1290 × 2796).
+7. **Screenshots and localization:** upload `store/screenshots/*.png` (1290 × 2796), plus `store/screenshots/<lang>/` and `store/listing.<lang>.md` for each localization. Set up Game Center from `store/gamecenter.md`.
 8. **Upload:** _Product → Archive → Distribute → App Store Connect_, test through TestFlight with a Sandbox account, then submit with the in-app purchases attached.
 
 The app is iPhone-only and portrait-only.
