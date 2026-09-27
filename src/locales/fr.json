@@ -511,5 +511,17 @@
   "Common": "Commun",
   "Uncommon": "Peu commun",
   "Rare": "Rare",
-  "Legendary": "Légendaire"
+  "Legendary": "Légendaire",
+  "Solar Wind": "Vent solaire",
+  "A steady wind pushes every throw sideways": "Un vent régulier pousse chaque lancer sur le côté",
+  "Dense Core": "Noyau dense",
+  "Extra-strong gravity bends shots sharply": "Une gravité très forte courbe fortement les lancers",
+  "Wobbly Spin": "Rotation bancale",
+  "The planet speeds up, slows and spins back": "La planète accélère, ralentit et tourne à l'envers",
+  "Twin Moons": "Lunes jumelles",
+  "Two moons orbit in opposite directions": "Deux lunes tournent en sens opposés",
+  "💨 Solar Wind": "💨 Vent solaire",
+  "🪐 Dense Core": "🪐 Noyau dense",
+  "🌀 Wobbly Spin": "🌀 Rotation bancale",
+  "🌑🌑 Twin Moons": "🌑🌑 Lunes jumelles"
 }

@@ -511,5 +511,17 @@
   "Common": "Häufig",
   "Uncommon": "Selten",
   "Rare": "Rar",
-  "Legendary": "Legendär"
+  "Legendary": "Legendär",
+  "Solar Wind": "Sonnenwind",
+  "A steady wind pushes every throw sideways": "Ein stetiger Wind drückt jeden Wurf zur Seite",
+  "Dense Core": "Dichter Kern",
+  "Extra-strong gravity bends shots sharply": "Extra starke Schwerkraft lenkt Würfe stark ab",
+  "Wobbly Spin": "Wackeldreher",
+  "The planet speeds up, slows and spins back": "Der Planet wird schneller, langsamer und dreht zurück",
+  "Twin Moons": "Zwillingsmonde",
+  "Two moons orbit in opposite directions": "Zwei Monde kreisen in entgegengesetzte Richtungen",
+  "💨 Solar Wind": "💨 Sonnenwind",
+  "🪐 Dense Core": "🪐 Dichter Kern",
+  "🌀 Wobbly Spin": "🌀 Wackeldreher",
+  "🌑🌑 Twin Moons": "🌑🌑 Zwillingsmonde"
 }

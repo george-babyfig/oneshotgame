@@ -511,5 +511,17 @@
   "Common": "ふつう",
   "Uncommon": "ちょっとレア",
   "Rare": "レア",
-  "Legendary": "でんせつ"
+  "Legendary": "でんせつ",
+  "Solar Wind": "たいようかぜ",
+  "A steady wind pushes every throw sideways": "風が投げたものを横におしながす",
+  "Dense Core": "おもたいコア",
+  "Extra-strong gravity bends shots sharply": "とても強い重力で大きくまがる",
+  "Wobbly Spin": "ふらふら回転",
+  "The planet speeds up, slows and spins back": "はやくなったり、おそくなったり、逆に回ったり",
+  "Twin Moons": "ふたごの月",
+  "Two moons orbit in opposite directions": "2つの月が反対向きに回る",
+  "💨 Solar Wind": "💨 たいようかぜ",
+  "🪐 Dense Core": "🪐 おもたいコア",
+  "🌀 Wobbly Spin": "🌀 ふらふら回転",
+  "🌑🌑 Twin Moons": "🌑🌑 ふたごの月"
 }

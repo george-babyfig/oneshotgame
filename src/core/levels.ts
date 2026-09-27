@@ -16,7 +16,7 @@ export function rngFrom(seed: string) {
   };
 }
 
-export type Twist = 'none' | 'fast' | 'tiny' | 'moon' | 'hot' | 'frozen' | 'ocean';
+export type Twist = 'none' | 'fast' | 'tiny' | 'moon' | 'hot' | 'frozen' | 'ocean' | 'wind' | 'heavy' | 'wobble' | 'twin';
 
 export const TWISTS: Record<Twist, { name: string; desc: string }> = {
   none: { name: '', desc: '' },
@@ -26,7 +26,21 @@ export const TWISTS: Record<Twist, { name: string; desc: string }> = {
   hot: { name: 'Scorched', desc: 'Starts baking hot' },
   frozen: { name: 'Snowball', desc: 'Starts frozen solid' },
   ocean: { name: 'Water World', desc: 'Starts covered in ocean' },
+  wind: { name: 'Solar Wind', desc: 'A steady wind pushes every throw sideways' },
+  heavy: { name: 'Dense Core', desc: 'Extra-strong gravity bends shots sharply' },
+  wobble: { name: 'Wobbly Spin', desc: 'The planet speeds up, slows and spins back' },
+  twin: { name: 'Twin Moons', desc: 'Two moons orbit in opposite directions' },
 };
+
+/** Physics twists join the pool as the campaign goes on. */
+function laterTwists(n: number): Twist[] {
+  const out: Twist[] = [];
+  if (n >= 12) out.push('wind');
+  if (n >= 16) out.push('heavy');
+  if (n >= 20) out.push('wobble');
+  if (n >= 24) out.push('twin');
+  return out;
+}
 
 export interface LevelDef {
   n: number;
@@ -129,10 +143,11 @@ export function makeLevel(n: number, seedPrefix = 'PP'): LevelDef {
   const kinds = availableKinds(n);
   let twist: Twist = 'none';
   if (n >= 5 && n % 5 === 0) {
-    const pool: Twist[] = ['fast', 'tiny', 'moon', 'hot', 'frozen', 'ocean'];
+    const pool: Twist[] = ['fast', 'tiny', 'moon', 'hot', 'frozen', 'ocean', ...laterTwists(n)];
     twist = pool[Math.floor(rnd() * pool.length)];
   } else if (n >= 8 && rnd() < 0.25) {
-    twist = (['fast', 'tiny', 'moon'] as Twist[])[Math.floor(rnd() * 3)];
+    const pool: Twist[] = ['fast', 'tiny', 'moon', ...laterTwists(n)];
+    twist = pool[Math.floor(rnd() * pool.length)];
   }
   const throws = n === 1 ? 6 : n === 2 ? 8 : Math.min(16, 9 + Math.floor(n / 4));
   // weighted deal: new kinds show up a bit more on their debut level

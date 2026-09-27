@@ -294,6 +294,10 @@ export class LevelScene {
       hot: t('🔥 Scorched start'),
       frozen: t('🧊 Frozen start'),
       ocean: t('🌊 Water World'),
+      wind: t('💨 Solar Wind'),
+      heavy: t('🪐 Dense Core'),
+      wobble: t('🌀 Wobbly Spin'),
+      twin: t('🌑🌑 Twin Moons'),
     };
     return map[this.L.twist] ?? '';
   }
@@ -450,11 +454,35 @@ export class LevelScene {
   private get launch() {
     return { x: this.w / 2, y: this.h - 150 };
   }
-  private get moon() {
-    if (this.L.twist !== 'moon') return null;
+  /** Moons that block shots (Moon Guard: one; Twin Moons: two, orbiting opposite ways). */
+  private get moons(): { x: number; y: number; r: number }[] {
+    if (this.L.twist !== 'moon' && this.L.twist !== 'twin') return [];
+    const out = [];
     const a = this.time * 0.8;
     const d = this.R * 2.05;
-    return { x: this.cx + Math.cos(a) * d, y: this.cy + Math.sin(a) * d, r: this.R * 0.28 };
+    out.push({ x: this.cx + Math.cos(a) * d, y: this.cy + Math.sin(a) * d, r: this.R * 0.28 });
+    if (this.L.twist === 'twin') {
+      const b = -this.time * 0.6 + Math.PI;
+      const e = this.R * 1.6;
+      out.push({ x: this.cx + Math.cos(b) * e, y: this.cy + Math.sin(b) * e, r: this.R * 0.22 });
+    }
+    return out;
+  }
+
+  /** Solar Wind: sideways push in px/s², direction fixed per level. */
+  private get wind() {
+    return this.L.spin > 0 ? 170 : -170;
+  }
+
+  /** Planet spin rate right now (Wobbly Spin swings back and forth). */
+  private spinNow(time = this.time) {
+    return this.L.twist === 'wobble' ? this.L.spin * 1.7 * Math.cos(time * 0.9) : this.L.spin;
+  }
+
+  /** How far the planet will have turned `dt` seconds from now. */
+  private rotAhead(dt: number) {
+    if (this.L.twist !== 'wobble') return this.L.spin * dt;
+    return ((this.L.spin * 1.7) / 0.9) * (Math.sin((this.time + dt) * 0.9) - Math.sin(this.time * 0.9));
   }
 
   // ---------------------------------------------------------------- input
@@ -544,7 +572,8 @@ export class LevelScene {
     const dy = this.cy - s.y;
     const r2 = Math.max(dx * dx + dy * dy, 400);
     const r = Math.sqrt(r2);
-    const a = GM / r2;
+    const a = (this.L.twist === 'heavy' ? GM * 1.45 : GM) / r2;
+    if (this.L.twist === 'wind') s.vx += this.wind * dt;
     s.vx += (dx / r) * a * dt;
     s.vy += (dy / r) * a * dt;
     s.x += s.vx * dt;
@@ -573,7 +602,7 @@ export class LevelScene {
         this.afterShot();
       }
     }
-    this.rot += this.L.spin * dt;
+    this.rot += this.spinNow() * dt;
     if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 30);
     // score tween
     if (this.shownScore !== this.score) {
@@ -605,8 +634,8 @@ export class LevelScene {
         sh.t += dt / sub;
         const d = Math.hypot(sh.x - this.cx, sh.y - this.cy);
         const i = this.hitSector(sh.x, sh.y);
-        const m = this.moon;
-        if (m && Math.hypot(sh.x - m.x, sh.y - m.y) < m.r + 8) {
+        const m = this.moons.find((mm) => Math.hypot(sh.x - mm.x, sh.y - mm.y) < mm.r + 8);
+        if (m) {
           this.burst(sh.x, sh.y, '#c9c3d6', 14, 4);
           this.popup(sh.x, sh.y - 10, t('Blocked!'), '#fff', 18);
           sfx.miss();
@@ -965,6 +994,24 @@ export class LevelScene {
   }
 
   // ---------------------------------------------------------------- fx helpers
+  /** Drifting streaks that show the wind's direction and strength. */
+  private drawWind() {
+    const g = this.g;
+    const dir = Math.sign(this.wind);
+    g.strokeStyle = 'rgba(200,230,255,0.55)';
+    g.lineWidth = 2.5;
+    g.lineCap = 'round';
+    for (let k = 0; k < 18; k++) {
+      const y = ((k * 97) % 100) / 100;
+      const speed = 60 + ((k * 37) % 50);
+      const x = ((((this.time * speed * dir + k * 131) % (this.w + 80)) + this.w + 80) % (this.w + 80)) - 40;
+      g.beginPath();
+      g.moveTo(x, y * this.h);
+      g.lineTo(x - dir * (18 + (k % 3) * 8), y * this.h);
+      g.stroke();
+    }
+  }
+
   private burst(x: number, y: number, color: string, n: number, speed: number) {
     for (let k = 0; k < n; k++) {
       const a = Math.random() * Math.PI * 2;
@@ -1050,8 +1097,7 @@ export class LevelScene {
       g.stroke();
     }
     g.globalAlpha = 1;
-    const m = this.moon;
-    if (m) {
+    for (const m of this.moons) {
       g.fillStyle = '#b9b3c9';
       g.beginPath();
       g.arc(m.x, m.y, m.r, 0, Math.PI * 2);
@@ -1061,6 +1107,7 @@ export class LevelScene {
       g.arc(m.x + m.r * 0.3, m.y + m.r * 0.2, m.r * 0.3, 0, Math.PI * 2);
       g.fill();
     }
+    if (this.L.twist === 'wind') this.drawWind();
     this.drawAim();
     // shot
     const sh = this.shot;
@@ -1201,7 +1248,7 @@ export class LevelScene {
           const d = Math.hypot(s.x - this.cx, s.y - this.cy);
           // where will it land, allowing for the spin during the flight? (same test as a real throw)
           const ft = ((k + 1) * 3) / 90;
-          const ang = Math.atan2(s.y - this.cy, s.x - this.cx) - (this.rot + this.L.spin * ft);
+          const ang = Math.atan2(s.y - this.cy, s.x - this.cx) - (this.rot + this.rotAhead(ft));
           const tt = ((ang % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
           const si = Math.floor(tt / ((Math.PI * 2) / SECTORS)) % SECTORS;
           if (d <= this.surfaceR(si) + 6) {
