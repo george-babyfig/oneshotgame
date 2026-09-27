@@ -46,6 +46,10 @@ import {
   sendHome,
   startExpedition,
   tickHome,
+  currentPaint,
+  applyPaint,
+  ownsPaint,
+  PAINTS,
   upgrade,
   towerLevel,
   type BuildCheck,
@@ -58,6 +62,8 @@ import { drawCreature, critterCanvas } from '../art/critters';
 import { drawKeeper } from '../art/keeper';
 import { drawDebris, drawDrone, drawStructure } from '../art/structures';
 import { shareCanvas } from '../postcard';
+import { SEASON_EMOJI, SEASON_NAMES, nightness, seasonOf } from '../../meta/seasons';
+import { drawMeteors, drawSeason } from '../art/seasons';
 import { passportName } from '../../meta/passport';
 import type { App } from '../app';
 import { t, tp } from '../../i18n';
@@ -231,11 +237,38 @@ export function showHomeworld(app: App) {
     g.beginPath();
     g.arc(geo.cx, geo.cy, R * 1.9, 0, TAU);
     g.fill();
-    // planet body
+    // sun by day, moon by night
+    const night = nightness(new Date());
+    if (night < 0.8) {
+      const sx = w * 0.12;
+      const sy = hh * 0.12;
+      const sg = g.createRadialGradient(sx, sy, 4, sx, sy, 70);
+      sg.addColorStop(0, `rgba(255,236,160,${0.8 * (1 - night)})`);
+      sg.addColorStop(1, 'rgba(255,236,160,0)');
+      g.fillStyle = sg;
+      g.beginPath();
+      g.arc(sx, sy, 70, 0, TAU);
+      g.fill();
+    }
+    if (night > 0.2) {
+      g.globalAlpha = night;
+      g.fillStyle = '#f4f0ff';
+      g.beginPath();
+      g.arc(w * 0.86, hh * 0.12, 16, 0, TAU);
+      g.fill();
+      g.fillStyle = 'rgba(40,30,90,0.9)';
+      g.beginPath();
+      g.arc(w * 0.86 + 7, hh * 0.12 - 4, 14, 0, TAU);
+      g.fill();
+      g.globalAlpha = 1;
+      if (!p.settings.reduceMotion) drawMeteors(g, w, hh, time, night);
+    }
+    // planet body, in the player's paint job
+    const paint = currentPaint(p);
     const body = g.createRadialGradient(geo.cx - R * 0.3, geo.cy - R * 0.35, R * 0.1, geo.cx, geo.cy, R);
-    body.addColorStop(0, '#8ef0a0');
-    body.addColorStop(0.55, '#3fae6a');
-    body.addColorStop(1, '#1f6a58');
+    body.addColorStop(0, paint.ground.colors[0]);
+    body.addColorStop(0.55, paint.ground.colors[1]);
+    body.addColorStop(1, paint.ground.colors[2]);
     g.fillStyle = body;
     g.beginPath();
     g.arc(geo.cx, geo.cy, R, 0, TAU);
@@ -244,7 +277,8 @@ export function showHomeworld(app: App) {
     for (let i = 0; i < 4; i++) {
       const a = rot * 0.999 + i * 1.7;
       const d = R * (0.35 + (i % 2) * 0.25);
-      g.fillStyle = 'rgba(70,160,230,0.55)';
+      g.fillStyle = paint.sea.colors[1];
+      g.globalAlpha = 0.7;
       g.beginPath();
       g.ellipse(geo.cx + Math.cos(a) * d, geo.cy + Math.sin(a) * d, R * 0.16, R * 0.1, a, 0, TAU);
       g.fill();
@@ -321,6 +355,15 @@ export function showHomeworld(app: App) {
       const a = time * 0.4 + (d * TAU) / Math.max(1, idle);
       drawDrone(g, geo.cx + Math.cos(a) * R * 1.55, geo.cy + Math.sin(a) * R * 0.5 - R * 0.9, 34, time + d);
     }
+    g.globalAlpha = 1;
+    // night shade over the planet
+    if (night > 0) {
+      g.fillStyle = `rgba(12,8,40,${night * 0.28})`;
+      g.beginPath();
+      g.arc(geo.cx, geo.cy, R, 0, TAU);
+      g.fill();
+    }
+    if (!p.settings.reduceMotion) drawSeason(g, w, hh, time, seasonOf(new Date(), p.settings.hemi), night, 30);
     // bursts + floating text
     const dt = 1 / 60;
     for (let i = bursts.length - 1; i >= 0; i--) {
@@ -453,6 +496,14 @@ export function showHomeworld(app: App) {
           { class: 'row' },
           btn(expeditionLabel(), expeditionBack(home, now) ? 'gem' : 'ghost', () => expeditionSheet(app, renderPanel)),
           btn(home.ring >= MAX_RING ? t('Max size') : t('Expand'), 'ghost', () => expandSheet(app, () => showHomeworld(app))),
+        ),
+      );
+      kids.push(
+        h(
+          'div',
+          { class: 'row' },
+          btn(t('🎨 Paint'), 'ghost', () => paintSheet(app)),
+          btn(t('📷 Photo'), 'ghost', () => photoMode(app, canvas)),
         ),
       );
     } else if (home.debris.includes(i)) {
@@ -940,5 +991,165 @@ function expandSheet(app: App, after: () => void) {
       m.close();
       after();
     }),
+  ]);
+}
+
+// ---------------------------------------------------------------- paint
+function paintSheet(app: App) {
+  const p = app.p;
+  const cur = currentPaint(p);
+  const row = (channel: 'ground' | 'sea') =>
+    h(
+      'div',
+      { class: 'paint-row' },
+      ...PAINTS.filter((x) => x.channel === channel).map((x) => {
+        const owned = ownsPaint(p, x.id);
+        const on = cur[channel].id === x.id;
+        return h(
+          'button',
+          {
+            class: `paint${on ? ' on' : ''}${owned ? '' : ' locked'}`,
+            onclick: () => {
+              const r = applyPaint(p, x.id);
+              if (r === 'gems') return app.needGems();
+              if (r === 'pass') return (m.close(), app.showPass());
+              sfx.click();
+              haptic.light();
+              app.save();
+              m.close();
+              paintSheet(app);
+            },
+          },
+          h('i', { style: `background:radial-gradient(circle at 35% 30%,${x.colors[0]},${x.colors[1]} 55%,${x.colors[2]})` }),
+          h('small', null, t(x.name)),
+          h('b', null, owned ? (on ? '✓' : '') : x.pass ? '🌌' : `💎${x.gems}`),
+        );
+      }),
+    );
+  const m = modal([
+    h('div', { class: 'm-title' }, t('Paint your Homeworld')),
+    h('div', { class: 'sec-title' }, t('Ground')),
+    row('ground'),
+    h('div', { class: 'sec-title' }, t('Water')),
+    row('sea'),
+    h('p', { class: 'muted tiny' }, t('Paints are yours forever once unlocked.')),
+  ]);
+}
+
+// ---------------------------------------------------------------- photo mode
+type Frame = 'clean' | 'polaroid' | 'stars' | 'season' | 'gold';
+const FRAMES: { id: Frame; name: string; pass?: boolean }[] = [
+  { id: 'polaroid', name: 'Instant' },
+  { id: 'clean', name: 'Clean' },
+  { id: 'stars', name: 'Starry' },
+  { id: 'season', name: 'Seasonal' },
+  { id: 'gold', name: 'Golden', pass: true },
+];
+
+function renderPhoto(app: App, src: HTMLCanvasElement, frame: Frame): HTMLCanvasElement {
+  const p = app.p;
+  const W = 1080;
+  const H = 1350;
+  const c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
+  const g = c.getContext('2d')!;
+  const bg = g.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#231c5e');
+  bg.addColorStop(1, '#0b0a24');
+  g.fillStyle = bg;
+  g.fillRect(0, 0, W, H);
+  // the live scene, cropped to a square around the planet
+  const pad = frame === 'polaroid' ? 70 : 60;
+  const size = W - pad * 2;
+  const sw = src.width;
+  const sh = src.height;
+  const side = Math.min(sw, sh);
+  g.drawImage(src, (sw - side) / 2, sh * 0.55 - side / 2, side, side, pad, pad + 40, size, size);
+  const font = (w: number, px: number) => `${w} ${px}px Fredoka, ui-rounded, system-ui, sans-serif`;
+  const season = seasonOf(new Date(), p.settings.hemi);
+  if (frame === 'polaroid') {
+    g.fillStyle = '#fbf7ee';
+    g.fillRect(0, 0, W, pad + 40);
+    g.fillRect(0, 0, pad, H);
+    g.fillRect(W - pad, 0, pad, H);
+    g.fillRect(0, pad + 40 + size, W, H);
+  } else {
+    g.strokeStyle = frame === 'gold' ? '#ffd24a' : 'rgba(255,255,255,0.8)';
+    g.lineWidth = frame === 'gold' ? 18 : 8;
+    g.strokeRect(pad, pad + 40, size, size);
+  }
+  if (frame === 'stars' || frame === 'gold') {
+    const col = frame === 'gold' ? '#ffd24a' : '#fff6b0';
+    for (let i = 0; i < 26; i++) {
+      const a = (i / 26) * TAU;
+      const x = W / 2 + Math.cos(a) * W * 0.5;
+      const y = pad + 40 + size / 2 + Math.sin(a) * size * 0.56;
+      g.fillStyle = col;
+      g.font = font(700, 30 + (i % 3) * 10);
+      g.textAlign = 'center';
+      g.fillText('★', Math.max(30, Math.min(W - 30, x)), Math.max(60, Math.min(H - 30, y)));
+    }
+  }
+  if (frame === 'season') drawSeason(g, W, H, 3.3, season, 0.8, 90);
+  const ink = frame === 'polaroid' ? '#2a2440' : '#ffffff';
+  g.textAlign = 'center';
+  g.fillStyle = ink;
+  g.font = font(700, 58);
+  g.fillText(t("{name}'s Homeworld", { name: passportName(p) }), W / 2, pad + 40 + size + 95);
+  g.font = font(500, 36);
+  g.fillStyle = frame === 'polaroid' ? '#6a6480' : '#c9c2ff';
+  g.fillText(
+    `${SEASON_EMOJI[season]} ${t(SEASON_NAMES[season])} · ${t('Ring {n}', { n: p.home.ring })} · ${new Date().toLocaleDateString()}`,
+    W / 2,
+    pad + 40 + size + 150,
+  );
+  g.font = font(700, 34);
+  g.fillStyle = frame === 'polaroid' ? '#3fae6a' : '#5ef2b0';
+  g.fillText('Pocket Planet', W / 2, H - 40);
+  return c;
+}
+
+function photoMode(app: App, src: HTMLCanvasElement) {
+  const p = app.p;
+  let frame: Frame = 'polaroid';
+  sfx.whoosh();
+  const preview = h('div', { class: 'photo-prev' });
+  const paint = () => {
+    const img = renderPhoto(app, src, frame);
+    img.style.width = '100%';
+    img.style.height = 'auto';
+    preview.replaceChildren(img);
+  };
+  paint();
+  const frames = h(
+    'div',
+    { class: 'photo-frames' },
+    ...FRAMES.map((f) => {
+      const el = h(
+        'button',
+        {
+          class: `tab${f.id === frame ? ' on' : ''}`,
+          onclick: () => {
+            if (f.pass && !p.pass) return (m.close(), app.showPass());
+            frame = f.id;
+            frames.querySelectorAll('.tab').forEach((x) => x.classList.remove('on'));
+            el.classList.add('on');
+            sfx.click();
+            paint();
+          },
+        },
+        `${f.pass && !p.pass ? '🔒 ' : ''}${t(f.name)}`,
+      );
+      return el;
+    }),
+  );
+  const m = modal([
+    h('div', { class: 'm-title' }, t('Photo mode')),
+    preview,
+    frames,
+    btn(t('📤 Share photo'), 'primary wide', () =>
+      shareCanvas(renderPhoto(app, src, frame), t('My Homeworld in Pocket Planet 🪐'), 'homeworld-photo'),
+    ),
   ]);
 }

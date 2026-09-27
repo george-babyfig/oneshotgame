@@ -17,6 +17,7 @@ import type { App } from '../app';
 import { icon as iconEl } from '../icons';
 import { t, tp } from '../../i18n';
 import { editPassport } from './passport';
+import { SEASON_EMOJI, SEASON_NAMES, seasonOf, skyEventOn } from '../../meta/seasons';
 import { homeBadge, homeUnlocked } from '../../meta/homeworld';
 
 export function navBtn(icon: string, label: string, badge: string | number, fn: () => void, cls = '') {
@@ -30,6 +31,18 @@ export function navBtn(icon: string, label: string, badge: string | number, fn: 
 }
 
 let setupAsked = false;
+
+/** Today's season, and a banner on real meteor-shower days. */
+function seasonChip(hemi: 'north' | 'south') {
+  const now = new Date();
+  const s = seasonOf(now, hemi);
+  const sky = skyEventOn(now);
+  return h(
+    'div',
+    { class: `season-chip${sky ? ' sky' : ''}` },
+    sky ? t('☄️ {name} tonight — Supernovas charge 2× faster!', { name: t(sky.name) }) : `${SEASON_EMOJI[s]} ${t(SEASON_NAMES[s])}`,
+  );
+}
 
 export function showHome(app: App) {
   const p = app.p;
@@ -69,6 +82,7 @@ export function showHome(app: App) {
     { class: 'screen home' },
     app.topBar(),
     h('div', { class: 'title' }, h('span', null, t('Pocket')), h('span', null, t('Planet'))),
+    seasonChip(p.settings.hemi),
     h(
       'div',
       { class: 'galaxy-wrap' },

@@ -24,13 +24,51 @@ export interface KeeperPose {
   cheer?: number;
   /** Look toward this angle (radians) with the eyes. */
   look?: number;
+  /** Play the look's emote; `et` = seconds since it started. */
+  emote?: boolean;
+  et?: number;
 }
 
 /** Draws the Keeper standing with its feet at (x, y). size ≈ total height. */
 export function drawKeeper(g: G, look: Look, x: number, y: number, size: number, t: number, pose: KeeperPose = {}) {
   const r = size * 0.3; // helmet radius
   const lean = pose.lean ?? 0;
-  const cheer = pose.cheer ?? 0;
+  let cheer = pose.cheer ?? 0;
+  // emote choreography
+  const em = pose.emote ? look.emote : '';
+  const et = pose.et ?? t;
+  let dx = 0;
+  let dy = 0;
+  let spin = 0;
+  let wave = false;
+  switch (em) {
+    case 'em_cheer':
+      cheer = 0.6 + Math.abs(Math.sin(et * 5)) * 0.4;
+      break;
+    case 'em_wave':
+      wave = true;
+      break;
+    case 'em_jump': {
+      const k = (et % 1.1) / 0.7;
+      dy = k < 1 ? -Math.sin(k * Math.PI) * size * 0.45 : 0;
+      cheer = k < 1 ? 1 : 0.3;
+      break;
+    }
+    case 'em_spin':
+      spin = et % 1.6 < 0.8 ? ((et % 1.6) / 0.8) * Math.PI * 2 : 0;
+      cheer = 1;
+      break;
+    case 'em_dance':
+      dx = Math.sin(et * 8) * size * 0.08;
+      spin = Math.sin(et * 8) * 0.18;
+      cheer = 0.5 + Math.sin(et * 16) * 0.5;
+      break;
+    case 'em_flag':
+    case 'em_fireworks':
+      cheer = em === 'em_fireworks' ? 1 : 0.2;
+      wave = em === 'em_flag';
+      break;
+  }
   const bob = Math.sin(t * 3) * size * 0.015 - cheer * size * 0.08;
   const body = look.suit;
   const main = col(body, 0, '#6ec8ff');
@@ -38,8 +76,14 @@ export function drawKeeper(g: G, look: Look, x: number, y: number, size: number,
   const visor = col(body, 2, '#1d2a5e');
   const set = fullSet(look);
   g.save();
-  g.translate(x, y + bob);
+  if (em === 'em_fireworks') drawFireworks(g, x, y - size * 1.25, size, et);
+  g.translate(x + dx, y + bob + dy);
   g.rotate(lean * -0.18);
+  if (spin) {
+    g.translate(0, -size * 0.45);
+    g.rotate(spin);
+    g.translate(0, size * 0.45);
+  }
   // set flourish
   if (set) {
     const gl = g.createRadialGradient(0, -size * 0.45, 0, 0, -size * 0.45, size * 0.75);
@@ -86,9 +130,30 @@ export function drawKeeper(g: G, look: Look, x: number, y: number, size: number,
   g.lineCap = 'round';
   g.lineWidth = size * 0.1;
   for (const sx of [-1, 1]) {
-    const up = cheer > 0 ? cheer : sx > 0 ? Math.max(0, lean) * 0.6 : 0;
-    const ax = sx * size * (0.28 - up * 0.02);
+    const up = wave && sx > 0 ? 1 : cheer > 0 ? cheer : sx > 0 ? Math.max(0, lean) * 0.6 : 0;
+    const ax = sx * size * (0.28 - up * 0.02) + (wave && sx > 0 ? Math.sin(et * 12) * size * 0.08 : 0);
     const ay = -size * (0.34 + up * 0.32);
+    if (em === 'em_flag' && sx > 0) {
+      // a little flag on a pole
+      g.save();
+      g.strokeStyle = '#e8e4ff';
+      g.lineWidth = size * 0.03;
+      g.beginPath();
+      g.moveTo(ax, ay + size * 0.1);
+      g.lineTo(ax, ay - size * 0.45);
+      g.stroke();
+      g.fillStyle = col(look.suit, 0, '#ff6a7a') === 'aurora' ? '#ff8fc8' : col(look.suit, 0, '#ff6a7a');
+      g.beginPath();
+      g.moveTo(ax, ay - size * 0.45);
+      g.quadraticCurveTo(ax + size * 0.18, ay - size * 0.42 + Math.sin(et * 9) * size * 0.04, ax + size * 0.32, ay - size * 0.38);
+      g.lineTo(ax, ay - size * 0.26);
+      g.fill();
+      star(g, ax + size * 0.12, ay - size * 0.36, size * 0.04, '#fff6b0');
+      g.restore();
+      g.strokeStyle = suitFill(g, main, size * 0.3, t);
+      g.lineWidth = size * 0.1;
+      g.lineCap = 'round';
+    }
     g.beginPath();
     g.moveTo(sx * size * 0.16, -size * 0.44);
     g.lineTo(ax, ay);
@@ -276,6 +341,30 @@ function drawHat(g: G, id: string, x: number, hy: number, r: number, t: number) 
       sparkle(g, x + r * 0.55, top - r * 0.45, r * 0.12, t);
       break;
     }
+    case 'hat_beanie': {
+      g.fillStyle = c0;
+      g.beginPath();
+      g.arc(x, top + r * 0.55, r * 0.78, Math.PI * 1.08, Math.PI * 1.92);
+      g.closePath();
+      g.fill();
+      g.fillStyle = c1;
+      g.beginPath();
+      g.roundRect(x - r * 0.78, top + r * 0.28, r * 1.56, r * 0.22, r * 0.1);
+      g.fill();
+      g.strokeStyle = 'rgba(255,255,255,0.35)';
+      g.lineWidth = r * 0.05;
+      for (let i = -2; i <= 2; i++) {
+        g.beginPath();
+        g.moveTo(x + i * r * 0.24, top + r * 0.28);
+        g.lineTo(x + i * r * 0.2, top - r * 0.12);
+        g.stroke();
+      }
+      g.fillStyle = c1;
+      g.beginPath();
+      g.arc(x, top - r * 0.26 + Math.sin(t * 3) * r * 0.03, r * 0.18, 0, Math.PI * 2);
+      g.fill();
+      break;
+    }
     case 'hat_halo': {
       g.strokeStyle = c0;
       g.shadowColor = c0;
@@ -288,6 +377,24 @@ function drawHat(g: G, id: string, x: number, hy: number, r: number, t: number) 
     }
   }
   g.restore();
+}
+
+function drawFireworks(g: G, x: number, y: number, size: number, et: number) {
+  const cols = ['#ff6a7a', '#ffd24a', '#5ef2b0', '#6ec8ff', '#b58cff'];
+  for (let i = 0; i < 3; i++) {
+    const k = ((et + i * 0.37) % 1.1) / 1.1;
+    const cx = x + (i - 1) * size * 0.55;
+    const cy = y - (i % 2) * size * 0.25;
+    g.globalAlpha = 1 - k;
+    g.fillStyle = cols[(i + Math.floor((et + i * 0.37) / 1.1)) % cols.length];
+    for (let j = 0; j < 10; j++) {
+      const a = (j / 10) * Math.PI * 2;
+      g.beginPath();
+      g.arc(cx + Math.cos(a) * k * size * 0.35, cy + Math.sin(a) * k * size * 0.35 + k * k * size * 0.1, size * 0.025, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  g.globalAlpha = 1;
 }
 
 function star(g: G, x: number, y: number, r: number, color: string) {
@@ -564,6 +671,8 @@ export function itemCanvas(id: string, look: Look, px: number, t = 0.3): HTMLCan
     g.beginPath();
     g.arc(pts[15].x + px * 0.04, pts[15].y - px * 0.03, px * 0.08, 0, Math.PI * 2);
     g.fill();
+  } else if (x.slot === 'emote') {
+    drawKeeper(g, { ...look, emote: id }, px / 2, px * 0.97, px * 0.72, t, { emote: true, et: 0.35 });
   } else if (x.slot === 'hat') {
     const size = px * 1.15;
     drawKeeper(g, { ...look, hat: id }, px / 2, px * 0.6 + size * 0.72, size, t);

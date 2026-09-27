@@ -8,7 +8,6 @@ export const VERSION = '1.0.0';
 export const CONTINUE_COSTS = [40, 70, 110];
 export const CONTINUE_THROWS = 5;
 
-export const DAILY_GEMS = [10, 15, 20, 25, 30, 40, 60];
 export const PIGGY_PER_WIN = 4;
 export const PIGGY_MAX = 250;
 export const GEMS_PER_NEW_SPECIES = 3;

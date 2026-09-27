@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { defaultProfile, migrate, totalStars } from '../src/meta/profile';
-import { applyLevelWin, claimDailyGift, collectDust, dailyGift, grantProduct, pendingDust, planetRate } from '../src/meta/economy';
+import { applyLevelWin, collectDust, grantProduct, pendingDust, planetRate } from '../src/meta/economy';
+import { CALENDAR_DAYS, stamp } from '../src/meta/calendar';
+import { owns } from '../src/meta/cosmetics';
 import {
   chestsReady,
   claimQuest,
@@ -44,12 +46,22 @@ describe('economy', () => {
     expect(pendingDust(p, 3600000)).toBe(0);
   });
 
-  it('daily gift streak grows on consecutive days and resets after a gap', () => {
+  it('star calendar stamps once a day and never resets after a gap', () => {
     const p = defaultProfile(0);
-    expect(claimDailyGift(p, '2026-01-01')).toBe(10);
-    expect(dailyGift(p, '2026-01-01')).toBeNull();
-    expect(claimDailyGift(p, '2026-01-02')).toBe(15);
-    expect(claimDailyGift(p, '2026-01-05')).toBe(10);
+    const g = p.gems;
+    expect(stamp(p, '2026-01-01')?.gems).toBe(10);
+    expect(p.gems).toBe(g + 10);
+    expect(stamp(p, '2026-01-01')).toBeNull();
+    stamp(p, '2026-01-02');
+    stamp(p, '2026-01-09'); // a week away: simply the next stamp
+    expect(p.daily.streak).toBe(3);
+    expect(owns(p, 'hat_beanie')).toBe(false);
+    for (let d = 10; d < 10 + 11; d++) stamp(p, `2026-01-${d}`);
+    expect(p.daily.streak).toBe(14);
+    expect(owns(p, 'hat_beanie')).toBe(true);
+    // second time round, item days pay gems instead
+    p.daily.streak = CALENDAR_DAYS + 13;
+    expect(stamp(p, '2026-03-01')?.item).toBeUndefined();
   });
 
   it('grants purchases exactly once', () => {

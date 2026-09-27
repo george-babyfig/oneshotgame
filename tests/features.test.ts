@@ -155,11 +155,12 @@ describe('review fixes', async () => {
   const E = await import('../src/meta/economy');
   const Hb = await import('../src/meta/habitats');
   const P = await import('../src/meta/profile');
-  it('daily gift ignores a clock that moved backwards', () => {
+  it('star calendar ignores a clock that moved backwards', async () => {
+    const C = await import('../src/meta/calendar');
     const p = defaultProfile(0);
-    E.claimDailyGift(p, '2026-09-28');
-    expect(E.dailyGift(p, '2026-09-27')).toBeNull();
-    expect(E.dailyGift(p, '2026-09-29')?.streak).toBe(2);
+    C.stamp(p, '2026-09-28');
+    expect(C.canStamp(p, '2026-09-27')).toBe(false);
+    expect(C.canStamp(p, '2026-09-29')).toBe(true);
   });
   it('vault recovers when lastCollect is in the future', () => {
     const p = defaultProfile(0);

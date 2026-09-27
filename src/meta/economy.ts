@@ -2,8 +2,8 @@
 // happened, so the UI can celebrate it and tests can pin it down.
 import { BIOMES, type Planet } from '../core/world';
 import { DIFFICULTY_DUST, type Difficulty } from '../core/levels';
-import { PIGGY_MAX, PIGGY_PER_WIN, PRODUCT_BY_ID, VAULT_HOURS, DAILY_GEMS, GEMS_PER_NEW_SPECIES } from './config';
-import { dayGap, type GalaxyPlanet, type Profile } from './profile';
+import { PIGGY_MAX, PIGGY_PER_WIN, PRODUCT_BY_ID, VAULT_HOURS, GEMS_PER_NEW_SPECIES } from './config';
+import { type GalaxyPlanet, type Profile } from './profile';
 import { questEvent, type QuestEvent } from './progression';
 
 /** Stardust per hour produced by one galaxy planet. */
@@ -124,23 +124,6 @@ export function discoverSpecies(p: Profile, id: string): boolean {
 }
 
 /** Daily login streak. Returns the gift to show, or null if already claimed today. */
-export function dailyGift(p: Profile, day: string): { streak: number; index: number; gems: number } | null {
-  if (p.daily.last === day) return null;
-  if (p.daily.last && dayGap(p.daily.last, day) < 0) return null; // clock/time zone moved back
-  const gap = p.daily.last ? dayGap(p.daily.last, day) : 99;
-  const streak = gap === 1 ? p.daily.streak + 1 : 1;
-  const index = (streak - 1) % DAILY_GEMS.length;
-  return { streak, index, gems: DAILY_GEMS[index] };
-}
-
-export function claimDailyGift(p: Profile, day: string) {
-  const g = dailyGift(p, day);
-  if (!g) return 0;
-  p.daily = { last: day, streak: g.streak };
-  p.gems += g.gems;
-  return g.gems;
-}
-
 /** Apply a completed store transaction exactly once. Returns gems granted or null if ignored. */
 export function grantProduct(p: Profile, productId: string, txId: string): { gems: number; title: string } | null {
   const def = PRODUCT_BY_ID[productId];

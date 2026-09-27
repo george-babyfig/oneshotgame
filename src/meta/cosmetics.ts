@@ -7,10 +7,10 @@ import { STAR_ROAD } from './progression';
 import { t } from '../i18n';
 import { HABITATS } from './habitats';
 
-export type Slot = 'suit' | 'hat' | 'launcher' | 'trail';
-export const SLOTS: Slot[] = ['suit', 'hat', 'launcher', 'trail'];
+export type Slot = 'suit' | 'hat' | 'launcher' | 'trail' | 'emote';
+export const SLOTS: Slot[] = ['suit', 'hat', 'launcher', 'trail', 'emote'];
 
-export type Source = 'free' | 'gems' | 'road' | 'pass' | 'rank' | 'habitat' | 'starter' | 'event';
+export type Source = 'free' | 'gems' | 'road' | 'pass' | 'rank' | 'habitat' | 'starter' | 'event' | 'calendar';
 /** Presentation tier only (frame colour); it never affects odds because nothing is random. */
 export type Tier = 'basic' | 'fancy' | 'epic';
 
@@ -80,6 +80,15 @@ export const COSMETICS: Cosmetic[] = [
     colors: ['#2a2270', '#ffd24a', '#0a0620'],
     set: 'captain',
   }),
+  c({
+    id: 'suit_night',
+    slot: 'suit',
+    name: 'Starlight',
+    source: 'calendar',
+    unlock: 28,
+    tier: 'epic',
+    colors: ['#1a2a6e', '#9fe6ff', '#050818'],
+  }),
   // hats
   c({ id: 'hat_none', slot: 'hat', name: 'Bare Helmet', source: 'free', tier: 'basic', colors: [] }),
   c({ id: 'hat_antenna', slot: 'hat', name: 'Antenna', source: 'free', tier: 'basic', colors: ['#ff6a7a'] }),
@@ -96,6 +105,7 @@ export const COSMETICS: Cosmetic[] = [
     colors: ['#ff8fc8', '#ffe066'],
   }),
   c({ id: 'hat_wizard', slot: 'hat', name: 'Star Wizard', source: 'rank', unlock: 5, tier: 'fancy', colors: ['#4a3aa8', '#ffd24a'] }),
+  c({ id: 'hat_beanie', slot: 'hat', name: 'Cozy Beanie', source: 'calendar', unlock: 14, tier: 'fancy', colors: ['#ff6a7a', '#ffffff'] }),
   c({ id: 'hat_crown', slot: 'hat', name: 'Tiny Crown', source: 'road', tier: 'epic', colors: ['#ffd24a', '#ff4a8a'] }),
   c({ id: 'hat_halo', slot: 'hat', name: 'Halo Ring', source: 'pass', tier: 'epic', colors: ['#ffe58a'], set: 'captain' }),
   // launchers
@@ -136,12 +146,20 @@ export const COSMETICS: Cosmetic[] = [
     colors: ['#7a4dff', '#ff4de1', '#4dc3ff'],
     set: 'captain',
   }),
+  // emotes (played when you finish a planet)
+  c({ id: 'em_cheer', slot: 'emote', name: 'Hooray', source: 'free', tier: 'basic', colors: [] }),
+  c({ id: 'em_wave', slot: 'emote', name: 'Big Wave', source: 'free', tier: 'basic', colors: [] }),
+  c({ id: 'em_jump', slot: 'emote', name: 'Moon Jump', source: 'rank', unlock: 6, tier: 'fancy', colors: [] }),
+  c({ id: 'em_spin', slot: 'emote', name: 'Twirl', source: 'gems', gems: 100, tier: 'fancy', colors: [] }),
+  c({ id: 'em_dance', slot: 'emote', name: 'Wiggle Dance', source: 'habitat', unlock: 'frost', tier: 'fancy', colors: [] }),
+  c({ id: 'em_flag', slot: 'emote', name: 'Plant the Flag', source: 'gems', gems: 150, tier: 'fancy', colors: [] }),
+  c({ id: 'em_fireworks', slot: 'emote', name: 'Fireworks', source: 'road', tier: 'epic', colors: [] }),
 ];
 
 export const COSMETIC_BY_ID: Record<string, Cosmetic> = Object.fromEntries(COSMETICS.map((x) => [x.id, x]));
 
 export type Look = Record<Slot, string>;
-export const DEFAULT_LOOK: Look = { suit: 'suit_sky', hat: 'hat_antenna', launcher: 'l_pad', trail: 'tr_dots' };
+export const DEFAULT_LOOK: Look = { suit: 'suit_sky', hat: 'hat_antenna', launcher: 'l_pad', trail: 'tr_dots', emote: 'em_cheer' };
 
 /** Star Road tier index (free or pass lane) that grants an item. */
 export function roadTierOf(id: string): { i: number; lane: 'free' | 'pass' } | null {
@@ -163,6 +181,8 @@ export function owns(p: Profile, id: string): boolean {
       return p.wardrobe.includes(id);
     case 'starter':
       return p.starter;
+    case 'calendar':
+      return p.daily.streak >= (x.unlock as number);
     case 'rank':
       return p.rank >= (x.unlock as number);
     case 'habitat':
@@ -203,7 +223,8 @@ export function buyCosmetic(p: Profile, id: string): boolean {
 
 /** Wearing every piece of a set adds a flourish (a glow in the set's colour). */
 export function fullSet(look: Look): string | null {
-  const sets = SLOTS.map((s) => COSMETIC_BY_ID[look[s]]?.set);
+  // sets are made of wearables; emotes don't count
+  const sets = SLOTS.filter((s) => s !== 'emote').map((s) => COSMETIC_BY_ID[look[s]]?.set);
   return sets.every((x) => x && x === sets[0]) ? (sets[0] as string) : null;
 }
 
@@ -228,6 +249,8 @@ export function sourceText(x: Cosmetic): string {
     }
     case 'event':
       return t('Weekly event');
+    case 'calendar':
+      return t('Star Calendar day {n}', { n: x.unlock as number });
     case 'road': {
       const r = roadTierOf(x.id);
       return r ? t('Star Road {n}★', { n: STAR_ROAD[r.i].stars }) : t('Star Road');
@@ -237,7 +260,7 @@ export function sourceText(x: Cosmetic): string {
   }
 }
 
-export const SLOT_NAMES: Record<Slot, string> = { suit: 'Suit', hat: 'Hat', launcher: 'Launcher', trail: 'Trail' };
+export const SLOT_NAMES: Record<Slot, string> = { suit: 'Suit', hat: 'Hat', launcher: 'Launcher', trail: 'Trail', emote: 'Emote' };
 
 /** Launcher mastery: flings needed for each mastery star. */
 export const MASTERY_STEPS = [100, 500, 2000];

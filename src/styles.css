@@ -3008,3 +3008,146 @@ button.lb {
 .lab-perks b {
   font-weight: 700;
 }
+
+/* ---------------------------------------------------------------- star calendar */
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.cal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  padding: 2px;
+  border-radius: 10px;
+  background: var(--panel-2);
+  font-size: 11px;
+  overflow: hidden;
+}
+.cal small {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 9px;
+  color: var(--muted);
+}
+.cal .ci {
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.cal.big {
+  background: linear-gradient(160deg, rgba(255, 210, 74, 0.25), var(--panel-2) 70%);
+  box-shadow: inset 0 0 0 1.5px var(--sun);
+}
+.cal.done {
+  opacity: 0.45;
+}
+.cal.today {
+  box-shadow:
+    inset 0 0 0 2px var(--life),
+    0 0 12px rgba(94, 242, 176, 0.5);
+  opacity: 1;
+}
+.cal .tick {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  color: var(--life);
+  font-style: normal;
+}
+
+/* ---------------------------------------------------------------- parental gate */
+.gate-q {
+  text-align: center;
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--dust);
+}
+.gate-a {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.paint-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.paint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 2px;
+  border-radius: 14px;
+  background: var(--panel-2);
+}
+.paint i {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  box-shadow: inset 0 -4px 8px rgba(0, 0, 0, 0.3);
+}
+.paint small {
+  font-size: 10px;
+  line-height: 1.1;
+  text-align: center;
+}
+.paint b {
+  font-size: 11px;
+  color: var(--dust);
+  min-height: 13px;
+}
+.paint.on {
+  box-shadow: inset 0 0 0 2px var(--life);
+}
+.paint.locked i {
+  opacity: 0.6;
+}
+.photo-prev {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  max-height: 52vh;
+  display: flex;
+  justify-content: center;
+}
+.photo-prev canvas {
+  max-height: 52vh;
+  width: auto !important;
+}
+.photo-frames {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 16px;
+  background: var(--panel);
+}
+.photo-frames .tab {
+  flex: 1 0 28%;
+  font-size: 12px;
+  padding: 7px 4px;
+}
+.season-chip {
+  align-self: center;
+  margin-top: -6px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.06);
+}
+.season-chip.sky {
+  color: #2a1600;
+  background: linear-gradient(90deg, #ffd76a, #ff9a3d);
+  text-align: center;
+}

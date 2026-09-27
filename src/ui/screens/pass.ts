@@ -8,7 +8,7 @@ import { drawKeeper, drawLauncher, drawTrail, itemCanvas } from '../art/keeper';
 import type { App } from '../app';
 import { t } from '../../i18n';
 
-export const CAPTAIN_LOOK: Look = { suit: 'suit_star', hat: 'hat_halo', launcher: 'l_orbit', trail: 'tr_cosmic' };
+export const CAPTAIN_LOOK: Look = { suit: 'suit_star', hat: 'hat_halo', launcher: 'l_orbit', trail: 'tr_cosmic', emote: 'em_cheer' };
 
 /** Animated hero banner: the Keeper in the Star Captain set on a golden ticket. */
 function hero(canvas: HTMLCanvasElement, reduceMotion: boolean) {

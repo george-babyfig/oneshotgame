@@ -69,8 +69,8 @@ describe('cosmetics', () => {
   });
 
   it('detects a full set and launcher mastery', () => {
-    expect(fullSet({ suit: 'suit_star', hat: 'hat_halo', launcher: 'l_orbit', trail: 'tr_cosmic' })).toBe('captain');
-    expect(fullSet({ suit: 'suit_star', hat: 'hat_halo', launcher: 'l_pad', trail: 'tr_cosmic' })).toBeNull();
+    expect(fullSet({ suit: 'suit_star', hat: 'hat_halo', launcher: 'l_orbit', trail: 'tr_cosmic', emote: 'em_cheer' })).toBe('captain');
+    expect(fullSet({ suit: 'suit_star', hat: 'hat_halo', launcher: 'l_pad', trail: 'tr_cosmic', emote: 'em_cheer' })).toBeNull();
     expect(masteryLevel(0)).toBe(0);
     expect(masteryLevel(500)).toBe(2);
     expect(masteryLevel(99999)).toBe(3);

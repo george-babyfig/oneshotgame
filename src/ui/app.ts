@@ -44,8 +44,10 @@ import { showWorkshop } from './screens/workshop';
 import { showPassport } from './screens/passport';
 import { showPass } from './screens/pass';
 import { showHomeworld } from './screens/homeworld';
+import { parentalGate } from './flows/gate';
 import { tickHome } from '../meta/homeworld';
 import { labLevels } from '../meta/lab';
+import { seasonOf, skyEventOn } from '../meta/seasons';
 import { keeperHead } from './art/keeper';
 
 export type ScreenName =
@@ -338,6 +340,8 @@ export class App {
       onShop: () => this.showShop(),
       // Object Lab levels apply to the campaign and Zen, not to the score-competitive modes
       lab: extra.competitive ? undefined : labLevels(this.p),
+      season: seasonOf(new Date(), this.p.settings.hemi),
+      shower: !!skyEventOn(new Date()),
       ...extra,
     };
   }
@@ -401,6 +405,10 @@ export class App {
     const pr = PRODUCT_BY_KEY[key];
     if ((key === 'starter' && this.p.starter) || (key === 'pass' && this.p.pass)) return;
     this.busy = true;
+    if (!(await parentalGate())) {
+      this.busy = false;
+      return;
+    }
     this.root.classList.add('buying');
     try {
       const r = await this.iap.purchase(pr);

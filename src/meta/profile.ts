@@ -27,6 +27,8 @@ export interface Settings {
   notifications: boolean;
   /** '' = follow the device language. */
   lang: string;
+  /** For real-calendar seasons. */
+  hemi: 'north' | 'south';
 }
 
 export interface Stats {
@@ -103,7 +105,7 @@ export interface Profile {
   /** Game Center achievement ids already reported. */
   gcReported: string[];
   /** Keeper outfit (see meta/cosmetics.ts) and items bought with gems. */
-  look: Record<'suit' | 'hat' | 'launcher' | 'trail', string>;
+  look: Record<'suit' | 'hat' | 'launcher' | 'trail' | 'emote', string>;
   wardrobe: string[];
   /** Flings per launcher, for launcher mastery. */
   mastery: Record<string, number>;
@@ -143,7 +145,7 @@ export function defaultProfile(now = Date.now()): Profile {
     road: [],
     chapters: [],
     dailyPlanet: { day: '', best: 0, stars: 0, rewarded: false },
-    settings: { sound: true, music: true, haptics: true, reduceMotion: false, notifications: true, lang: '' },
+    settings: { sound: true, music: true, haptics: true, reduceMotion: false, notifications: true, lang: '', hemi: 'north' },
     tutorial: false,
     meta: { installed: now, lastSeen: now, sessions: 0, rated: false, starterOffered: false, notifAsked: false },
     stats: {
@@ -170,7 +172,7 @@ export function defaultProfile(now = Date.now()): Profile {
     zen: null,
     event: { week: '', tokens: 0, claimed: [] },
     gcReported: [],
-    look: { suit: 'suit_sky', hat: 'hat_antenna', launcher: 'l_pad', trail: 'tr_dots' },
+    look: { suit: 'suit_sky', hat: 'hat_antenna', launcher: 'l_pad', trail: 'tr_dots', emote: 'em_cheer' },
     wardrobe: [],
     mastery: {},
     passport: { first: -1, second: -1, set: false, title: '', banner: 0, badges: [] },

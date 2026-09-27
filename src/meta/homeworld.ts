@@ -147,6 +147,64 @@ export interface HomeState {
   started: number;
   /** The welcome card was shown. */
   intro: boolean;
+  /** Paint job: ground and water palette ids. */
+  paint: { ground: string; sea: string };
+  /** Paints bought with gems. */
+  paints: string[];
+}
+
+// ------------------------------------------------------------------ paint
+export interface Paint {
+  id: string;
+  name: string;
+  channel: 'ground' | 'sea';
+  /** light, mid, dark */
+  colors: [string, string, string];
+  gems?: number;
+  pass?: boolean;
+}
+
+export const PAINTS: Paint[] = [
+  { id: 'meadow', name: 'Meadow', channel: 'ground', colors: ['#8ef0a0', '#3fae6a', '#1f6a58'] },
+  { id: 'dune', name: 'Dune', channel: 'ground', colors: ['#ffe6a8', '#e0b060', '#9a6a30'] },
+  { id: 'snow', name: 'Snowdrift', channel: 'ground', colors: ['#ffffff', '#cfe4ff', '#7a9ac8'] },
+  { id: 'candy', name: 'Candy', channel: 'ground', colors: ['#ffd0ea', '#ff8fc8', '#b8467e'], gems: 120 },
+  { id: 'ember', name: 'Ember', channel: 'ground', colors: ['#ffb08a', '#d9553a', '#5a1a2a'], gems: 120 },
+  { id: 'crystal', name: 'Crystal', channel: 'ground', colors: ['#e6d6ff', '#a07aff', '#4a2a9a'], gems: 150 },
+  { id: 'gilded', name: 'Gilded', channel: 'ground', colors: ['#fff2b8', '#ffc94a', '#a0600a'], pass: true },
+  { id: 'blue', name: 'Ocean Blue', channel: 'sea', colors: ['#9fd6ff', '#46a0e6', '#1f5a9e'] },
+  { id: 'teal', name: 'Lagoon', channel: 'sea', colors: ['#a8fff0', '#3fd6c0', '#1a7a7a'] },
+  { id: 'rose', name: 'Rose Water', channel: 'sea', colors: ['#ffd0e6', '#ff7ab8', '#9a2a6a'], gems: 60 },
+  { id: 'nebula', name: 'Nebula', channel: 'sea', colors: ['#e0c8ff', '#9a6bff', '#3a1a8a'], gems: 60 },
+  { id: 'goldsea', name: 'Liquid Gold', channel: 'sea', colors: ['#fff6c8', '#ffd24a', '#b8800a'], pass: true },
+];
+export const PAINT_BY_ID: Record<string, Paint> = Object.fromEntries(PAINTS.map((x) => [x.id, x]));
+
+export function ownsPaint(p: Profile, id: string) {
+  const x = PAINT_BY_ID[id];
+  if (!x) return false;
+  if (x.pass) return p.pass;
+  return !x.gems || p.home.paints.includes(id);
+}
+
+/** Buy (if needed) and apply a paint. */
+export function applyPaint(p: Profile, id: string): 'ok' | 'gems' | 'pass' {
+  const x = PAINT_BY_ID[id];
+  if (!x) return 'pass';
+  if (!ownsPaint(p, id)) {
+    if (x.pass) return 'pass';
+    if (p.gems < (x.gems ?? 0)) return 'gems';
+    p.gems -= x.gems ?? 0;
+    p.home.paints.push(id);
+  }
+  p.home.paint = { ...p.home.paint, [x.channel]: id };
+  return 'ok';
+}
+
+export function currentPaint(p: Profile) {
+  const g = ownsPaint(p, p.home.paint?.ground) ? p.home.paint.ground : 'meadow';
+  const s = ownsPaint(p, p.home.paint?.sea) ? p.home.paint.sea : 'blue';
+  return { ground: PAINT_BY_ID[g], sea: PAINT_BY_ID[s] };
 }
 
 export function defaultHome(now = Date.now()): HomeState {
@@ -159,6 +217,8 @@ export function defaultHome(now = Date.now()): HomeState {
     lastDebris: now,
     started: now,
     intro: false,
+    paint: { ground: 'meadow', sea: 'blue' },
+    paints: [],
   };
 }
 

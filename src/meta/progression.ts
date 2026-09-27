@@ -93,7 +93,7 @@ export const STAR_ROAD: RoadTier[] = [
   { stars: 120, reward: { boosters: { shower: 3, spark: 3, scope: 3 }, item: 'tr_rainbow' }, pass: { gems: 100 } },
   { stars: 140, reward: { dust: 3000 }, pass: { boosters: { shower: 5, spark: 5, scope: 5 } } },
   { stars: 165, reward: { skin: 'gold', gems: 40 }, pass: { gems: 120, item: 'suit_star' } },
-  { stars: 190, reward: { gems: 80 }, pass: { dust: 8000 } },
+  { stars: 190, reward: { gems: 80, item: 'em_fireworks' }, pass: { dust: 8000 } },
   { stars: 220, reward: { dust: 6000, gems: 50, item: 'hat_crown' }, pass: { gems: 150 } },
   { stars: 260, reward: { gems: 120 }, pass: { gems: 250 } },
 ];

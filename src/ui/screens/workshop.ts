@@ -27,7 +27,7 @@ import { t } from '../../i18n';
 let lastSlot: Slot = 'suit';
 
 /** Animated stage: the Keeper flings a rock every couple of seconds. */
-function stage(canvas: HTMLCanvasElement, getLook: () => Look, reduceMotion: boolean, mastered: (id: string) => boolean) {
+function stage(canvas: HTMLCanvasElement, getLook: () => Look, reduceMotion: boolean, mastered: (id: string) => boolean, emoting = false) {
   const g = canvas.getContext('2d')!;
   let raf = 0;
   const t0 = performance.now();
@@ -60,8 +60,10 @@ function stage(canvas: HTMLCanvasElement, getLook: () => Look, reduceMotion: boo
     g.arc(px, py, 30, 0, Math.PI * 2);
     g.fill();
     drawKeeper(g, look, w * 0.28, hh * 0.92, Math.min(130, hh * 0.72), time, {
-      lean: pull,
+      lean: emoting ? 0 : pull,
       cheer: flying > 0.8 ? 1 : 0,
+      emote: emoting,
+      et: time,
       look: Math.atan2(py - hh * 0.5, px - w * 0.28),
     });
     drawLauncher(g, look.launcher, lx, ly, time, { x: -pull * 14, y: pull * 22 }, '#c9c2ff', mastered(look.launcher));
@@ -172,6 +174,7 @@ export function showWorkshop(app: App, slot: Slot = lastSlot, tryOn?: string) {
     () => preview,
     p.settings.reduceMotion,
     (id) => masteryLevel(p.mastery[id] ?? 0) >= MASTERY_STEPS.length,
+    slot === 'emote',
   );
   app.mount(
     h(

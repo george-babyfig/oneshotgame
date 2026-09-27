@@ -45,6 +45,18 @@ export function settingsFlow(app: App) {
     app.refresh();
     settingsFlow(app);
   });
+  const hemi = h(
+    'select',
+    { class: 'lang-select', 'aria-label': t('Seasons') },
+    h('option', { value: 'north' }, t('Northern hemisphere')),
+    h('option', { value: 'south' }, t('Southern hemisphere')),
+  ) as HTMLSelectElement;
+  hemi.value = s.hemi;
+  hemi.addEventListener('change', () => {
+    s.hemi = hemi.value === 'south' ? 'south' : 'north';
+    app.save();
+    app.refresh();
+  });
   const m = modal([
     h('div', { class: 'm-title' }, t('Settings')),
     tog(t('Sound effects'), 'sound'),
@@ -53,6 +65,7 @@ export function settingsFlow(app: App) {
     tog(t('Reduce motion'), 'reduceMotion'),
     tog(t('Reminders'), 'notifications'),
     h('label', { class: 'toggle lang' }, t('Language'), lang),
+    h('label', { class: 'toggle lang' }, t('Seasons'), hemi),
     btn(t('How to play'), 'ghost wide', () => (m.close(), howTo())),
     btn(t('Restore purchases'), 'ghost wide', () => app.restore()),
     gcAvailable() ? btn(t('Game Center'), 'ghost wide', () => gcDashboard()) : null,

@@ -22,6 +22,8 @@ import { drawProjectile, projectileCanvas } from './art/projectiles';
 import { drawKeeper, drawLauncher, drawTrail } from './art/keeper';
 import { DEFAULT_LOOK, type Look } from '../meta/cosmetics';
 import { NOVA_CHARGE } from '../meta/lab';
+import type { Season } from '../meta/seasons';
+import { drawMeteors, drawSeason } from './art/seasons';
 import { sfx } from './audio';
 import { haptic } from './haptics';
 import { t, tp } from '../i18n';
@@ -32,6 +34,9 @@ export interface SceneOpts {
   scopeLevel: number; // 0..3 aim guide length
   /** The player's Keeper outfit, launcher and trail. */
   look?: Look;
+  /** Real-calendar season weather, and a meteor shower tonight (Supernova charges 2×). */
+  season?: Season;
+  shower?: boolean;
   /** Object Lab level per object (campaign/Zen only). */
   lab?: Partial<Record<Kind, number>>;
   /** The launcher is fully mastered (gold glow). */
@@ -781,7 +786,7 @@ export class LevelScene {
       setTimeout(() => this.popup(this.cx, this.cy - this.R * 1.5, t('SUPERNOVA!'), '#ffd24a', 32, 1.4), 120);
     } else {
       const before = this.charge;
-      this.charge = Math.min(NOVA_CHARGE, this.charge + novaCharge(res.changed.length, res.spawned.length, lv));
+      this.charge = Math.min(NOVA_CHARGE, this.charge + novaCharge(res.changed.length, res.spawned.length, lv) * (this.o.shower ? 2 : 1));
       if (before < NOVA_CHARGE && this.charge >= NOVA_CHARGE) {
         setTimeout(() => {
           const L = this.launch;
@@ -1154,8 +1159,10 @@ export class LevelScene {
     return this.o.look ?? DEFAULT_LOOK;
   }
 
+  private emoteAt = -1;
   private confetti() {
     this.cheerUntil = this.time + 2.5;
+    this.emoteAt = this.time;
     if (this.o.reduceMotion) return;
     const cols = ['#ffd84a', '#5ef2b0', '#ff8fc8', '#6ec8ff', '#b58cff'];
     for (let k = 0; k < 90; k++) {
@@ -1215,6 +1222,10 @@ export class LevelScene {
       g.fill();
     }
     g.globalAlpha = 1;
+    if (!this.o.reduceMotion) {
+      if (this.o.shower) drawMeteors(g, w, H, this.time, 1.5);
+      if (this.o.season) drawSeason(g, w, H, this.time, this.o.season, 0.6, 22);
+    }
     if (this.shake > 0) g.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     this.drawPlanet();
     for (const r of this.rings) {
@@ -1410,6 +1421,8 @@ export class LevelScene {
       lean: aiming && this.aimFrom ? Math.min(1, p.len / MAX_PULL) : 0,
       cheer,
       look: Math.atan2(this.cy - (ky - 45), this.cx - kx),
+      emote: this.emoteAt >= 0 && this.time - this.emoteAt < 6,
+      et: this.time - this.emoteAt,
     });
     drawLauncher(g, this.look.launcher, L.x, L.y, this.time, { x: ox, y: oy }, KINDS[this.cur].color, this.o.mastered);
     this.drawNovaMeter(L.x, L.y, aiming);
