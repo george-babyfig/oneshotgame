@@ -1,6 +1,9 @@
 import { BIOMES, KINDS, SECTORS, SPECIES_BY_ID, clonePlanet, impact, lifeScore, settle, type Kind, type Planet } from '../core/world';
 import { starsFor, type LevelDef } from '../core/levels';
 import { h, btn, fmt, modal, type Modal } from './dom';
+import { renderPlanet, surfaceK } from './art/planet';
+import { critterCanvas, drawCreature } from './art/critters';
+import { drawProjectile, projectileCanvas } from './art/projectiles';
 import { sfx } from './audio';
 import { haptic } from './haptics';
 
@@ -104,37 +107,6 @@ const GM = 5.2e7; // gravity strength (px^3/s^2)
 const MAX_PULL = 150;
 const PULL_TO_SPEED = 6.2;
 const SCOPE_STEPS = [16, 28, 44, 90];
-
-// --------------------------------------------------------------- emoji cache
-const emojiCache = new Map<string, HTMLCanvasElement>();
-function emoji(e: string, size: number): HTMLCanvasElement {
-  const s = Math.max(8, Math.round(size));
-  const key = `${e}|${s}`;
-  let c = emojiCache.get(key);
-  if (c) return c;
-  c = document.createElement('canvas');
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  c.width = c.height = Math.ceil(s * 1.3 * dpr);
-  const g = c.getContext('2d')!;
-  g.scale(dpr, dpr);
-  g.textAlign = 'center';
-  g.textBaseline = 'middle';
-  g.font = `${s}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
-  g.fillText(e, (s * 1.3) / 2, (s * 1.3) / 2 + s * 0.05);
-  emojiCache.set(key, c);
-  return c;
-}
-
-function drawEmoji(g: CanvasRenderingContext2D, e: string, x: number, y: number, size: number, rot = 0, alpha = 1) {
-  const c = emoji(e, size);
-  const w = size * 1.3;
-  g.save();
-  g.globalAlpha = alpha;
-  g.translate(x, y);
-  if (rot) g.rotate(rot);
-  g.drawImage(c, -w / 2, -w / 2, w, w);
-  g.restore();
-}
 
 export class LevelScene {
   el: HTMLElement;
@@ -313,9 +285,9 @@ export class LevelScene {
     }
     const k = KINDS[this.cur];
     const n = KINDS[this.next];
-    this.curEl.textContent = k.emoji;
+    this.curEl.replaceChildren(projectileCanvas(this.cur, 40));
     this.curEl.style.setProperty('--c', k.color);
-    this.nextEl.textContent = n.emoji;
+    this.nextEl.replaceChildren(projectileCanvas(this.next, 36));
     this.nextEl.style.setProperty('--c', n.color);
     this.descEl.replaceChildren(h('b', null, k.name), ` — ${k.desc}`);
     this.renderScore();
@@ -520,9 +492,7 @@ export class LevelScene {
   }
 
   private surfaceR(i: number) {
-    const s = this.planet.sectors[i];
-    const top = BIOMES[s.biome].sea ? Math.max(s.land, s.water) : s.land;
-    return this.R * (0.92 + top * 0.035);
+    return this.R * surfaceK(this.planet.sectors[i]);
   }
 
   private update(dt: number) {
@@ -706,7 +676,7 @@ export class LevelScene {
     const label = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', legendary: 'Legendary' }[sp.rarity];
     this.discoverEl.className = `discover show r-${sp.rarity}`;
     this.discoverEl.replaceChildren(
-      h('div', { class: 'd-emoji' }, sp.emoji),
+      h('div', { class: 'd-emoji' }, critterCanvas(sp.id, 56)),
       h(
         'div',
         { class: 'd-body' },
@@ -956,7 +926,7 @@ export class LevelScene {
         g.fill();
       });
       g.globalAlpha = 1;
-      drawEmoji(g, KINDS[sh.kind].emoji, sh.x, sh.y, 34, sh.t * 6);
+      drawProjectile(g, sh.kind, sh.x, sh.y, 30, this.time, sh.t * 6);
     }
     // particles
     for (const p of this.particles) {
@@ -988,88 +958,24 @@ export class LevelScene {
   }
 
   private drawPlanet() {
-    const g = this.g;
-    const { cx, cy, R } = this;
-    const step = (Math.PI * 2) / SECTORS;
-    const lifeK = Math.min(1, this.score / this.L.stars[2]);
-    // atmosphere
-    const glow =
-      this.o.glow === 'aurora'
-        ? `hsl(${(this.time * 40) % 360} 90% 65%)`
-        : this.o.glow === 'cosmic'
-          ? `hsl(${265 + Math.sin(this.time * 1.5) * 45} 95% 68%)`
-          : this.o.glow;
-    const atm = g.createRadialGradient(cx, cy, R * 0.9, cx, cy, R * (1.45 + lifeK * 0.25));
-    atm.addColorStop(0, glow + '');
-    atm.addColorStop(1, 'rgba(0,0,0,0)');
-    g.globalAlpha = 0.25 + lifeK * 0.35;
-    g.fillStyle = atm;
-    g.beginPath();
-    g.arc(cx, cy, R * 1.8, 0, Math.PI * 2);
-    g.fill();
-    g.globalAlpha = 1;
-    // planet body: soil disc with soft strata, crust ring coloured by biome
-    const body = g.createRadialGradient(cx - R * 0.3, cy - R * 0.35, R * 0.1, cx, cy, R);
-    body.addColorStop(0, '#8a7596');
-    body.addColorStop(1, '#4a3b5c');
-    g.fillStyle = body;
-    g.beginPath();
-    g.arc(cx, cy, R * 0.86, 0, Math.PI * 2);
-    g.fill();
-    g.strokeStyle = 'rgba(255,255,255,0.06)';
-    g.lineWidth = 2;
-    for (const k of [0.35, 0.55, 0.72]) {
-      g.beginPath();
-      g.arc(cx, cy, R * k, 0, Math.PI * 2);
-      g.stroke();
-    }
-    for (let i = 0; i < SECTORS; i++) {
-      const s = this.planet.sectors[i];
-      const B = BIOMES[s.biome];
-      const a0 = this.rot + i * step;
-      const r = this.surfaceR(i);
-      g.fillStyle = B.color;
-      g.beginPath();
-      g.arc(cx, cy, r, a0 - 0.006, a0 + step + 0.006);
-      g.arc(cx, cy, R * 0.8, a0 + step + 0.006, a0 - 0.006, true);
-      g.closePath();
-      g.fill();
-      const f = this.flash.find((x) => x.i === i);
-      if (f) {
-        g.globalAlpha = f.t * 1.4;
-        g.fillStyle = '#ffffff';
-        g.fill();
-        g.globalAlpha = 1;
-      }
-    }
-    const shade = g.createRadialGradient(cx - R * 0.4, cy - R * 0.45, R * 0.1, cx, cy, R * 1.25);
-    shade.addColorStop(0, 'rgba(255,255,255,0.22)');
-    shade.addColorStop(0.55, 'rgba(255,255,255,0)');
-    shade.addColorStop(1, 'rgba(0,0,20,0.4)');
-    g.fillStyle = shade;
-    g.beginPath();
-    g.arc(cx, cy, R * 1.12, 0, Math.PI * 2);
-    g.fill();
-    // decorations & creatures
-    for (let i = 0; i < SECTORS; i++) {
-      const s = this.planet.sectors[i];
-      const a = this.rot + (i + 0.5) * step;
-      const r = this.surfaceR(i);
-      const B = BIOMES[s.biome];
-      const up = a + Math.PI / 2;
-      if (B.deco && i % 2 === 0) {
-        drawEmoji(g, B.deco, cx + Math.cos(a) * (r - R * 0.06), cy + Math.sin(a) * (r - R * 0.06), R * 0.2, up, 0.95);
-      }
-      if (s.species) {
-        const sp = SPECIES_BY_ID[s.species];
+    const lifeK = this.o.endless ? 0.6 : Math.min(1, this.score / this.L.stars[2]);
+    renderPlanet(this.g, this.planet, {
+      cx: this.cx,
+      cy: this.cy,
+      R: this.R,
+      rot: this.rot,
+      time: this.time,
+      glow: this.o.glow,
+      lifeK,
+      flash: (i) => (this.flash.find((f) => f.i === i)?.t ?? 0) * 1.4,
+      creature: (g, i, x, y, a) => {
+        const sp = SPECIES_BY_ID[this.planet.sectors[i].species!];
         const anim = this.spawnAnim.get(i) ?? 0;
-        const bob = Math.sin(this.time * 3 + i) * R * 0.02;
         const pop = anim > 0 ? 1 + Math.sin((anim / 0.9) * Math.PI) * 0.8 : 1;
-        const rr = r + R * 0.13 + bob;
-        const size = R * (sp.rarity === 'common' ? 0.24 : sp.rarity === 'uncommon' ? 0.28 : 0.34) * pop;
-        drawEmoji(g, sp.emoji, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, size, up);
-      }
-    }
+        const size = this.R * (sp.rarity === 'common' ? 0.2 : sp.rarity === 'uncommon' ? 0.24 : 0.3) * pop;
+        drawCreature(g, sp.id, x, y, a + Math.PI / 2, size, this.time + i);
+      },
+    });
   }
 
   private predictCache: { key: string; label: string; delta: number; spawn: string } | null = null;
@@ -1135,7 +1041,7 @@ export class LevelScene {
       const bounce = this.aimFrom ? 0 : Math.sin(this.time * 3) * 3;
       const ox = this.aimFrom ? -p.vx / PULL_TO_SPEED / 3 : 0;
       const oy = this.aimFrom ? -p.vy / PULL_TO_SPEED / 3 : 0;
-      drawEmoji(this.g, KINDS[this.cur].emoji, L.x + ox, L.y + oy + bounce, 40);
+      drawProjectile(this.g, this.cur, L.x + ox, L.y + oy + bounce, 36, this.time);
       if (this.aimFrom && p.len >= 18) {
         // trajectory preview
         const steps = SCOPE_STEPS[this.o.boosters.scope ? 3 : this.o.scopeLevel];

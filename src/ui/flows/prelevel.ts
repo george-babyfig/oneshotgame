@@ -7,6 +7,7 @@ import { KINDS } from '../../core/world';
 import { BOOSTERS, type BoosterId } from '../../meta/config';
 import { spendDust } from '../../meta/economy';
 import { chapterOf } from '../../meta/progression';
+import { projectileCanvas } from '../art/projectiles';
 import type { App, Boosters } from '../app';
 
 export function preLevel(app: App, n: number) {
@@ -74,7 +75,12 @@ export function preLevel(app: App, n: number) {
         'div',
         { class: 'kinds' },
         ...kinds.map((k) =>
-          h('span', { class: `kc${k === newKind ? ' new' : ''}`, title: k.desc }, k.emoji, k === newKind ? h('small', null, 'NEW') : null),
+          h(
+            'span',
+            { class: `kc${k === newKind ? ' new' : ''}`, title: k.desc },
+            projectileCanvas(k.id, 34),
+            k === newKind ? h('small', null, 'NEW') : null,
+          ),
         ),
       ),
       newKind ? h('p', { class: 'newkind' }, `New: ${newKind.emoji} ${newKind.name} — ${newKind.desc}`) : null,

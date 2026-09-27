@@ -1,5 +1,6 @@
 // Animated galaxy on the home screen: your finished planets orbit a sun.
 import { SPECIES_BY_ID } from '../../core/world';
+import { drawCreature } from '../art/critters';
 import type { GalaxyPlanet } from '../../meta/profile';
 
 const rnd = (i: number) => (((Math.sin(i * 91.7) * 43758.5) % 1) + 1) % 1;
@@ -93,10 +94,7 @@ export function drawGalaxy(
       g.fill();
       const sp = pl.species[0] ? SPECIES_BY_ID[pl.species[0]] : null;
       if (sp) {
-        g.font = `${Math.round(size * 1.1)}px "Apple Color Emoji","Noto Color Emoji",sans-serif`;
-        g.textAlign = 'center';
-        g.textBaseline = 'middle';
-        g.fillText(sp.emoji, x, y - size - 6 + Math.sin(t * 3 + i) * 1.5);
+        drawCreature(g, sp.id, x, y - size + 1 + Math.sin(t * 3 + i) * 1.2, 0, size * 1.05, t + i);
       }
     });
     raf = requestAnimationFrame(draw);

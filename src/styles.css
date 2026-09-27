@@ -1966,3 +1966,26 @@ button.lb {
     font-size: 23px;
   }
 }
+.lb.locked .lbe canvas,
+.lb-big.locked canvas {
+  filter: brightness(0) opacity(0.35);
+}
+.lbe canvas,
+.lb-big canvas,
+.visit-emoji canvas,
+.d-emoji canvas {
+  display: block;
+  margin: 0 auto;
+}
+.lb-big {
+  display: grid;
+  place-items: center;
+}
+.kc canvas,
+.obj canvas {
+  display: block;
+  pointer-events: none;
+}
+.obj {
+  font-size: 0;
+}

@@ -4,6 +4,7 @@ import { sfx } from '../audio';
 import { haptic } from '../haptics';
 import { SPECIES_BY_ID } from '../../core/world';
 import { openVisitor, mementoName } from '../../meta/visitors';
+import { critterCanvas } from '../art/critters';
 import type { App } from '../app';
 
 export function visitorsFlow(app: App) {
@@ -25,7 +26,7 @@ export function visitorsFlow(app: App) {
     sfx.creature(!!v.memento);
     haptic.success();
     const kids = [
-      h('div', { class: 'visit-emoji' }, sp?.emoji ?? '✨'),
+      h('div', { class: 'visit-emoji' }, critterCanvas(v.species, 120)),
       h('div', { class: 'm-title' }, `${sp?.name ?? 'A visitor'} dropped by!`),
       h('div', { class: 'reward-list' }, h('span', null, `✨ ${fmt(v.dust)}`), v.gems ? h('span', null, `💎 ${v.gems}`) : null),
       v.memento ? h('div', { class: 'memento' }, h('small', null, 'Memento'), h('b', null, `🎀 ${mementoName(v.memento)}`)) : null,

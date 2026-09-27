@@ -46,7 +46,7 @@ export interface BiomeDef {
 }
 
 export const BIOMES: Record<BiomeId, BiomeDef> = {
-  barren: { id: 'barren', name: 'Bare Rock', value: 0, color: '#6b5b73', deco: '', recipe: 'Where nothing has landed yet' },
+  barren: { id: 'barren', name: 'Bare Rock', value: 0, color: '#a08aa6', deco: '', recipe: 'Where nothing has landed yet' },
   ocean: { id: 'ocean', name: 'Ocean', value: 2, color: '#2f7fe0', deco: '🌊', sea: true, recipe: '☄️ Ice on low ground' },
   reef: { id: 'reef', name: 'Reef', value: 5, color: '#1fc6c0', deco: '🪸', sea: true, recipe: '🌱 Seeds in the ocean' },
   icesheet: {

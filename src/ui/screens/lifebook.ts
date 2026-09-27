@@ -7,6 +7,7 @@ import type { App } from '../app';
 import { btn, toast } from '../dom';
 import { HABITATS, habitatProgress } from '../../meta/habitats';
 import { applyReward, rewardText } from '../../meta/progression';
+import { critterCanvas } from '../art/critters';
 import { mementoName } from '../../meta/visitors';
 
 const ORDER: Rarity[] = ['common', 'uncommon', 'rare', 'legendary'];
@@ -14,7 +15,7 @@ const LABEL: Record<Rarity, string> = { common: 'Common', uncommon: 'Uncommon', 
 
 function card(s: SpeciesDef, got: boolean) {
   modal([
-    h('div', { class: `lb-big r-${s.rarity}${got ? '' : ' locked'}` }, got ? s.emoji : '?'),
+    h('div', { class: `lb-big r-${s.rarity}${got ? '' : ' locked'}` }, critterCanvas(s.id, 120)),
     h('div', { class: 'm-sub' }, LABEL[s.rarity]),
     h('div', { class: 'm-title' }, got ? s.name : 'Undiscovered'),
     h('p', { class: 'muted' }, `Lives: ${s.hint}`),
@@ -38,7 +39,7 @@ export function showLifebook(app: App) {
           return h(
             'button',
             { class: `lb r-${r}${got ? '' : ' locked'}`, onclick: () => (sfx.click(), card(s, got)) },
-            h('div', { class: 'lbe' }, got ? s.emoji : '?'),
+            h('div', { class: 'lbe' }, critterCanvas(s.id, 56)),
             h('div', { class: 'lbn' }, got ? s.name : '???'),
             h('div', { class: 'lbh' }, s.hint),
           );
