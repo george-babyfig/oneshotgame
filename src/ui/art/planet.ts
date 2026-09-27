@@ -114,32 +114,52 @@ export function renderPlanet(g: G, p: Planet, v: PlanetView) {
       g.globalAlpha = 1;
     }
   }
-  // soil and rocky core
-  const soil = g.createRadialGradient(cx, cy, R * 0.1, cx, cy, R * 0.8);
-  soil.addColorStop(0, '#3a2440');
-  soil.addColorStop(0.7, '#6a4a5c');
-  soil.addColorStop(0.86, 'rgba(120,86,100,0.75)');
-  soil.addColorStop(1, 'rgba(120,86,100,0)');
-  g.fillStyle = soil;
+  // soil band under the biomes (darkens the lower terrain for depth)
+  const band = g.createRadialGradient(cx, cy, R * 0.74, cx, cy, R * 0.9);
+  band.addColorStop(0, 'rgba(40,20,40,0.45)');
+  band.addColorStop(1, 'rgba(40,20,40,0)');
+  g.fillStyle = band;
   g.beginPath();
-  g.arc(cx, cy, R * 0.8, 0, Math.PI * 2);
+  g.arc(cx, cy, R * 0.9, 0, Math.PI * 2);
   g.fill();
-  // strata lines
-  g.strokeStyle = 'rgba(255,220,200,0.07)';
-  g.lineWidth = Math.max(1, R * 0.015);
-  for (const k of [0.36, 0.5, 0.62]) {
+  // crisp cutaway: rock mantle with a glowing magma heart
+  const mantleR = R * 0.76;
+  const mantle = g.createRadialGradient(cx - R * 0.15, cy - R * 0.2, R * 0.05, cx, cy, mantleR);
+  mantle.addColorStop(0, '#8a5a6e');
+  mantle.addColorStop(1, '#4e3350');
+  g.fillStyle = mantle;
+  g.beginPath();
+  g.arc(cx, cy, mantleR, 0, Math.PI * 2);
+  g.fill();
+  // strata rings (slowly turning)
+  g.lineWidth = Math.max(1, R * 0.02);
+  for (const [k, col] of [
+    [0.66, 'rgba(255,210,190,0.12)'],
+    [0.54, 'rgba(0,0,0,0.12)'],
+    [0.44, 'rgba(255,210,190,0.1)'],
+  ] as [number, string][]) {
+    g.strokeStyle = col;
     g.beginPath();
-    g.arc(cx, cy, R * k, rot * 0.5, rot * 0.5 + Math.PI * 1.6);
+    g.arc(cx, cy, R * k, rot * 0.5, rot * 0.5 + Math.PI * 1.7);
     g.stroke();
   }
-  // glowing core
-  const core = g.createRadialGradient(cx, cy, 0, cx, cy, R * 0.3);
-  core.addColorStop(0, 'rgba(255,170,90,0.55)');
-  core.addColorStop(1, 'rgba(255,120,60,0)');
+  // magma core
+  const pulse = 1 + Math.sin(time * 2) * 0.04;
+  const core = g.createRadialGradient(cx, cy, 0, cx, cy, R * 0.34 * pulse);
+  core.addColorStop(0, '#fff2a8');
+  core.addColorStop(0.35, '#ffb13d');
+  core.addColorStop(0.75, '#e0562e');
+  core.addColorStop(1, 'rgba(160,50,50,0)');
   g.fillStyle = core;
   g.beginPath();
-  g.arc(cx, cy, R * 0.3, 0, Math.PI * 2);
+  g.arc(cx, cy, R * 0.34 * pulse, 0, Math.PI * 2);
   g.fill();
+  // mantle edge
+  g.strokeStyle = 'rgba(30,12,35,0.45)';
+  g.lineWidth = Math.max(1.5, R * 0.025);
+  g.beginPath();
+  g.arc(cx, cy, mantleR, 0, Math.PI * 2);
+  g.stroke();
   g.restore();
 
   // grassy / sandy lip along the surface

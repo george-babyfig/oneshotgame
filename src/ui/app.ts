@@ -319,6 +319,10 @@ export class App {
     levelResults(this, r);
   }
 
+  skinGlow() {
+    return (SKINS.find((s) => s.id === this.p.skin) ?? SKINS[0]).glow;
+  }
+
   // ------------------------------------------------------------------ purchases
   priceOf(key: string) {
     const pr = PRODUCT_BY_KEY[key];

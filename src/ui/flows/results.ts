@@ -6,6 +6,7 @@ import { chestsReady, questsClaimable, roadReady } from '../../meta/progression'
 import { totalStars } from '../../meta/profile';
 import { FINISH_DUST_PER_THROW, type LevelResult } from '../game';
 import type { App } from '../app';
+import { sharePostcard } from '../postcard';
 import { addTokens, ensureEvent, eventActive, eventReady } from '../../meta/events';
 import { askForReminders, maybeAskReview } from '../platform';
 
@@ -51,6 +52,18 @@ export function levelResults(app: App, r: LevelResult) {
       ),
       h('p', { class: 'muted' }, `It now makes ✨${planetRate(out.entry)}/hour for you, even while you're away.`),
       ...extras,
+      btn('📮 Share postcard', 'ghost wide small-btn', () =>
+        sharePostcard(
+          r.planet,
+          {
+            title: r.level.name,
+            subtitle: `Planet ${n} · ${r.planet.speciesFound.length} creatures · ${r.score} life`,
+            stars: r.stars,
+            glow: app.skinGlow(),
+          },
+          `I grew ${r.score} life on ${r.level.name} in Pocket Planet! 🪐`,
+        ),
+      ),
       h(
         'div',
         { class: 'row' },
