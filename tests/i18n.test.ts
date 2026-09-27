@@ -62,6 +62,7 @@ export function allKeys(): string[] {
     'Challenge a Friend',
     'Send a code, play the same planet, compare scores.',
   ].forEach(add);
+  ['Common', 'Uncommon', 'Rare', 'Legendary'].forEach(add); // src/ui/text.ts rarityName()
   ['short', 'medium', 'long', 'full', 'Someone', 'Paradise!', 'Thriving!', 'Blooming!', 'Nice!'].forEach(add);
   keys.delete('');
   return [...keys].sort();

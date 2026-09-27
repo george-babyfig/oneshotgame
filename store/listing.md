@@ -63,6 +63,10 @@ The first release. Thanks for playing!
 
 No account or login. Purchases can be tested with the included StoreKit configuration. Modes unlock with Explorer Rank (Daily Planet at rank 2, reached after about 5 planets).
 
+## Localized listings
+
+Spanish, French, German, Brazilian Portuguese and Japanese copy is in `listing.es.md`, `listing.fr.md`, `listing.de.md`, `listing.pt.md` and `listing.ja.md`. Localized screenshots are in `screenshots/<lang>/`. English is in `screenshots/`.
+
 ## Screenshots
 
 `store/screenshots/*.png` — 1290 × 2796 (6.7"/6.9" display). Regenerate with the Playwright script described in the README.
