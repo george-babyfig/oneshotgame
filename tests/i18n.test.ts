@@ -19,6 +19,7 @@ import { BUILDINGS } from '../src/meta/homeworld';
 import { FRAMES, REASON } from '../src/ui/screens/homeworld';
 import { PAINTS, RESIDENT_ACCS } from '../src/meta/homeworld';
 import { letterStrings } from '../src/meta/inbox';
+import { CONSTELLATIONS, MAT_NAMES } from '../src/meta/constellations';
 import { LORE } from '../src/meta/lore';
 import { OBJECT_TITLES } from '../src/meta/records';
 import { SEASON_NAMES, SKY_EVENTS } from '../src/meta/seasons';
@@ -72,6 +73,8 @@ export function allKeys(): string[] {
   RESIDENT_ACCS.forEach((x) => add(x.name));
   FRAMES.forEach((x) => add(x.name));
   letterStrings().forEach(add);
+  CONSTELLATIONS.forEach((c) => add(c.name));
+  Object.values(MAT_NAMES).forEach(add);
   Object.values(LORE).forEach(add);
   Object.values(OBJECT_TITLES).forEach(add);
   Object.values(SEASON_NAMES).forEach(add);

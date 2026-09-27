@@ -46,6 +46,7 @@ import { showPass } from './screens/pass';
 import { showHomeworld } from './screens/homeworld';
 import { parentalGate } from './flows/gate';
 import { inboxFlow } from './flows/inbox';
+import { showSky } from './screens/sky';
 import { tickHome } from '../meta/homeworld';
 import { labLevels } from '../meta/lab';
 import { addFling } from '../meta/records';
@@ -54,7 +55,7 @@ import { seasonOf, skyEventOn } from '../meta/seasons';
 import { keeperHead } from './art/keeper';
 
 export type ScreenName =
-  'home' | 'lifebook' | 'upgrades' | 'shop' | 'map' | 'road' | 'level' | 'workshop' | 'pass' | 'passport' | 'homeworld';
+  'home' | 'lifebook' | 'upgrades' | 'shop' | 'map' | 'road' | 'level' | 'workshop' | 'pass' | 'passport' | 'homeworld' | 'sky';
 export type Boosters = Record<BoosterId, boolean>;
 export const NO_BOOSTERS: Boosters = { shower: false, spark: false, scope: false };
 
@@ -190,6 +191,7 @@ export class App {
       passport: () => this.showPassport(),
       pass: () => this.showPass(),
       homeworld: () => this.showHomeworld(),
+      sky: () => this.showSky(),
     };
     this.refreshing = true;
     try {
@@ -226,6 +228,9 @@ export class App {
   }
   showPass() {
     showPass(this);
+  }
+  showSky() {
+    showSky(this);
   }
   inbox() {
     inboxFlow(this);

@@ -365,6 +365,32 @@ function drawHat(g: G, id: string, x: number, hy: number, r: number, t: number) 
       g.fill();
       break;
     }
+    case 'hat_snow': {
+      g.fillStyle = c0;
+      g.beginPath();
+      g.arc(x, top + r * 0.55, r * 0.76, Math.PI * 1.1, Math.PI * 1.9);
+      g.closePath();
+      g.fill();
+      g.strokeStyle = c1;
+      g.lineWidth = r * 0.07;
+      g.lineCap = 'round';
+      for (let k = 0; k < 3; k++) {
+        const a = (k / 3) * Math.PI + t * 0.3;
+        g.beginPath();
+        g.moveTo(x - Math.cos(a) * r * 0.22, top - r * 0.05 - Math.sin(a) * r * 0.22);
+        g.lineTo(x + Math.cos(a) * r * 0.22, top - r * 0.05 + Math.sin(a) * r * 0.22);
+        g.stroke();
+      }
+      break;
+    }
+    case 'hat_star': {
+      g.shadowColor = c0;
+      g.shadowBlur = 12;
+      star(g, x, top - r * 0.3 + Math.sin(t * 2) * r * 0.05, r * 0.45, c0);
+      g.shadowBlur = 0;
+      star(g, x - r * 0.08, top - r * 0.36 + Math.sin(t * 2) * r * 0.05, r * 0.15, c1);
+      break;
+    }
     case 'hat_halo': {
       g.strokeStyle = c0;
       g.shadowColor = c0;
@@ -448,8 +474,9 @@ export function drawLauncher(g: G, id: string, x: number, y: number, t: number, 
   };
   switch (id) {
     case 'l_twig':
+    case 'l_tree':
     case 'l_petal': {
-      g.strokeStyle = id === 'l_twig' ? c0 : '#4f9e5a';
+      g.strokeStyle = id === 'l_petal' ? '#4f9e5a' : c0;
       g.lineCap = 'round';
       g.lineWidth = 7;
       g.beginPath();
@@ -473,6 +500,23 @@ export function drawLauncher(g: G, id: string, x: number, y: number, t: number, 
           g.beginPath();
           g.arc(x + sx * 28, y - 8, 3, 0, Math.PI * 2);
           g.fill();
+        }
+      } else if (id === 'l_tree') {
+        // leafy crowns on both prongs, with a glow
+        for (const sx of [-1, 1]) {
+          const gl = g.createRadialGradient(x + sx * 28, y - 10, 2, x + sx * 28, y - 10, 18);
+          gl.addColorStop(0, 'rgba(125,255,176,0.55)');
+          gl.addColorStop(1, 'rgba(125,255,176,0)');
+          g.fillStyle = gl;
+          g.beginPath();
+          g.arc(x + sx * 28, y - 10, 18, 0, Math.PI * 2);
+          g.fill();
+          for (let k = 0; k < 4; k++) {
+            g.fillStyle = k % 2 ? c1 : '#8ef0a0';
+            g.beginPath();
+            g.ellipse(x + sx * 28 + Math.cos(k * 1.6 + t) * 6, y - 10 + Math.sin(k * 1.6) * 5, 6, 4, k, 0, Math.PI * 2);
+            g.fill();
+          }
         }
       } else {
         g.fillStyle = c1;
@@ -600,6 +644,7 @@ export function drawTrail(g: G, id: string, pts: { x: number; y: number }[], t: 
         g.fill();
         break;
       case 'tr_rainbow':
+      case 'tr_aurora':
       case 'tr_cosmic': {
         const cs = COSMETIC_BY_ID[id].colors;
         if (k === 0) break;

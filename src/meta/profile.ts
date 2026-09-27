@@ -126,6 +126,10 @@ export interface Profile {
   bosses: number[];
   /** Saved Keeper outfits (Workshop presets). */
   presets: (Record<string, string> | null)[];
+  /** Constellations: materials from level drops, filled bundles, lit constellations. */
+  mats: Partial<Record<'stone' | 'dew' | 'leaf' | 'ember' | 'frost', number>>;
+  bundles: string[];
+  constellations: string[];
 }
 
 const KEY = 'pp.profile';
@@ -194,6 +198,9 @@ export function defaultProfile(now = Date.now()): Profile {
     mail: [],
     bosses: [],
     presets: [null, null, null],
+    mats: {},
+    bundles: [],
+    constellations: [],
   };
 }
 

@@ -3389,3 +3389,98 @@ button.lb {
   font-size: 16px;
   padding: 4px;
 }
+
+/* ---------------------------------------------------------------- star atlas */
+.mats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.mats span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 2px;
+  border-radius: 12px;
+  background: var(--panel);
+}
+.mats small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.const-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #1d1850, var(--panel) 70%);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.const-card.lit {
+  box-shadow: inset 0 0 0 2px #ffe58a;
+}
+.const-card.locked {
+  opacity: 0.5;
+}
+.const-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.const-head .grow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.const-head small {
+  color: var(--muted);
+}
+.const-reward {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--dust);
+}
+.bundles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.bundle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.bundle .need {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--muted);
+}
+.bundle .need .ok {
+  color: var(--life);
+}
+.bundle.done {
+  opacity: 0.6;
+}
+.bundle .tick {
+  color: var(--life);
+}
+.drops {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+.drops small {
+  color: var(--muted);
+}

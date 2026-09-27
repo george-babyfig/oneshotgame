@@ -10,7 +10,7 @@ import { HABITATS } from './habitats';
 export type Slot = 'suit' | 'hat' | 'launcher' | 'trail' | 'emote';
 export const SLOTS: Slot[] = ['suit', 'hat', 'launcher', 'trail', 'emote'];
 
-export type Source = 'free' | 'gems' | 'road' | 'pass' | 'rank' | 'habitat' | 'starter' | 'event' | 'calendar';
+export type Source = 'free' | 'gems' | 'road' | 'pass' | 'rank' | 'habitat' | 'starter' | 'event' | 'calendar' | 'constellation';
 /** Presentation tier only (frame colour); it never affects odds because nothing is random. */
 export type Tier = 'basic' | 'fancy' | 'epic';
 
@@ -89,6 +89,24 @@ export const COSMETICS: Cosmetic[] = [
     tier: 'epic',
     colors: ['#1a2a6e', '#9fe6ff', '#050818'],
   }),
+  c({
+    id: 'suit_tide',
+    slot: 'suit',
+    name: 'Tide Diver',
+    source: 'constellation',
+    unlock: 'otter',
+    tier: 'epic',
+    colors: ['#2fc6b8', '#e8fffb', '#0a2e3a'],
+  }),
+  c({
+    id: 'suit_ember',
+    slot: 'suit',
+    name: 'Ember Suit',
+    source: 'constellation',
+    unlock: 'ember',
+    tier: 'epic',
+    colors: ['#e0552f', '#ffd07a', '#2a0a10'],
+  }),
   // hats
   c({ id: 'hat_none', slot: 'hat', name: 'Bare Helmet', source: 'free', tier: 'basic', colors: [] }),
   c({ id: 'hat_antenna', slot: 'hat', name: 'Antenna', source: 'free', tier: 'basic', colors: ['#ff6a7a'] }),
@@ -106,6 +124,24 @@ export const COSMETICS: Cosmetic[] = [
   }),
   c({ id: 'hat_wizard', slot: 'hat', name: 'Star Wizard', source: 'rank', unlock: 5, tier: 'fancy', colors: ['#4a3aa8', '#ffd24a'] }),
   c({ id: 'hat_beanie', slot: 'hat', name: 'Cozy Beanie', source: 'calendar', unlock: 14, tier: 'fancy', colors: ['#ff6a7a', '#ffffff'] }),
+  c({
+    id: 'hat_snow',
+    slot: 'hat',
+    name: 'Snowflake Cap',
+    source: 'constellation',
+    unlock: 'frost',
+    tier: 'epic',
+    colors: ['#9fe6ff', '#ffffff'],
+  }),
+  c({
+    id: 'hat_star',
+    slot: 'hat',
+    name: 'Star Crown',
+    source: 'constellation',
+    unlock: 'crown',
+    tier: 'epic',
+    colors: ['#ffd24a', '#fff6b0'],
+  }),
   c({ id: 'hat_crown', slot: 'hat', name: 'Tiny Crown', source: 'road', tier: 'epic', colors: ['#ffd24a', '#ff4a8a'] }),
   c({ id: 'hat_halo', slot: 'hat', name: 'Halo Ring', source: 'pass', tier: 'epic', colors: ['#ffe58a'], set: 'captain' }),
   // launchers
@@ -113,6 +149,15 @@ export const COSMETICS: Cosmetic[] = [
   c({ id: 'l_twig', slot: 'launcher', name: 'Twig Sling', source: 'rank', unlock: 2, tier: 'basic', colors: ['#a0743a', '#e0b050'] }),
   c({ id: 'l_petal', slot: 'launcher', name: 'Petal Sling', source: 'gems', gems: 200, tier: 'fancy', colors: ['#ff8fc8', '#5ecf5a'] }),
   c({ id: 'l_cannon', slot: 'launcher', name: 'Comet Cannon', source: 'gems', gems: 250, tier: 'fancy', colors: ['#6e8cff', '#ffd24a'] }),
+  c({
+    id: 'l_tree',
+    slot: 'launcher',
+    name: 'World Tree',
+    source: 'constellation',
+    unlock: 'tree',
+    tier: 'epic',
+    colors: ['#6a4a2a', '#5ecf6a'],
+  }),
   c({ id: 'l_crystal', slot: 'launcher', name: 'Crystal Arc', source: 'road', tier: 'epic', colors: ['#7fdcff', '#d8f6ff'] }),
   c({
     id: 'l_orbit',
@@ -129,6 +174,15 @@ export const COSMETICS: Cosmetic[] = [
   c({ id: 'tr_hearts', slot: 'trail', name: 'Hearts', source: 'gems', gems: 120, tier: 'fancy', colors: ['#ff6a9a'] }),
   c({ id: 'tr_bubbles', slot: 'trail', name: 'Bubbles', source: 'rank', unlock: 4, tier: 'fancy', colors: ['#9fe6ff'] }),
   c({ id: 'tr_embers', slot: 'trail', name: 'Embers', source: 'habitat', unlock: 'sun', tier: 'fancy', colors: ['#ff8a3d', '#ffd24a'] }),
+  c({
+    id: 'tr_aurora',
+    slot: 'trail',
+    name: 'Aurora',
+    source: 'constellation',
+    unlock: 'mill',
+    tier: 'epic',
+    colors: ['#6ef2c0', '#6ec8ff', '#b58cff'],
+  }),
   c({
     id: 'tr_rainbow',
     slot: 'trail',
@@ -183,6 +237,8 @@ export function owns(p: Profile, id: string): boolean {
       return p.starter;
     case 'calendar':
       return p.daily.streak >= (x.unlock as number);
+    case 'constellation':
+      return p.constellations.includes(x.unlock as string);
     case 'rank':
       return p.rank >= (x.unlock as number);
     case 'habitat':
@@ -251,6 +307,8 @@ export function sourceText(x: Cosmetic): string {
       return t('Weekly event');
     case 'calendar':
       return t('Star Calendar day {n}', { n: x.unlock as number });
+    case 'constellation':
+      return t('Constellation');
     case 'road': {
       const r = roadTierOf(x.id);
       return r ? t('Star Road {n}★', { n: STAR_ROAD[r.i].stars }) : t('Star Road');

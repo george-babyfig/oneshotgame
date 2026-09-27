@@ -68,6 +68,8 @@ import { drawCreature, critterCanvas } from '../art/critters';
 import { drawKeeper } from '../art/keeper';
 import { drawDebris, drawDrone, drawStructure } from '../art/structures';
 import { shareCanvas } from '../postcard';
+import { CONSTELLATION_BY_ID, constellationsReady } from '../../meta/constellations';
+import { drawConstellation } from './sky';
 import { SEASON_EMOJI, SEASON_NAMES, nightness, seasonOf } from '../../meta/seasons';
 import { drawMeteors, drawSeason } from '../art/seasons';
 import { passportName } from '../../meta/passport';
@@ -119,6 +121,16 @@ function gotText(c: Collected) {
   for (const [k, v] of Object.entries(c.boosters)) if (v) parts.push(`${e[k]}×${v}`);
   return parts.join('  ');
 }
+
+/** Where relit constellations sit in the Homeworld sky (fractions of the canvas). */
+const SKY_SLOTS: [number, number][] = [
+  [0.66, 0.02],
+  [0.02, 0.82],
+  [0.66, 0.82],
+  [0.36, 0.0],
+  [0.36, 0.86],
+  [0.02, 0.3],
+];
 
 let selected = -1;
 let moving = -1;
@@ -235,6 +247,16 @@ export function showHomeworld(app: App) {
       g.fill();
     }
     g.globalAlpha = 1;
+    // constellations you've relit shine in the sky
+    p.constellations.forEach((id, k) => {
+      const c = CONSTELLATION_BY_ID[id];
+      const slot = SKY_SLOTS[k % SKY_SLOTS.length];
+      if (c) {
+        g.globalAlpha = 0.75;
+        drawConstellation(g, c, slot[0] * w, slot[1] * hh, w * 0.3, hh * 0.16, c.stars.length, time, true);
+        g.globalAlpha = 1;
+      }
+    });
     // atmosphere + ring hint
     const atm = g.createRadialGradient(geo.cx, geo.cy, R * 0.9, geo.cx, geo.cy, R * 1.9);
     atm.addColorStop(0, 'rgba(110,200,255,0.35)');
@@ -246,14 +268,18 @@ export function showHomeworld(app: App) {
     // sun by day, moon by night
     const night = nightness(new Date());
     if (night < 0.8) {
-      const sx = w * 0.12;
-      const sy = hh * 0.12;
-      const sg = g.createRadialGradient(sx, sy, 4, sx, sy, 70);
+      const sx = w * 0.16;
+      const sy = hh * 0.14;
+      const sg = g.createRadialGradient(sx, sy, 4, sx, sy, 46);
       sg.addColorStop(0, `rgba(255,236,160,${0.8 * (1 - night)})`);
       sg.addColorStop(1, 'rgba(255,236,160,0)');
       g.fillStyle = sg;
       g.beginPath();
-      g.arc(sx, sy, 70, 0, TAU);
+      g.arc(sx, sy, 46, 0, TAU);
+      g.fill();
+      g.fillStyle = `rgba(255,240,190,${1 - night})`;
+      g.beginPath();
+      g.arc(sx, sy, 11, 0, TAU);
       g.fill();
     }
     if (night > 0.2) {
@@ -512,6 +538,7 @@ export function showHomeworld(app: App) {
           btn(t('📷 Photo'), 'ghost', () => photoMode(app, canvas)),
         ),
       );
+      kids.push(btn(`✨ ${t('Star Atlas')}${constellationsReady(p) ? ' •' : ''}`, 'ghost wide', () => app.showSky()));
     } else if (home.debris.includes(i)) {
       kids.push(h('div', { class: 'hw-title' }, t('Meteor rock')));
       kids.push(h('p', { class: 'muted' }, t('Tap it to clear it away (+{n} stardust).', { n: DEBRIS_DUST })));

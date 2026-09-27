@@ -14,6 +14,7 @@ import { addTokens, ensureEvent, eventActive, eventReady } from '../../meta/even
 import { askForReminders, maybeAskReview } from '../platform';
 import { t, tp } from '../../i18n';
 import { homeUnlocked, speedUpBuilds } from '../../meta/homeworld';
+import { MAT_EMOJI, addDrops, dropsFor, type Mat } from '../../meta/constellations';
 
 export function levelResults(app: App, r: LevelResult) {
   const p = app.p;
@@ -39,6 +40,20 @@ export function levelResults(app: App, r: LevelResult) {
   if (eventActive(p) && eventReady(p).length)
     extras.push(h('div', { class: 'nudge' }, t('{emoji} Event reward ready!', { emoji: ensureEvent(p).emoji })));
   if (questsClaimable(p)) extras.push(h('div', { class: 'nudge' }, t('📜 A quest is complete!')));
+  // materials for the constellations (from the lands on this planet)
+  const drops = dropsFor(r.planet, r.stars);
+  if (Object.keys(drops).length) {
+    addDrops(p, drops);
+    app.save();
+    extras.unshift(
+      h(
+        'div',
+        { class: 'drops' },
+        h('small', null, t('Materials')),
+        ...Object.entries(drops).map(([m, n]) => h('span', null, `${MAT_EMOJI[m as Mat]} ${n}`)),
+      ),
+    );
+  }
   if (r.boss && !p.bosses.includes(n)) {
     p.bosses.push(n);
     applyReward(p, BOSS_REWARD);
