@@ -113,6 +113,9 @@ export function difficultyOf(n: number, seedPrefix = 'PP'): Difficulty {
 
 export const DIFFICULTY_DUST: Record<Difficulty, number> = { normal: 1, hard: 2, super: 3 };
 
+/** Reviewed layout substitutions for campaign slots. Zero means the original layout. */
+export const LEVEL_SALT: Partial<Record<number, number>> = { 24: 48 };
+
 const NAMES_A = [
   'Pebble',
   'Mossy',
@@ -244,8 +247,9 @@ function pickGoals(n: number, difficulty: Difficulty, start: Planet, plan: Plane
 }
 
 /** `o.goals` / `o.boss` give non-campaign planets (the weekly Voyage) goals and a Comet Guardian. */
-export function makeLevel(n: number, seedPrefix = 'PP', o: { goals?: boolean; boss?: boolean } = {}): LevelDef {
-  const seed = `${seedPrefix}-${n}`;
+export function makeLevel(n: number, seedPrefix = 'PP', o: { goals?: boolean; boss?: boolean; salt?: number } = {}): LevelDef {
+  const salt = o.salt ?? (seedPrefix === 'PP' ? LEVEL_SALT[n] : undefined);
+  const seed = `${seedPrefix}-${n}${salt ? `~${salt}` : ''}`;
   const rnd = rngFrom(seed);
   const kinds = availableKinds(n);
   let twist: Twist = 'none';

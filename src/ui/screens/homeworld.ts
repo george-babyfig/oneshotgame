@@ -772,7 +772,7 @@ export function showHomeworld(app: App) {
   if (!home.intro) {
     home.intro = true;
     app.save();
-    modal([
+    const m = modal([
       h('div', { class: 'm-title' }, t('Welcome to your Homeworld!')),
       h(
         'div',
@@ -782,6 +782,7 @@ export function showHomeworld(app: App) {
         h('p', null, t('🦦 Invite creatures from your Lifebook to live here — they will ask you for small favours.')),
         h('p', null, t('🌍 Finish chapters to grow your planet and unlock new buildings.')),
       ),
+      btn(t('Got it!'), 'primary wide', () => m.close()),
     ]);
   }
 }

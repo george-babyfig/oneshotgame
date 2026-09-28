@@ -1,3 +1,5 @@
+import { MILESTONE_REWARD } from './tuning';
+import { ALBUM_PAGES } from './tuning';
 // Sticker Album: every sticker is earned by doing something specific
 // (discovering a creature, a festival, a finished Voyage, a feat). No packs, no
 // duplicates, no randomness. Stickers you own can be placed freely on three
@@ -100,12 +102,7 @@ export interface AlbumPage {
 }
 
 /** Collection pages; filling one pays its reward once. */
-export const ALBUM_PAGES: AlbumPage[] = [
-  { id: 'critter', name: 'Critters', reward: { gems: 100 } },
-  { id: 'fest', name: 'Festivals', reward: { gems: 80 } },
-  { id: 'voyage', name: 'Voyages', reward: { gems: 60 } },
-  { id: 'feat', name: 'Feats', reward: { gems: 60 } },
-];
+export { ALBUM_PAGES } from './tuning';
 
 export const pageStickers = (kind: StickerKind) => STICKERS.filter((s) => s.kind === kind);
 
@@ -117,7 +114,7 @@ export const hasSticker = (p: Profile, id: string) => !!STICKER_BY_ID[id]?.earne
 
 /** Every 10 stickers pays a small gem bonus. */
 export const MILESTONE_EVERY = 10;
-export const MILESTONE_REWARD: Reward = { gems: 10 };
+export { MILESTONE_REWARD } from './tuning';
 
 export function milestonesReady(p: Profile) {
   return Math.max(0, Math.floor(ownedStickers(p).length / MILESTONE_EVERY) - p.album.milestones);
@@ -136,7 +133,7 @@ export function claimMilestones(p: Profile): Reward | null {
   if (!n) return null;
   p.album.milestones += n;
   const r: Reward = { gems: (MILESTONE_REWARD.gems ?? 0) * n };
-  applyReward(p, r);
+  applyReward(p, r, 'album');
   return r;
 }
 
@@ -144,7 +141,7 @@ export function claimPage(p: Profile, kind: StickerKind): Reward | null {
   const pg = ALBUM_PAGES.find((x) => x.id === kind);
   if (!pg || !pageDone(p, kind) || p.album.pagesClaimed.includes(kind)) return null;
   p.album.pagesClaimed = [...p.album.pagesClaimed, kind];
-  applyReward(p, pg.reward);
+  applyReward(p, pg.reward, 'album');
   return pg.reward;
 }
 

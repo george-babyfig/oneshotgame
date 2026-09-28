@@ -5,3 +5,5 @@ coverage/
 *.log
 .env*
 ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+test-results/
+playwright-report/

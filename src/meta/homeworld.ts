@@ -1,3 +1,16 @@
+import { RING_PLOTS, RING_CHAPTER, WIN_SPEEDUP, FRIEND_LEVELS, REQ_PERIOD, EXPEDITION_HOURS, DEBRIS_EVERY, DEBRIS_MAX } from './tuning';
+import { FRIENDSHIP_REWARD_GEMS_PER_LEVEL, FRIENDSHIP_TREAT, EXPEDITION_REWARD, EXPEDITION_MULTIPLIER } from './tuning';
+import { ledger } from './ledger';
+import { BASE_CAP_HOURS } from './tuning';
+import { RATE } from './tuning';
+import { COST_K } from './tuning';
+import { DEBRIS_DUST } from './tuning';
+import { PAINTS } from './tuning';
+import { RESIDENT_ACCS } from './tuning';
+import { RING_COST } from './tuning';
+import { BUILD_TIME } from './tuning';
+import { BUILDINGS } from './tuning';
+import { earn, spend } from './wallet';
 // Homeworld: the passive side of Pocket Planet. A planet of your own that grows
 // in rings; build and upgrade structures on its plots, invite creatures from
 // your Lifebook to live there, and send them on expeditions.
@@ -15,7 +28,6 @@ import { rngFrom } from '../core/levels';
 import { LEVELS_PER_CHAPTER } from './progression';
 
 const H = 3600e3;
-const M = 60e3;
 
 export type BuildingType =
   'mill' | 'greenhouse' | 'grove' | 'den' | 'tower' | 'observatory' | 'fountain' | 'lantern' | 'flowers' | 'statue';
@@ -37,75 +49,22 @@ export interface BuildingDef {
   max: number;
 }
 
-export const BUILDINGS: Record<BuildingType, BuildingDef> = {
-  mill: { type: 'mill', name: 'Stardust Mill', desc: 'Makes stardust while you are away', ring: 1, cost: 150, max: 3 },
-  den: { type: 'den', name: 'Critter Den', desc: 'A home for creatures from your Lifebook', ring: 1, cost: 250, max: 2 },
-  greenhouse: { type: 'greenhouse', name: 'Greenhouse', desc: 'Grows boosters for your levels', ring: 2, cost: 600, max: 2 },
-  tower: { type: 'tower', name: 'Launch Tower', desc: 'Sends residents on expeditions', ring: 2, cost: 900, max: 1 },
-  grove: { type: 'grove', name: 'Crystal Grove', desc: 'Slowly grows gems', ring: 3, cost: 2000, max: 2 },
-  observatory: {
-    type: 'observatory',
-    name: 'Observatory',
-    desc: 'Every producer stores more before it is full',
-    ring: 3,
-    cost: 2500,
-    max: 1,
-  },
-  fountain: {
-    type: 'fountain',
-    name: 'Star Fountain',
-    desc: 'Decoration · residents love it',
-    ring: 1,
-    cost: 300,
-    decor: true,
-    charm: 2,
-    max: 2,
-  },
-  lantern: {
-    type: 'lantern',
-    name: 'Moon Lantern',
-    desc: 'Decoration · residents love it',
-    ring: 1,
-    cost: 200,
-    decor: true,
-    charm: 1,
-    max: 3,
-  },
-  flowers: {
-    type: 'flowers',
-    name: 'Comet Flowers',
-    desc: 'Decoration · residents love it',
-    ring: 2,
-    cost: 400,
-    decor: true,
-    charm: 2,
-    max: 3,
-  },
-  statue: {
-    type: 'statue',
-    name: 'Keeper Statue',
-    desc: 'Decoration · residents adore it',
-    ring: 1,
-    cost: 0,
-    gems: 120,
-    decor: true,
-    charm: 4,
-    max: 1,
-  },
-};
+export { BUILDINGS } from './tuning';
+
 export const BUILDING_TYPES = Object.keys(BUILDINGS) as BuildingType[];
 
 export const MAX_LEVEL = 5;
 /** Build time for reaching each level (index = target level). */
-export const BUILD_TIME = [0, 30e3, 5 * M, 30 * M, 2 * H, 4 * H];
-const COST_K = [0, 1, 2.5, 6, 14, 30];
+export { BUILD_TIME } from './tuning';
+
 /** Plots on each ring; ring n needs chapter RING_CHAPTER[n] finished and RING_COST[n] stardust. */
-export const RING_PLOTS = [0, 6, 8, 10, 12, 14];
-export const RING_CHAPTER = [0, 0, 1, 3, 5, 8];
-export const RING_COST = [0, 0, 1500, 5000, 12000, 30000];
+export { RING_PLOTS } from './tuning';
+export { RING_CHAPTER } from './tuning';
+export { RING_COST } from './tuning';
+
 export const MAX_RING = 5;
 /** Winning a campaign level takes this much off every active build. */
-export const WIN_SPEEDUP = 10 * M;
+export { WIN_SPEEDUP } from './tuning';
 export const HOME_UNLOCK_LEVEL = 5;
 
 export interface Building {
@@ -132,25 +91,7 @@ export interface Resident {
 }
 
 /** Resident accessories: earned with friendship, or a couple bought with gems. */
-export const RESIDENT_ACCS: { id: string; name: string; friend?: number; gems?: number; fest?: boolean }[] = [
-  { id: 'bow', name: 'Bow', friend: 2 },
-  { id: 'flower', name: 'Flower', friend: 3 },
-  { id: 'scarf', name: 'Scarf', friend: 4 },
-  { id: 'crown', name: 'Tiny Crown', friend: 5 },
-  { id: 'shades', name: 'Sunglasses', gems: 40 },
-  { id: 'party', name: 'Party Hat', gems: 40 },
-  // festival keepsakes (see meta/festivals.ts), never sold
-  { id: 'heart', name: 'Heart Bopper', fest: true },
-  { id: 'leaf', name: 'Sprout', fest: true },
-  { id: 'rainhat', name: 'Rain Hat', fest: true },
-  { id: 'wreath', name: 'Flower Crown', fest: true },
-  { id: 'star', name: 'Star Clip', fest: true },
-  { id: 'lantern', name: 'Lantern', fest: true },
-  { id: 'acorn', name: 'Acorn Cap', fest: true },
-  { id: 'pumpkin', name: 'Pumpkin Hat', fest: true },
-  { id: 'knit', name: 'Knit Beanie', fest: true },
-  { id: 'pom', name: 'Pom-pom Hat', fest: true },
-];
+export { RESIDENT_ACCS } from './tuning';
 
 export function accAvailable(p: Profile, r: Resident, id: string) {
   const a = RESIDENT_ACCS.find((x) => x.id === id);
@@ -165,6 +106,7 @@ export function wearAcc(p: Profile, species: string, id: string | undefined): 'o
   if (!r) return 'locked';
   if (!id) {
     r.acc = undefined;
+    ledger.homeworldAction();
     return 'ok';
   }
   const a = RESIDENT_ACCS.find((x) => x.id === id);
@@ -172,9 +114,10 @@ export function wearAcc(p: Profile, species: string, id: string | undefined): 'o
   if (!accAvailable(p, r, id)) {
     if (a.friend || a.fest) return 'locked';
     if (p.gems < (a.gems ?? 0)) return 'gems';
-    p.gems -= a.gems ?? 0;
+    spend(p, 'gems', a.gems ?? 0, 'accessory');
     p.home.accs.push(id);
   }
+  ledger.homeworldAction();
   r.acc = id;
   return 'ok';
 }
@@ -266,20 +209,8 @@ export interface Paint {
   pass?: boolean;
 }
 
-export const PAINTS: Paint[] = [
-  { id: 'meadow', name: 'Meadow', channel: 'ground', colors: ['#8ef0a0', '#3fae6a', '#1f6a58'] },
-  { id: 'dune', name: 'Dune', channel: 'ground', colors: ['#ffe6a8', '#e0b060', '#9a6a30'] },
-  { id: 'snow', name: 'Snowdrift', channel: 'ground', colors: ['#ffffff', '#cfe4ff', '#7a9ac8'] },
-  { id: 'candy', name: 'Candy', channel: 'ground', colors: ['#ffd0ea', '#ff8fc8', '#b8467e'], gems: 120 },
-  { id: 'ember', name: 'Ember', channel: 'ground', colors: ['#ffb08a', '#d9553a', '#5a1a2a'], gems: 120 },
-  { id: 'crystal', name: 'Crystal', channel: 'ground', colors: ['#e6d6ff', '#a07aff', '#4a2a9a'], gems: 150 },
-  { id: 'gilded', name: 'Gilded', channel: 'ground', colors: ['#fff2b8', '#ffc94a', '#a0600a'], pass: true },
-  { id: 'blue', name: 'Ocean Blue', channel: 'sea', colors: ['#9fd6ff', '#46a0e6', '#1f5a9e'] },
-  { id: 'teal', name: 'Lagoon', channel: 'sea', colors: ['#a8fff0', '#3fd6c0', '#1a7a7a'] },
-  { id: 'rose', name: 'Rose Water', channel: 'sea', colors: ['#ffd0e6', '#ff7ab8', '#9a2a6a'], gems: 60 },
-  { id: 'nebula', name: 'Nebula', channel: 'sea', colors: ['#e0c8ff', '#9a6bff', '#3a1a8a'], gems: 60 },
-  { id: 'goldsea', name: 'Liquid Gold', channel: 'sea', colors: ['#fff6c8', '#ffd24a', '#b8800a'], pass: true },
-];
+export { PAINTS } from './tuning';
+
 export const PAINT_BY_ID: Record<string, Paint> = Object.fromEntries(PAINTS.map((x) => [x.id, x]));
 
 export function ownsPaint(p: Profile, id: string) {
@@ -296,9 +227,10 @@ export function applyPaint(p: Profile, id: string): 'ok' | 'gems' | 'pass' {
   if (!ownsPaint(p, id)) {
     if (x.pass) return 'pass';
     if (p.gems < (x.gems ?? 0)) return 'gems';
-    p.gems -= x.gems ?? 0;
+    spend(p, 'gems', x.gems ?? 0, 'cosmetic');
     p.home.paints.push(id);
   }
+  ledger.homeworldAction();
   p.home.paint = { ...p.home.paint, [x.channel]: id };
   return 'ok';
 }
@@ -368,9 +300,10 @@ export function build(p: Profile, plot: number, type: BuildingType, now = Date.n
   const c = canBuild(p, plot, type, now);
   if (c !== 'ok') return c;
   const d = BUILDINGS[type];
-  if (d.gems) p.gems -= d.gems;
-  else p.dust -= buildCost(type, 1);
+  if (d.gems) spend(p, 'gems', d.gems, 'build');
+  else spend(p, 'dust', buildCost(type, 1), 'build');
   // decorations are placed instantly; structures need a drone
+  ledger.homeworldAction();
   p.home.plots[plot] = d.decor ? { type, lv: 1, since: now } : { type, lv: 1, since: now, done: now + BUILD_TIME[1] };
   return 'ok';
 }
@@ -392,7 +325,8 @@ export function upgrade(p: Profile, plot: number, now = Date.now()): BuildCheck 
   const b = p.home.plots[plot]!;
   // bank what it made so far; production pauses while the drones work
   collect(p, plot, now);
-  p.dust -= buildCost(b.type, b.lv + 1);
+  spend(p, 'dust', buildCost(b.type, b.lv + 1), 'upgrade');
+  ledger.homeworldAction();
   b.lv++;
   b.done = now + BUILD_TIME[b.lv];
   return 'ok';
@@ -456,8 +390,9 @@ export function canExpand(p: Profile): RingCheck {
 export function expand(p: Profile): RingCheck {
   const c = canExpand(p);
   if (c !== 'ok') return c;
+  ledger.homeworldAction();
   p.home.ring++;
-  p.dust -= RING_COST[p.home.ring];
+  spend(p, 'dust', RING_COST[p.home.ring], 'ring');
   while (p.home.plots.length < RING_PLOTS[p.home.ring]) p.home.plots.push(null);
   return 'ok';
 }
@@ -467,12 +402,6 @@ export type Produce = 'dust' | 'booster' | 'gem';
 export const PRODUCES: Partial<Record<BuildingType, Produce>> = { mill: 'dust', greenhouse: 'booster', grove: 'gem' };
 
 /** Units per hour at each level. */
-const RATE: Record<Produce, number[]> = {
-  dust: [0, 40, 70, 110, 160, 230],
-  booster: [0, 1 / 6, 1 / 5, 1 / 4, 1 / 3.5, 1 / 3],
-  gem: [0, 1 / 6, 1 / 5, 1 / 4, 1 / 3, 1 / 2.5],
-};
-const BASE_CAP_HOURS = 6;
 
 export function capHours(h: HomeState, now = Date.now()) {
   const obs = h.plots.find((b) => b?.type === 'observatory');
@@ -522,8 +451,8 @@ export function collect(p: Profile, plot: number, now = Date.now()): Collected {
       const id = BOOSTER_CYCLE[(Math.floor(b.since / H) + plot + i) % 3];
       out.boosters[id] = (out.boosters[id] ?? 0) + 1;
     }
-  p.dust += out.dust;
-  p.gems += out.gems;
+  earn(p, 'dust', out.dust, 'homeworld_producer');
+  earn(p, 'gems', out.gems, 'homeworld_producer');
   for (const [k, v] of Object.entries(out.boosters)) p.boosters[k as BoosterId] += v ?? 0;
   // keep the partial unit so nothing is lost between collections
   const elapsed = Math.min(capHours(h, now), (now - b.since) / H);
@@ -547,7 +476,7 @@ export function anyReady(h: HomeState, now = Date.now()) {
 }
 
 // ------------------------------------------------------------------ residents
-export const FRIEND_LEVELS = [0, 3, 8, 15, 25];
+export { FRIEND_LEVELS } from './tuning';
 
 export function denCapacity(h: HomeState, now = Date.now()) {
   return h.plots.reduce((a, b) => {
@@ -576,6 +505,7 @@ export function invite(p: Profile, species: string): boolean {
   if (h.residents.length >= denCapacity(h)) return false;
   // a creature that lived here before remembers you (and its friendship, rewards and today's request)
   const old = h.friends?.[species];
+  ledger.homeworldAction();
   h.residents.push(old ? { ...old, species } : { species, fp: 0, lastReq: -1, rewarded: 1 });
   return true;
 }
@@ -585,6 +515,7 @@ export function sendHome(p: Profile, species: string): boolean {
   if (h.expedition?.species === species) return false;
   const i = h.residents.findIndex((r) => r.species === species);
   if (i < 0) return false;
+  ledger.homeworldAction();
   const [r] = h.residents.splice(i, 1);
   h.friends = { ...h.friends, [species]: { ...r } };
   return true;
@@ -596,8 +527,8 @@ export function addFriendship(p: Profile, r: Resident, pts: number): { levelUp?:
   const lv = friendLevel(r.fp);
   if (lv <= r.rewarded) return {};
   let gems = 0;
-  for (let l = r.rewarded + 1; l <= lv; l++) gems += 5 * l;
-  p.gems += gems;
+  for (let l = r.rewarded + 1; l <= lv; l++) gems += FRIENDSHIP_REWARD_GEMS_PER_LEVEL * l;
+  earn(p, 'gems', gems, 'buddy');
   r.rewarded = lv;
   if (lv >= FRIEND_LEVELS.length && !p.mementos.includes(r.species)) p.mementos.push(r.species);
   return { levelUp: lv, gems };
@@ -611,7 +542,7 @@ export interface Request {
   decor?: BuildingType;
 }
 
-export const REQ_PERIOD = 6 * H;
+export { REQ_PERIOD } from './tuning';
 // Only decorations bought with stardust: a resident never nudges you toward spending gems.
 const DECOR_WANTS: BuildingType[] = ['fountain', 'lantern', 'flowers'];
 
@@ -626,7 +557,7 @@ export function requestOf(r: Resident, now = Date.now(), ring = MAX_RING): Reque
   const rnd = rngFrom(`REQ-${r.species}-${per}`);
   const x = rnd();
   const lv = friendLevel(r.fp);
-  if (x < 0.4) return { kind: 'treat', dust: 40 + lv * 30 };
+  if (x < 0.4) return { kind: 'treat', dust: FRIENDSHIP_TREAT.baseDust + lv * FRIENDSHIP_TREAT.dustPerLevel };
   if (x < 0.75) return { kind: 'pat' };
   const wants = DECOR_WANTS.filter((d) => BUILDINGS[d].ring <= ring);
   return { kind: 'decor', decor: wants[Math.floor(rnd() * wants.length)] };
@@ -643,9 +574,10 @@ export function fulfil(p: Profile, species: string, now = Date.now()): { result:
   if (!req) return { result: 'none' };
   if (req.kind === 'treat') {
     if (p.dust < (req.dust ?? 0)) return { result: 'dust' };
-    p.dust -= req.dust ?? 0;
+    spend(p, 'dust', req.dust ?? 0, 'friendship');
   }
   if (req.kind === 'decor' && !countOf(h, req.decor!)) return { result: 'decor' };
+  ledger.homeworldAction();
   r.lastReq = period(now);
   // charm makes friends faster: +1 bonus point per 4 charm
   const up = addFriendship(p, r, (req.kind === 'treat' ? 2 : 1) + Math.floor(charm(h) / 4));
@@ -657,7 +589,7 @@ export function requestsWaiting(h: HomeState, now = Date.now()) {
 }
 
 // ------------------------------------------------------------------ expeditions
-export const EXPEDITION_HOURS = [1, 4, 8];
+export { EXPEDITION_HOURS } from './tuning';
 
 export function towerLevel(h: HomeState, now = Date.now()) {
   const t = h.plots.find((b) => b?.type === 'tower');
@@ -671,10 +603,15 @@ export function expeditionOptions(h: HomeState) {
 
 export function expeditionLoot(hours: number, towerLv: number, species: string) {
   const rare = SPECIES_BY_ID[species]?.rarity;
-  const bonus = rare === 'legendary' ? 1.5 : rare === 'rare' ? 1.25 : 1;
+  const bonus = rare === 'legendary' ? EXPEDITION_MULTIPLIER.legendary : rare === 'rare' ? EXPEDITION_MULTIPLIER.rare : 1;
   return {
-    dust: Math.round(hours * 120 * (1 + towerLv * 0.1) * bonus),
-    gems: hours >= 8 ? 6 : hours >= 4 ? 2 : 0,
+    dust: Math.round(hours * EXPEDITION_REWARD.dustPerHour * (1 + towerLv * EXPEDITION_MULTIPLIER.perTowerLevel) * bonus),
+    gems:
+      hours >= EXPEDITION_REWARD.eightHourThreshold
+        ? EXPEDITION_REWARD.eightHourGems
+        : hours >= EXPEDITION_REWARD.fourHourThreshold
+          ? EXPEDITION_REWARD.fourHourGems
+          : 0,
     boosters: hours >= 8 ? ({ shower: 1, spark: 1, scope: 1 } as Partial<Record<BoosterId, number>>) : hours >= 4 ? { spark: 1 } : {},
   };
 }
@@ -684,6 +621,7 @@ export function startExpedition(p: Profile, species: string, hours: number, now 
   if (now < (h.lastTick ?? 0) || h.expedition || !expeditionOptions(h).includes(hours)) return false;
   if (!h.residents.some((r) => r.species === species)) return false;
   const planet = p.galaxy.length ? Math.floor(rngFrom(`EXP-${species}-${now}`)() * p.galaxy.length) : -1;
+  ledger.homeworldAction();
   h.expedition = { species, hours, ends: now + hours * H, planet };
   return true;
 }
@@ -697,8 +635,8 @@ export function finishExpedition(p: Profile, now = Date.now()) {
   const e = h.expedition;
   if (!e || e.ends > now || now < (h.lastTick ?? 0)) return null;
   const loot = expeditionLoot(e.hours, towerLevel(h), e.species);
-  p.dust += loot.dust;
-  p.gems += loot.gems;
+  earn(p, 'dust', loot.dust, 'expedition');
+  earn(p, 'gems', loot.gems, 'expedition');
   for (const [k, v] of Object.entries(loot.boosters)) p.boosters[k as BoosterId] += v ?? 0;
   const r = h.residents.find((x) => x.species === e.species);
   if (r) addFriendship(p, r, Math.ceil(e.hours / 4) + 1);
@@ -707,9 +645,9 @@ export function finishExpedition(p: Profile, now = Date.now()) {
 }
 
 // ------------------------------------------------------------------ meteor debris
-export const DEBRIS_EVERY = 3 * H;
-export const DEBRIS_MAX = 3;
-export const DEBRIS_DUST = 60;
+export { DEBRIS_EVERY } from './tuning';
+export { DEBRIS_MAX } from './tuning';
+export { DEBRIS_DUST } from './tuning';
 
 /** Meteors fall on empty plots while you're away (never on buildings). */
 export function tickDebris(h: HomeState, now = Date.now()): number {
@@ -731,7 +669,7 @@ export function clearDebris(p: Profile, plot: number): number {
   const i = p.home.debris.indexOf(plot);
   if (i < 0) return 0;
   p.home.debris.splice(i, 1);
-  p.dust += DEBRIS_DUST;
+  earn(p, 'dust', DEBRIS_DUST, 'debris');
   return DEBRIS_DUST;
 }
 

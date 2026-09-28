@@ -1119,5 +1119,6 @@
   "Reminders are off in the iPhone Settings app.": "Los recordatorios están desactivados en la app Configuración del iPhone.",
   "until tonight": "hasta esta noche",
   "until {date}": "hasta el {date}",
-  "×{n}": "×{n}"
+  "×{n}": "×{n}",
+  "Pause": "Pausa"
 }

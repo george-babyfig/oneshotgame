@@ -96,7 +96,7 @@ export function showUpgrades(app: App) {
       max
         ? h('div', { class: 'up-max' }, t('MAX'))
         : btn(`✨${fmt(cost)}`, `buy${p.dust >= cost ? '' : ' dim'}`, () => {
-            if (!spendDust(p, cost)) {
+            if (!spendDust(p, cost, 'upgrade')) {
               sfx.error();
               return toast(t('Not enough stardust — collect from your galaxy!'), 'bad');
             }

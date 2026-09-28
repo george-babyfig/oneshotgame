@@ -1,3 +1,4 @@
+import { ledger } from '../../meta/ledger';
 // Parental gate before purchases and actions that leave the game.
 import { h, btn, modal } from '../dom';
 import { sfx } from '../audio';
@@ -18,11 +19,13 @@ export function parentalGate(reason: GateReason = 'buy', rnd = Math.random): Pro
     gamecenter: t('To sign in to Game Center, please answer:'),
     link: t('To leave the game, please answer:'),
   }[reason];
+  ledger.count('gate_shown');
   return new Promise((resolve) => {
     let done = false;
     const finish = (ok: boolean) => {
       if (done) return;
       done = true;
+      ledger.count(ok ? 'gate_passed' : 'gate_failed');
       m.close();
       resolve(ok);
     };

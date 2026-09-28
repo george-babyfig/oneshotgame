@@ -1,3 +1,4 @@
+import { spend } from './wallet';
 // Object Lab: level up each flingable object (1-5) with stardust. Every level
 // adds a visible perk. Lab levels apply to the campaign and Zen Garden; the
 // competitive modes (Daily Planet, Meteor Rush, Challenge) use base stats so
@@ -9,7 +10,8 @@ import { t } from '../i18n';
 
 export const LAB_MAX = 5;
 /** Stardust to reach each level (index = target level). */
-export const LAB_COST = [0, 0, 400, 1200, 3000, 7000];
+export { LAB_COST } from './tuning';
+import { LAB_COST } from './tuning';
 
 export interface LabPerk {
   lv: number;
@@ -47,7 +49,7 @@ export function upgradeLab(p: Profile, kind: Kind): LabCheck {
   const c = canLab(p, kind);
   if (c !== 'ok') return c;
   const lv = labLevel(p, kind);
-  p.dust -= LAB_COST[lv + 1];
+  spend(p, 'dust', LAB_COST[lv + 1], 'lab');
   p.lab = { ...p.lab, [kind]: lv + 1 };
   return 'ok';
 }

@@ -1,0 +1,183 @@
+{
+  "v": 3,
+  "gems": 30,
+  "dust": 0,
+  "level": 1,
+  "stars": {},
+  "seen": [],
+  "galaxy": [],
+  "lastCollect": 1790611200000,
+  "upgrades": {
+    "scope": 0,
+    "throws": 0,
+    "splash": 0,
+    "vault": 0
+  },
+  "boosters": {
+    "shower": 1,
+    "spark": 1,
+    "scope": 1
+  },
+  "piggy": 0,
+  "starter": false,
+  "pass": false,
+  "roadPass": [],
+  "skin": "classic",
+  "skins": ["classic"],
+  "processedTx": [],
+  "daily": {
+    "last": "",
+    "streak": 0
+  },
+  "quests": {
+    "day": "",
+    "list": [],
+    "bonusClaimed": false
+  },
+  "road": [],
+  "chapters": [],
+  "dailyPlanet": {
+    "day": "",
+    "best": 0,
+    "stars": 0,
+    "rewarded": false
+  },
+  "settings": {
+    "sound": true,
+    "music": true,
+    "haptics": true,
+    "reduceMotion": false,
+    "notifications": false,
+    "gameCenter": false,
+    "lang": "",
+    "hemi": "north"
+  },
+  "tutorial": false,
+  "meta": {
+    "installed": 1790611200000,
+    "lastSeen": 1790611200000,
+    "sessions": 1,
+    "rated": false,
+    "starterOffered": false,
+    "notifAsked": false
+  },
+  "stats": {
+    "throws": 0,
+    "plays": 0,
+    "wins": 0,
+    "bestLife": 0,
+    "creatures": 0,
+    "threeStars": 0,
+    "dailies": 0,
+    "rushBest": 0,
+    "rushPlays": 0,
+    "zenThrows": 0,
+    "challenges": 0,
+    "hardWins": 0,
+    "bestStreak": 0
+  },
+  "momentum": {
+    "streak": 0,
+    "shieldDay": ""
+  },
+  "visitors": [],
+  "mementos": [],
+  "rank": 1,
+  "habitats": [],
+  "challengeLog": [],
+  "zen": null,
+  "event": {
+    "week": "",
+    "tokens": 0,
+    "claimed": []
+  },
+  "gcReported": [],
+  "look": {
+    "suit": "suit_sky",
+    "hat": "hat_antenna",
+    "launcher": "l_pad",
+    "trail": "tr_dots",
+    "emote": "em_cheer"
+  },
+  "wardrobe": [],
+  "mastery": {},
+  "passport": {
+    "first": -1,
+    "second": -1,
+    "set": false,
+    "title": "",
+    "banner": 0,
+    "badges": [],
+    "badgesSet": false
+  },
+  "home": {
+    "ring": 1,
+    "plots": [null, null, null, null, null, null],
+    "residents": [],
+    "expedition": null,
+    "debris": [],
+    "lastDebris": 1790611200000,
+    "lastTick": 1790611200000,
+    "intro": false,
+    "paint": {
+      "ground": "meadow",
+      "sea": "blue"
+    },
+    "paints": [],
+    "friends": {},
+    "accs": []
+  },
+  "lab": {},
+  "flings": {},
+  "sightings": {},
+  "mail": [],
+  "mailSeen": [],
+  "bosses": [],
+  "presets": [null, null, null],
+  "mats": {},
+  "bundles": [],
+  "constellations": [],
+  "dyes": [],
+  "dye": {
+    "main": null,
+    "trim": null
+  },
+  "festival": {
+    "key": "",
+    "spotted": 0,
+    "claimed": []
+  },
+  "voyage": {
+    "week": "",
+    "base": 8,
+    "cleared": 0,
+    "stars": []
+  },
+  "voyageDone": 0,
+  "fails": {},
+  "continuesUsed": {},
+  "visits": {},
+  "album": {
+    "fest": [],
+    "milestones": 0,
+    "pagesClaimed": [],
+    "pages": [
+      {
+        "bg": 0,
+        "items": []
+      },
+      {
+        "bg": 1,
+        "items": []
+      },
+      {
+        "bg": 0,
+        "items": []
+      }
+    ]
+  },
+  "buddy": {
+    "species": null,
+    "acc": null
+  }
+}

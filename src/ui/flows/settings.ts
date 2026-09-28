@@ -1,3 +1,4 @@
+import { clearLedger, ledger, ledgerSummary } from '../../meta/ledger';
 // Settings, language, how-to-play, credits and reset.
 import { h, btn, modal, confirmBox, toast } from '../dom';
 import { Capacitor } from '@capacitor/core';
@@ -108,6 +109,26 @@ export function settingsFlow(app: App) {
         }
       })
     : null;
+  const version = h(
+    'p',
+    { class: 'tiny muted' },
+    `${GAME_NAME} v${VERSION} · ${t('No accounts, no ads, no tracking. Progress is saved on this device.')}`,
+  );
+  // Dev-only Balance Report; its English labels are never shown in production.
+  if (import.meta.env.DEV || import.meta.env.VITE_TESTER === '1') {
+    let hold = 0;
+    version.addEventListener('pointerdown', () => {
+      hold = window.setTimeout(() => {
+        hold = 0;
+        const summary = ledgerSummary();
+        modal([
+          h('div', { class: 'm-title' }, 'Balance Report'),
+          h('pre', { style: 'white-space:pre-wrap;overflow:auto;max-height:60vh;font-size:11px' }, JSON.stringify(summary, null, 2)),
+        ]);
+      }, 1000);
+    });
+    for (const event of ['pointerup', 'pointercancel', 'pointerleave']) version.addEventListener(event, () => window.clearTimeout(hold));
+  }
   const m = modal([
     h('div', { class: 'm-title' }, t('Settings')),
     tog(t('Sound effects'), 'sound'),
@@ -141,17 +162,15 @@ export function settingsFlow(app: App) {
       if (keep.starter) app.p.skins.push('aurora');
       ensureQuests(app.p, today());
       await saveProfile(app.p);
+      await clearLedger();
       app.startLevel(1, { tutorial: true });
     }),
-    h(
-      'p',
-      { class: 'tiny muted' },
-      `${GAME_NAME} v${VERSION} · ${t('No accounts, no ads, no tracking. Progress is saved on this device.')}`,
-    ),
+    version,
   ]);
 }
 
 export function howTo() {
+  ledger.count('help_used');
   modal([
     h('div', { class: 'm-title' }, t('How to play')),
     h(

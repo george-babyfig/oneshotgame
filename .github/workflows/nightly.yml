@@ -1,0 +1,21 @@
+name: Nightly sims
+
+# The slow simulations: the full difficulty sim, the level lint and the 90-day
+# economy sim. They are Watch-only for now and print their reports to the log.
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  sims:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run sim

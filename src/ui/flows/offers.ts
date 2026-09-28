@@ -1,3 +1,6 @@
+import { PRODUCT_BY_KEY, STARTER_BOOSTERS } from '../../meta/tuning';
+import { ledger } from '../../meta/ledger';
+import { earn } from '../../meta/wallet';
 // Well-timed, non-pushy offers: the Starter Pack after the first chapter chest,
 // and a welcome-back gift for players who have been away a few days.
 import { h, btn, fmt, modal } from '../dom';
@@ -9,12 +12,14 @@ import type { App } from '../app';
 import { t } from '../../i18n';
 
 export const WELCOME_BACK_DAYS = 3;
-export const WELCOME_BACK_GEMS = 30;
+export { WELCOME_BACK_GEMS } from '../../meta/tuning';
+import { WELCOME_BACK_GEMS } from '../../meta/tuning';
 
 export function maybeStarterOffer(app: App, then?: () => void) {
   const p = app.p;
   if (p.starter || p.meta.starterOffered || p.chapters.length < 1 || p.meta.sessions <= 1) return then?.();
   p.meta.starterOffered = true;
+  ledger.count('offer_starter_after_chest');
   app.save();
   const m = modal(
     [
@@ -24,8 +29,8 @@ export function maybeStarterOffer(app: App, then?: () => void) {
       h(
         'ul',
         { class: 'offer-list' },
-        h('li', null, t('💎 {n} gems', { n: 300 })),
-        h('li', null, t('🌠 ✨ 🔭 {n} of every booster', { n: 5 })),
+        h('li', null, t('💎 {n} gems', { n: PRODUCT_BY_KEY.starter.gems })),
+        h('li', null, t('🌠 ✨ 🔭 {n} of every booster', { n: STARTER_BOOSTERS })),
         h('li', null, t('🌈 Aurora atmosphere')),
       ),
       h('p', { class: 'muted' }, t('You can find this in the Shop later.')),
@@ -44,7 +49,7 @@ export function welcomeBackFlow(app: App, awayMs: number, then?: () => void) {
   const days = Math.floor(awayMs / 86400000);
   if (days < WELCOME_BACK_DAYS || !p.tutorial) return then?.();
   const pending = pendingDust(p);
-  p.gems += WELCOME_BACK_GEMS;
+  earn(p, 'gems', WELCOME_BACK_GEMS, 'welcome_back');
   app.save();
   sfx.gem();
   haptic.success();

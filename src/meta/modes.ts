@@ -1,3 +1,5 @@
+import { DAILY_REWARD, RUSH_REWARD, CHALLENGE_REWARD } from './tuning';
+import { earn } from './wallet';
 // Level builders and scoring for the extra modes: Daily Planet, Meteor Rush,
 // Zen Garden and Challenge a Friend. All seeded, so no server is needed.
 import { greedyScore, makeLevel, rngFrom, type LevelDef } from '../core/levels';
@@ -7,7 +9,7 @@ import { t } from '../i18n';
 
 export const DAILY_EPOCH = '2026-01-01';
 export const RUSH_SECONDS = 60;
-export const RUSH_BEST_GEMS = 5;
+export const RUSH_BEST_GEMS = RUSH_REWARD.bestGems;
 
 export function dailyNumber(day: string) {
   return dayGap(DAILY_EPOCH, day) + 1;
@@ -99,11 +101,11 @@ export function challengeShareText(code: string, score: number, planet: Planet) 
 
 // ------------------------------------------------------------------ rewards
 export function dailyReward(stars: number) {
-  return { gems: 5 + stars * 5 };
+  return { gems: DAILY_REWARD.baseGems + stars * DAILY_REWARD.gemsPerStar };
 }
 
 export function rushReward(score: number) {
-  return { dust: Math.round(score * 0.6) };
+  return { dust: Math.round(score * RUSH_REWARD.dustPerScore) };
 }
 
 /** Record a Daily Planet result; returns gems earned (first finish of the day only). */
@@ -116,7 +118,7 @@ export function recordDaily(p: Profile, day: string, score: number, stars: numbe
   p.dailyPlanet.rewarded = true;
   p.stats.dailies++;
   const g = dailyReward(stars).gems;
-  p.gems += g;
+  earn(p, 'gems', g, 'daily');
   return g;
 }
 
@@ -125,8 +127,8 @@ export function recordRush(p: Profile, score: number): { dust: number; best: boo
   p.stats.rushBest = Math.max(p.stats.rushBest, score);
   p.stats.rushPlays++;
   const dust = rushReward(score).dust;
-  p.dust += dust;
-  if (best) p.gems += RUSH_BEST_GEMS;
+  earn(p, 'dust', dust, 'rush');
+  if (best) earn(p, 'gems', RUSH_BEST_GEMS, 'rush');
   return { dust, best };
 }
 
@@ -135,9 +137,9 @@ export function recordChallenge(p: Profile, code: string, score: number, stars: 
   p.challengeLog = [...p.challengeLog.filter((c) => c.code !== code), { code, score, stars, vs }].slice(-30);
   p.stats.challenges++;
   const won = score > vs;
-  const gems = won && !played && vs > 0 ? 10 : 0;
-  p.gems += gems;
-  p.dust += 50;
+  const gems = won && !played && vs > 0 ? CHALLENGE_REWARD.winGems : 0;
+  earn(p, 'gems', gems, 'challenge');
+  earn(p, 'dust', CHALLENGE_REWARD.dust, 'challenge');
   return { won, gems };
 }
 

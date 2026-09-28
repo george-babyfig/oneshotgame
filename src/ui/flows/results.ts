@@ -1,11 +1,13 @@
+import { BOSS_REWARD } from '../../meta/tuning';
 // After a won level: record it, celebrate, and point at what's next.
 import { h, btn, fmt, modal } from '../dom';
 import { sfx } from '../audio';
 import { planetRate, applyLevelWin } from '../../meta/economy';
-import { applyReward, chestsReady, questsClaimable, roadReady, type Reward } from '../../meta/progression';
+import { applyReward, chestsReady, questsClaimable, roadReady } from '../../meta/progression';
 
 /** First-time reward for defeating a planet's Comet Guardian. */
-export const BOSS_REWARD: Reward = { gems: 30, dust: 500 };
+export { BOSS_REWARD } from '../../meta/tuning';
+
 import { totalStars } from '../../meta/profile';
 import { FINISH_DUST_PER_THROW, type LevelResult } from '../game';
 import type { App } from '../app';
@@ -42,7 +44,7 @@ export function levelResults(app: App, r: LevelResult) {
   // materials for the constellations (from the lands on this planet)
   const drops = dropsFor(r.planet, r.stars);
   if (Object.keys(drops).length) {
-    addDrops(p, drops);
+    addDrops(p, drops, out.firstClear ? 'material_drop_first_clear' : 'material_drop_replay');
     app.save();
     extras.unshift(
       h(
@@ -55,7 +57,7 @@ export function levelResults(app: App, r: LevelResult) {
   }
   if (r.boss && !p.bosses.includes(n)) {
     p.bosses.push(n);
-    applyReward(p, BOSS_REWARD);
+    applyReward(p, BOSS_REWARD, 'boss');
     app.save();
     extras.unshift(
       h('div', { class: 'nudge boss' }, t('☄️ Guardian defeated! +💎{g} +✨{d}', { g: BOSS_REWARD.gems ?? 0, d: BOSS_REWARD.dust ?? 0 })),

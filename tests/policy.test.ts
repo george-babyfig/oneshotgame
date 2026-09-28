@@ -45,8 +45,19 @@ export const OUTBOUND_CALLS = [
   'LocalNotifications.requestPermissions(',
   'window.open(',
   'App.openUrl(',
+  'restorePurchases(',
+  'app.restore(',
+  'this.iap.restore(',
+  'iap.purchase(',
 ];
-export const OUTBOUND_FILES = ['src/ui/share.ts', 'src/ui/postcard.ts', 'src/ui/platform.ts', 'src/ui/flows/settings.ts'];
+// These chokepoints are invoked only after their callers pass the gate; the low-level
+// IAP adapter cannot show UI, and shareTextUngated is used after the postcard gate.
+const GATED_CHOKEPOINTS = [
+  { file: 'src/ui/share.ts', call: 'Share.share(', functionName: 'shareTextUngated' },
+  { file: 'src/ui/share.ts', call: 'navigator.share(', functionName: 'shareTextUngated' },
+  { file: 'src/ui/app.ts', call: 'this.iap.restore(', functionName: 'restore' },
+  { file: 'src/meta/iap.ts', call: 'restorePurchases(', functionName: 'restore' },
+];
 export const GC_AUTH_FILES = ['src/ui/gamecenter.ts'];
 export const GC_SIGNIN_FILES = ['src/ui/gamecenter.ts', 'src/ui/flows/settings.ts', 'src/ui/app.ts'];
 
@@ -76,6 +87,63 @@ function code(file: string): string {
 const SRC = walk('src').map((f) => ({ file: rel(f), src: code(f) }));
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+function closingBrace(src: string, open: number): number {
+  let depth = 0;
+  let quote = '';
+  for (let i = open; i < src.length; i++) {
+    const c = src[i];
+    if (quote) {
+      if (c === '\\') i++;
+      else if (c === quote) quote = '';
+    } else if (c === '"' || c === "'" || c === '`') quote = c;
+    else if (c === '{') depth++;
+    else if (c === '}' && --depth === 0) return i;
+  }
+  return src.length;
+}
+
+/** Innermost declared function, method or arrow body containing the call. */
+function enclosingFunction(src: string, index: number): { open: number; close: number; name: string } | undefined {
+  const headers =
+    /(?:\b(?:async\s+)?function\s+\w+\s*\([^)]*\)|\b(?:async\s+)?[A-Za-z_$]\w*\s*\([^)]*\)(?:\s*:\s*[\w<>| ]+)?|\b(?:async\s*)?\([^)]*\)\s*=>)\s*\{/g;
+  let found: { open: number; close: number; name: string } | undefined;
+  for (const m of src.matchAll(headers)) {
+    const open = m.index! + m[0].length - 1;
+    if (open >= index) break;
+    const name = m[0].match(/^\s*(?:async\s+)?(?:function\s+)?(\w+)\s*\(/)?.[1];
+    if (name && ['if', 'for', 'while', 'switch', 'catch', 'with'].includes(name)) continue;
+    const close = closingBrace(src, open);
+    if (close > index && (!found || open > found.open)) found = { open, close, name: name ?? '' };
+  }
+  return found;
+}
+
+function outboundViolations(file: string, src: string): string[] {
+  const bad: string[] = [];
+  for (const call of OUTBOUND_CALLS) {
+    const re = new RegExp(escapeRe(call), 'g');
+    for (const m of src.matchAll(re)) {
+      const index = m.index!;
+      if (call === 'restorePurchases(' && /(?:function|async)\s+$/.test(src.slice(Math.max(0, index - 20), index))) continue;
+      const fn = enclosingFunction(src, index);
+      if (!fn) {
+        bad.push(`${file}:${lineOf(src, index)}: ${call} outside a function`);
+        continue;
+      }
+      if (GATED_CHOKEPOINTS.some((c) => c.file === file && c.call === call && c.functionName === fn.name)) continue;
+      const before = src.slice(fn.open + 1, index);
+      const gates = [...before.matchAll(/\bawait\s+parentalGate\s*\(/g)];
+      const hasGate = gates.some((gate) => enclosingFunction(src, fn.open + 1 + gate.index!)?.open === fn.open);
+      if (!hasGate) bad.push(`${file}:${lineOf(src, index)}: ${call} without an earlier awaited parentalGate(`);
+    }
+  }
+  return bad;
+}
+
+function lineOf(src: string, index: number): number {
+  return src.slice(0, index).split('\n').length;
+}
 
 /** A term matches at the start of a word (so 'ends in' does not hit 'friends in'), and may run on ('beeil' hits 'beeilen'). */
 function termRegex(term: string): RegExp {
@@ -108,15 +176,23 @@ function sourceStrings(): { file: string; s: string }[] {
 // ---- Rules ----
 
 describe('policy: outbound actions are gated (0.1, 0.2)', () => {
-  it('outbound calls live only in the allowed files, and each of those files calls parentalGate(', () => {
-    const bad: string[] = [];
-    for (const { file, src } of SRC) {
-      const calls = OUTBOUND_CALLS.filter((c) => src.replace(/\bfunction\s+\w+\(/g, '').includes(c));
-      if (!calls.length) continue;
-      if (!OUTBOUND_FILES.includes(file)) bad.push(`${file}: ${calls.join(', ')} outside the allowed files`);
-      else if (!src.includes('parentalGate(')) bad.push(`${file}: ${calls.join(', ')} without parentalGate(`);
-    }
+  it('checks an awaited parental gate before each outbound call in its function', () => {
+    const bad = SRC.flatMap(({ file, src }) => outboundViolations(file, src));
     expect(bad, bad.join('\n')).toEqual([]);
+  });
+
+  it('rejects an ungated sibling call even if the file has another gated function', () => {
+    const src = 'async function safe() { await parentalGate(); Share.share({}); }\nasync function unsafe() { Share.share({}); }';
+    expect(outboundViolations('src/ui/example.ts', src)).toEqual([
+      'src/ui/example.ts:2: Share.share( without an earlier awaited parentalGate(',
+    ]);
+  });
+
+  it('does not borrow a gate from a nested callback', () => {
+    const src = 'async function outer() { async function inner() { await parentalGate(); } Share.share({}); }';
+    expect(outboundViolations('src/ui/example.ts', src)).toEqual([
+      'src/ui/example.ts:1: Share.share( without an earlier awaited parentalGate(',
+    ]);
   });
 
   it('Game Center sign-in happens only from gamecenter.ts, settings.ts, or app.ts behind settings.gameCenter', () => {

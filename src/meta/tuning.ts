@@ -1,0 +1,772 @@
+// Canonical prices, rewards and costs. Review changes against the tuning snapshot.
+// DIFFICULTY_DUST stays in core/levels.ts so core never imports meta.
+import { t, tp } from '../i18n';
+
+export const GAME_NAME = 'Pocket Planet';
+export const VERSION = '1.0.0';
+
+export const PIGGY_PER_WIN = 4;
+export const PIGGY_MAX = 250;
+export const GEMS_PER_NEW_SPECIES = 3;
+
+export interface ProductDef {
+  key: string;
+  /** Must match the Product ID you create in App Store Connect. */
+  id: string;
+  title: string;
+  gems: number;
+  consumable: boolean;
+  fallbackPrice: string;
+}
+
+export const PRODUCTS: ProductDef[] = [
+  { key: 'gems_s', id: 'com.pocketplanet.game.gems80', title: 'Handful of Gems', gems: 80, consumable: true, fallbackPrice: '$0.99' },
+  {
+    key: 'gems_m',
+    id: 'com.pocketplanet.game.gems500',
+    title: 'Pouch of Gems',
+    gems: 500,
+    consumable: true,
+    fallbackPrice: '$4.99',
+  },
+  {
+    key: 'gems_l',
+    id: 'com.pocketplanet.game.gems1200',
+    title: 'Chest of Gems',
+    gems: 1200,
+    consumable: true,
+    fallbackPrice: '$9.99',
+  },
+  {
+    key: 'gems_xl',
+    id: 'com.pocketplanet.game.gems2800',
+    title: 'Galaxy of Gems',
+    gems: 2800,
+    consumable: true,
+    fallbackPrice: '$19.99',
+  },
+  { key: 'piggy', id: 'com.pocketplanet.game.piggy', title: 'Gem Piggy Bank', gems: 0, consumable: true, fallbackPrice: '$1.99' },
+  { key: 'starter', id: 'com.pocketplanet.game.starter', title: 'Starter Pack', gems: 300, consumable: false, fallbackPrice: '$2.99' },
+  { key: 'pass', id: 'com.pocketplanet.game.cosmicpass', title: 'Cosmic Pass', gems: 0, consumable: false, fallbackPrice: '$4.99' },
+];
+
+export const PRODUCT_BY_KEY: Record<string, ProductDef> = Object.fromEntries(PRODUCTS.map((p) => [p.key, p]));
+export const PRODUCT_BY_ID: Record<string, ProductDef> = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]));
+
+// Boosters: bought with stardust (soft) or gems (premium), used before a level.
+export type BoosterId = 'shower' | 'spark' | 'scope';
+export const BOOSTERS: Record<BoosterId, { name: string; emoji: string; desc: string; dust: number; gems: number }> = {
+  shower: { name: 'Comet Shower', emoji: '🌠', desc: '+3 throws this level', dust: 180, gems: 25 },
+  spark: { name: 'Life Spark', emoji: '✨', desc: 'Start with three meadows already growing', dust: 150, gems: 20 },
+  scope: { name: 'Star Scope', emoji: '🔭', desc: 'Full-length aim guide this level', dust: 120, gems: 15 },
+};
+
+// Permanent upgrades bought with stardust.
+export type UpgradeId = 'scope' | 'throws' | 'splash' | 'vault';
+export const UPGRADES: Record<UpgradeId, { name: string; emoji: string; desc: (lv: number) => string; costs: number[] }> = {
+  scope: {
+    name: 'Aim Guide',
+    emoji: '🎯',
+    desc: (lv) => t('Aim line length: {x}', { x: t(['short', 'medium', 'long', 'full'][lv]) }),
+    costs: [250, 700, 1600],
+  },
+  throws: {
+    name: 'Extra Throws',
+    emoji: '🪨',
+    desc: (lv) => tp(lv, '+{n} throw every level', '+{n} throws every level'),
+    costs: [400, 1200, 3000],
+  },
+  splash: {
+    name: 'Wide Impact',
+    emoji: '💥',
+    desc: (lv) => (lv ? t('Impacts spread one region further') : t('Normal impact size')),
+    costs: [5000],
+  },
+  vault: {
+    name: 'Stardust Vault',
+    emoji: '🏦',
+    desc: (lv) => t('Galaxy stores up to {n}h of stardust', { n: [4, 8, 12, 24][lv] }),
+    costs: [300, 900, 2500],
+  },
+};
+export const VAULT_HOURS = [4, 8, 12, 24];
+
+// Atmosphere skins (cosmetic glow around every planet).
+export interface SkinDef {
+  id: string;
+  name: string;
+  glow: string;
+  gems: number;
+  starter?: boolean;
+  road?: boolean;
+  pass?: boolean;
+}
+export const SKINS: SkinDef[] = [
+  { id: 'classic', name: 'Sky Blue', glow: '#6ec8ff', gems: 0 },
+  { id: 'violet', name: 'Nebula', glow: '#b58cff', gems: 150 },
+  { id: 'ember', name: 'Ember', glow: '#ff8a4a', gems: 150 },
+  { id: 'teal', name: 'Lagoon', glow: '#4ef0d0', gems: 150 },
+  { id: 'rose', name: 'Rose Dawn', glow: '#ff8fc8', gems: 0, road: true },
+  { id: 'lime', name: 'Lime Haze', glow: '#b8ff6e', gems: 0, road: true },
+  { id: 'gold', name: 'Solar Gold', glow: '#ffd24a', gems: 0, road: true },
+  { id: 'aurora', name: 'Aurora', glow: 'aurora', gems: 0, starter: true },
+  { id: 'cosmic', name: 'Cosmic', glow: 'cosmic', gems: 0, pass: true, road: true },
+];
+
+// Round and mode rewards.
+export const WIN_REWARD = { baseDust: 25, dustPerStar: 15, firstClearDust: 40, threeStarGems: 2, superFirstClearGems: 5 };
+export const DAILY_REWARD = { baseGems: 5, gemsPerStar: 5 };
+export const RUSH_REWARD = { dustPerScore: 0.6, bestGems: 5 };
+export const CHALLENGE_REWARD = { winGems: 10, dust: 50 };
+export const CONTINUE_COST = 50;
+export const LAB_COST = [0, 0, 400, 1200, 3000, 7000];
+export const WELCOME_BACK_GEMS = 30;
+
+import type { Reward, RoadTier, QuestDef } from './progression';
+import type { BuildingType, BuildingDef } from './homeworld';
+import type { FestivalTier } from './festivals';
+import type { EventTier } from './events';
+import type { Constellation } from './constellations';
+import type { Dye } from './dyes';
+
+export const STAR_ROAD: RoadTier[] = [
+  { stars: 5, reward: { gems: 15 }, pass: { skin: 'cosmic', gems: 30, item: 'l_orbit' } },
+  { stars: 12, reward: { boosters: { shower: 2 } }, pass: { gems: 40 } },
+  { stars: 20, reward: { dust: 400 }, pass: { boosters: { shower: 2, spark: 2, scope: 2 } } },
+  { stars: 30, reward: { skin: 'rose', gems: 10 }, pass: { gems: 50, item: 'hat_halo' } },
+  { stars: 42, reward: { gems: 30 }, pass: { dust: 1500 } },
+  { stars: 55, reward: { boosters: { spark: 2, scope: 2 }, item: 'l_crystal' }, pass: { gems: 60 } },
+  { stars: 70, reward: { dust: 1200 }, pass: { boosters: { shower: 3, spark: 3, scope: 3 } } },
+  { stars: 85, reward: { skin: 'lime', gems: 20 }, pass: { gems: 80, item: 'tr_cosmic' } },
+  { stars: 100, reward: { gems: 50 }, pass: { dust: 4000 } },
+  { stars: 120, reward: { boosters: { shower: 3, spark: 3, scope: 3 }, item: 'tr_rainbow' }, pass: { gems: 100 } },
+  { stars: 140, reward: { dust: 3000 }, pass: { boosters: { shower: 5, spark: 5, scope: 5 } } },
+  { stars: 165, reward: { skin: 'gold', gems: 40 }, pass: { gems: 120, item: 'suit_star' } },
+  { stars: 190, reward: { gems: 80, item: 'em_fireworks' }, pass: { dust: 8000 } },
+  { stars: 220, reward: { dust: 6000, gems: 50, item: 'hat_crown' }, pass: { gems: 150 } },
+  { stars: 260, reward: { gems: 120 }, pass: { gems: 250 } },
+];
+
+export const QUESTS: QuestDef[] = [
+  { id: 'throw25', event: 'throw', goal: 25, gems: 8, emoji: '🪨', text: (g) => t('Fling {n} objects', { n: g }) },
+  { id: 'win3', event: 'win', goal: 3, gems: 12, emoji: '🪐', text: (g) => t('Complete {n} planets', { n: g }) },
+  { id: 'star6', event: 'star', goal: 6, gems: 15, emoji: '⭐', text: (g) => t('Earn {n} stars', { n: g }) },
+  { id: 'creature8', event: 'creature', goal: 8, gems: 10, emoji: '🦊', text: (g) => t('Bring {n} creatures to life', { n: g }) },
+  { id: 'three1', event: 'three', goal: 1, gems: 15, emoji: '🌟', text: () => t('Get 3 stars on any planet') },
+  { id: 'booster1', event: 'booster', goal: 1, gems: 6, emoji: '🌠', text: () => t('Use a booster') },
+  { id: 'collect2', event: 'collect', goal: 2, gems: 8, emoji: '✨', text: (g) => t('Collect stardust {n} times', { n: g }) },
+  { id: 'land20', event: 'land', goal: 20, gems: 10, emoji: '🌍', text: (g) => t('Transform {n} regions', { n: g }) },
+  {
+    id: 'voyage1',
+    event: 'voyage',
+    goal: 1,
+    gems: 10,
+    emoji: '🚀',
+    text: () => t('Clear a Weekly Voyage stop'),
+    need: (p) => p.level >= 12,
+  },
+  {
+    id: 'spot6',
+    event: 'spot',
+    goal: 6,
+    gems: 8,
+    emoji: '🎪',
+    text: (g) => t('Spot {n} costumed critters', { n: g }),
+    need: (p) => p.level >= 8,
+  },
+];
+
+export const QUEST_BONUS: Reward = { gems: 20, boosters: { shower: 1 } };
+
+export const CALENDAR: Reward[] = [
+  { gems: 10 },
+  { dust: 200 },
+  { gems: 15 },
+  { boosters: { shower: 1 } },
+  { gems: 20 },
+  { dust: 400 },
+  { gems: 50, boosters: { spark: 1 } },
+  { gems: 15 },
+  { dust: 300 },
+  { boosters: { scope: 1 } },
+  { gems: 20 },
+  { dust: 500 },
+  { gems: 25 },
+  { item: 'hat_beanie', gems: 20 },
+  { gems: 20 },
+  { dust: 600 },
+  { boosters: { spark: 2 } },
+  { gems: 25 },
+  { dust: 700 },
+  { gems: 30 },
+  { gems: 40, boosters: { shower: 1, spark: 1, scope: 1 } },
+  { gems: 25 },
+  { dust: 800 },
+  { boosters: { shower: 2 } },
+  { gems: 30 },
+  { dust: 1000 },
+  { gems: 35 },
+  { item: 'suit_night', gems: 60 },
+];
+
+export const VOYAGE_REWARDS: Reward[] = [
+  { dust: 150 },
+  { dust: 200 },
+  { gems: 5 },
+  { dust: 300, boosters: { spark: 1 } },
+  { gems: 10 },
+  { dust: 400, boosters: { shower: 1 } },
+  { gems: 30, dust: 600 },
+];
+
+export const FESTIVAL_TIERS: FestivalTier[] = [
+  { spot: 10, reward: { dust: 250 }, sticker: true },
+  { spot: 25, reward: { gems: 15 } },
+  { spot: 45, reward: { gems: 20, dust: 500 }, acc: true },
+];
+
+export const EVENT_TIERS: EventTier[] = [
+  { tokens: 10, reward: { gems: 10 } },
+  { tokens: 25, reward: { dust: 300 } },
+  { tokens: 45, reward: { boosters: { shower: 1, spark: 1 } } },
+  { tokens: 70, reward: { gems: 25 } },
+  { tokens: 100, reward: { dust: 900, boosters: { scope: 2 } } },
+  { tokens: 140, reward: { gems: 50 } },
+];
+
+export const BUILDINGS: Record<BuildingType, BuildingDef> = {
+  mill: { type: 'mill', name: 'Stardust Mill', desc: 'Makes stardust while you are away', ring: 1, cost: 150, max: 3 },
+  den: { type: 'den', name: 'Critter Den', desc: 'A home for creatures from your Lifebook', ring: 1, cost: 250, max: 2 },
+  greenhouse: { type: 'greenhouse', name: 'Greenhouse', desc: 'Grows boosters for your levels', ring: 2, cost: 600, max: 2 },
+  tower: { type: 'tower', name: 'Launch Tower', desc: 'Sends residents on expeditions', ring: 2, cost: 900, max: 1 },
+  grove: { type: 'grove', name: 'Crystal Grove', desc: 'Slowly grows gems', ring: 3, cost: 2000, max: 2 },
+  observatory: {
+    type: 'observatory',
+    name: 'Observatory',
+    desc: 'Every producer stores more before it is full',
+    ring: 3,
+    cost: 2500,
+    max: 1,
+  },
+  fountain: {
+    type: 'fountain',
+    name: 'Star Fountain',
+    desc: 'Decoration · residents love it',
+    ring: 1,
+    cost: 300,
+    decor: true,
+    charm: 2,
+    max: 2,
+  },
+  lantern: {
+    type: 'lantern',
+    name: 'Moon Lantern',
+    desc: 'Decoration · residents love it',
+    ring: 1,
+    cost: 200,
+    decor: true,
+    charm: 1,
+    max: 3,
+  },
+  flowers: {
+    type: 'flowers',
+    name: 'Comet Flowers',
+    desc: 'Decoration · residents love it',
+    ring: 2,
+    cost: 400,
+    decor: true,
+    charm: 2,
+    max: 3,
+  },
+  statue: {
+    type: 'statue',
+    name: 'Keeper Statue',
+    desc: 'Decoration · residents adore it',
+    ring: 1,
+    cost: 0,
+    gems: 120,
+    decor: true,
+    charm: 4,
+    max: 1,
+  },
+};
+
+export const BUILD_TIME = [0, 30e3, 5 * 60e3, 30 * 60e3, 2 * 3600e3, 4 * 3600e3];
+
+export const RING_COST = [0, 0, 1500, 5000, 12000, 30000];
+
+export const DYES: Dye[] = [
+  { id: 'snow', name: 'Snow', color: '#f4f6ff' },
+  { id: 'sky', name: 'Sky', color: '#6ec8ff' },
+  { id: 'mint', name: 'Mint', color: '#5ef2b0' },
+  { id: 'night', name: 'Night', color: '#2a2a5e' },
+  { id: 'coral', name: 'Coral', color: '#ff7a8a', cost: { dew: 4 } },
+  { id: 'sunflower', name: 'Sunflower', color: '#ffd24a', cost: { leaf: 4 } },
+  { id: 'lilac', name: 'Lilac', color: '#b58cff', cost: { frost: 3 } },
+  { id: 'forest', name: 'Forest', color: '#3f9e5a', cost: { leaf: 6 } },
+  { id: 'lava', name: 'Lava', color: '#e0552f', cost: { ember: 5 } },
+  { id: 'ocean', name: 'Deep Ocean', color: '#1f5a9e', cost: { dew: 6 } },
+  { id: 'peach', name: 'Peach', color: '#ffb48a', cost: { ember: 3, leaf: 3 } },
+  { id: 'glacier', name: 'Glacier', color: '#bfeaff', cost: { frost: 6 } },
+  { id: 'slate', name: 'Slate', color: '#6a7088', cost: { stone: 6 } },
+  { id: 'bubblegum', name: 'Bubblegum', color: '#ff8fd0', cost: { dew: 4, leaf: 4 } },
+  { id: 'gold', name: 'Gold Leaf', color: '#e8b33a', cost: { stone: 8, ember: 6 } },
+  { id: 'aurora', name: 'Aurora', color: 'aurora', cost: { frost: 8, dew: 8 } },
+];
+
+export const CONSTELLATIONS: Constellation[] = [
+  {
+    id: 'otter',
+    name: 'The Little Otter',
+    stars: [
+      [0.2, 0.6],
+      [0.4, 0.45],
+      [0.6, 0.5],
+      [0.8, 0.35],
+    ],
+    lines: [
+      [0, 1],
+      [1, 2],
+      [2, 3],
+    ],
+    bundles: [
+      { id: 'otter-1', need: { dew: 6 } },
+      { id: 'otter-2', need: { leaf: 5, dew: 3 } },
+      { id: 'otter-3', need: { stone: 4, dew: 4 } },
+    ],
+    reward: { gems: 40, item: 'suit_tide' },
+  },
+  {
+    id: 'mill',
+    name: 'The Windmill',
+    stars: [
+      [0.5, 0.5],
+      [0.3, 0.25],
+      [0.75, 0.3],
+      [0.7, 0.75],
+      [0.25, 0.7],
+    ],
+    lines: [
+      [0, 1],
+      [0, 2],
+      [0, 3],
+      [0, 4],
+    ],
+    bundles: [
+      { id: 'mill-1', need: { stone: 8 } },
+      { id: 'mill-2', need: { leaf: 8 } },
+      { id: 'mill-3', need: { stone: 5, ember: 4 } },
+      { id: 'mill-4', need: { dew: 6, leaf: 4 } },
+    ],
+    reward: { gems: 50, item: 'tr_aurora' },
+  },
+  {
+    id: 'ember',
+    name: 'The Ember Fox',
+    stars: [
+      [0.15, 0.7],
+      [0.35, 0.55],
+      [0.5, 0.3],
+      [0.65, 0.55],
+      [0.85, 0.4],
+    ],
+    lines: [
+      [0, 1],
+      [1, 2],
+      [2, 3],
+      [3, 4],
+    ],
+    bundles: [
+      { id: 'ember-1', need: { ember: 6 } },
+      { id: 'ember-2', need: { ember: 6, stone: 6 } },
+      { id: 'ember-3', need: { ember: 8, leaf: 5 } },
+    ],
+    reward: { gems: 50, item: 'suit_ember' },
+  },
+  {
+    id: 'frost',
+    name: 'The Snow Whale',
+    stars: [
+      [0.15, 0.5],
+      [0.4, 0.4],
+      [0.65, 0.45],
+      [0.85, 0.3],
+      [0.85, 0.6],
+    ],
+    lines: [
+      [0, 1],
+      [1, 2],
+      [2, 3],
+      [2, 4],
+    ],
+    bundles: [
+      { id: 'frost-1', need: { frost: 6 } },
+      { id: 'frost-2', need: { frost: 6, dew: 6 } },
+      { id: 'frost-3', need: { frost: 10, stone: 4 } },
+    ],
+    reward: { gems: 60, item: 'hat_snow' },
+  },
+  {
+    id: 'tree',
+    name: 'The World Tree',
+    stars: [
+      [0.5, 0.85],
+      [0.5, 0.55],
+      [0.3, 0.35],
+      [0.7, 0.35],
+      [0.5, 0.15],
+    ],
+    lines: [
+      [0, 1],
+      [1, 2],
+      [1, 3],
+      [1, 4],
+    ],
+    bundles: [
+      { id: 'tree-1', need: { leaf: 12 } },
+      { id: 'tree-2', need: { leaf: 8, dew: 8 } },
+      { id: 'tree-3', need: { leaf: 10, stone: 6, frost: 4 } },
+      { id: 'tree-4', need: { leaf: 10, ember: 6 } },
+    ],
+    reward: { gems: 80, item: 'l_tree' },
+  },
+  {
+    id: 'crown',
+    name: 'The Keeper’s Crown',
+    stars: [
+      [0.2, 0.7],
+      [0.25, 0.35],
+      [0.4, 0.55],
+      [0.5, 0.25],
+      [0.6, 0.55],
+      [0.75, 0.35],
+      [0.8, 0.7],
+    ],
+    lines: [
+      [0, 1],
+      [1, 2],
+      [2, 3],
+      [3, 4],
+      [4, 5],
+      [5, 6],
+      [6, 0],
+    ],
+    bundles: [
+      { id: 'crown-1', need: { stone: 12, dew: 12 } },
+      { id: 'crown-2', need: { leaf: 12, ember: 10 } },
+      { id: 'crown-3', need: { frost: 12, stone: 8 } },
+      { id: 'crown-4', need: { stone: 8, dew: 8, leaf: 8, ember: 8, frost: 8 } },
+    ],
+    reward: { gems: 150, item: 'hat_star' },
+  },
+];
+
+import type { Cosmetic } from './cosmetics';
+import type { Habitat } from './habitats';
+import type { AlbumPage } from './stickers';
+import type { Paint, Produce } from './homeworld';
+const c = (x: Cosmetic) => x;
+
+export const COSMETICS: Cosmetic[] = [
+  // suits
+  c({ id: 'suit_sky', slot: 'suit', name: 'Sky Scout', source: 'free', tier: 'basic', colors: ['#6ec8ff', '#ffffff', '#1d2a5e'] }),
+  c({ id: 'suit_mint', slot: 'suit', name: 'Mint Ranger', source: 'free', tier: 'basic', colors: ['#5ef2b0', '#ffffff', '#123f38'] }),
+  c({
+    id: 'suit_coral',
+    slot: 'suit',
+    name: 'Coral Cadet',
+    source: 'gems',
+    gems: 120,
+    tier: 'fancy',
+    colors: ['#ff7a8a', '#ffe0a8', '#3a1a38'],
+  }),
+  c({ id: 'suit_sun', slot: 'suit', name: 'Sunbeam', source: 'gems', gems: 120, tier: 'fancy', colors: ['#ffc94a', '#ffffff', '#4a2a10'] }),
+  c({
+    id: 'suit_grape',
+    slot: 'suit',
+    name: 'Nebula Navigator',
+    source: 'rank',
+    unlock: 3,
+    tier: 'fancy',
+    colors: ['#9a6bff', '#ffd0ff', '#1a1040'],
+  }),
+  c({
+    id: 'suit_moss',
+    slot: 'suit',
+    name: 'Forest Warden',
+    source: 'habitat',
+    unlock: 'greenwoods',
+    tier: 'fancy',
+    colors: ['#4f9e5a', '#e8d6a0', '#10301a'],
+  }),
+  c({
+    id: 'suit_aurora',
+    slot: 'suit',
+    name: 'Aurora Explorer',
+    source: 'starter',
+    tier: 'epic',
+    colors: ['aurora', '#ffffff', '#20104a'],
+  }),
+  c({
+    id: 'suit_star',
+    slot: 'suit',
+    name: 'Star Captain',
+    source: 'pass',
+    tier: 'epic',
+    colors: ['#2a2270', '#ffd24a', '#0a0620'],
+    set: 'captain',
+  }),
+  c({
+    id: 'suit_night',
+    slot: 'suit',
+    name: 'Starlight',
+    source: 'calendar',
+    unlock: 28,
+    tier: 'epic',
+    colors: ['#1a2a6e', '#9fe6ff', '#050818'],
+  }),
+  c({
+    id: 'suit_tide',
+    slot: 'suit',
+    name: 'Tide Diver',
+    source: 'constellation',
+    unlock: 'otter',
+    tier: 'epic',
+    colors: ['#2fc6b8', '#e8fffb', '#0a2e3a'],
+  }),
+  c({
+    id: 'suit_ember',
+    slot: 'suit',
+    name: 'Ember Suit',
+    source: 'constellation',
+    unlock: 'ember',
+    tier: 'epic',
+    colors: ['#e0552f', '#ffd07a', '#2a0a10'],
+  }),
+  // hats
+  c({ id: 'hat_none', slot: 'hat', name: 'Bare Helmet', source: 'free', tier: 'basic', colors: [] }),
+  c({ id: 'hat_antenna', slot: 'hat', name: 'Antenna', source: 'free', tier: 'basic', colors: ['#ff6a7a'] }),
+  c({ id: 'hat_sprout', slot: 'hat', name: 'Sprout', source: 'gems', gems: 80, tier: 'basic', colors: ['#5ecf5a'] }),
+  c({ id: 'hat_bunny', slot: 'hat', name: 'Bunny Ears', source: 'gems', gems: 100, tier: 'fancy', colors: ['#f3eef7', '#ffb3cf'] }),
+  c({ id: 'hat_horns', slot: 'hat', name: 'Dragon Horns', source: 'gems', gems: 150, tier: 'fancy', colors: ['#ffd07a', '#b8303a'] }),
+  c({
+    id: 'hat_flower',
+    slot: 'hat',
+    name: 'Flower Crown',
+    source: 'habitat',
+    unlock: 'seaside',
+    tier: 'fancy',
+    colors: ['#ff8fc8', '#ffe066'],
+  }),
+  c({ id: 'hat_wizard', slot: 'hat', name: 'Star Wizard', source: 'rank', unlock: 5, tier: 'fancy', colors: ['#4a3aa8', '#ffd24a'] }),
+  c({ id: 'hat_beanie', slot: 'hat', name: 'Cozy Beanie', source: 'calendar', unlock: 14, tier: 'fancy', colors: ['#ff6a7a', '#ffffff'] }),
+  c({
+    id: 'hat_snow',
+    slot: 'hat',
+    name: 'Snowflake Cap',
+    source: 'constellation',
+    unlock: 'frost',
+    tier: 'epic',
+    colors: ['#9fe6ff', '#ffffff'],
+  }),
+  c({
+    id: 'hat_star',
+    slot: 'hat',
+    name: 'Star Crown',
+    source: 'constellation',
+    unlock: 'crown',
+    tier: 'epic',
+    colors: ['#ffd24a', '#fff6b0'],
+  }),
+  c({ id: 'hat_crown', slot: 'hat', name: 'Tiny Crown', source: 'road', tier: 'epic', colors: ['#ffd24a', '#ff4a8a'] }),
+  c({ id: 'hat_halo', slot: 'hat', name: 'Halo Ring', source: 'pass', tier: 'epic', colors: ['#ffe58a'], set: 'captain' }),
+  // launchers
+  c({ id: 'l_pad', slot: 'launcher', name: 'Launch Pad', source: 'free', tier: 'basic', colors: ['#c9c2ff'] }),
+  c({ id: 'l_twig', slot: 'launcher', name: 'Twig Sling', source: 'rank', unlock: 2, tier: 'basic', colors: ['#a0743a', '#e0b050'] }),
+  c({ id: 'l_petal', slot: 'launcher', name: 'Petal Sling', source: 'gems', gems: 200, tier: 'fancy', colors: ['#ff8fc8', '#5ecf5a'] }),
+  c({ id: 'l_cannon', slot: 'launcher', name: 'Comet Cannon', source: 'gems', gems: 250, tier: 'fancy', colors: ['#6e8cff', '#ffd24a'] }),
+  c({
+    id: 'l_tree',
+    slot: 'launcher',
+    name: 'World Tree',
+    source: 'constellation',
+    unlock: 'tree',
+    tier: 'epic',
+    colors: ['#6a4a2a', '#5ecf6a'],
+  }),
+  c({ id: 'l_crystal', slot: 'launcher', name: 'Crystal Arc', source: 'road', tier: 'epic', colors: ['#7fdcff', '#d8f6ff'] }),
+  c({
+    id: 'l_orbit',
+    slot: 'launcher',
+    name: 'Golden Orbit',
+    source: 'pass',
+    tier: 'epic',
+    colors: ['#ffd24a', '#fff2b8'],
+    set: 'captain',
+  }),
+  // trails
+  c({ id: 'tr_dots', slot: 'trail', name: 'Stardust', source: 'free', tier: 'basic', colors: [] }),
+  c({ id: 'tr_sparkle', slot: 'trail', name: 'Twinkle', source: 'gems', gems: 120, tier: 'fancy', colors: ['#fff6b0'] }),
+  c({ id: 'tr_hearts', slot: 'trail', name: 'Hearts', source: 'gems', gems: 120, tier: 'fancy', colors: ['#ff6a9a'] }),
+  c({ id: 'tr_bubbles', slot: 'trail', name: 'Bubbles', source: 'rank', unlock: 4, tier: 'fancy', colors: ['#9fe6ff'] }),
+  c({ id: 'tr_embers', slot: 'trail', name: 'Embers', source: 'habitat', unlock: 'sun', tier: 'fancy', colors: ['#ff8a3d', '#ffd24a'] }),
+  c({
+    id: 'tr_aurora',
+    slot: 'trail',
+    name: 'Aurora',
+    source: 'constellation',
+    unlock: 'mill',
+    tier: 'epic',
+    colors: ['#6ef2c0', '#6ec8ff', '#b58cff'],
+  }),
+  c({
+    id: 'tr_rainbow',
+    slot: 'trail',
+    name: 'Rainbow',
+    source: 'road',
+    tier: 'epic',
+    colors: ['#ff6a7a', '#ffc94a', '#5ef2b0', '#6ec8ff', '#b58cff'],
+  }),
+  c({
+    id: 'tr_cosmic',
+    slot: 'trail',
+    name: 'Comet Tail',
+    source: 'pass',
+    tier: 'epic',
+    colors: ['#7a4dff', '#ff4de1', '#4dc3ff'],
+    set: 'captain',
+  }),
+  // emotes (played when you finish a planet)
+  c({ id: 'em_cheer', slot: 'emote', name: 'Hooray', source: 'free', tier: 'basic', colors: [] }),
+  c({ id: 'em_wave', slot: 'emote', name: 'Big Wave', source: 'free', tier: 'basic', colors: [] }),
+  c({ id: 'em_jump', slot: 'emote', name: 'Moon Jump', source: 'rank', unlock: 6, tier: 'fancy', colors: [] }),
+  c({ id: 'em_spin', slot: 'emote', name: 'Twirl', source: 'gems', gems: 100, tier: 'fancy', colors: [] }),
+  c({ id: 'em_dance', slot: 'emote', name: 'Wiggle Dance', source: 'habitat', unlock: 'frost', tier: 'fancy', colors: [] }),
+  c({ id: 'em_flag', slot: 'emote', name: 'Plant the Flag', source: 'gems', gems: 150, tier: 'fancy', colors: [] }),
+  c({ id: 'em_fireworks', slot: 'emote', name: 'Fireworks', source: 'road', tier: 'epic', colors: [] }),
+];
+
+export const HABITATS: Habitat[] = [
+  {
+    id: 'greenwoods',
+    name: 'Greenwoods',
+    emoji: '🌲',
+    species: ['bunny', 'deer', 'parrot', 'bear', 'butterfly', 'unicorn', 'worldtree'],
+    reward: { gems: 60, dust: 800 },
+  },
+  {
+    id: 'seaside',
+    name: 'Seaside',
+    emoji: '🌊',
+    species: ['fish', 'reeffish', 'otter', 'turtle', 'octopus', 'whale', 'kraken', 'leviathan'],
+    reward: { gems: 70, dust: 900 },
+  },
+  {
+    id: 'frost',
+    name: 'Frostlands',
+    emoji: '❄️',
+    species: ['seal', 'penguin', 'owl', 'wolf', 'eagle', 'mammoth'],
+    reward: { gems: 50, dust: 700 },
+  },
+  {
+    id: 'sun',
+    name: 'Sunlands',
+    emoji: '🏜️',
+    species: ['scorpion', 'giraffe', 'camel', 'elephant', 'sunbird'],
+    reward: { gems: 45, dust: 600 },
+  },
+  { id: 'peaks', name: 'Peaks & Fire', emoji: '🌋', species: ['goat', 'llama', 'newt', 'dragon', 'dino'], reward: { gems: 45, dust: 600 } },
+  { id: 'wetlands', name: 'Wetlands', emoji: '🍃', species: ['crab', 'frog', 'duck', 'flamingo', 'croc'], reward: { gems: 45, dust: 600 } },
+];
+
+export const ALBUM_PAGES: AlbumPage[] = [
+  { id: 'critter', name: 'Critters', reward: { gems: 100 } },
+  { id: 'fest', name: 'Festivals', reward: { gems: 80 } },
+  { id: 'voyage', name: 'Voyages', reward: { gems: 60 } },
+  { id: 'feat', name: 'Feats', reward: { gems: 60 } },
+];
+
+export const MILESTONE_REWARD: Reward = { gems: 10 };
+
+export const RESIDENT_ACCS: { id: string; name: string; friend?: number; gems?: number; fest?: boolean }[] = [
+  { id: 'bow', name: 'Bow', friend: 2 },
+  { id: 'flower', name: 'Flower', friend: 3 },
+  { id: 'scarf', name: 'Scarf', friend: 4 },
+  { id: 'crown', name: 'Tiny Crown', friend: 5 },
+  { id: 'shades', name: 'Sunglasses', gems: 40 },
+  { id: 'party', name: 'Party Hat', gems: 40 },
+  // festival keepsakes (see meta/festivals.ts), never sold
+  { id: 'heart', name: 'Heart Bopper', fest: true },
+  { id: 'leaf', name: 'Sprout', fest: true },
+  { id: 'rainhat', name: 'Rain Hat', fest: true },
+  { id: 'wreath', name: 'Flower Crown', fest: true },
+  { id: 'star', name: 'Star Clip', fest: true },
+  { id: 'lantern', name: 'Lantern', fest: true },
+  { id: 'acorn', name: 'Acorn Cap', fest: true },
+  { id: 'pumpkin', name: 'Pumpkin Hat', fest: true },
+  { id: 'knit', name: 'Knit Beanie', fest: true },
+  { id: 'pom', name: 'Pom-pom Hat', fest: true },
+];
+
+export const PAINTS: Paint[] = [
+  { id: 'meadow', name: 'Meadow', channel: 'ground', colors: ['#8ef0a0', '#3fae6a', '#1f6a58'] },
+  { id: 'dune', name: 'Dune', channel: 'ground', colors: ['#ffe6a8', '#e0b060', '#9a6a30'] },
+  { id: 'snow', name: 'Snowdrift', channel: 'ground', colors: ['#ffffff', '#cfe4ff', '#7a9ac8'] },
+  { id: 'candy', name: 'Candy', channel: 'ground', colors: ['#ffd0ea', '#ff8fc8', '#b8467e'], gems: 120 },
+  { id: 'ember', name: 'Ember', channel: 'ground', colors: ['#ffb08a', '#d9553a', '#5a1a2a'], gems: 120 },
+  { id: 'crystal', name: 'Crystal', channel: 'ground', colors: ['#e6d6ff', '#a07aff', '#4a2a9a'], gems: 150 },
+  { id: 'gilded', name: 'Gilded', channel: 'ground', colors: ['#fff2b8', '#ffc94a', '#a0600a'], pass: true },
+  { id: 'blue', name: 'Ocean Blue', channel: 'sea', colors: ['#9fd6ff', '#46a0e6', '#1f5a9e'] },
+  { id: 'teal', name: 'Lagoon', channel: 'sea', colors: ['#a8fff0', '#3fd6c0', '#1a7a7a'] },
+  { id: 'rose', name: 'Rose Water', channel: 'sea', colors: ['#ffd0e6', '#ff7ab8', '#9a2a6a'], gems: 60 },
+  { id: 'nebula', name: 'Nebula', channel: 'sea', colors: ['#e0c8ff', '#9a6bff', '#3a1a8a'], gems: 60 },
+  { id: 'goldsea', name: 'Liquid Gold', channel: 'sea', colors: ['#fff6c8', '#ffd24a', '#b8800a'], pass: true },
+];
+
+export const DEBRIS_DUST = 60;
+
+export const BOSS_REWARD: Reward = { gems: 30, dust: 500 };
+
+export const COST_K = [0, 1, 2.5, 6, 14, 30];
+
+export const RATE: Record<Produce, number[]> = {
+  dust: [0, 40, 70, 110, 160, 230],
+  booster: [0, 1 / 6, 1 / 5, 1 / 4, 1 / 3.5, 1 / 3],
+  gem: [0, 1 / 6, 1 / 5, 1 / 4, 1 / 3, 1 / 2.5],
+};
+
+export const BASE_CAP_HOURS = 6;
+
+// Formula inputs keep their previous values; changes here are balance changes.
+export const CHAPTER_REWARD = { baseGems: 25, gemsPerChapter: 5, dustPerChapter: 200 };
+export const RANK_REWARD = { baseGems: 20, gemsPerRank: 5, dustPerRank: 150 };
+export const CALENDAR_REPEAT_ITEM_GEMS = 40;
+export const FINISH_DUST_PER_THROW = 15;
+export const VISITOR_DUST = { common: 20, uncommon: 30, rare: 50, legendary: 80 };
+export const FRIENDSHIP_REWARD_GEMS_PER_LEVEL = 5;
+export const FRIENDSHIP_TREAT = { baseDust: 40, dustPerLevel: 30 };
+export const EXPEDITION_REWARD = { dustPerHour: 120, eightHourGems: 6, fourHourGems: 2, eightHourThreshold: 8, fourHourThreshold: 4 };
+export const GALAXY_RATE = { base: 6, perStar: 3, perSpecies: 2 };
+export const INBOX_GIFTS: Record<string, Reward> = {
+  welcome: { gems: 20 },
+  homeworld: { dust: 300 },
+  chapter: { gems: 15, boosters: { spark: 1 } },
+  best: { gems: 25 },
+  season: { boosters: { shower: 1 } },
+  festival: { dust: 150 },
+  voyage: { dust: 200 },
+};
+
+export const STARTER_BOOSTERS = 5;
+export const MATERIAL_DROP = { regionsPerDrop: 2, threeStarBonus: 1 };
+export const EXPEDITION_MULTIPLIER = { perTowerLevel: 0.1, legendary: 1.5, rare: 1.25 };
+
+// Homeworld pacing and unlock tables.
+export const RING_PLOTS = [0, 6, 8, 10, 12, 14];
+export const RING_CHAPTER = [0, 0, 1, 3, 5, 8];
+export const WIN_SPEEDUP = 10 * 60e3;
+export const FRIEND_LEVELS = [0, 3, 8, 15, 25];
+export const REQ_PERIOD = 6 * 3600e3;
+export const EXPEDITION_HOURS = [1, 4, 8];
+export const DEBRIS_EVERY = 3 * 3600e3;
+export const DEBRIS_MAX = 3;

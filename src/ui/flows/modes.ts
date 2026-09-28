@@ -1,3 +1,4 @@
+import { CHALLENGE_REWARD } from '../../meta/tuning';
 // Modes hub: Daily Planet, Meteor Rush, Zen Garden and Challenge a Friend.
 import { h, btn, fmt, modal, toast } from '../dom';
 import { sfx, setMusicTheme } from '../audio';
@@ -176,8 +177,8 @@ function modeEnded(app: App, mode: Mode, r: LevelResult, vs?: { code: string; se
           )
         : h('div', { class: 'end-score' }, t('{n} life', { n: fmt(r.score) })),
       out.gems
-        ? h('div', { class: 'reward-list' }, h('span', null, `💎 ${out.gems}`), h('span', null, '✨ 50'))
-        : h('div', { class: 'reward-list' }, h('span', null, '✨ 50')),
+        ? h('div', { class: 'reward-list' }, h('span', null, `💎 ${out.gems}`), h('span', null, `✨ ${CHALLENGE_REWARD.dust}`))
+        : h('div', { class: 'reward-list' }, h('span', null, `✨ ${CHALLENGE_REWARD.dust}`)),
       h(
         'p',
         { class: 'muted' },

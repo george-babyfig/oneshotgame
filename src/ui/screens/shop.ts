@@ -78,7 +78,7 @@ export function showShop(app: App) {
         h('div', { class: 'up-ic' }, b.emoji),
         h('div', { class: 'up-body' }, h('b', null, `${t(b.name)} ×${p.boosters[id]}`), h('small', null, t(b.desc))),
         btn(`💎${b.gems}`, 'buy', () => {
-          if (!spendGems(p, b.gems)) return app.needGems();
+          if (!spendGems(p, b.gems, 'booster')) return app.needGems();
           p.boosters[id]++;
           sfx.coin();
           app.save();
@@ -105,7 +105,7 @@ export function showShop(app: App) {
             else {
               if (p.gems < s.gems) return app.needGems();
               if (!(await confirmBox(t('Buy {name} for 💎{n}?', { name: t(s.name), n: s.gems }), t('Buy')))) return;
-              if (!spendGems(p, s.gems)) return app.needGems();
+              if (!spendGems(p, s.gems, 'atmosphere')) return app.needGems();
               p.skins.push(s.id);
               p.skin = s.id;
             }
@@ -151,7 +151,7 @@ export function showShop(app: App) {
         boosters,
         h('div', { class: 'sec-title' }, t('Atmospheres')),
         skins,
-        btn(t('Restore purchases'), 'ghost small', async () => {
+        btn(t('Restore purchases'), 'ghost small restore-purchases', async () => {
           if (await parentalGate('buy')) await app.restore();
         }),
         h(

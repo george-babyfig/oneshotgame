@@ -1,3 +1,4 @@
+import { RANK_REWARD } from './tuning';
 // Explorer Rank: three standing goals at a time; clear all three to rank up (Alto's style).
 import type { Profile } from './profile';
 import type { Reward } from './progression';
@@ -78,7 +79,11 @@ export function rankReady(p: Profile) {
 }
 
 export function rankReward(rank: number): Reward {
-  return { gems: 20 + rank * 5, dust: 150 * rank, boosters: rank % 2 ? { shower: 1 } : { spark: 1, scope: 1 } };
+  return {
+    gems: RANK_REWARD.baseGems + rank * RANK_REWARD.gemsPerRank,
+    dust: RANK_REWARD.dustPerRank * rank,
+    boosters: rank % 2 ? { shower: 1 } : { spark: 1, scope: 1 },
+  };
 }
 
 /** What a rank unlocks when you reach it. */

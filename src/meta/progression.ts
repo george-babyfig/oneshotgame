@@ -1,3 +1,8 @@
+import { CHAPTER_REWARD } from './tuning';
+import { QUEST_BONUS } from './tuning';
+import { QUESTS } from './tuning';
+import { STAR_ROAD } from './tuning';
+import { earn, type EarnSource } from './wallet';
 // Chapters, the Star Road reward track, and daily quests.
 import { rngFrom } from '../core/levels';
 import type { BoosterId } from './config';
@@ -49,14 +54,18 @@ export interface Reward {
 }
 
 export function chapterReward(n: number): Reward {
-  return { gems: 25 + n * 5, dust: 200 * n, boosters: { shower: 1, spark: 1, scope: 1 } };
+  return {
+    gems: CHAPTER_REWARD.baseGems + n * CHAPTER_REWARD.gemsPerChapter,
+    dust: CHAPTER_REWARD.dustPerChapter * n,
+    boosters: { shower: 1, spark: 1, scope: 1 },
+  };
 }
 
 export function openChest(p: Profile, n: number): Reward | null {
   if (!chestsReady(p).includes(n)) return null;
   p.chapters.push(n);
   const r = chapterReward(n);
-  applyReward(p, r);
+  applyReward(p, r, 'chest');
   return r;
 }
 
@@ -80,23 +89,7 @@ export interface RoadTier {
   pass: Reward;
 }
 
-export const STAR_ROAD: RoadTier[] = [
-  { stars: 5, reward: { gems: 15 }, pass: { skin: 'cosmic', gems: 30, item: 'l_orbit' } },
-  { stars: 12, reward: { boosters: { shower: 2 } }, pass: { gems: 40 } },
-  { stars: 20, reward: { dust: 400 }, pass: { boosters: { shower: 2, spark: 2, scope: 2 } } },
-  { stars: 30, reward: { skin: 'rose', gems: 10 }, pass: { gems: 50, item: 'hat_halo' } },
-  { stars: 42, reward: { gems: 30 }, pass: { dust: 1500 } },
-  { stars: 55, reward: { boosters: { spark: 2, scope: 2 }, item: 'l_crystal' }, pass: { gems: 60 } },
-  { stars: 70, reward: { dust: 1200 }, pass: { boosters: { shower: 3, spark: 3, scope: 3 } } },
-  { stars: 85, reward: { skin: 'lime', gems: 20 }, pass: { gems: 80, item: 'tr_cosmic' } },
-  { stars: 100, reward: { gems: 50 }, pass: { dust: 4000 } },
-  { stars: 120, reward: { boosters: { shower: 3, spark: 3, scope: 3 }, item: 'tr_rainbow' }, pass: { gems: 100 } },
-  { stars: 140, reward: { dust: 3000 }, pass: { boosters: { shower: 5, spark: 5, scope: 5 } } },
-  { stars: 165, reward: { skin: 'gold', gems: 40 }, pass: { gems: 120, item: 'suit_star' } },
-  { stars: 190, reward: { gems: 80, item: 'em_fireworks' }, pass: { dust: 8000 } },
-  { stars: 220, reward: { dust: 6000, gems: 50, item: 'hat_crown' }, pass: { gems: 150 } },
-  { stars: 260, reward: { gems: 120 }, pass: { gems: 250 } },
-];
+export { STAR_ROAD } from './tuning';
 
 export function roadReady(p: Profile, stars: number): number[] {
   const out: number[] = [];
@@ -115,12 +108,12 @@ export function claimRoad(p: Profile, i: number, stars: number): Reward[] {
   if (!t || stars < t.stars) return got;
   if (!p.road.includes(i)) {
     p.road.push(i);
-    applyReward(p, t.reward);
+    applyReward(p, t.reward, 'star_road');
     got.push(t.reward);
   }
   if (p.pass && !p.roadPass.includes(i)) {
     p.roadPass.push(i);
-    applyReward(p, t.pass);
+    applyReward(p, t.pass, 'star_road');
     got.push(t.pass);
   }
   return got;
@@ -143,36 +136,10 @@ export interface QuestDef {
   need?: (p: Profile) => boolean;
 }
 
-export const QUESTS: QuestDef[] = [
-  { id: 'throw25', event: 'throw', goal: 25, gems: 8, emoji: '🪨', text: (g) => t('Fling {n} objects', { n: g }) },
-  { id: 'win3', event: 'win', goal: 3, gems: 12, emoji: '🪐', text: (g) => t('Complete {n} planets', { n: g }) },
-  { id: 'star6', event: 'star', goal: 6, gems: 15, emoji: '⭐', text: (g) => t('Earn {n} stars', { n: g }) },
-  { id: 'creature8', event: 'creature', goal: 8, gems: 10, emoji: '🦊', text: (g) => t('Bring {n} creatures to life', { n: g }) },
-  { id: 'three1', event: 'three', goal: 1, gems: 15, emoji: '🌟', text: () => t('Get 3 stars on any planet') },
-  { id: 'booster1', event: 'booster', goal: 1, gems: 6, emoji: '🌠', text: () => t('Use a booster') },
-  { id: 'collect2', event: 'collect', goal: 2, gems: 8, emoji: '✨', text: (g) => t('Collect stardust {n} times', { n: g }) },
-  { id: 'land20', event: 'land', goal: 20, gems: 10, emoji: '🌍', text: (g) => t('Transform {n} regions', { n: g }) },
-  {
-    id: 'voyage1',
-    event: 'voyage',
-    goal: 1,
-    gems: 10,
-    emoji: '🚀',
-    text: () => t('Clear a Weekly Voyage stop'),
-    need: (p) => p.level >= 12,
-  },
-  {
-    id: 'spot6',
-    event: 'spot',
-    goal: 6,
-    gems: 8,
-    emoji: '🎪',
-    text: (g) => t('Spot {n} costumed critters', { n: g }),
-    need: (p) => p.level >= 8,
-  },
-];
+export { QUESTS } from './tuning';
+
 export const QUEST_BY_ID: Record<string, QuestDef> = Object.fromEntries(QUESTS.map((q) => [q.id, q]));
-export const QUEST_BONUS: Reward = { gems: 20, boosters: { shower: 1 } };
+export { QUEST_BONUS } from './tuning';
 
 /** Make sure today's three quests exist. */
 export function ensureQuests(p: Profile, day: string) {
@@ -204,14 +171,14 @@ export function claimQuest(p: Profile, id: string): number {
   const def = QUEST_BY_ID[id];
   if (!q || !def || q.claimed || q.progress < def.goal) return 0;
   q.claimed = true;
-  p.gems += def.gems;
+  earn(p, 'gems', def.gems, 'quest');
   return def.gems;
 }
 
 export function claimQuestBonus(p: Profile): Reward | null {
   if (p.quests.bonusClaimed || !p.quests.list.length || !p.quests.list.every((q) => q.claimed)) return null;
   p.quests.bonusClaimed = true;
-  applyReward(p, QUEST_BONUS);
+  applyReward(p, QUEST_BONUS, 'quest');
   return QUEST_BONUS;
 }
 
@@ -222,9 +189,9 @@ export function questsClaimable(p: Profile): number {
 }
 
 // ------------------------------------------------------------------ rewards
-export function applyReward(p: Profile, r: Reward) {
-  if (r.gems) p.gems += r.gems;
-  if (r.dust) p.dust += r.dust;
+export function applyReward(p: Profile, r: Reward, source: EarnSource = 'generic_reward') {
+  if (r.gems) earn(p, 'gems', r.gems, source);
+  if (r.dust) earn(p, 'dust', r.dust, source);
   for (const [k, v] of Object.entries(r.boosters ?? {})) p.boosters[k as BoosterId] += v ?? 0;
   if (r.skin && !p.skins.includes(r.skin)) p.skins.push(r.skin);
 }

@@ -1,3 +1,4 @@
+import { VOYAGE_REWARDS } from './tuning';
 // Weekly Voyage: a 7-planet mini-chapter that changes every Monday (same for
 // everyone, seeded by the ISO week). Planets unlock one after another, the last
 // one has a Comet Guardian, and finishing the whole trip counts toward Voyage
@@ -5,21 +6,13 @@
 import { makeLevel, type LevelDef } from '../core/levels';
 import type { Profile } from './profile';
 import { applyReward, type Reward } from './progression';
-import { isoWeek } from './events';
+import { isoWeek, weekAtMostOneAhead } from './events';
 
 export const VOYAGE_LEN = 7;
 export const VOYAGE_UNLOCK_LEVEL = 12;
 
 /** Paid the first time each stop is cleared this week. */
-export const VOYAGE_REWARDS: Reward[] = [
-  { dust: 150 },
-  { dust: 200 },
-  { gems: 5 },
-  { dust: 300, boosters: { spark: 1 } },
-  { gems: 10 },
-  { dust: 400, boosters: { shower: 1 } },
-  { gems: 30, dust: 600 },
-];
+export { VOYAGE_REWARDS } from './tuning';
 
 /** Stop names for the map, one set per week. */
 export const PORTS = ['Harbor', 'Reef', 'Lighthouse', 'Lagoon', 'Beacon', 'Drift', 'Summit', 'Haven', 'Cove', 'Isle'];
@@ -44,7 +37,8 @@ export function voyageBase(level: number) {
 }
 
 export function ensureVoyage(p: Profile, week = isoWeek()) {
-  if (p.voyage.week !== week) p.voyage = { week, base: voyageBase(p.level), cleared: 0, stars: [] };
+  if (week > p.voyage.week || (week < p.voyage.week && !weekAtMostOneAhead(p.voyage.week, week)))
+    p.voyage = { week, base: voyageBase(p.level), cleared: 0, stars: [] };
   return p.voyage;
 }
 
@@ -84,7 +78,7 @@ export function clearStop(p: Profile, i: number, stars: number): { reward: Rewar
   if (i < v.cleared) return { reward: null, done: false };
   v.cleared = i + 1;
   const reward = VOYAGE_REWARDS[i];
-  applyReward(p, reward);
+  applyReward(p, reward, 'voyage');
   const done = v.cleared === VOYAGE_LEN;
   if (done) p.voyageDone++;
   return { reward, done };

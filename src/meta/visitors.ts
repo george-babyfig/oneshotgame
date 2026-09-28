@@ -1,3 +1,5 @@
+import { VISITOR_DUST } from './tuning';
+import { earn } from './wallet';
 // Visitors: while the app is closed, creatures you've discovered drop by your galaxy
 // and leave small gifts — and sometimes a keepsake memento (inspired by Neko Atsume).
 import { SPECIES, SPECIES_BY_ID } from '../core/world';
@@ -52,7 +54,7 @@ export function rollVisitors(p: Profile, now: number): VisitorGift[] {
     const species = p.seen.reduce((best, id) => ((visits[id] ?? 0) < (visits[best] ?? 0) ? id : best));
     visits[species] = (visits[species] ?? 0) + 1;
     const rarity = SPECIES_BY_ID[species]?.rarity ?? 'common';
-    const dust = { common: 20, uncommon: 30, rare: 50, legendary: 80 }[rarity];
+    const dust = VISITOR_DUST[rarity];
     const memento = visits[species] >= 3 && !owed.has(species) ? species : null;
     if (memento) owed.add(species);
     out.push({ species, dust, gems: 0, memento });
@@ -75,7 +77,7 @@ export function addVisitors(p: Profile, now: number) {
 export function openVisitor(p: Profile): VisitorGift | null {
   const v = p.visitors.shift();
   if (!v) return null;
-  p.dust += v.dust;
+  earn(p, 'dust', v.dust, 'visitor');
   if (v.memento && !p.mementos.includes(v.memento)) p.mementos.push(v.memento);
   return v;
 }

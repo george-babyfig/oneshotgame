@@ -205,7 +205,7 @@ export function editPassport(app: App, first = false) {
     h('div', { class: 'pe-av' }, keeperCanvas(currentLook(p), 92, 0.3, { cheer: 1 })),
     wheel(0),
     wheel(1),
-    btn(t('✨ Surprise me'), 'ghost small', () => {
+    btn(t('✨ Surprise me'), 'ghost small passport-surprise', () => {
       ({ first: a, second: b } = randomName());
       sfx.click();
       paint();

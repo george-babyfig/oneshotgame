@@ -1,3 +1,5 @@
+import { WIN_REWARD, GALAXY_RATE, STARTER_BOOSTERS } from './tuning';
+import { earn, spend, type SpendSink } from './wallet';
 // Pure game-economy rules. Everything here mutates a Profile and returns what
 // happened, so the UI can celebrate it and tests can pin it down.
 import { BIOMES, type Planet } from '../core/world';
@@ -8,7 +10,7 @@ import { questEvent, type QuestEvent } from './progression';
 
 /** Stardust per hour produced by one galaxy planet. */
 export function planetRate(g: Pick<GalaxyPlanet, 'stars' | 'species'>) {
-  return 6 + g.stars * 3 + g.species.length * 2;
+  return GALAXY_RATE.base + g.stars * GALAXY_RATE.perStar + g.species.length * GALAXY_RATE.perSpecies;
 }
 
 export function galaxyRate(p: Profile) {
@@ -37,7 +39,7 @@ export function vaultFullAt(p: Profile) {
 export function collectDust(p: Profile, now = Date.now(), multiplier = 1) {
   const d = pendingDust(p, now) * multiplier;
   if (d <= 0) return 0;
-  p.dust += d;
+  earn(p, 'dust', d, 'vault');
   p.lastCollect = now;
   track(p, 'collect');
   return d;
@@ -80,11 +82,14 @@ export function applyLevelWin(p: Profile, w: WinInput): LevelOutcome {
   const prev = p.stars[n] ?? 0;
   const firstClear = prev === 0;
   const newStars = Math.max(0, stars - prev);
-  const dust = (25 + stars * 15 + (firstClear ? 40 : 0)) * DIFFICULTY_DUST[difficulty] + (w.bonusDust ?? 0);
-  const gems = (stars === 3 && prev < 3 ? 2 : 0) + (firstClear && difficulty === 'super' ? 5 : 0);
+  const dust =
+    (WIN_REWARD.baseDust + stars * WIN_REWARD.dustPerStar + (firstClear ? WIN_REWARD.firstClearDust : 0)) * DIFFICULTY_DUST[difficulty] +
+    (w.bonusDust ?? 0);
+  const gems =
+    (stars === 3 && prev < 3 ? WIN_REWARD.threeStarGems : 0) + (firstClear && difficulty === 'super' ? WIN_REWARD.superFirstClearGems : 0);
   p.stars[n] = Math.max(prev, stars);
-  p.dust += dust;
-  p.gems += gems;
+  earn(p, 'dust', dust, firstClear ? 'first_clear' : 'level_win');
+  earn(p, 'gems', gems, firstClear ? 'first_clear' : 'level_win');
   p.piggy = Math.min(PIGGY_MAX, p.piggy + PIGGY_PER_WIN);
   p.stats.wins++;
   if (difficulty !== 'normal') p.stats.hardWins++;
@@ -119,7 +124,7 @@ export function applyLevelWin(p: Profile, w: WinInput): LevelOutcome {
 export function discoverSpecies(p: Profile, id: string): boolean {
   if (p.seen.includes(id)) return false;
   p.seen.push(id);
-  p.gems += GEMS_PER_NEW_SPECIES;
+  earn(p, 'gems', GEMS_PER_NEW_SPECIES, 'discovery');
   return true;
 }
 
@@ -137,7 +142,7 @@ export function grantProduct(p: Profile, productId: string, txId: string): { gem
       break;
     case 'starter':
       if (p.starter) gems = 0;
-      else for (const k of Object.keys(p.boosters) as (keyof Profile['boosters'])[]) p.boosters[k] += 5;
+      else for (const k of Object.keys(p.boosters) as (keyof Profile['boosters'])[]) p.boosters[k] += STARTER_BOOSTERS;
       p.starter = true;
       if (!p.skins.includes('aurora')) p.skins.push('aurora');
       break;
@@ -146,20 +151,16 @@ export function grantProduct(p: Profile, productId: string, txId: string): { gem
       p.pass = true;
       break;
   }
-  p.gems += gems;
+  earn(p, 'gems', gems, 'iap');
   return { gems, title: def.title };
 }
 
-export function spendGems(p: Profile, n: number) {
-  if (p.gems < n) return false;
-  p.gems -= n;
-  return true;
+export function spendGems(p: Profile, n: number, sink: SpendSink = 'generic_spend') {
+  return spend(p, 'gems', n, sink);
 }
 
-export function spendDust(p: Profile, n: number) {
-  if (p.dust < n) return false;
-  p.dust -= n;
-  return true;
+export function spendDust(p: Profile, n: number, sink: SpendSink = 'generic_spend') {
+  return spend(p, 'dust', n, sink);
 }
 
 /** Quest tracking helper (keeps call sites short). */

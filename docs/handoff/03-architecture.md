@@ -62,6 +62,9 @@ docs/          privacy.html and this handoff
 - **Style:** Prettier formatting (CI checks it). Comments are short and explain _why_.
 
 - **Music:** `app.mount()` picks the theme for every non-level screen: `voyage` on the Voyage map, `festival` while `festivalLive(p)` (this month's festival still has tiers to claim), otherwise `home`. Levels set their own theme after mounting (`chapterTheme(n)`, mode themes, `voyage` for Voyage stops). `setMusicTheme` switches at the next chord. `resources/render-music.cjs` (`npm run music`, needs `npm run dev`) mirrors `startMusic()` to record WAVs, so keep the two in step if the synth changes.
+- **Money and measurement (M1):** every change to gems, stardust or Essences (`p.mats`) goes through `earn()`/`spend()` in `src/meta/wallet.ts` with a named source or sink; `tests/wallet.test.ts` fails on any direct write. Every price, reward and cost lives in `src/meta/tuning.ts` (a snapshot test shows any balance change). `src/meta/ledger.ts` keeps private on-device aggregates in its own store (`pp.ledger`), never sent anywhere; long-press the version in Settings (dev/tester builds only) for the Balance Report.
+- **Sims:** `npm run sim:quick` (difficulty survey, compares with `tests/sim/baseline.json`; refresh with `npm run sim:baseline`), `npm run sim:economy` (90-day careers), `npm run sim` (all). `makeLevel(n, prefix, { salt })` gives shadow seeds; `LEVEL_SALT` in `levels.ts` re-seeds individual walls.
+- **E2E:** `npm run e2e` (Playwright; `e2e/`), `npm run e2e:quick`. In dev, `window.__i18n.setLang('pseudo')` switches to a 40%-longer pseudo-locale.
 - **Planned systems:** [docs/product/ROADMAP-v2.md](../product/ROADMAP-v2.md) specifies the next systems (synergies, hazards, the Homeworld overhaul and more), with the files each milestone touches. Read it before changing `src/core/world.ts`, `levels.ts` or `homeworld.ts`.
 
 ## Unlock levels (campaign `p.level`)

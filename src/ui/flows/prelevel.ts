@@ -95,7 +95,7 @@ export function preLevel(app: App, n: number) {
             canGet ? 'primary wide' : 'primary wide dim',
             () => {
               if (count > 0) chosen[id] = true;
-              else if (spendDust(p, b.dust)) {
+              else if (spendDust(p, b.dust, 'booster')) {
                 p.boosters[id]++;
                 chosen[id] = true;
                 sfx.coin();

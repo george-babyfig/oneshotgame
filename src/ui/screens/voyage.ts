@@ -5,7 +5,7 @@ import { sfx, setMusicTheme } from '../audio';
 import { haptic } from '../haptics';
 import { LevelScene, type LevelResult } from '../game';
 import type { LevelDef } from '../../core/levels';
-import { isoWeek, eventEndsIn } from '../../meta/events';
+import { eventEndsIn } from '../../meta/events';
 import {
   VOYAGE_LEN,
   VOYAGE_REWARDS,
@@ -216,8 +216,8 @@ function play(app: App, i: number) {
 function ended(app: App, i: number, week: string, r: LevelResult) {
   const p = app.p;
   if (r.throwsUsed === -1) return play(app, i);
-  // the week rolled over mid-level: the old route is gone
-  if (isoWeek() !== week || p.voyage.week !== week) {
+  // The saved route changed while this stop was open.
+  if (p.voyage.week !== week) {
     showVoyage(app);
     return toast(t('A new Voyage has begun!'));
   }

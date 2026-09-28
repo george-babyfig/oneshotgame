@@ -1,3 +1,4 @@
+import { ledger } from '../meta/ledger';
 import {
   type BiomeId,
   BIOMES,
@@ -112,7 +113,8 @@ interface Ring {
   color: string;
 }
 
-export const FINISH_DUST_PER_THROW = 15;
+export { FINISH_DUST_PER_THROW } from '../meta/tuning';
+import { FINISH_DUST_PER_THROW } from '../meta/tuning';
 const CALLOUTS: [number, string, string][] = [
   [50, 'Paradise!', '#ff8fe0'],
   [32, 'Thriving!', '#ffd84a'],
@@ -220,7 +222,10 @@ export class LevelScene {
   private coachEl!: HTMLElement;
   private discoverEl!: HTMLElement;
 
+  private startedAt = performance.now();
+
   constructor(level: LevelDef, opts: SceneOpts) {
+    if (!opts.endless) ledger.count('round_started');
     this.L = level;
     this.o = opts;
     this.planet = clonePlanet(level.start);
@@ -291,7 +296,7 @@ export class LevelScene {
       h(
         'div',
         { class: 'hud-top' },
-        h('button', { class: 'icon', 'aria-label': 'Pause', onclick: () => this.pause() }, icon('pause', 22)),
+        h('button', { class: 'icon', 'aria-label': t('Pause'), onclick: () => this.pause() }, icon('pause', 22)),
         h(
           'div',
           { class: 'hud-title' },
@@ -1005,6 +1010,7 @@ export class LevelScene {
       }
       m.close();
       this.modalOpen = null;
+      ledger.count('continues_bought');
       this.o.onContinue?.();
       this.throwsLeft += CONTINUE_THROWS;
       this.throwsTotal += CONTINUE_THROWS;
@@ -1086,6 +1092,17 @@ export class LevelScene {
   private finish(stars: number) {
     if (this.ended) return;
     this.ended = true;
+    if (!this.o.endless) {
+      if (stars === 0) ledger.count('round_failed');
+      ledger.count(
+        stars > 0
+          ? 'round_won'
+          : this.L.goals.some((g) => goalProgress(this.planet, g) < g.count)
+            ? 'round_failed_goal'
+            : 'round_failed_score',
+      );
+      ledger.add('round_seconds', Math.max(1, Math.round((performance.now() - this.startedAt) / 1000)));
+    }
     const send = () =>
       !this.destroyed &&
       this.o.onEnd({
@@ -1126,6 +1143,7 @@ export class LevelScene {
           if (this.ended) return;
           m.close();
           this.ended = true;
+          if (!this.o.endless) ledger.count('round_restarted');
           this.o.onEnd({
             level: this.L,
             score: 0,

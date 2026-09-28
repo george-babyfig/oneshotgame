@@ -41,7 +41,7 @@ export function rankFlow(app: App) {
         if (!rankReady(p)) return;
         p.rank++;
         const r = rankReward(p.rank);
-        applyReward(p, r);
+        applyReward(p, r, 'rank');
         app.syncGameCenter();
         app.save();
         sfx.levelUp();

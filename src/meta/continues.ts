@@ -1,6 +1,6 @@
 import type { Profile } from './profile';
 
-export const CONTINUE_COST = 50;
+export { CONTINUE_COST } from './tuning';
 export const CONTINUE_THROWS = 5;
 export const CONTINUE_MAX = 2;
 export const CONTINUE_FROM_PLANET = 11;

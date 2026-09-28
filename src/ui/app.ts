@@ -1,3 +1,4 @@
+import { ledger, loadLedger } from '../meta/ledger';
 // App shell: owns the profile, screen mounting, purchases and the level flow.
 // Each screen lives in ./screens and each modal flow in ./flows.
 import { Capacitor } from '@capacitor/core';
@@ -101,6 +102,8 @@ export class App {
     this.root.append(this.host);
     mountOverlays(this.root);
     this.p = await loadProfile();
+    await loadLedger();
+    ledger.count('app_open');
     this.p.meta.sessions++;
     this.applySettings();
     ensureQuests(this.p, today());
@@ -192,6 +195,7 @@ export class App {
       if (sc) sc.scrollTop = scrollTop;
     }
     this.screen = name;
+    if (name !== 'homeworld') ledger.homeworldClose();
     if (name !== 'level') setMusicTheme(name === 'voyage' ? 'voyage' : festivalLive(this.p) ? 'festival' : 'home');
   }
 
@@ -227,36 +231,49 @@ export class App {
     showHome(this, quiet);
   }
   showLifebook() {
+    ledger.discover('lifebook', this.p.level);
     showLifebook(this);
   }
   showUpgrades() {
+    ledger.discover('upgrades', this.p.level);
     showUpgrades(this);
   }
   showShop() {
+    ledger.discover('shop', this.p.level);
+    if (this.screen !== 'shop') ledger.count('offer_shop');
     showShop(this);
   }
   showStarMap() {
+    ledger.discover('star_map', this.p.level);
     showStarMap(this);
   }
   showRoad() {
+    ledger.discover('star_road', this.p.level);
     showRoad(this);
   }
   showWorkshop() {
+    ledger.discover('workshop', this.p.level);
     showWorkshop(this);
   }
   showPassport() {
+    ledger.discover('passport', this.p.level);
     showPassport(this);
   }
   showPass() {
+    ledger.discover('pass', this.p.level);
+    if (this.screen !== 'pass') ledger.count('contents_sheet');
     showPass(this);
   }
   showSky() {
+    ledger.discover('sky', this.p.level);
     showSky(this);
   }
   showVoyage() {
+    ledger.discover('voyage', this.p.level);
     showVoyage(this);
   }
   showAlbum() {
+    ledger.discover('album', this.p.level);
     showAlbum(this);
   }
   festival() {
@@ -266,6 +283,8 @@ export class App {
     inboxFlow(this);
   }
   showHomeworld() {
+    ledger.discover('homeworld', this.p.level);
+    if (this.screen !== 'homeworld') ledger.homeworldOpen();
     showHomeworld(this);
   }
   settings() {
@@ -353,7 +372,7 @@ export class App {
       reduceMotion: this.p.settings.reduceMotion,
       gems: () => this.p.gems,
       spendGems: (g) => {
-        const ok = spendGems(this.p, g);
+        const ok = spendGems(this.p, g, 'continue');
         if (ok) this.save();
         return ok;
       },
@@ -409,7 +428,10 @@ export class App {
   startLevel(n: number, o: { tutorial?: boolean; boosters?: Boosters; level?: LevelDef } = {}) {
     const L = o.level ?? makeLevel(n);
     const boosters = o.boosters ?? NO_BOOSTERS;
-    if (Object.values(boosters).some(Boolean)) track(this.p, 'booster');
+    if (Object.values(boosters).some(Boolean)) {
+      track(this.p, 'booster');
+      ledger.count('boosters_used', Object.values(boosters).filter(Boolean).length);
+    }
     this.p.stats.plays++;
     const tier = momentumActive(this.p) ? this.p.momentum.streak : 0;
     const perk = MOMENTUM_PERKS[tier];
@@ -492,8 +514,13 @@ export class App {
     this.root.classList.add('buying');
     try {
       const r = await this.iap.purchase(pr);
-      if (r.ok) this.grant(r.productId ?? pr.id, r.txId ?? `local-${Date.now()}`);
-      else if (!r.cancelled && r.error) toast(r.error, 'bad');
+      if (r.ok) {
+        this.grant(r.productId ?? pr.id, r.txId ?? `local-${Date.now()}`);
+      } else if (r.cancelled) ledger.count('purchase_cancelled');
+      else if (r.error) {
+        ledger.count(/pending|ask to buy/i.test(r.error) ? 'purchase_pending' : 'purchase_failed');
+        toast(r.error, 'bad');
+      }
     } finally {
       this.busy = false;
       this.root.classList.remove('buying');
@@ -503,6 +530,7 @@ export class App {
   grant(productId: string, txId: string) {
     const g = grantProduct(this.p, productId, txId);
     if (!g) return;
+    ledger.count('purchase_ok');
     this.saveNow();
     sfx.gem();
     haptic.success();

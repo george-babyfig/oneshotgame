@@ -1,3 +1,4 @@
+import { FESTIVAL_TIERS } from './tuning';
 // Monthly festivals: every calendar month has a theme, and while it runs the
 // creatures on your planets wear that month's costume. Spot enough costumed
 // critters for the festival's sticker, gems and a keepsake your Homeworld
@@ -44,11 +45,7 @@ export interface FestivalTier {
   acc?: boolean;
 }
 
-export const FESTIVAL_TIERS: FestivalTier[] = [
-  { spot: 10, reward: { dust: 250 }, sticker: true },
-  { spot: 25, reward: { gems: 15 } },
-  { spot: 45, reward: { gems: 20, dust: 500 }, acc: true },
-];
+export { FESTIVAL_TIERS } from './tuning';
 
 export function festivalOn(d = new Date()): Festival {
   return FESTIVALS[d.getMonth()];
@@ -78,8 +75,14 @@ export function festivalDaysLeft(d = new Date()) {
 
 export function ensureFestival(p: Profile, d = new Date()): Festival {
   const key = festivalKey(d);
-  if (p.festival.key !== key) p.festival = { key, spotted: 0, claimed: [] };
-  return festivalOn(d);
+  const month = (value: string) => {
+    const match = /^(\d{4})-(\d{2})$/.exec(value);
+    if (!match || Number(match[2]) < 1 || Number(match[2]) > 12) return NaN;
+    return Number(match[1]) * 12 + Number(match[2]);
+  };
+  if (key > p.festival.key || (key < p.festival.key && month(p.festival.key) - month(key) !== 1))
+    p.festival = { key, spotted: 0, claimed: [] };
+  return FESTIVALS[Number(p.festival.key.slice(5)) - 1] ?? festivalOn(d);
 }
 
 /** A costumed creature appeared on a planet. */
@@ -103,7 +106,7 @@ export function claimFestival(p: Profile, i: number, d = new Date()): Reward | n
   const tier = FESTIVAL_TIERS[i];
   if (!tier || p.festival.spotted < tier.spot || p.festival.claimed.includes(i)) return null;
   p.festival.claimed = [...p.festival.claimed, i];
-  applyReward(p, tier.reward);
+  applyReward(p, tier.reward, 'festival');
   if (tier.sticker && !p.album.fest.includes(f.id)) p.album.fest = [...p.album.fest, f.id];
   if (tier.acc && !p.home.accs.includes(f.acc)) p.home.accs = [...p.home.accs, f.acc];
   return tier.reward;

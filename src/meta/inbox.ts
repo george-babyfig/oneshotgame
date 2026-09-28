@@ -1,3 +1,4 @@
+import { INBOX_GIFTS } from './tuning';
 // Inbox: letters shipped with the app, delivered when something happens
 // (milestones, seasons, meteor showers, new friends). Some carry a small gift.
 import { festivalActive, festivalKey, festivalOn } from './festivals';
@@ -46,7 +47,7 @@ const RULES: Rule[] = [
       from: MC,
       title: 'Welcome, Keeper!',
       body: 'Your job is simple: fling, grow, and bring planets to life. We packed a little something for the trip.',
-      gift: { gems: 20 },
+      gift: INBOX_GIFTS.welcome,
     }),
   },
   {
@@ -56,7 +57,7 @@ const RULES: Rule[] = [
       from: MC,
       title: 'A planet of your own',
       body: 'We found you a quiet little world. Build a Stardust Mill and a Critter Den — it will grow with every chapter you finish.',
-      gift: { dust: 300 },
+      gift: INBOX_GIFTS.homeworld,
     }),
   },
   {
@@ -70,7 +71,7 @@ const RULES: Rule[] = [
       from: MC,
       title: 'Chapter {n} complete!',
       body: 'Every planet in the chapter is alive and orbiting your galaxy. The crew is proud of you. Onward!',
-      gift: { gems: 15, boosters: { spark: 1 } },
+      gift: INBOX_GIFTS.chapter,
     }),
   },
   {
@@ -96,7 +97,7 @@ const RULES: Rule[] = [
       face: '{c}',
       title: 'Best friends forever',
       body: 'I made you something to remember our adventures by. Please keep it somewhere safe.',
-      gift: { gems: 25 },
+      gift: INBOX_GIFTS.best,
     }),
   },
   {
@@ -107,7 +108,7 @@ const RULES: Rule[] = [
       from: MC,
       title: SEASON_TITLES[v.s as string] ?? 'A new season',
       body: SEASON_BODIES[v.s as string] ?? '',
-      gift: { boosters: { shower: 1 } },
+      gift: INBOX_GIFTS.season,
     }),
   },
   {
@@ -140,7 +141,7 @@ const RULES: Rule[] = [
       from: MC,
       title: '{e} has begun!',
       body: 'All month long, every creature on your planets wears a festival costume. Spot them to earn a sticker and a keepsake your residents can wear.',
-      gift: { dust: 150 },
+      gift: INBOX_GIFTS.festival,
     }),
   },
   {
@@ -150,7 +151,7 @@ const RULES: Rule[] = [
       from: MC,
       title: 'Set sail on the Weekly Voyage',
       body: 'Every Monday a new route of seven planets opens. Clear them one by one, and watch out for the Comet Guardian at the end!',
-      gift: { dust: 200 },
+      gift: INBOX_GIFTS.voyage,
     }),
   },
   {
@@ -240,7 +241,7 @@ export function claimMail(p: Profile, id: string): Reward | null {
   const gift = letterOf(m)?.gift;
   if (!gift || m.claimed) return null;
   m.claimed = true;
-  applyReward(p, gift);
+  applyReward(p, gift, 'inbox');
   return gift;
 }
 
