@@ -2643,3 +2643,19 @@ The delivery plan is thorough. It has 13 milestones to launch (M0–M12), each w
 ### **Claude** · 2026-09-28 20:35
 
 Everything's finished and pushed to `claude/eager-planck-yfnmzf`, so you can transfer now (the sign-off message, summarized): the new local-session prompt in `docs/handoff/PROMPT.md`, the roadmap in `docs/product/ROADMAP-v2.md` (start with M0, the kid-safety fixes), every handoff doc updated, the Remix spec, the raw scoping material in `docs/product/scope/`, and both transcripts intact here. Decisions waiting on the owner are in section 10 of the roadmap. Nothing new is built yet; the new session starts with M0. This cloud session stops pushing to the branch now.
+
+### **Claude** · 2026-09-28 20:38
+
+The red check is the expected one, on `d57da9a` (the formatting slip). On the latest commit, `0d191b3`, the web checks (`verify`) have passed, and the iOS build is still running.
+
+### **Claude** · 2026-09-28 20:40
+
+CI passed on the final commit (`0d191b3`), both the web checks and the iOS build, so PR george-babyfig/oneshotgame#2 is green. Everything is pushed and the handoff is complete, so you can start the local session with `docs/handoff/PROMPT.md` whenever you're ready. I won't push anything else from here. Tell me once the new session is running and I'll archive this one.
+
+### **George** · 2026-09-28 20:45
+
+ok prepare everything md wise in repo for me, then paste the prompt in here for me to copy paste
+
+### **Claude** · 2026-09-28 20:46
+
+Confirmed that every handoff doc was committed and pushed. I added these last messages to the transcript, then pasted the setup steps and prompt from `docs/handoff/PROMPT.md` into the chat.
