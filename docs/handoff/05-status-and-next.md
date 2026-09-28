@@ -1,52 +1,74 @@
-# 05: Status and next steps (as of 28 September 2026)
+# 05: Status and next steps (as of 28 September 2026, end of the second session)
 
 ## Where things stand
 
-- **Branch:** `claude/eager-planck-yfnmzf`. The head commit is `78f22e9` (festival and Voyage music) and the working tree is clean.
-- **PR:** george-babyfig/oneshotgame#2 is a **draft** with rounds 3–7. CI is green (`verify` and `ios-build`), it merges cleanly, and it has no review comments. The owner hasn't said to merge it yet; mark it ready or merge only when they ask.
-- **Tests:** 84 pass. Format and typecheck are clean, and the build works.
-- **Playable web build:** https://claude.ai/artifact/K5sPveYA8weiBttagqJjsR (private to the owner) is at Version 11, which is round 6. It **does not include** the round 7 music yet. Only a Claude session with the Artifact tool can republish it. A local session can instead run `npm run dev` or the iOS Simulator (see 06-workflow.md).
+- **Branch:** `claude/eager-planck-yfnmzf`, pushed, with a clean working tree. The cloud sessions have stopped, so the next (local) session owns the branch.
+- **PR:** george-babyfig/oneshotgame#2 is a **draft** with rounds 3–7 and the product scope. CI (`verify` and `ios-build`) is green on every commit except `3014b7b`, which had a formatting slip that the next commit fixed. It merges cleanly and has no review comments. Merge only when the owner asks.
+- **Tests:** 85 pass. Format and typecheck are clean, and the build works.
+- **Playable web build:** https://claude.ai/artifact/K5sPveYA8weiBttagqJjsR (private to the owner) is at **Version 12**: rounds 1–6 plus the round 7 music. A local session may not have the Artifact tool. The Simulator is the main way to play from now on.
+- **Simulator download:** every CI run uploads **PocketPlanet-Simulator** (steps in [06-workflow.md](06-workflow.md)).
 
-## In progress: round 7
+## Done in the second session
 
-The roadmap items after round 6 are an optional New Game+, iMessage stickers and festival music.
+- **Music:** festival and Voyage themes checked with offline recordings (`npm run music`). One bug fixed: the festival tune had permanently replaced the home music from planet 8.
+- **Round 7 research**, the ROADMAP.md round 7 section, and the full [Remix and iMessage spec](../product/REMIX.md).
+- **Product scope**, a senior-PM review run with sub-agents:
+  - audits of the gameplay, economy, Homeworld and first-session journey
+  - three research sweeps
+  - 45 proposals from 5 PMs
+  - 5 adversarial critiques
+  - a head-of-product roadmap: **[docs/product/ROADMAP-v2.md](../product/ROADMAP-v2.md)**
+  - The raw material is in [docs/product/scope/](../product/scope/README.md).
 
-- [x] Festival music on the home screen while a festival runs (`THEMES.festival`), and a Voyage theme (`THEMES.voyage`). Both are in `src/ui/audio.ts` (commit `78f22e9`).
-- [ ] **Listen to the new themes** in the running game and tweak them if they don't feel good.
-- [ ] **Update ROADMAP.md** with a round 7 section (research table plus what shipped).
-- [ ] **New Game+ / "Remix"** (the main remaining round 7 feature). The campaign is endless (levels are generated), so a classic New Game+ doesn't fit. The proposed design:
-  - Remix any finished chapter: the same chapter, with different seeds (e.g. a `RMX-` seed prefix in `makeLevel`), tougher star targets and always-on goals.
-  - It earns "Remix stars" shown on the Star Map, a gold chapter frame, and a Passport title. No new currency.
-  - Needs: a profile field for remix stars, Star Map UI, tests (feasibility via `greedyPlan`), i18n and a roadmap entry.
-- [ ] **iMessage sticker pack.** This needs a native iMessage extension target in Xcode, which is only feasible on a Mac. The stickers could be exported from `drawSticker` in `src/ui/art/stickers.ts` as PNGs.
-- [ ] After each feature: tests, translations for all 5 languages, Playwright or Simulator QA, commit, push, update the PR description, and republish the playable build if possible.
+## What the scope found (short version)
+
+These are the owner's "what is the point?" questions, answered by the audits:
+
+- **Levels:** the best throw is usually just "aim at the biggest number" in the landing preview. There are no combos, nothing on the planet pushes back, and the Object Lab's flat bonuses make levels too easy.
+- **Stardust:** it piles up from idle income, and after the Lab there is little worth buying.
+- **Gems:** there are more free gems than things to spend them on, so gem packs have almost nothing to sell. Realistic revenue per payer is capped near $8.
+- **Homeworld:** production only feeds more production. Nothing there changes a throw, residents are cosmetic, and nothing can be lost or decided.
+- **Onboarding:**
+  - Planet 1 can be failed, and the failure shows a gem continue.
+  - A new player meets about 21 buttons on the home screen and a calendar pop-up they can't dismiss.
+  - The iPhone SE home screen clips buttons.
+- **Compliance gaps in the current build (fix first):**
+  - sharing has no parental gate
+  - Game Center sign-in, notification permission and rating prompts are shown to the child
+  - free events show ticking countdowns
+  - visitors hand out random gems
+
+## Next: build ROADMAP-v2, milestone by milestone
+
+<!-- MILESTONES -->
+
+How to build each milestone as a studio, with Codex as lead developer: [06-workflow.md](06-workflow.md), "Running it like a dev team".
+
+## Also planned
+
+- **Remix** (spec in [REMIX.md](../product/REMIX.md)): scheduled in ROADMAP-v2. It only needs `makeLevel`, so it can be built in parallel once the new round rules are frozen.
+- **iMessage sticker pack:** the PNG export script can be written anywhere. The Xcode extension target, icons and signing need the Mac. Spec in REMIX.md.
 
 ## Known issues and caveats
 
-- **Voyage map previews all look alike.** They show each stop's _starting_ planet, which is mostly bare rock with the cutaway core. It could show a hint of the target instead, or tint each preview by the stop's hue.
-- **Round 6 translations** (20 strings: buddy, festival and Voyage letters, quests, achievements) were written by Claude without a native-speaker review. German uses "Accessoire" for "Accessory".
-- **Zen Garden festival farming:** spotting creatures in Zen Garden counts toward festivals, so festival tiers can be filled quickly there. Rewards are small (max ~35 gems a month). Consider excluding Zen, or leave it as is.
-- **Voyage replays** count toward the "Clear a Weekly Voyage stop" quest; this is intentional.
-- **Not yet verified on real hardware:** real StoreKit purchases (only the StoreKit config file and the mock have been tested), the game's feel on a device, and installing the Simulator zip. The difficulty curve was tuned by simulation, not by hand.
+- **Voyage map previews all look alike.** They show each stop's starting planet, which is mostly bare rock.
+- **Round 6 translations** (20 strings) were written by Claude without a native-speaker review. German uses "Accessoire" for "Accessory".
+- **Zen Garden festival farming:** spotting creatures in Zen counts toward festivals. Rewards are small.
+- **Voyage replays** count toward the "Clear a Weekly Voyage stop" quest. This is intentional.
+- **The difficulty simulation ignores twists, swaps and aiming physics**, so real fail rates are probably higher than `npm run sim` says (economy audit).
+- **Not yet verified on real hardware:** StoreKit purchases, the game's feel on a device, and installing the Simulator zip.
+- **Research limits:** the cloud network blocked many sites (App Store pages, Wikipedia, 9to5mac…), so some findings rest on search snippets. Each research file marks its confidence.
 
-## Owner to-dos (things only George can do)
+## Owner decisions and to-dos (things only George can do)
 
-- Make the repo **private**: GitHub → Settings → General → Danger Zone → Change visibility.
-- Switch the repo's **default branch** to `main`.
-- Create the leaderboard and achievement IDs in **App Store Connect → Game Center**. `store/gamecenter.md` has 27 achievements and 4 leaderboards.
+- **Decisions the roadmap needs:** see section 10 of [ROADMAP-v2.md](../product/ROADMAP-v2.md). The biggest is whether to retire gem packs and the piggy bank before launch, in favour of a store where money buys looks only. Nothing exists in App Store Connect yet, so switching now costs nothing.
+- **Run the next session locally:** see [PROMPT.md](PROMPT.md). Check that Xcode and Codex work on the Mac.
+- **Repo settings:** make the repo **private** (GitHub → Settings → General → Danger Zone) and switch the **default branch** to `main`.
 - **App Store setup:**
-  - an Apple Developer account and bundle ID `com.pocketplanet.game`
-  - in-app purchase products matching `ios/App/PocketPlanet.storekit` (7 products)
+  - an Apple Developer account
+  - the bundle ID `com.pocketplanet.game`
+  - Game Center IDs from `store/gamecenter.md`
+  - in-app purchases (wait for the catalogue decision above)
   - the listing text and screenshots in `store/`
-- **Playtest** on a device or the Simulator, and share how the difficulty feels.
+- **Playtest** in the Simulator or on a device, and say how the difficulty feels.
 - **Merge PR #2** when happy.
-
-## Ideas for after round 7
-
-These are drawn from the research tables' "next up" notes; none has been started.
-
-- **Seasonal (rotating) passes** instead of a single permanent Cosmic Pass.
-- **iMessage stickers**, as above.
-- **Social without a server:** more share cards (e.g. an album page is already done); Game Center friend challenges.
-- **Accessibility:** a colour-blind biome palette, a larger-text option, audio cues for landing previews.
-- **Performance** on older iPhones: profile the canvas and cache planet and critter layers.
