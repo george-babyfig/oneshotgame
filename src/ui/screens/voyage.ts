@@ -207,7 +207,7 @@ function play(app: App, i: number) {
   const scene = new LevelScene(L, opts);
   app.mount(scene.el, 'level');
   app.scene = scene;
-  setMusicTheme('tide');
+  setMusicTheme('voyage');
 }
 
 function ended(app: App, i: number, week: string, r: LevelResult) {

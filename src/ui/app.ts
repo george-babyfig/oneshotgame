@@ -191,7 +191,7 @@ export class App {
       if (sc) sc.scrollTop = scrollTop;
     }
     this.screen = name;
-    if (name !== 'level') setMusicTheme('home');
+    if (name !== 'level') setMusicTheme(festivalActive(this.p) ? 'festival' : 'home');
   }
 
   /** Re-render whatever non-level screen is showing (after currencies change). */

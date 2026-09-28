@@ -263,6 +263,34 @@ export const THEMES: Record<string, Theme> = {
     wave: 'sine',
     bells: true,
   },
+  // bouncy major loop with bells for the home screen while a festival runs
+  festival: {
+    chords: [
+      [60, 64, 67, 72],
+      [65, 69, 72, 77],
+      [67, 71, 74, 79],
+      [65, 69, 72, 77],
+    ],
+    len: 2.4,
+    arp: [0, 2, 1, 3, 2, 1],
+    step: 0.3,
+    wave: 'triangle',
+    bells: true,
+  },
+  // rolling sea-shanty feel for the Weekly Voyage
+  voyage: {
+    chords: [
+      [57, 60, 64, 69],
+      [62, 65, 69, 74],
+      [55, 59, 62, 67],
+      [57, 60, 64, 69],
+    ],
+    len: 2.7,
+    arp: [0, 1, 2, 1, 2, 3],
+    step: 0.45,
+    wave: 'triangle',
+    bells: true,
+  },
 };
 const CHAPTER_THEMES = ['dawn', 'cinder', 'tide', 'frost', 'verdant', 'storm'];
 let theme: Theme = THEMES.home;
