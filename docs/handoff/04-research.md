@@ -43,6 +43,18 @@ The detailed research tables, with citations, live in [ROADMAP.md](../../ROADMAP
    - **Rejected:** random sticker packs for money.
 5. **Round 6: a buddy and tie-ins** (Pokémon GO buddies, Sky, Cats & Soup).
    - **Built:** the Buddy companion, quests and letters for the new systems, residents in festival costume, and 5 more achievements.
+6. **Round 7: replay, remix and stickers** (Super Mario Galaxy comets, Portal Advanced Chambers, Mario Kart Mirror Mode, Where's My Water? Challenges, Celeste B-Sides, Candy Crush Dreamworld and Sugar Stars, Hollow Knight Steel Soul, Slay the Spire Ascension, Apple's Messages and App Review documentation, the UK Children's Code).
+   - **Method:** a second agent checked each finding against its source. 44 were kept and 15 dropped as unconfirmed. Many sites (apps.apple.com, Wikipedia, 9to5mac…) are blocked in the cloud, so some checks relied on search snippets.
+   - **Built:** festival and Voyage music.
+   - **Designed:** Remix. Each remixed planet gets one named twist and one always-on goal, with targets from the solver on a fixed seed. It unlocks when a chapter is finished, and its rewards are prestige only (gold Remix stars, silver/gold chapter frames, Passport titles). It has no currency and nothing is sold.
+   - **Also designed:** a free bundled iMessage sticker pack.
+   - **Rejected:** paid skips/unlocks, random reveals, first-try or expiring challenges, re-rolled seeds and stacked penalty tiers.
+   - **Where it lives:** the full spec, with code notes and sources, is [docs/product/REMIX.md](../product/REMIX.md).
+7. **Product scoping (senior-PM review)** after round 7. The owner asked what the point of the game is, and for synergies, combos, stats, power-ups, hazards, a deeper Homeworld and more revenue.
+   - **Audits:** code audits of the gameplay, economy and Homeworld, plus a played-through user journey with screenshots.
+   - **Research:** combos and hazards, what gives a base-builder its purpose, and kid-safe revenue with benchmarks.
+   - **Review:** five PM proposals and five adversarial critiques.
+   - **Output:** [docs/product/ROADMAP-v2.md](../product/ROADMAP-v2.md), which has the findings, sources and milestone plan.
 
 ## Principles distilled from all the rounds
 
@@ -53,3 +65,5 @@ The detailed research tables, with citations, live in [ROADMAP.md](../../ROADMAP
 5. **Kid-safe monetization:** fixed-price, previewable, a parental gate, no gambling themes, no ads, no pay-to-skip timers.
 6. **No server:** everything seeded from the date (daily, weekly, monthly), with Game Center for the social side.
 7. **Everything drawn in code**, in one house style, localized into 5 languages from day one.
+8. **Mastery is prestige, never power or pressure** (round 7): generated and provable, never revoked, no timers, streaks or first-try rules.
+9. **Every system must answer "why play?"** (product scoping): each one feeds the core fling loop or visibly grows something the player owns.
