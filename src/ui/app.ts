@@ -51,7 +51,7 @@ import { currentBuddy } from '../meta/buddy';
 import { showVoyage } from './screens/voyage';
 import { showAlbum } from './screens/album';
 import { festivalFlow } from './flows/festival';
-import { ensureFestival, festivalActive, spotFestival } from '../meta/festivals';
+import { ensureFestival, festivalActive, festivalLive, spotFestival } from '../meta/festivals';
 import { tickHome } from '../meta/homeworld';
 import { labLevels } from '../meta/lab';
 import { addFling } from '../meta/records';
@@ -191,7 +191,7 @@ export class App {
       if (sc) sc.scrollTop = scrollTop;
     }
     this.screen = name;
-    if (name !== 'level') setMusicTheme(festivalActive(this.p) ? 'festival' : 'home');
+    if (name !== 'level') setMusicTheme(name === 'voyage' ? 'voyage' : festivalLive(this.p) ? 'festival' : 'home');
   }
 
   /** Re-render whatever non-level screen is showing (after currencies change). */

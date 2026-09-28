@@ -62,6 +62,14 @@ export function festivalActive(p: Profile) {
   return p.level >= FESTIVAL_UNLOCK_LEVEL;
 }
 
+/** This month's festival still has tiers to earn. A festival runs every month,
+ *  so the festival music plays only until its track is finished. */
+export function festivalLive(p: Profile, d = new Date()) {
+  if (!festivalActive(p)) return false;
+  ensureFestival(p, d);
+  return p.festival.claimed.length < FESTIVAL_TIERS.length;
+}
+
 /** Days left in this month's festival (1 on the last day). */
 export function festivalDaysLeft(d = new Date()) {
   const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();

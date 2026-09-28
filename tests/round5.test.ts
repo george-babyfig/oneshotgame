@@ -6,6 +6,7 @@ import {
   claimFestival,
   ensureFestival,
   festivalDaysLeft,
+  festivalLive,
   festivalOn,
   festivalReady,
   spotFestival,
@@ -66,6 +67,17 @@ describe('festivals', () => {
     ensureFestival(p, new Date(2026, 9, 1));
     expect(p.festival.spotted).toBe(0);
     expect(p.album.fest).toEqual(['acorn']);
+  });
+
+  it("plays festival music only until this month's track is finished", () => {
+    const p = defaultProfile();
+    expect(festivalLive(p, SEPT)).toBe(false); // not unlocked yet
+    p.level = 10;
+    expect(festivalLive(p, SEPT)).toBe(true);
+    for (let i = 0; i < FESTIVAL_TIERS[2].spot; i++) spotFestival(p, SEPT);
+    FESTIVAL_TIERS.forEach((_, i) => claimFestival(p, i, SEPT));
+    expect(festivalLive(p, SEPT)).toBe(false);
+    expect(festivalLive(p, new Date(2026, 9, 1))).toBe(true); // next month's festival
   });
 
   it('festival costumes cannot be bought, only earned', () => {
