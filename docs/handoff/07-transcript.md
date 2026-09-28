@@ -2619,3 +2619,27 @@ Nothing's stuck. The last step, writing the roadmap, is running now and was acti
 **Still running:** the head of product started writing the final roadmap about 8 minutes ago. It had to read about 700 KB of input first (the audits, proposals and critiques). I'd expect it to take roughly another 15–25 minutes, because it's a long document with a milestone plan.
 
 **Left after that:** save the roadmap, fill in the status doc's milestone list, append this chat to the transcript, update the PR description and push. I'm writing the status doc and transcript now so that final step only takes a few minutes. The slowness came from this cloud machine only running 2 sub-agents at a time, which is why I split the later stages into side-by-side runs.
+
+### **Claude** · 2026-09-28 20:03
+
+The status doc and this session's transcript are now pushed too (`9eddddb`). Session 1's transcript is untouched apart from its intro line, which now mentions both sessions. The roadmap writer has finished reading and is now writing the document in one long pass. Once it lands I'll save it, fill the milestone list into the status doc, update the PR and push. That last step takes a few minutes.
+
+### **Claude** · 2026-09-28 20:06
+
+CI passed on `9eddddb` (the transcript and status doc). The roadmap writer is still in its long writing pass; the file hasn't been saved yet. I'll finish up the moment it lands.
+
+### **Claude** · 2026-09-28 20:30
+
+The container running this session restarted, and that killed the roadmap writer partway through. Everything already pushed is safe on GitHub. Checking what survived locally.
+
+The roadmap writer had already saved its document (137 KB) before the restart. Checking it's complete.
+
+The roadmap is complete: all 10 sections, plus 13 milestones (M0–M12) and an "after launch" list. Only the agent's short structured summary was lost in the restart, and the document already contains all of it. Reviewing the key parts before I publish it.
+
+Sections 1–4 look strong. They give a clear answer to "what's the point?": the creatures. Stardust is fuel, gems are a treat, and every system feeds the next throw. Checking the delivery plan so I can summarize it in the status doc.
+
+The delivery plan is thorough. It has 13 milestones to launch (M0–M12), each with files, acceptance criteria, a test plan and a string count, plus four post-launch updates (M13–M16). M0 is the kid-safety fix-up of the current build. Publishing it now and finishing the docs.
+
+### **Claude** · 2026-09-28 20:35
+
+Everything's finished and pushed to `claude/eager-planck-yfnmzf`, so you can transfer now (the sign-off message, summarized): the new local-session prompt in `docs/handoff/PROMPT.md`, the roadmap in `docs/product/ROADMAP-v2.md` (start with M0, the kid-safety fixes), every handoff doc updated, the Remix spec, the raw scoping material in `docs/product/scope/`, and both transcripts intact here. Decisions waiting on the owner are in section 10 of the roadmap. Nothing new is built yet; the new session starts with M0. This cloud session stops pushing to the branch now.

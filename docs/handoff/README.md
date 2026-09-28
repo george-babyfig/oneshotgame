@@ -12,6 +12,6 @@ These files carry the full context of the two cloud build sessions (27–28 Sept
 | [05-status-and-next.md](05-status-and-next.md)       | Where things stand and what's next: the ROADMAP-v2 milestones, known issues, open decisions and owner to-dos                                                    |
 | [06-workflow.md](06-workflow.md)                     | How to test, QA, build, ship and publish; running the work as a dev team with Codex; git and PR rules; how the owner likes to work                              |
 | [07-transcript.md](07-transcript.md)                 | The full readable conversation, word for word, from both sessions                                                                                               |
-| [../product/ROADMAP-v2.md](../product/ROADMAP-v2.md) | **The plan to build next:** the senior-PM scope (the point of the game, synergies, hazards, the Homeworld overhaul, revenue, journeys, data) and milestones M1… |
+| [../product/ROADMAP-v2.md](../product/ROADMAP-v2.md) | **The plan to build next:** the senior-PM scope (the point of the game, synergies, hazards, the Homeworld overhaul, revenue, journeys, data) and milestones M0–M12 |
 
 The project's own docs are still the source of truth for their topics: [README.md](../../README.md) (the game and how to build it), [ROADMAP.md](../../ROADMAP.md) (research tables and shipped/planned items), [store/](../../store) (App Store listings, Game Center IDs) and [privacy.html](../privacy.html).

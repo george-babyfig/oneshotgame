@@ -68,7 +68,7 @@ Before doing anything else:
    docs/handoff/04-research.md      (market research and principles)
    docs/handoff/05-status-and-next.md (where things stand and what's next)
    docs/handoff/06-workflow.md      (commands, QA, the Claude + Codex dev-team playbook, git/PR rules)
-   docs/product/ROADMAP-v2.md       (THE PLAN: the point of the game, systems, milestones M1...)
+   docs/product/ROADMAP-v2.md       (THE PLAN: the point of the game, systems, milestones M0-M12)
    docs/product/REMIX.md            (the Remix and iMessage spec)
    Skim docs/handoff/07-transcript.md (both sessions word for word; search it for exact details),
    ROADMAP.md and README.md.
@@ -100,8 +100,10 @@ Ground rules (important):
 - Talk to me in plain language, keep updates short, and tell me honestly what you couldn't do or
   haven't verified.
 
-Then build docs/product/ROADMAP-v2.md milestone by milestone, starting with M1 (Remix is scheduled
-in it, spec in docs/product/REMIX.md). For each milestone:
+Then build docs/product/ROADMAP-v2.md milestone by milestone, starting with M0 (the kid-safety fixes
+to today's build). Remix is M9, spec in docs/product/REMIX.md. Section 10 of the roadmap lists
+decisions only I can make; ask me decision 1 before you start M5, and use the stated defaults for the
+rest unless I say otherwise. For each milestone:
 1. Plan the work packages.
 2. Codex implements them while a sub-agent writes the tests.
 3. Review the diff and run the checks.

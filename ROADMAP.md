@@ -4,6 +4,8 @@ Goal: a polished, studio-quality casual iOS game you can open in a waiting room,
 
 Status key: ✅ done · 🔨 in progress · ⏳ planned · 💭 later / needs a backend · ❌ decided against
 
+**The plan after round 7 is [docs/product/ROADMAP-v2.md](docs/product/ROADMAP-v2.md)**: a senior-PM scope of the whole game (what the game is for, shot synergies, hazards, a Homeworld with a purpose, a looks-only store, journeys, data) with milestones M0–M12 to launch. The research tables below remain the record of rounds 1–7.
+
 ## Research: what the best casual games do that we should borrow
 
 We compared this roadmap against top-grossing and high-retention casual games (Royal Match, Candy Crush, Monopoly GO, Two Dots, Angry Birds 2, Neko Atsume, Alto's Odyssey, Mini Metro, Wordle, Balatro, Block Blast). Constraints: one developer, no server, no ads, no gambling or random paid rewards, safe for kids.

@@ -1,0 +1,1205 @@
+# Pocket Planet: Product Scope and Roadmap v2
+
+**Status:** the plan to build from, pending the owner decisions in section 10. Nothing in it is built yet.
+**Written:** 28 September 2026 by the Head of Product.
+**Built from:** four audits of the game, three market-research sweeps, 45 proposals from five product managers, and five adversarial critiques. All of it is kept in [scope/](scope/README.md) so any number here can be checked.
+**Built by:** a local session with Claude as engineering manager and Codex as lead developer (see [../handoff/06-workflow.md](../handoff/06-workflow.md)). Remix is already designed in [REMIX.md](REMIX.md); this roadmap only schedules it.
+
+**How to read it.** Sections 1-3 say what the game is for and what we learned. Section 4 is the design, with rules and numbers. Section 5 walks through the player journeys. Section 6 is money. Section 7 is data and QA. Section 8 is the build plan, milestone by milestone. Section 9 lists risks and what we cut. Section 10 lists the few choices only the owner can make.
+
+**Evidence tags.** `[CG]` core-gameplay audit, `[EC]` economy and data audit, `[HW]` Homeworld audit, `[UX]` user-journey audit, `[R1]` research on combos and hazards, `[R2]` research on what gives a base-builder its purpose, `[R3]` research on kid-safe revenue. All seven are sections of [scope/evidence.md](scope/evidence.md). `[P:id]` is a proposal in [scope/proposals.md](scope/proposals.md). `[C:lens]` is a critique in [scope/critiques.md](scope/critiques.md) (kid safety, originality, engineering, economy, player advocate).
+
+**Words used in this document**
+
+| Word           | Meaning                                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Solver         | The code that plays each planet well, to set the star targets and prove every planet can be beaten.                      |
+| Sim, bot       | Automated players of different skill that play thousands of rounds to measure difficulty and the economy.                |
+| Band           | The allowed range for a measured number. If a change moves the number outside the band, the build fails.                 |
+| CI             | The automatic checks that run on every change to the code.                                                               |
+| Faucet, sink   | Where a currency comes from, and where it gets spent.                                                                    |
+| Non-consumable | A purchase you keep forever. It can be restored on a new phone and shared with the family.                               |
+| Playwright     | A robot that taps through the game in a browser, checks the layout and takes screenshots.                                |
+| Ledger         | A private record, kept only on the phone, of what happened in play (rounds, fails, earnings). It is never sent anywhere. |
+| Regular player | The sim's typical player: 6 planets a day, 3 visits a day. "Casual" plays 3 a day, "Engaged" plays 12.                   |
+
+---
+
+## 1. The point of the game
+
+**The one line a 7-year-old can repeat:** "I make homes for creatures, and they help me."
+
+**The player fantasy.** You are the Keeper of a small corner of space. Each tiny planet starts as bare rock. You fling rocks, ice comets, seed pods, magma, rain clouds and sunbursts at it, and gravity bends every shot. Each hit changes the land. When the right lands sit side by side, creatures move in. They become your friends. They live on your Homeworld, they help you on harder planets, and your Homeworld teaches your shots new tricks.
+
+**The owner asked: "What is the point? The stardust? The characters?"** The answer is the characters.
+
+- **Creatures are the point.** They are why you fling (you are building homes for them), what you collect (36 species in the Lifebook), and who helps you. Each creature has a trait that protects its home from Troubles. One friend comes along as your Buddy. Friends ask you for Wishes, which give every round a reason.
+- **Stardust is fuel, never the goal.** It pays for your Homeworld and your Labs. Waiting must never pay more than playing. Today it does: one 4-hour collect at planet 30 beats all the stardust you earned playing chapter 3 [EC]. We fix that.
+- **Essences are the lands you grew,** in five colours (stone, dew, leaf, ember, frost). Labs are built from them, so "grow icy lands" means "my Ice Comet gets stronger".
+- **Gems are a treat,** earned by playing and never sold. They buy looks, boosters and, rarely, a continue.
+
+**Core loop (about one minute).** Aim, and the landing card shows the new land, who moves in, who would wander off, any reaction, and any Trouble. Fling. The land changes and creatures arrive. Read the forecast and plan the next throw. Finish with 1-3 stars.
+
+**Meta loop (days).** Wins pay stardust, Essences and new friends. Labs teach each object a new trick. Friends become your Buddy and give Wishes. Your Homeworld grows a level. You reach harder planets, new Troubles and Remix.
+
+**Long-term goal.** A thriving Homeworld at Level 5, with six Labs whose objects reach their top forms. All 36 creatures in the Lifebook. Every constellation lit in the Star Atlas. Gold Remix frames on your chapters. A Keeper, Homeworld and Passport that look like yours. The campaign never ends, and a new Star Road opens every 8 weeks.
+
+**The loop in one line**
+
+```
+Fling → lands change → creatures move in → stardust, Essences and new friends → Labs and your Buddy make the next fling better → harder planets → fling again
+```
+
+---
+
+## 2. What we learned
+
+The game has a strong, original core. Levels take about a minute, the Lifebook's silhouettes pull players forward, prices are fixed, and there are no ads, energy or loot boxes [UX]. The problems are that nobody can say what it is for, nothing in a round pushes back, the meta rewards waiting over playing, and the current build has some kid-safety gaps.
+
+| #   | Pain point (plain language)                                                                                                                                                                                                                                                                                                                                             | Evidence                                                                                                                                                  | Fixed in      |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| 1   | **Nobody can say what the game is for.** There is no title or goal line. The only sentence that explains stardust is a small grey line after a win. Coach tips stop at planet 3.                                                                                                                                                                                        | `[UX]` results.ts:88, coach.ts:3-16                                                                                                                       | M3            |
+| 2   | **The first three minutes push money and walls.** Planet 1 can be failed, and then shows "+5 THROWS 40 gems, you have 33". A full-screen calendar can't be closed. An OFFER badge shows from minute 3.                                                                                                                                                                  | `[UX]` screenshot a06; daily.ts:50; home.ts:175                                                                                                           | M0, M3        |
+| 3   | **The current build has kid-safety gaps.** Sharing opens with no parental gate. Game Center sign-in pops up at launch. The child is asked about notifications and asked to rate the app. Free events show ticking countdowns. Visitors hand out random gems (25% chance) and mementos (18%). Two buttons use a dice icon. A notification says "Keep your streak going". | `[C:kid safety]`; share.ts, postcard.ts:89, modes.ts:144/189, app.ts:153, platform.ts:59-93, event.ts:15, voyage.ts:68, festival.ts:72, visitors.ts:10/57 | **M0**        |
+| 4   | **The best throw is read off the screen.** On average 4.3 sectors tie for best. Sharp bots 3-star 70-83% of normal planets. 17% of best throws gain 3 life or less.                                                                                                                                                                                                     | `[CG]`                                                                                                                                                    | M6-M8         |
+| 5   | **Nothing fights back, and losses are hidden.** 39-74% of throw options make a creature leave, and the game never says so.                                                                                                                                                                                                                                              | `[CG]` settle() returns `lost`, nothing reads it                                                                                                          | M6, M8        |
+| 6   | **Upgrades flatten the game.** Object Lab level 3 lifts a decent player's 3-star rate from about 45% to 75-89%, and Hard fails drop to 0-7%. The perks pay for wrecking and rebuilding land.                                                                                                                                                                            | `[CG]` `[EC]` lab.ts:20-27                                                                                                                                | M0, M10       |
+| 7   | **Stardust has no purpose after week one.** Idle income is 1,049/h at planet 30. The Lab and upgrades are bought by day 9/6/4 and every sink by day 23/17/11 (at 3/6/12 planets a day).                                                                                                                                                                                 | `[EC]` economy.ts:10-12                                                                                                                                   | M10, M11      |
+| 8   | **The Homeworld is a closed loop.** Mills make stardust to build more mills. Nothing on it reaches a level. Residents are pets. It has no goals, and everything is stuck at level 1 until planet 11.                                                                                                                                                                    | `[HW]` app.ts:337-397, homeworld.ts:381                                                                                                                   | M10, M11, M13 |
+| 9   | **Money is thin and fragile.** The fixed gem catalogue is about 2,670 gems while players earn about 100 free gems a day, so spend per payer tops out near $8. The Pass pays out by chapter 10. There is selling at the moment of failure ("So close!"). The EU is moving against in-game currencies for children.                                                       | `[EC]` `[R3]`                                                                                                                                             | M0, M5, M12   |
+| 10  | **Walls and a broken curve.** Planet 24, a Normal planet, fails 88% of decent bots and 98% of casual ones. 10 of 12 Hard planets are easier than their target. Casual fails jump from 3% to 36% at chapter 2.                                                                                                                                                           | `[P:liveops-data-4]` `[EC]`                                                                                                                               | M1, M8        |
+| 11  | **Home is crowded and breaks on small phones.** About 21 tap targets and up to 9 side buttons. At 320×568 the side rail (214 px) is taller than its panel (182 px), so buttons are cut off. Back always goes Home.                                                                                                                                                      | `[UX]` styles.css:235-243, app.ts:311                                                                                                                     | M4            |
+| 12  | **Materials starve and events are uneven.** Frost drops 0.08 per planet, which walls off constellations 4-6. Critter Week is done in 3 levels; Frost Week needs 67.                                                                                                                                                                                                     | `[EC]`                                                                                                                                                    | M7, M12       |
+| 13  | **Nothing is measured.** There is no ledger. About 35 wallet writes are spread over 8 files. The sim ignores physics and twists.                                                                                                                                                                                                                                        | `[EC]` `[P:liveops-data-1]`                                                                                                                               | M1            |
+| 14  | **Too many things to learn.** About 10 counters and about 35 meta nouns by planet 20. The proposals would have added about 20 more.                                                                                                                                                                                                                                     | `[UX]` `[C:player advocate]`                                                                                                                              | all; see 4h   |
+
+---
+
+## 3. Design pillars
+
+1. **A good round in a minute.** The median round is 60-100 seconds, or up to 120 with the end-of-round tally. Every throw is one readable choice. Starting a round never costs anything: the next round is always free.
+2. **Creatures are the point.** Every creature has a home land, a trait and a way to help. Creatures "wander off" and "come back". They are never hurt.
+3. **Everything you grow comes back to the fling.** Each meta system either changes your next throw or visibly grows something you own. Waiting never beats playing.
+4. **Fair, forecast and beatable.** The same seed gives the same planet. Every threat is shown before it acts. The solver proves 3 stars are possible, and 1 star is always reachable the old way. New ideas arrive one at a time.
+5. **Money buys looks, never power or time.** Parents buy and kids play. No currency is for sale, and there are no random rewards, no timers to skip and no offers at sad moments.
+
+**Guardrail: our own design.** Every feature spec names the nearest hit game, says what is recognisably theirs, and says what we do instead. It must pass the "describe it without our nouns" test: if the plain description names a hit, we rework it. The owner signs off before build. A lint bans hit names and hit-specific terms in every player-facing string and store listing, in all six languages.
+
+---
+
+## 4. Systems design
+
+Every system has to answer "why play?". It either feeds the fling, or it visibly grows something the player owns. Anything that did neither was cut (section 9).
+
+| System                                       | Why it earns its place                                                                             |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Fusions and Clashes (4a)                     | Feed the fling: the order and place of throws matter, so a planned throw beats the biggest number. |
+| Object stats and Labs (4b)                   | Feed the fling: each Lab level changes one rule for one object.                                    |
+| Supernova, boosters, Buddy, help ladder (4c) | Feed the fling: earned big moments and free help when stuck.                                       |
+| Troubles and traits (4d)                     | Feed the fling: something to read and counter, and creatures that protect their homes.             |
+| Homeworld, friends, Wishes (4e)              | Grow what you own, and send it back into rounds through Labs, the Buddy and Wishes.                |
+| Essences and stardust (4f)                   | Fuel for the Homeworld and Labs. Capped so waiting never beats playing.                            |
+| Star Road, Styles, Star Atlas                | Grow what you own: looks and a lit sky.                                                            |
+| Voyage, Festival, Daily Planet, Remix (4g)   | Feed the fling: more planets, each with a twist.                                                   |
+| Lifebook and Field Guide                     | Feed the fling: the recipes and traits you use in rounds.                                          |
+
+### 4a. Shot synergies and combos: Fusions and Clashes
+
+**The rules**
+
+1. A reaction fires when an object lands on, or next to, land that its partner object makes. The land itself is the memory: there are no timers, coloured rings or meters. (This replaces the proposed "Glow" ring, which copied another game's reaction system [C:originality].)
+2. It happens on top of the object's normal effect, in the same step, before creatures settle.
+3. At most one reaction per throw. If two could fire, a Fusion beats a Clash, then the one taught first wins.
+4. A reaction only fires once it has been taught. Debut planets live in the single unlock table (`unlocks.ts`).
+5. The landing card shows it before you throw: a gold chip for a Fusion, a red chip for a Clash.
+6. Reactions are the same for every player, so they are on in every mode, including Daily Planet, Meteor Rush, Challenge and Remix.
+7. The solver models them exactly, so every planet stays provably beatable.
+
+**The reaction chart** (bold ships at launch; "later" ships in the post-launch content drop, M15)
+
+|                | Rock | Ice Comet         | Seed Pod | Magma             | Rain Cloud             | Sunburst                  |
+| -------------- | ---- | ----------------- | -------- | ----------------- | ---------------------- | ------------------------- |
+| **Rock**       | –    | **Glacier** (P25) | –        | Firemount (later) | –                      | –                         |
+| **Ice Comet**  |      | –                 | –        | **Steam** (P8)    | Flood, a Clash (later) | –                         |
+| **Seed Pod**   |      |                   | –        | –                 | **Rain Garden** (P13)  | **Wildflowers** (P22)     |
+| **Magma**      |      |                   |          | –                 | –                      | **Scorch**, a Clash (P32) |
+| **Rain Cloud** |      |                   |          |                   | –                      | Rainbow (later)           |
+
+A dash means nothing happens. The Field Guide chart shows "?" until you try a pair, and "nothing happens" after.
+
+**The five launch reactions**
+
+| Reaction        | Type                 | Fires when                                                                                               | What it does                                                                                                                                                        | Debut |
+| --------------- | -------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| **Steam**       | Fusion               | Magma lands on or next to Ice Sheet, Tundra or Taiga; or Ice Comet lands on or next to Volcano or Desert | The centre becomes Hot Springs. A warm mist on the 2 sectors each side adds water +1 and pulls heat toward 0. It cools any Ember Vent within 2 sectors.             | P8    |
+| **Rain Garden** | Fusion               | Rain Cloud centred on or next to Meadow or Forest; or Seed Pod lands on or next to Marsh or Swamp        | Every sector within 3 that has some water gets life +1, so marshes and reefs appear.                                                                                | P13   |
+| **Wildflowers** | Fusion               | Sunburst centred on or next to Meadow or Forest; or Seed Pod lands on or next to Savanna or Jungle       | The 2 sectors each side get life +1 wherever life can grow.                                                                                                         | P22   |
+| **Glacier**     | Fusion               | Ice Comet lands on or next to Mountain or Highland; or Rock lands on or next to Ice Sheet or Tundra      | The centre gains land +1, and the centre and its neighbours turn cold (heat -2), making tundra, ice sheet or taiga. These are frost lands, which the Ice Lab needs. | P25   |
+| **Scorch**      | **Clash** (backfire) | Sunburst centred on or next to Volcano or Desert; or Magma lands on or next to Jungle                    | The 2 sectors each side lose 1 life and gain 1 heat. Green dries out, and creatures go looking for shade.                                                           | P32   |
+
+**How it feels.** An arc links the partner land to the impact. A one-word banner ("STEAM!") shows with the reaction's icon, a haptic and a sound. Everything reads with the sound off, because waiting rooms are muted. The first time a reaction fires, a NEW FUSION card shows "A + B = C" in two pictures, pays 50 stardust and a sticker, and lights that pair on the Field Guide chart. Finding all five earns the "Little Chemist" title. A Fusion adds 3 to the Supernova meter; a Clash adds nothing.
+
+**Negative interactions from your own shots**
+
+1. **Scorch**, the Clash above. It is always shown in red before you throw, so it is a mistake you can see and learn from.
+2. **Overwrites.** A throw that changes a creature's land makes it wander off. The landing card now shows this in grey before you throw, and the creature comes back when its land returns.
+3. **Later:** Flood (Ice Comet + Rain Cloud) is double-edged. Forests turn to marsh, but sea creatures love it. It waits for post-launch because a 7-year-old can't tell whether it is good or bad [C:player advocate].
+
+**Numbers and gates.** The prototype, run on the real `world.ts` with the older ring model, found that reaction-aware play earns 14.8% more than today's solver while blind play earns only 3.1% more. The best landing spot changed on 16.8% of throws, and the gap between the strongest and weakest object fell from 2.8× to 1.7× [P:core-loop-3]. The land-based trigger must be re-measured in M7 and pass these bands in CI:
+
+- decent-aware bot's 3-star rate at least 10 points above the decent-blind bot's
+- the best sector differs from the blind best on at least 10% of throws from planet 20
+- per-object average gain spread at most 1.8× (today 2.8×)
+- dead throws (3 life or less) at most 10% (today 17%)
+- the decent-aware bot averages at least 1 Fusion per planet from planet 20
+- blind play triggers 0.3-0.6 Clashes per planet
+
+**Later (M15):** Firemount (Rock + Magma), Rainbow (Rain Cloud + Sunburst, +1 throw once per planet, inside the cap of 1 extra throw from in-round sources) and Flood.
+
+### 4b. Object stats and how they grow (Labs replace the Object Lab)
+
+**Each object gets an identity card.** Long-press an object, or open the Field Guide, to see three icon bars and a three-word job. Stats are data in `KindDef` instead of numbers hard-coded in `applyKind`. The defaults reproduce today's terrain exactly, and a snapshot test of all 17 lands × 6 objects proves nothing changed.
+
+| Object     | Element | Power (main change at the centre) | Reach         | Job                                   | Share of the deal |
+| ---------- | ------- | --------------------------------- | ------------- | ------------------------------------- | ----------------- |
+| Rock       | earth   | land +2                           | 1 (3 sectors) | Builds mountains; mountains stop fire | 3.5 (was 4)       |
+| Ice Comet  | water   | water +2, heat -1                 | 1             | Makes water; cools vents              | 4                 |
+| Seed Pod   | life    | life +2                           | 1             | Grows life; strong roots stop weeds   | 4                 |
+| Magma      | fire    | heat +2, land +1, water -1        | 1             | Builds volcanoes; burns weeds         | 3                 |
+| Rain Cloud | air     | water +1, heat toward 0           | 3 (7 sectors) | Wide rain; cools vents                | 2.5 (was 2)       |
+| Sunburst   | light   | heat +1, life +1                  | 3             | Wide warmth; melts frost              | 1.25 (was 1.5)    |
+
+All objects keep flying the same way. Per-object gravity was cut because it breaks the aim children have learned by feel [C:player advocate]. "The heavy rock" comes through sound, haptics, trail and impact instead. The deal re-weighting ships once, together with the solver retune in M6.
+
+**Six Labs on the Homeworld replace the Object Lab.** Rock Lab, Ice Lab, Seed Lab, Magma Lab, Rain Lab and Sun Lab are buildings on your Homeworld. You can build one as soon as its object unlocks, and the first is free. A drone builds it in 30 seconds. Level-ups are instant once paid: there is never a timer on shot power.
+
+| Lab level          | What it does                                                                   | Cost (stardust + the Lab's Essence) | Available from                                               |
+| ------------------ | ------------------------------------------------------------------------------ | ----------------------------------- | ------------------------------------------------------------ |
+| 2: Power           | The object's centre effect grows by 1 (its Power bar fills).                   | 400 + 10                            | Homeworld Level 1 (planet 5)                                 |
+| 3: Fusion reach    | This object's Fusions reach 1 sector further.                                  | 1,200 + 25                          | Homeworld Level 2 (after chapter 1), once Fusions are taught |
+| 4: Guard           | A named Trouble perk (table below).                                            | 3,000 + 50                          | Homeworld Level 3, once Troubles are taught                  |
+| 5: Supernova reach | This object's Supernova reaches 1 sector further.                              | 7,000 + 90                          | Homeworld Level 4                                            |
+| Top form           | A new rule for the object, unlocked by a feat. Switch it on or off in the Lab. | a feat, no cost                     | Level 5 and the feat                                         |
+
+Lab Essences: Rock uses stone, Ice uses frost, Seed uses leaf, Magma uses ember, Rain uses dew and Sun uses leaf. A Lab's level can never be more than the Homeworld Level + 1. A perk card appears only once its system has been taught, so nobody sees "Weed Burner" before meeting Tanglevine. These costs are starting values; the economy sim tunes them into the bands in section 7.
+
+| Lab   | Guard perk (level 4)                                                                                   | Top form          | Feat that unlocks it    | What the top form changes                                                        |
+| ----- | ------------------------------------------------------------------------------------------------------ | ----------------- | ----------------------- | -------------------------------------------------------------------------------- |
+| Rock  | **Firewall:** mountains your Rock builds also shield the sectors either side from Ember Vents          | **Pebble Shower** | Make 10 Glaciers        | Also drops 2 pebbles 3 sectors away (land +1 each)                               |
+| Ice   | **Vent Cooler:** cools Ember Vents up to 2 sectors away (normally 1)                                   | **Rime Comet**    | Make Steam 10 times     | The centre becomes Ice Sheet on water or Tundra on land; neighbours get water +1 |
+| Seed  | **Strong Roots:** sectors your Seed Pod lands on can't be tangled this round                           | **Grove Pod**     | Grow 10 Rain Gardens    | Centre life +3 and neighbours life +1: an instant forest                         |
+| Magma | **Weed Burner:** burns Tanglevine up to 2 sectors away with no life lost                               | **Obsidian Flow** | Burn away 5 Tanglevines | No longer dries water; neighbours land +1, building ridges                       |
+| Rain  | **Rinse:** cools Ember Vents up to 4 sectors away (normally 3) and also clears Tanglevine in its reach | **Monsoon**       | Cool 5 Ember Vents      | Also life +1 where water is 2 or more in its reach                               |
+| Sun   | **Frost Melter:** melts Frost Creep crystals up to 4 sectors away                                      | **Solar Flare**   | Grow 10 Wildflowers     | Heat +1 only where life is 2 or more, so it stops drying meadows                 |
+
+The Lab card shows the top form as a silhouette with its feat counter ("Steam 4/10"). Feats count in the campaign, Voyage and Zen. When a feat completes, the form is revealed on the planet where it happened. A feat unlocks it rather than a boss win, and there are no upgrade paths, because the boss unlock copied Vampire Survivors and the paths copied Bloons TD 6 [C:originality]. Paths also multiplied the cases the sim must guard [C:engineering].
+
+**Retired:** the four flat perks shared by every object (Bloom, Charge, Magnet, Starfall) and the Upgrades screen (Aim Guide, Extra Throws, Wide Impact; the Vault upgrade moves to the Collect chip). The aim line becomes today's Aim Guide level-2 length for everyone, plus a "Full aim line" assist in the accessibility settings. The churn exploit is fixed in M0, before Labs change: Magnet pays only on a species' first arrival per planet, Bloom only when a region reaches a new best this planet, and the preview leaves the Lab bonus out of throws that make the planet worse.
+
+**One power budget.** Every player-side bonus (Labs, top forms, the Buddy, boosters, Momentum, help-ladder throws, assists) goes through one pipeline (`RoundModifiers`) with a per-mode allowlist. It is on in the campaign, Voyage and Zen, and off in Daily Planet, Meteor Rush, Challenge and Remix. That also fixes today's bug where Extra Throws, Wide Impact and Aim Guide apply in the Daily Planet and Challenge [C:engineering]. Star targets ignore every bonus, so bonuses only ever help. CI gates:
+
+- the "max legal loadout" bot (everything maxed and switched on) adds at most 15 points to the decent-aware 3-star rate on normal planets 21-60
+- the decent bot still fails at least 20% of Hard planets with the max loadout
+- greedy play with every perk and top form switched on still meets every goal on planets 1-120
+
+### 4c. Power-ups and boosts
+
+| Layer                         | What                                                                                                                                                                                                  | How you get it                                                                                                                                                                 | Sold for money?     |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- |
+| In the round, earned by skill | Fusions; the Supernova; your Buddy's trait (once per planet)                                                                                                                                          | Playing well                                                                                                                                                                   | Never               |
+| Before the round              | Boosters: **Comet Shower** (+3 throws), **Life Spark** (3 meadows on the sectors nearest the planet's goal lands), **Star Scope** (shows the next 5 objects and where a Fusion can happen this throw) | Greenhouse, chapter chests, Star Road free lane, Momentum. Or buy with stardust (180/150/120) or earned gems (25/20/15). The first tap on a tile explains it and never spends. | Never               |
+| Permanent                     | Lab levels and top forms                                                                                                                                                                              | Stardust, Essences, feats                                                                                                                                                      | Never               |
+| Win streak                    | **Momentum:** 1/2/3 wins in a row give +1 throw / +1 throw and a free Life Spark / +2 throws and a free Star Scope. A fail pauses the streak; it never resets it.                                     | Winning                                                                                                                                                                        | Never               |
+| When stuck                    | The help ladder (below)                                                                                                                                                                               | Failing the same planet                                                                                                                                                        | Never               |
+| Continue                      | +5 throws for 50 earned gems                                                                                                                                                                          | See the continue rule                                                                                                                                                          | Gems are never sold |
+
+**Supernova 2.0**
+
+- **Charge.** +1 per sector whose land got better, +2 per creature arriving for the first time on this planet, +3 per Fusion and +3 per Trouble settled. A throw that makes the planet worse charges nothing.
+- **Threshold.** Full at 12 the first time and 18 after that, which gives about 2-3 per planet. Today it fires about 3.7 times per planet, automatically, even after destructive throws [CG].
+- **Firing.** It fires by itself on your next throw, as today, so the youngest players never miss it. Optional: tap the glowing ring to hold it for a better moment (a tip at planet 24). This is opt-out, not opt-in [C:player advocate].
+- **"Supernova = your object, super-sized."** +1 reach plus that object's main effect on every sector in reach. Rock raises land, Ice Comet adds water, Seed Pod adds life, Magma builds a volcano ring, Rain Cloud clears Trouble sources within 3 and adds water, and Sunburst adds life. It still deals 2 damage to a Comet Guardian.
+- **When.** The meter appears at planet 9 and is hidden before; the solver matches.
+
+**Throw budget.** The solver never uses boosters, Momentum, Buddy help or continues, so every planet is beatable without them. Extra throws from in-round sources are capped at 1 per planet (Rainbow now; motes later).
+
+**The help ladder** (one ladder for the whole game; it replaces four competing proposals)
+
+| Fails on this planet | What the player gets                                                                                                                                                                                     |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1st                  | A "What happened" card: up to 3 plain facts from the round ("Ember Vent dried 3 sectors · Ice Comet cools it"). A big "Try again". No price and no "so close".                                           |
+| 2nd                  | A free tip card: the goal's recipe with its sectors outlined, or "Try Magma on the jungle" from the solver's first move. The gem continue now appears as a small second button (planets 11 and up only). |
+| 3rd                  | Your Buddy brings 2 extra throws for this attempt.                                                                                                                                                       |
+| 5th                  | A hint try: the solver's first 3 target sectors pulse.                                                                                                                                                   |
+
+A fail means running out of throws after using at least half of them; restarts and quits don't count [C:economy]. Help is campaign-only, and it stops once the planet is cleared. Stars earned with help count normally. Wonder (post-launch) does not count them.
+
+**The continue rule** (one rule for the whole game): never on planets 1-10, never after a win, and never in Daily Planet, Meteor Rush, Challenge or Remix. It appears only from the second fail in a row on the same planet, costs a flat 50 earned gems, at most twice per planet, as a small secondary button. There is no "So close" bar and no Shop link. A "Ways to earn gems" sheet opens only if the child taps it.
+
+### 4d. Hazards and negative interactions: Troubles
+
+**The Trouble contract.** Every Trouble has a visible source on the planet; a forecast (a dotted arrow to the exact sector it will hit, plus how many throws until it acts); one simple rule; one or two counter objects; and a green "settled" state once it is countered or has nothing left to hit. Troubles come from the level seed and are never random. Creatures only ever wander off and come back.
+
+**Firebreaks, in plain words:** "Water, mountains and fireproof friends stop fire." (Under the hood: water 2 or more, land 3 or more, or a creature whose trait resists that Trouble.) While a Trouble is live, protected sectors show a small wall icon, so nobody has to read hidden numbers [C:player advocate].
+
+| Trouble                        | Each time it acts                                                                                                             | What stops it                                                                            | How to clear it                                                                                     | Debut                                                 |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| **Ember Vent**                 | Dries the nearest green sector within 2 (life -1, heat +1), clockwise first                                                   | Water, mountains, Fireproof or Swimmer friends                                           | Ice Comet lands within 1, or Rain Cloud within 3, of the vent ("Vent cooled!"); or a Steam within 2 | P14                                                   |
+| **Tanglevine**                 | Spreads to the next green sector its arrow shows. A tangled sector counts as bare, so its creature wanders off until cleared. | Water (it can't cross), full-life sectors ("strong roots"), Weedproof or Swimmer friends | Magma lands on it and burns it away                                                                 | P28                                                   |
+| **Frost Creep**                | Cools the nearest sector within 2 (heat -1)                                                                                   | Hot land, Frostproof friends                                                             | Magma within 1, or Sunburst within 3, melts the crystal                                             | P36                                                   |
+| **Space Pebble** (post-launch) | A marked sector counts down 3-2-1, then gets a small crater                                                                   | A mountain on the target                                                                 | Hit the pebble in the sky with any throw                                                            | M15; the Comet Guardian tosses them from the P50 boss |
+
+Troubles act after every 3rd throw on Normal planets and every 2nd on Hard and Super Hard. The **Forecast strip** under the HUD shows the next 2 beats as icon + number + shape, safe for colour-blind players. Tapping one gives a one-line rule and the counter icons.
+
+**Traits: the characters become the keys.** Each creature's trait comes from its home land, so a child can predict it: "Newts live on volcanoes, so fire can't bother them." One rule, one table, owned by the core [C:engineering].
+
+| Trait                  | Home lands                            | Creatures                                                                                                                                | What it does in a round                                                                |
+| ---------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| **Fireproof**          | Volcano, Desert, Savanna, Hot Springs | Ember Newt, Obsidian Turtle, Sky Dragon, Dune Scorpion, Oasis Camel, Tall Neck, Grass Elephant, Sunbird, Steam Crab, Steam Flamingo (10) | Its sector is a firebreak, and Scorch can't dry it                                     |
+| **Swimmer**            | Ocean, Reef, Marsh, Swamp             | Glimfish, Reef Darter, Kraken, Canopy Octopus, Reed Duck, Bog Frog, Mud Croc (7)                                                         | Its sector counts as water, which stops fire and weeds                                 |
+| **Weedproof**          | Forest, Jungle, Meadow, Highland      | Moss Deer, Tide Otter, Rainbow Parrot, Magma Rex, Hopper Bunny, Dew Butterfly, Prism Unicorn, Cloud Llama, Ridge Bear (9)                | Its sector can't be tangled                                                            |
+| **Frostproof**         | Tundra, Taiga, Ice Sheet, Mountain    | Tuxling, Woolly Mammoth, Pine Owl, Aurora Wolf, Floe Seal, Snow Whale, Crag Goat, Frost Eagle (8)                                        | Frost Creep stops at its sector                                                        |
+| **Calm** (legendaries) | planet-wide                           | World Tree Spirit, Leviathan (2)                                                                                                         | While it is on the planet, the first Trouble acts 1 throw later (shown as a soft glow) |
+
+A missing trait gives no shield and no penalty. The forecast arrow visibly bounces off a protected creature with a shield puff, so the rule teaches itself.
+
+**Pacing per planet**
+
+| Planets                                     | Troubles                                                                                                                                        |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1-13, the tutorial, Zen, Meteor Rush, Remix | None                                                                                                                                            |
+| 14                                          | Ember Vent teaching planet: on its own, acting every 3rd throw, with the counter object dealt in throws 2-3. One star means the lesson is done. |
+| 16-27                                       | Ember Vent on about 30% of Normal planets, and on every Hard planet from 20                                                                     |
+| 28                                          | Tanglevine teaching planet                                                                                                                      |
+| 36                                          | Frost Creep teaching planet                                                                                                                     |
+| 29-40                                       | At most 1 Trouble and 1 twist per planet                                                                                                        |
+| 40 and up                                   | Super Hard planets may have 2 Troubles                                                                                                          |
+| Daily Planet                                | A date-seeded "Weather Report" Trouble, the same for everyone, once the pre-flight check passes                                                 |
+
+**How the solver and tests keep every planet beatable**
+
+- Solver 2.0 projects each Trouble to its next action and plays around it. In the prototype this recovered 86% of the hazard's cost [P:core-loop-1].
+- Solver 0 (today's blind choice rule, under the new rules) must still reach 1 star. This is the kid floor: 1 star is always reachable the old way.
+- On every Trouble planet, blind play must lose at least 5% of its gain against the same planet without the Trouble, and aware play at most 8%. Blind play with the max loadout must still lose at least 3%, so helpers can't delete the Trouble [C:economy].
+- Zero "surprise losses": a creature may never leave without the landing card or forecast showing it first.
+- At most one pre-round mitigation per Trouble per planet (the Buddy). Lab Guard perks are counters used during the round.
+- Prototype results (planets 21-60, acting every 3rd throw, floor on): casual fail 21%, the same as today; decent-blind 3-star 29%; decent-aware 40%. An Ember Vent costs careless play 11.7% of its gain and careful play 1.6% [P:core-loop-4].
+- Hard planets reach their 25-45% decent-fail band through Troubles, not through bigger targets.
+
+**Gentle planets** is a setting in the Grown-ups area. Troubles don't act and Clashes don't fire, stars count normally, and nothing is marked. It is for children who find spreading hazards stressful.
+
+**Kid-safe words.** "Wandered off", "came back", "settled", "vent cooled"; never "died", "destroyed" or "failed". Retired hazard names: Wildfire, Deep Freeze, Dust Drift, Blight, Frostbite, Heat Wave, Meteor Shower (as a front) and Meteor (as a Trouble).
+
+### 4e. The Homeworld overhaul
+
+**Purpose:** "Your Homeworld is where your friends live and where your shots learn new tricks."
+
+**What makes it ours, not Clash of Clans.** There are no raids, armies, attacks or defences. No central headquarters building sets everyone's level. Shot power has no timer, and nothing that speeds anything up is sold. You grow it with what you grew in play: lands become Essences, creatures become friends, and friends help in rounds.
+
+**Its loops**
+
+1. **Shots.** Play → stardust and Essences → a Lab level → that object plays differently in the next round → better planets → more Essences.
+2. **Friends.** Play → meet creatures → invite them to your Den → your Buddy helps in rounds and friends give Wishes → friendship grows → accessories and a best-friend letter.
+3. **Growth.** Chapters + stardust + Essences → a Homeworld Level → a bigger planet, more plots, a higher Lab cap, new buildings and a third drone.
+4. **Style.** Paint, decorations, Homeworld Themes, photo mode and postcards.
+5. **Trips (post-launch, M13).** Send a friend to a planet you grew → Essences of that planet's lands. This is the main fix for frost and ember.
+
+**What reaches a level.** Lab perks and top forms, your Buddy's trait and its help-ladder throws, Greenhouse boosters (earned and capped), and Wishes, which name a goal for the round. All of it is on in the campaign, Voyage and Zen, and off in Daily Planet, Meteor Rush, Challenge and Remix. The results card has one "Homeworld helped" line, for example "Rock Lab: Firewall stopped 1 Ember Vent".
+
+**Buildings after the overhaul**
+
+| Building             | What it does                                                    | Notes                                                                                  |
+| -------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 6 Labs               | Level up one object each (4b)                                   | First free, then 300 stardust each; a drone builds each in 30 s; level-ups are instant |
+| Den (up to 2)        | Houses friends, level + 1 each, 12 at most                      | As today                                                                               |
+| Greenhouse (up to 2) | Holds 1 booster and refills every 12 hours; you choose the type | Today's hidden cycle is replaced by a free choice                                      |
+| Launch Tower         | Trips (reworked in M13; today's expeditions until then)         | As today                                                                               |
+| Decorations          | Fountain, Lantern, Comet Flowers, Keeper Statue: looks only     | Charm is retired                                                                       |
+
+Retired buildings: Stardust Mill, Crystal Grove and Observatory. The game is pre-launch, so their costs are refunded to tester saves or the saves are reset; no migration letters. Plots go 6/8/10/12/14 by Homeworld Level, which fits 6 Labs, 2 Dens, 2 Greenhouses and a Tower plus decorations by Level 5.
+
+**The Homeworld Level** replaces "Ring". It is the planet growing, not a building.
+
+| Level | Needs                                                | Opens                                                                                 |
+| ----- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| 1     | Planet 5                                             | 6 plots, Labs up to level 2, the Den                                                  |
+| 2     | Chapter 1 done, 1,500 ✨, 20 leaf, 20 dew            | 8 plots, Labs up to level 3, Greenhouse, Launch Tower, a new ground palette           |
+| 3     | Chapter 3 done, 5,000 ✨, 40 stone, 30 ember         | 10 plots, Labs up to level 4, the third drone (free for everyone), an atmosphere glow |
+| 4     | Chapter 5 done, 12,000 ✨, 40 frost, 40 dew, 40 leaf | 12 plots, Labs up to level 5                                                          |
+| 5     | Chapter 8 done, 30,000 ✨, 60 of each Essence        | 14 plots, a ring of light, top-tier building art                                      |
+
+Each level-up plays a short skyline change and names what just opened. The level shows on the Homeworld tab, the Passport and the Star Map. Money never buys a level. Band: a Regular player reaches Level 5 no earlier than day 28.
+
+**Wishes** replace both the daily quests and the 6-hour resident requests.
+
+- Three cards a day, date-seeded (no server). Each is a creature asking for something from a round: "Tide Otter wishes for a Forest next to an Ocean"; "Ember Newt wishes you'd cool an Ember Vent"; "Crag Goat wishes for 3 mountains on one planet". Never "Fling 25 objects".
+- The reward is shown up front: 12 gems, 50 stardust and 1 Star Road point each, plus 15 gems for all three. That matches today's quests (about 50 gems a day). If the creature lives in your Den, its friendship grows too.
+- Unfinished Wishes never expire; finished ones are replaced the next day. One free swap a day.
+- They count in the campaign, Voyage, Zen and Daily Planet, never in Remix.
+- New Wish types arrive with each system: lands and creatures (M4), Fusions (M7), Troubles (M8), friends first (M13).
+
+**Friends.** Any creature you have seen can move in, as today; there is no building gate. Friendship grows from its Wishes (+2), wins with it as your Buddy (+1) and, later, trips (+1 to +3). There is no daily cap, no greeting chore and no "come back tomorrow". Friendship levels at 3/8/15/25 give accessories, 5 × level gems once, and the 25-gem best-friend letter, as today.
+
+**The first hour (planet 5), in two steps.** (1) "Build your first Lab": it suggests the object you threw most, is free and takes 30 seconds. The card says what it does: "Rock Lab: your Rock gets stronger. Upgrades use stone from mountain lands." (2) "Invite a friend": the first creature you met moves into your Den and waves. The fixed reward (100 stardust) is shown before you start. Next Up then says "Play planet 6". Lab level 2 is affordable within the first day, which fixes today's level-1 dead end.
+
+**What was cut from the Homeworld proposals, and why**
+
+| Proposed                                                                                                                  | Decision                                                                | Why                                                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Adjacency bonuses and clashes between buildings [P:meta-homeworld-5]                                                      | **Cut**                                                                 | Cut by two critics. A production spreadsheet on an idle base that rewards the passive income we are shrinking.                                                                                                                                       |
+| Weather Fronts, dimmed buildings, repairs, Wards, Meteor Watch [P:meta-homeworld-6]                                       | **Cut** (post-launch idea: an optional, reward-only terraforming round) | Cut by engineering: a new mini-game, XL in size. It punished daily players more than absent ones, added a third hazard vocabulary, and the shoot-down round read as Missile Command. Troubles bring the negative interaction into the round instead. |
+| A Star Dock whose level is the Homeworld Level                                                                            | Cut                                                                     | It reads as Clash of Clans' Town Hall [C:originality]. The Homeworld Level is the planet growing.                                                                                                                                                    |
+| Workshops with Reach/Power/Echo paths, a 3-1-0 cap, respec, a Master resident and Essence production [P:meta-homeworld-2] | Replaced by six Labs with one ladder                                    | The paths copy Bloons TD 6, the resident-plus-boss unlock copies Vampire Survivors, and production is another timer to check.                                                                                                                        |
+| A Kit with 1-4 slots of Helpers, Ward charms and evolved shots [P:meta-homeworld-3]                                       | Replaced by the Buddy, one chip                                         | A loadout before a 1-minute round, on a sheet that already overflows at 320×568.                                                                                                                                                                     |
+| Hearts, a daily greeting and a 5-a-day cap [P:meta-homeworld-4]                                                           | Cut; "friendship" stays                                                 | Pokemon GO's buddy hearts, a daily chore and a habit loop aimed at children.                                                                                                                                                                         |
+| Jobs with % bonuses                                                                                                       | Deferred                                                                | With Mills and Groves gone, there is no output left for a job to boost.                                                                                                                                                                              |
+| Refinery                                                                                                                  | Cut                                                                     | Fix frost and ember at the source: drop rates, Glacier, Frost Creep lands, trips.                                                                                                                                                                    |
+| A Commissions board on top of daily quests                                                                                | Merged into Wishes                                                      | One daily board, not two.                                                                                                                                                                                                                            |
+| Orbit moons, Monuments, Blueprints, a Homeworld leaderboard, a Homeworld notification                                     | Cut or deferred                                                         | More nouns. A leaderboard shows public nicknames to children, and notifications nudge.                                                                                                                                                               |
+| Architecture Themes at "$2.99 or 360 gems" [P:meta-homeworld-9]                                                           | Merged into one Homeworld Theme line, sold in USD only                  | One item, one price.                                                                                                                                                                                                                                 |
+| The paid third drone                                                                                                      | Free at Homeworld Level 3                                               | Paying for parallel building is paying to skip timers.                                                                                                                                                                                               |
+
+### 4f. Currencies after consolidation
+
+The top bar shows exactly two pills: ✨ stardust and 💎 gems. Essences show in the Homeworld header as one pouch with five colours, on Lab cards and in one line on the results card. A counter only appears once it can be spent.
+
+| Currency                                              | Comes from                                                                                                                                                                                                                                          | Buys                                                                                                                                             | Never                                                                      |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| **Stardust ✨** (fuel)                                | Wins: (25 + 15 × stars + 40 on a first clear) × 1/2/3 for Normal/Hard/Super Hard. Meteor Finale, chapter chests, the Vault (capped at 40-120 an hour by Vault level), Wishes, Voyage, Festival, first discoveries, visitors.                        | Lab levels (with Essences), Homeworld Levels, buildings, Vault upgrades, boosters, stardust-priced looks (5,000-50,000, new ones each Star Road) | Sold for money. Bought with gems (the "×2 for 10 gems" button is retired). |
+| **Gems 💎** (a treat, earned only)                    | Wishes (about 50 a day), Star Calendar (about 16 a day), Daily Planet, Voyage (about 130 a week, including the old weekly event's share), Festival, new creatures (+3 each), chapter chests, Comet Guardian, Star Road free lane, friendship levels | Continues (50), boosters (25/20/15), gem-priced single looks (60-300; at least 3,000 gems of new ones each Star Road)                            | Sold for money (gem packs and the Piggy Bank retire)                       |
+| **Essences** (stone, dew, leaf, ember, frost)         | Campaign wins: 1 per 2 sectors of a land family (frost: 1 per sector) and +1 per family present at 3 stars. Replays pay half. Later, trips.                                                                                                         | Lab levels, Homeworld Levels, Star Atlas constellations, suit dyes                                                                               | Sold for money or gems                                                     |
+| **Boosters** (items, not a currency)                  | Greenhouse, chapter chests, Star Road free lane, Momentum                                                                                                                                                                                           | Used before a round                                                                                                                              | Sold for money                                                             |
+| **Star Road points** (a progress bar, not a currency) | 1 per new star (campaign, Voyage, Daily Planet) and 1 per Wish, up to 4 a day (8 a day in a Road's last 2 weeks)                                                                                                                                    | Steps on the Star Road                                                                                                                           | Sold; tier skips                                                           |
+
+**Retired or never introduced:** "Materials" (renamed Essences), event tokens (the Voyage carries the weekly theme), Piggy Bank gems, charm, the ×2 collect, Explorer Rank points; and, never introduced, Glow, Hearts, Blueprints and star ore.
+
+**What never costs money:** everything in this table. Section 6 has the full never-sold list. The economy sim also prints an exchange-rate sheet (1 gem = how much stardust in each channel) and flags any channel more than 2× the median; today the ×2 collect is about 420 stardust per gem against 7-8 for boosters [EC].
+
+### 4g. Remix: where it slots in
+
+Remix is fully designed in [REMIX.md](REMIX.md): an optional, harder remix of each finished chapter, with one twist and one goal per planet, gold Remix stars, chapter frames and titles, and no currency. We build it exactly as written, as milestone **M9**, right after the rules freeze at the end of M8. That way it is tuned once, on the final round rules. It makes the launch candidate.
+
+How it fits with the rest of this plan (no changes to its design):
+
+- "Classic rules" now means the round rules at the freeze: taught Fusions and Clashes are on, because they are the same for everyone. There are no Troubles in Remix v1.
+- The modifier allowlist switches off every player-side bonus in Remix (Labs, top forms, Buddy, boosters, Momentum), with no continues and no help ladder.
+- Remix stars never feed the Star Road, Wishes, chapter chests or Momentum.
+- Its unlock stays as specified: a quiet gold chip on finished chapter cards and one Inbox letter, with no card, so it does not use a slot in the one-idea-per-planet ladder.
+- Its three Game Center achievements must total 75 points or less. The Explorer Rank achievements (90 points) are re-pointed to chapter milestones, so there is room.
+
+### 4h. Glossary: every player-facing noun
+
+**Rule:** every new term retires an old one or earns its place. `tests/glossary.test.ts` fails the build on a duplicate name, a retired word coming back, or a hit game's term, in any of the six languages.
+
+**Kept (unchanged)**
+
+| Area  | Nouns                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Round | planet, throws, life, stars, goals, the 17 lands (Barren, Ocean, Reef, Ice Sheet, Hot Springs, Meadow, Forest, Jungle, Mountain, Highland, Desert, Savanna, Tundra, Taiga, Swamp, Marsh, Volcano), the 36 creatures, Rock, Ice Comet, Seed Pod, Magma, Rain Cloud, Sunburst, swap, Supernova, Comet Guardian, twists (Scorched, Snowball, Water World, Tiny World, Solar Wind, Dense Core, Wobbly Spin, Twin Moons, Moon Guard, Fast Spin), Hard, Super Hard, Meteor Finale, boosters (Comet Shower, Life Spark, Star Scope), continue, Momentum, Buddy (now it helps) |
+| Meta  | stardust, gems, Vault, Collect all, galaxy, Star Map, chapters, chapter chest, Homeworld, Den, friendship, Greenhouse, Launch Tower, drones, decorations, paint, photo mode, postcards, Star Atlas, constellations, dyes, Keeper, Passport, titles, Lifebook, Sticker Album, Inbox and letters, Star Calendar, visitors, mementos, Daily Planet, Meteor Rush, Zen Garden, Challenge a Friend, Weekly Voyage, Festival, Star Road (now renewed every 8 weeks), Cosmic Pass (now the paid lane of each Star Road), Remix (Remix stars, frames)                           |
+
+**New or renamed** (each with what it replaces or why it earns its place)
+
+| Noun                                                                      | What it is                                       | Replaces / why                                                                                          |
+| ------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| Fusion, Clash                                                             | A good reaction; a reaction that backfires       | The owner's "synergies" and "negative interactions"                                                     |
+| Steam, Rain Garden, Wildflowers, Glacier, Scorch                          | The five launch reactions                        | New content ("Wildflowers" replaces the proposed "Bloom"; "Steam" avoids clashing with "Ember Vent")    |
+| Trouble, Ember Vent, Tanglevine, Frost Creep                              | Telegraphed hazards                              | Retires Wildfire, Deep Freeze, Dust Drift, Blight, Frostbite, Heat Wave                                 |
+| Forecast                                                                  | The strip showing the next 2 Trouble beats       | Needed so threats are never a surprise                                                                  |
+| Fireproof, Swimmer, Weedproof, Frostproof, Calm                           | Creature traits                                  | Retires Sturdy, Rain-maker, Rooted, Fire-proof and Frost-proof                                          |
+| Power, Reach                                                              | Object stats                                     | The owner's "stats"                                                                                     |
+| Labs (Rock, Ice, Seed, Magma, Rain, Sun Lab)                              | Homeworld buildings that level up objects        | Replace the Object Lab screen, the Upgrades screen and the proposed "Workshops"                         |
+| Firewall, Vent Cooler, Strong Roots, Weed Burner, Rinse, Frost Melter     | Lab level-4 perks                                | Replace Bloom, Charge, Magnet, Starfall                                                                 |
+| Pebble Shower, Rime Comet, Grove Pod, Obsidian Flow, Monsoon, Solar Flare | Top forms                                        | Replace the proposed "evolutions"; no category word needed                                              |
+| Essences                                                                  | Stone, dew, leaf, ember, frost                   | Renames "materials"                                                                                     |
+| Homeworld Level                                                           | The Homeworld's size and cap                     | Renames "Ring"                                                                                          |
+| Friends                                                                   | Creatures living on your Homeworld               | Renames "residents"                                                                                     |
+| Wishes                                                                    | Three daily asks from creatures                  | Replace daily quests and resident requests                                                              |
+| Missions (tab)                                                            | Wishes, Star Road, Star Calendar, letters        | Replaces up to 6 side buttons                                                                           |
+| Collection (tab)                                                          | Lifebook, Sticker Album, Field Guide             | Replaces side buttons                                                                                   |
+| Field Guide                                                               | Rules, objects, reaction chart, Troubles         | Replaces "How to play" in Settings                                                                      |
+| Styles (tab)                                                              | Looks for your Keeper, shots and Homeworld       | Replaces the kid-facing "Shop" tab **and** the "Workshop" screen, which settles the Workshop name clash |
+| Grown-ups                                                                 | The gated parent area: shop, purchases, settings | Replaces the paid side of "Shop" and the proposed Parents page, Family Summary and Grown-up Shop        |
+| Favourites                                                                | Looks a child has hearted                        | Replaces the proposed wishlist and "Ask a grown-up" card                                                |
+| Next Up                                                                   | The single suggested next step on Home           | Replaces the pile of badges                                                                             |
+| Past Roads                                                                | Earlier Star Roads, still open                   | Replaces seasonal loss; no FOMO                                                                         |
+| Gentle planets                                                            | A parent setting that switches Troubles off      | New, for children who find hazards stressful                                                            |
+| Starter Crew                                                              | The first real-money pack                        | Renames "Starter Pack", now looks only                                                                  |
+| Wonder (post-launch)                                                      | A mastery mark above 3 stars                     | Replaces the proposed "Mastery" segment and "par tier"                                                  |
+| Space Pebble (post-launch)                                                | A countdown Trouble                              | Renames the proposed "Meteor" to avoid clashing with Meteor Rush and Meteor Finale                      |
+
+We do not say "season" to players, because the game already uses Seasons for real-world weather (snow, blossoms, hemisphere). Players see "a new Star Road opens every 8 weeks".
+
+**Retired:** Materials, Ring, Object Lab (screen), Bloom, Charge, Magnet, Starfall, Upgrades (screen), Aim Guide, Extra Throws, Wide Impact, Stardust Mill, Crystal Grove, Observatory, charm, resident requests, residents (word), Workshop (word), Shop (kid tab), Piggy Bank, gem packs, ×2 collect, OFFER badge, "So close!", Explorer Rank, daily quests, Weekly Event, event tokens, "How to play", Starter Pack (renamed).
+
+**Never introduced** (proposed, then cut): Glow, Afterglow, Sector Conditions, Hearts, Kit, Helper, Wards, Fronts, Dimmed, Meteor Watch, Refinery, Star Dock, Blueprints, star ore, Orbit, Monuments, Commissions, Workshops (buildings), paths, evolution, Master resident, Radiance, Explorer Club, Explorer Bundle, Wishlist, Ask a grown-up, Weather Dial, Heat, Star Motes and Wild Pod (Star Motes return in M15 without Wild Pod), Hint try, Goal Compass.
+
+**The noun budget.** By planet 20, a child today meets about 35 meta nouns [UX]. In this plan they meet 18: stardust, gems, stars, Star Map, Homeworld, Lab, Essences, friends, Buddy, Missions, Wishes, Star Road, Momentum, Voyage, Lifebook, Styles, Passport and boosters. CI caps it at 20 (section 9 explains why not the critic's 12).
+
+**One concept, one name, one owner**
+
+| Concept                   | The one name                                 | Spec     | Retired alternatives                               |
+| ------------------------- | -------------------------------------------- | -------- | -------------------------------------------------- |
+| Shot upgrades             | Labs, one ladder                             | 4b, M10  | Object Lab 2.0 paths, Workshops                    |
+| Reactions                 | Fusion / Clash, land-triggered               | 4a, M7   | Glow, Afterglow, Sector Conditions                 |
+| Hazards                   | Troubles                                     | 4d, M8   | Three rival hazard rosters, Fronts                 |
+| Creature keys             | Traits (4 + Calm)                            | 4d, M8   | The five Essence-family traits                     |
+| The creature in the round | Buddy                                        | 4c, M8   | Helper, Kit, Buddy Power, Buddy Helper             |
+| Help when stuck           | The help ladder                              | 4c, M8   | Hint try, Try with a hint, Goal Compass, So close  |
+| Continue                  | One rule                                     | 4c, M0   | Four rival rules                                   |
+| Parent area and gate      | Grown-ups, Gate v2                           | 6, M5    | Parents page, Family Summary, two gate specs       |
+| Homeworld number          | Homeworld Level                              | 4e, M11  | Ring, Star Dock, Base Level, Radiance              |
+| Daily goals               | Wishes                                       | 4e, M4   | Quests, requests, Commissions, Order Board         |
+| Weekly headline           | Weekly Voyage with a theme                   | 7, M12   | Weekly Event and tokens                            |
+| Recurring track           | Star Road + Cosmic Pass, every 8 weeks       | 6, M12   | Glow seasons, a Homeworld pass, the Club           |
+| Mastery above 3 stars     | Wonder                                       | M15      | Mastery segment, par tier                          |
+| Looks                     | Styles (kid side), Grown-ups (paid)          | 6, M4-M5 | Shop tab, Workshop, Architecture Themes            |
+| Measurement               | One ledger, one sim harness, one economy sim | 7, M1    | Two ledgers, two sim harnesses, three economy sims |
+
+---
+
+## 5. User journeys
+
+### 5.1 The unlock ladder: one new idea per planet
+
+Today a new player meets 2-4 new ideas on some planets, and the proposals would have made that worse [C:player advocate]. From M2 on, every debut is one row in `src/meta/unlocks.ts`, and CI fails if two ideas land on the same planet. An idea is anything with an intro card, whether it appears in the round or on Home after a win.
+
+| Planet | The one new idea                                      | Notes                                                                                                 |
+| ------ | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| 1      | Fling and the life bar                                | Can't be failed. The star tip shows at throw 0.                                                       |
+| 2      | Seed Pod and swap                                     |                                                                                                       |
+| 3      | The landing card: who moves in, who wanders off       | Wander-off ghosts and "came back!"                                                                    |
+| 4      | Magma                                                 |                                                                                                       |
+| 5      | Your Homeworld: build your first Lab, invite a friend | Planet 5 is no longer Hard. Essences are introduced on the Lab card.                                  |
+| 6      | Goals, with a tap for the recipe                      |                                                                                                       |
+| 7      | Rain Cloud                                            |                                                                                                       |
+| 8      | Steam, the first Fusion                               | Teaching planet: Ice Comet and Magma dealt in throws 1-2                                              |
+| 9      | Supernova                                             | The meter is hidden before this planet                                                                |
+| 10     | Comet Guardian                                        | Planet 10 is no longer Hard. After the win: chapter chest; the Remix chip appears quietly (REMIX.md). |
+| 11     | Sunburst                                              |                                                                                                       |
+| 12     | Missions: three Wishes and the Star Road              |                                                                                                       |
+| 13     | Rain Garden                                           |                                                                                                       |
+| 14     | Ember Vent, the first Trouble                         | Teaching planet                                                                                       |
+| 15     | The first Hard planet                                 |                                                                                                       |
+| 16     | Traits: "fireproof friends stop fire"                 |                                                                                                       |
+| 17     | Momentum                                              | Moved from planet 6. A fail pauses it.                                                                |
+| 18     | Your Buddy helps                                      |                                                                                                       |
+| 19     | The first Super Hard planet                           |                                                                                                       |
+| 20     | Weekly Voyage                                         | Moved from planet 12; it now carries the weekly theme                                                 |
+| 21     | Star Calendar chip                                    | Moved from the first Home view                                                                        |
+| 22     | Wildflowers                                           |                                                                                                       |
+| 23     | Star Atlas                                            |                                                                                                       |
+| 24     | Holding the Supernova (a tip)                         |                                                                                                       |
+| 25     | Glacier                                               |                                                                                                       |
+| 27     | Daily Planet                                          | Explorer Rank is retired, so modes unlock by planet                                                   |
+| 28     | Tanglevine                                            |                                                                                                       |
+| 30     | Zen Garden                                            |                                                                                                       |
+| 32     | Scorch, the first Clash                               |                                                                                                       |
+| 34     | Festival                                              | Moved from planet 8                                                                                   |
+| 36     | Frost Creep                                           |                                                                                                       |
+| 38     | Meteor Rush                                           |                                                                                                       |
+| 40     | Challenge a Friend                                    |                                                                                                       |
+
+### 5.2 First session, minute by minute (after M3)
+
+| Time   | What happens                                                                                                                                                                                                      | What changed                                                                                     |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| 0:00   | Title beat, 5 seconds or less: the Keeper lands on a bare planet. "Grow lands · Welcome creatures · Build your Homeworld". Tap to start.                                                                          | Today the game drops straight into planet 1 with no purpose.                                     |
+| 0:10   | Planet 1. Pull back and fling. An arrow points at the bar: "Fill the bar past a ★ to finish the planet." The first creature's points fly into the bar.                                                            | The star tip moves from throw 4 to throw 0.                                                      |
+| ~1:10  | Planet 1 cleared. It can't be failed: if throws run out below 1 star, the Keeper gives 3 more, up to twice. The planet shrinks into the galaxy with a stardust trickle: "Your planet now makes stardust for you." | Today it can be failed, and then shows "+5 THROWS 40 gems, you have 33".                         |
+| ~2:30  | Planet 2: Seed Pod and swap. "Next" opens the next planet directly.                                                                                                                                               | One tap between planets instead of two.                                                          |
+| ~2:40  | First look at Home: the galaxy with 2 planets and one Next Up card, "Play planet 3".                                                                                                                              | No calendar wall, no Passport pop-up, no OFFER badge, no Game Center sheet, no notification ask. |
+| ~3:50  | Planet 3: the landing card shows who moves in and who would wander off.                                                                                                                                           | Creature losses are visible for the first time.                                                  |
+| ~5:10  | Planet 4: Magma.                                                                                                                                                                                                  |                                                                                                  |
+| ~6:30  | Planet 5 (now a normal planet). After the win: "Your Homeworld is ready", then 2 steps: build your first Lab, invite a friend. About 1.5 minutes.                                                                 | Today: a 4-line pop-up and an empty planet.                                                      |
+| ~9:00  | Planet 6: goals. Tap a goal to see how to make it.                                                                                                                                                                | Today goals are bare icons with a tooltip that doesn't work on touch.                            |
+| ~10:30 | The player leaves whenever they like: "See you next time!"                                                                                                                                                        | No teaser and no countdown.                                                                      |
+
+Session 1 targets: 0 prices, 0 gem prompts, 0 system prompts, and at most 1 interrupting pop-up per app open. The first fling comes within 15 seconds of install, and at least 85% of new players finish planets 1-5 in session 1. In supervised playtests, 4 of 5 children can say what the game is for.
+
+### 5.3 Day 1 (the next day)
+
+1. **Open.** A "While you were away" card appears only if the player was away 4 hours or more, or something is ready: "Your planets made ✨240 · Moss Deer visited and left ✨30 · Your Rock Lab can reach level 2". One "Collect all" button covers every engine. It closes to Home with Next Up: "Play planet 7". The first throw is at most 3 taps away.
+2. **Play.** Planets 7-12 bring Rain Cloud, Steam (with a NEW FUSION card), the Supernova, the Comet Guardian (then the chapter chest, and the Remix chip appears quietly), Sunburst, and Missions with the first three Wishes.
+3. **Homeworld.** Rock Lab level 2 (Power 3). After chapter 1, Homeworld Level 2 costs 1,500 ✨, 20 leaf and 20 dew.
+4. **Parents.** Starter Crew now appears in Grown-ups. Nothing is shown to the child.
+
+Fixed: today's chain of up to 3 blocking pop-ups on every launch; two stardust engines collected on two screens; a calendar that returns on every cold start; notifications the child agreed to (now off unless a grown-up turns them on, at most one a day, never 21:00-09:00).
+
+### 5.4 Day 7 (a Regular player is around planet 35-40)
+
+- **Each open.** The away card if something is ready. Then Next Up rotates mid-term goals from real data: "Ice Lab level 3: 12 more frost (Glacier makes frost lands)", "Homeworld Level 3: finish chapter 3", "Remix chapter 1: 12/30 stars", "This week's Voyage: Volcano Week, stop 4 of 7".
+- **Rounds.** Fusions, Ember Vent and Tanglevine, traits, and a Buddy suggested from the forecast. A decent player fails about 1 Hard planet in 3, and the help ladder catches anyone who is stuck.
+- **Missions.** Three Wishes voiced by creatures, the Star Road bar (about day 7 of 49), and letters.
+- **Stardust still matters.** Labs and Homeworld Levels soak it for weeks (band: power sinks last at least 28 days for a Regular player). Today everything is bought by day 6 [EC].
+
+Fixed: dead currency, the missing next goal, and chores that exist only to make you check in.
+
+### 5.5 Coming back after 7 days or more
+
+- The away card shows a 3-line recap and one "Collect all": "Your galaxy made ✨2,880 (the Vault filled at 12 hours) · Tide Otter is waiting in your Den · You're on planet 34".
+- Nothing was lost. Unfinished Wishes are still there. Star Road points are safe (Past Roads stay open, and new points fill the oldest unfinished Road automatically). Missed Voyage weeks are simply replaced. Momentum was paused, not reset.
+- It offers a warm-up planet: a replay of your last 3-star planet, with no way to fail and the full preview. It pays normal replay rewards. Then Next Up.
+- There is no guilt copy ("your creatures miss you"), no streak lost and no gem offer.
+
+### 5.6 The first purchase (a parent's journey)
+
+1. The child browses Styles, taps "Try on" on the Comet Candy Homeworld Theme and sees it on their own Homeworld until they tap Done. No price shows. They tap the heart, and it goes to Favourites.
+2. Later a parent opens Grown-ups, from Settings or a small gated link at the bottom of Styles, and passes Gate v2 (or enters their PIN).
+3. Grown-ups shows What's new, Favourites ("Liked: Comet Candy theme") and the shop in US dollars.
+4. The product page lists every item, the price ($2.99), "Family Sharing: yes" and "Never expires". The preview button is never next to Buy.
+5. Buy opens Apple's purchase sheet. With Ask to Buy, the page shows "Waiting for approval" and the item arrives when the organiser approves, even days later.
+6. A receipt card says exactly where it went: "Comet Candy Theme is in Styles → Homeworld." Purchases lists it with the date and price. The spending reminder shows this month's total against the amount the parent chose.
+
+The first real-money product appears in Grown-ups only after the chapter-1 chest, and nothing is ever pushed to the child. Fixed: prices in the child's tabs, a gate a child can pass by guessing (1 in 4 today), no purchase history, no Family Sharing, and a "grab a pack" toast at the moment of failure.
+
+---
+
+## 6. Monetization plan
+
+**The idea in one line:** money buys looks, never power or time, and the parent is the buyer. Kid-safe games earn from breadth (many families buying a little, often) rather than from depth per child [R3]. Nothing is set up in App Store Connect yet, so the whole catalogue can change freely before launch at no cost.
+
+### 6.1 The launch catalogue (7 products, the same number as today)
+
+All are non-consumable (owned forever, restorable), Family Shareable with up to 5 family members, priced in US dollars and sold only in Grown-ups. Every product grants looks only. One item has one price in one currency.
+
+| Product                          | Price | Contents                                                                                                                                                              | Replaces                                                                             |
+| -------------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **Starter Crew**                 | $2.99 | Aurora atmosphere, the full Aurora Keeper set (suit, hat, launcher, trail, with the set glow) and an Aurora Homeworld paint                                           | Starter Pack (300 gems + 15 boosters)                                                |
+| **Cosmic Pass: Cosmic Road**     | $3.99 | The paid lane of the first Star Road: 12 looks, including the Star Captain set, the Cosmic atmosphere, 2 gold paints, the gold photo frame and the Star Captain title | Cosmic Pass ($4.99, with 880 gems, 13,500 stardust, 30 boosters and the third drone) |
+| **Homeworld Theme: Tidepool**    | $2.99 | Skins for all 6 Labs, the Den, Greenhouse and Tower; a ground and sea paint; 3 decoration skins; 2 friend outfits                                                     | Gem packs                                                                            |
+| **Homeworld Theme: Comet Candy** | $2.99 | Same structure                                                                                                                                                        | Gem packs                                                                            |
+| **Planet Pack: Crystal Frost**   | $2.99 | A Keeper set, a trail and burst for all 6 objects, and a Fusion style                                                                                                 | Gem packs                                                                            |
+| **Style Single: Nebula Swirl**   | $1.99 | A Supernova style and a matching trail                                                                                                                                | Piggy Bank                                                                           |
+| **Style Single: Firefly Glow**   | $1.99 | A Supernova style and a matching trail                                                                                                                                | Piggy Bank                                                                           |
+
+Suggested product IDs: `com.pocketplanet.game.startercrew`, `.road00`, `.theme.tidepool`, `.theme.cometcandy`, `.pack.crystalfrost`, `.style.nebula`, `.style.firefly`. Every Theme and Pack also contains one free sampler item that any child can earn from a Wish. Paid decorations are skins of free ones, with the same (now purely visual) effect.
+
+**Kid side (no money).** Styles also sells looks for earned currencies. There are gem-priced singles at 60-300 gems, with at least 3,000 gems of new ones added with each Star Road so earned gems always have a use. There are stardust-priced looks at 5,000-50,000, rising within each series, as the late-game stardust sink. And each Star Road's free lane has about 150 gems, stardust, boosters, one look and one sticker.
+
+### 6.2 Star Roads (the recurring line)
+
+- A new Star Road opens every 8 weeks. It has 20 steps of 10 points, with a free lane and a paid Cosmic Pass lane.
+- **Points:** 1 per new star (campaign, Voyage, Daily Planet) and 1 per Wish, up to 4 a day, or 8 a day in a Road's last 2 weeks as a catch-up. About one win and one Wish a day finishes a Road in about 7 weeks. Replays of already-starred planets, Remix and Zen pay no points [C:economy].
+- **No fear of missing out.** A Road ends only when the next Road is already in the app. Dates show as plain text ("until 12 January"), never as a countdown. Past Roads stay open and on sale at the same price, and points overflow automatically into the oldest unfinished one.
+- **Buying the lane** claims everything already reached. There are never paid tier skips.
+- **Cosmic Road** (Road 0) is today's Star Road free rewards plus today's Cosmic Pass looks, and ships at launch. Road 1 ships in M14.
+
+### 6.3 After launch
+
+| When                      | Product                                                                               | Rule                                                                                                                                                                                                                                   |
+| ------------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Every Star Road (8 weeks) | 1 Cosmic Pass lane ($3.99), 1 Theme or Planet Pack ($2.99), 1-2 Style Singles ($1.99) | About 3-4 new products per Road keeps the catalogue growing. Toca Boca World's revenue fell when its catalogue went stale [R3].                                                                                                        |
+| From about Road 2         | **Collector's Edition**                                                               | Everything released to date except the current and future Roads, fixed at the purchase date. $19.99 once its parts are worth at least $33.32; $14.99 if it ships earlier. The product page lists contents only, with no savings claim. |
+| Not planned               | Gem packs, Piggy Bank, bundles with "value" claims, a family subscription             | See section 10 for the subscription.                                                                                                                                                                                                   |
+
+### 6.4 Where offers appear, and where they never do
+
+- **Only in Grown-ups.** A "What's new" list and the shop. A new Road or product is announced only there.
+- **Kid side:** paid looks show in Styles with "Try on" and a heart, but no price and no Buy button. There is one quiet "New" dot on the Styles tab per release. A parent can hide paid looks entirely.
+- **Never:** in the first session or before planet 5; during a round, in the pause menu, on a fail or continue screen, or on results; on the "While you were away" card; in Remix; in notifications; in Inbox letters (no prices); on the Next Up card; and nothing new is announced for 7 days after a refund.
+- Every impression carries a context tag in the ledger so the charter can be audited automatically.
+
+### 6.5 Never sold, directly or through a currency
+
+1. Throws, continues, boosters
+2. Gems, stardust, Essences
+3. Lab levels, top forms, Homeworld Levels, buildings, drones, build speed, timer skips
+4. Stars, goals, planets, Remix access, Remix frames and titles, Wonder marks
+5. Preview, forecast or hint information
+6. Creatures, traits, friendship, Buddy powers
+7. Titles earned by play; stickers; festival costumes
+8. Anything random or "mystery"
+9. Anything with a countdown or "last chance"
+10. Anything shown at a fail, continue, pause or round moment
+11. Ads, never. Personal data, never.
+
+### 6.6 The checkout charter (enforced in code and CI)
+
+1. Try-on and preview are never next to Buy.
+2. The path is always: Gate v2 → a contents sheet (art, the item list, the USD price, "Family Sharing: yes", "Never expires") → Apple's purchase sheet → a receipt card saying where each item went.
+3. No countdowns, and no "now", "hurry", "last chance", "best value", "popular" or "N× the value" wording in any language. Dates are plain text.
+4. Never lock or shame an account after a refund.
+5. Restore Purchases, refund steps, Ask to Buy and Screen Time help are always one tap away in Grown-ups.
+6. One item, one price, one currency.
+7. Every product name, description and charter string exists in all 5 languages (checked by `tests/store.test.ts`).
+
+**Gate v2** (one spec, used before every purchase, share, rating prompt, notification setting, Game Center sign-in and outside link). It shows a three-digit number written in words in the device's language ("four hundred twelve"). The grown-up types it on a keypad whose digits are shuffled, then holds a button for 1.5 seconds. A wrong answer brings a 30-second pause and a new number. A spoken prompt says "Please hand the phone to a grown-up." A parent can set an optional 4-digit PIN instead. Grown-ups also explains that Ask to Buy and the Apple ID password are the real lock. Number words are generated per language (English, Spanish, French, German, Brazilian Portuguese, Japanese) and tested.
+
+**Grown-ups** (the parent area, behind the gate): What's new; the shop; Favourites; Purchases, with history and receipts; a spending reminder the parent sets ($0/$5/$10/$20/none), which is only a reminder and points to Screen Time; Play time, showing this week's rounds and minutes, with an optional "suggest a break after N rounds" that is off by default; notifications (off by default); Gentle planets; hide paid looks; Game Center; rate the app; Restore; help with refunds, Ask to Buy, Screen Time and Family Sharing, plus the fact that progress lives on this device; and "Clear play history".
+
+### 6.7 Estimated impact
+
+These are model numbers with no telemetry behind them. We use the monetization model's lines, reduced where the economy critic showed they were optimistic: Starter Crew at 1.0% of installs, not 1.6%, and no retention lift assumed [C:economy]. The subscription is not included.
+
+| Line (gross revenue per install, first year) | Low       | Mid       | High      | Assumption                                                        |
+| -------------------------------------------- | --------- | --------- | --------- | ----------------------------------------------------------------- |
+| Starter Crew ($2.99)                         | $0.015    | $0.030    | $0.060    | 0.5% / 1.0% / 2.0% of installs buy it                             |
+| Cosmic Pass lanes ($3.99 per Road)           | $0.055    | $0.095    | $0.160    | 5% / 8% / 12% of Road-active players buy the lane                 |
+| Themes, Planet Packs, Style Singles          | $0.035    | $0.069    | $0.135    | 0.6% / 1.2% / 2.4% of installs buy about 1.8 items at about $3.20 |
+| Collector's Edition (from about Road 2)      | $0.010    | $0.025    | $0.050    | A small share of engaged families                                 |
+| **Total**                                    | **$0.12** | **$0.22** | **$0.40** | Today's catalogue models at $0.076                                |
+| After Apple's 15% (Small Business Program)   | $0.10     | $0.19     | $0.34     |                                                                   |
+
+For scale, at the mid case 100,000 installs bring about $22,000 gross in the first year, and 1,000,000 installs about $220,000. Retiring gem packs and the Piggy Bank removes about $0.018 per install from today's $0.076 baseline, and the direct-priced lines replace it about 10 times over in the mid case.
+
+**Benchmarks** [R3]
+
+- Payer conversion of 2-5% is healthy for free-to-play. Kid-safe games sit lower, so we plan for about 2-3%.
+- 26% of US players aged 8 and over have bought a season or battle pass (ESA 2026). Over 70% of top-grossing games offer a pass under $10. Vendors cite 15-20% premium-lane conversion (low confidence); we assume 5-12% because there is no FOMO and no currency in our lane.
+- Toca Boca World earns about $8M a month from fixed-price, previewable packs, down from $17M at its 2021 peak as the catalogue aged.
+- Pocket Camp Complete sells "everything, once" for $9.99, which anchors the Collector's Edition.
+- Casual iOS installs cost about $1.41 to buy through ads. At $0.22 per install, paid ads do not pay back. Growth has to come from App Store featuring, In-App Events, gated share cards and word of mouth. The biggest money lever is retention: each +10% of retention adds about 10% to Road revenue.
+- Starting now avoids a retrofit: the EU's Digital Fairness Act proposal (eyed for November 2026) may restrict in-game currencies for minors, and Belgium, the Netherlands and PEGI are moving against paid randomness.
+
+**App Store Connect.** Nothing exists there yet. The owner creates the 7 products (with their localizations, Family Sharing switched on) once M5 is accepted, so TestFlight can test real sandbox purchases. The owner also re-creates the Game Center IDs after M4 re-points the Explorer Rank achievements.
+
+---
+
+## 7. Data, live-ops and QA
+
+### 7.1 Privacy stance
+
+The App Store label stays **"Data Not Collected"**. There is no network code for analytics, no SDKs and no identifiers. Everything below runs on the phone, and CI proves it (`tests/privacy.test.ts` bans `fetch`, XHR, beacons, sockets and hard-coded endpoints, checks the dependency allowlist and checks that `PrivacyInfo.xcprivacy` is unchanged). `docs/privacy.html` is updated in all 6 languages in M5 to describe the local ledger, Grown-ups and the tester export.
+
+### 7.2 The on-device ledger and its numbers
+
+One store (`pp.ledger`), separate from the save so a ledger bug can't damage progress. It holds aggregates only, at most 16 KB, with a 30-day ring of daily totals and 8 weekly buckets. There is no free text and nothing finer than a day. A parent can clear it in Grown-ups.
+
+| KPI group    | Measures                                                                                                                                         |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Round        | Attempts per clear; fails split into score misses and goal misses; restarts; median round seconds; continue rate; booster rate; help-ladder use  |
+| Engagement   | Active days in the last 7 and 30; rounds and minutes per day; Homeworld opens with an action other than collecting                               |
+| Economy      | Earn and spend per currency per source; the active share of stardust; first-clear versus replay Essences; gems earned versus spent               |
+| Discovery    | The planet at which each feature was first opened                                                                                                |
+| Money funnel | Gate shown, passed and failed; contents sheet; purchase OK, cancelled, pending (Ask to Buy) and failed; offer impressions with their context tag |
+
+**Where the numbers go.** In production, they go nowhere. Parents see a plain summary in Grown-ups. In a separate tester build (never submitted to the App Store), an adult tester can copy a code after an adult-consent screen and paste it into TestFlight feedback. Codes are deleted after each milestone review.
+
+### 7.3 Evidence tiers
+
+| Tier | Source                                                                                                                                                                              | When it exists                                | Used for                                            |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | --------------------------------------------------- |
+| T0   | Supervised kid playtests: parent present and consenting, 15 minutes, paper notes only, no recordings, nothing stored about the child. The owner runs them with 5 children aged 6-9. | Now                                           | Comprehension and gate checks in M3-M8, M10 and M11 |
+| T1   | Sims and tests in CI                                                                                                                                                                | From M1                                       | Every balance and safety gate                       |
+| T2   | Adult tester codes from the tester build                                                                                                                                            | Once a developer account and TestFlight exist | Calibrating the sim; spotting outliers              |
+| T3   | App Store Connect aggregates: sales, refunds, opt-in retention, crashes                                                                                                             | After launch                                  | Revenue and retention reads                         |
+
+The Game Center leaderboard-reader tool was dropped because it would process other players' data [C:kid safety].
+
+### 7.4 Simulations
+
+- **One sim harness** (`tests/sim/`), with the pure round step (`stepRound`) and the real flight code inside it. Policies: casual, decent-blind, decent-aware, sharp, planner (nightly), max legal loadout, and casual with the help ladder. Shadow seeds (the same planet slot with a different random salt) give at least 30 levels behind every Hard or Super Hard estimate.
+- **Level lint** flags WALL (too hard), EASY, TRIVIAL and GOAL-TRAP planets. It fixes a planet by trying another seed salt, written as a reviewable data change, without touching the global tuning.
+- **Economy sim** (`tests/economy.sim.ts`): 90-day careers for 7 player types (Waiting-room 3 a day, Regular 6, Engaged 12, Weekender, Lapsed, Collector, and a Payer who buys only cosmetics), run over the real meta code with an injected clock.
+- **Calendar pre-flight:** every Daily Planet for the next 90 days and every Voyage stop for the next 12 weeks is linted before a build ships.
+
+### 7.5 Balance bands enforced in CI
+
+"Gate" fails the build. "Watch" only warns. Each band turns on in the milestone that creates it.
+
+| Band                                           | Target                                                      | Type  | From |
+| ---------------------------------------------- | ----------------------------------------------------------- | ----- | ---- |
+| Casual fail, normal planets 21-60              | ≤ 25%                                                       | Gate  | M8   |
+| Casual fail, planets 11-20                     | ≤ 30% (today 31-51%)                                        | Gate  | M8   |
+| Decent-aware 3-star, normal planets 21-60      | 40-55%                                                      | Gate  | M8   |
+| Aware vs blind 3-star gap                      | ≥ 10 points                                                 | Gate  | M7   |
+| Decent fail on Hard                            | 25-45% (today 3-23%)                                        | Gate  | M8   |
+| Decent fail on Super Hard                      | 30-70%                                                      | Watch | M8   |
+| WALL planets in 1-60                           | 0 (planet 24 fixed in M1)                                   | Gate  | M8   |
+| 1 star reachable the old way (Solver 0)        | every planet 1-120                                          | Gate  | M2   |
+| Per-object gain spread                         | ≤ 1.8×                                                      | Gate  | M7   |
+| Dead throws (≤ 3 life)                         | ≤ 10%                                                       | Watch | M7   |
+| Median round, planets 21-60, every layer on    | 60-100 s                                                    | Gate  | M8   |
+| Casual with help ladder, attempts to clear     | p90 ≤ 5 on every planet 1-120                               | Gate  | M8   |
+| Max legal loadout uplift                       | ≤ +15 points 3-star; decent Hard fail ≥ 20%                 | Gate  | M10  |
+| Trouble planets                                | blind loses ≥ 5%, aware ≤ 8%, blind + max loadout ≥ 3%      | Gate  | M8   |
+| Surprise losses                                | 0                                                           | Gate  | M8   |
+| Idle vs active stardust (Regular, days 1-60)   | idle ≤ 1.5× active every day                                | Gate  | M11  |
+| Power sinks (all Labs level 5)                 | Regular no earlier than day 28; Engaged at least 30% sooner | Gate  | M10  |
+| Homeworld Level 5                              | Regular no earlier than day 28                              | Gate  | M11  |
+| Every currency has something to buy            | on day 60                                                   | Gate  | M11  |
+| Free gems per active day (Regular)             | ≥ 95 (today about 100)                                      | Gate  | M4   |
+| New gem sinks per Road                         | ≥ 0.8× free gem supply per Road                             | Watch | M12  |
+| Frost supply                                   | 3-10 per 10 planets                                         | Gate  | M7   |
+| Boosters                                       | ≤ 0.5 per planet (Regular)                                  | Gate  | M11  |
+| Replays' share of Essences                     | ≤ 30%                                                       | Watch | M10  |
+| Star Road free lane                            | 6-8 weeks for anyone playing daily                          | Gate  | M12  |
+| Paying gets power sooner                       | 0 days                                                      | Gate  | M5   |
+| Continue offers on planets 1-10 or after a win | 0                                                           | Gate  | M0   |
+| Notifications                                  | ≤ 1 per calendar day, none 21:00-09:00                      | Gate  | M0   |
+| Countdown or urgency words, any language       | 0                                                           | Gate  | M0   |
+| Outbound actions without the gate              | 0                                                           | Gate  | M0   |
+| Intros per planet                              | ≤ 1                                                         | Gate  | M2   |
+| Meta nouns by planet 20                        | ≤ 20                                                        | Gate  | M4   |
+
+The baseline changes only through an explicit `npm run sim:baseline` commit. Seeds are fixed, so the gates are deterministic and never flaky.
+
+### 7.6 Content cadence and live-ops
+
+| Rhythm        | What                                                                                                                                                                     | Kid-safe rule                                                       |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| Daily         | 3 Wishes, the Daily Planet (with its Weather Report Trouble), a Star Calendar stamp                                                                                      | Unfinished Wishes never expire; the calendar never resets           |
+| Weekly        | One headline: the Weekly Voyage, 7 stops with the week's theme (Volcano, Ocean, Blossom, Frost, Critter, Starfall), hemisphere-aware so Frost Week falls in local winter | Plain end date; reached rewards are sent to the Inbox automatically |
+| Monthly       | One headline: the Festival (spot costumed creatures for a sticker and a costume)                                                                                         | Zen Garden does not count; costumes are never sold                  |
+| Every 8 weeks | A new Star Road, 1 Theme or Planet Pack, 1-2 Style Singles, at least 3,000 gems of gem singles, new stardust looks, and an App Store In-App Event                        | A Road ends only when the next is in the app; Past Roads stay open  |
+| Release train | Tuning and content every 2 weeks; features every 6 weeks                                                                                                                 | Each Road launches with a feature release                           |
+| Runway        | Every build carries at least 98 days of pre-flighted Daily Planets and Voyage stops                                                                                      | Test fails otherwise                                                |
+
+With no server, every change ships through App Review. So content is authored ahead, generated from dates and pre-flighted in CI. Remix stays off the calendar, as REMIX.md requires.
+
+### 7.7 QA process
+
+**Per milestone** (the loop in [../handoff/06-workflow.md](../handoff/06-workflow.md)):
+
+1. The engineering manager (Claude) splits the milestone into packages that own separate files, and writes one brief per package.
+2. The test engineer writes tests from the spec while Codex (lead developer) builds the logic, then the UI.
+3. The engineering manager reviews the diff and runs format, typecheck, tests and build.
+4. The data analyst runs the sims and the economy sim against the milestone's bands, and reports before-and-after numbers.
+5. The QA analyst runs the Playwright journeys and the Simulator checks, and screenshots every new screen.
+6. The translators fill all 5 languages.
+7. Adversarial reviewers (Claude sub-agents plus Codex read-only) review through 4 lenses: correctness, economy and kid safety, UX and i18n, and originality. A second skeptic confirms each finding before anyone fixes it.
+8. The engineering manager commits, pushes, keeps CI green, updates the status in this document and reports to the owner in plain language.
+
+**Test layers:** unit and invariant tests (every change); sim gates; Playwright journeys; Scene Bot (real-physics play of planets 1-30 checking the sim's flight model lands on the same sector at least 95% of the time, plus a 50-planet soak for frame time and memory); save goldens (a save from every version must load); time-travel tests (ISO week 53, year end, daylight saving in both hemispheres, month end, clock moved forward or back); and a StoreKit matrix (success, cancel, Ask to Buy pending then approved or declined, interrupted purchase, network loss, Screen Time "Don't Allow", restore after reinstall, replayed transactions never granting twice).
+
+**Playwright journeys** (6 languages × 320×568, 375×667, 390×844 and 430×932; Chromium and WebKit):
+
+| Journey | Covers                                                                                                              |
+| ------- | ------------------------------------------------------------------------------------------------------------------- |
+| J1      | First session: fresh install to planet 6 and the Homeworld                                                          |
+| J2      | Every tab and screen, with Back returning to the right place                                                        |
+| J3      | Purchases with a mock store: gate fail means no purchase; pass grants once; a replay is ignored; Ask to Buy pending |
+| J4      | Modes: Daily Planet, Challenge code round trip, gated sharing                                                       |
+| J5      | Homeworld with an injected clock                                                                                    |
+| J6      | Remix                                                                                                               |
+| J7      | Background the app mid-round and resume the same round                                                              |
+
+Every journey asserts that nothing sits outside the screen, no label is cut off, tap targets are at least 44 px, the console shows no errors, and at most 4 overlay types are drawn on the planet.
+
+**Severity:** S0 = money, privacy or kid safety (a gate bypass, a wrong price or double charge, any network call, a random paid reward, save loss); it blocks the release. S1 = a crash, a progress blocker or a WALL planet. S2 = clipping, an EASY planet, a missing translation. S3 = cosmetic.
+
+**Release checklist** (`docs/qa/release.md`): CI and nightly green; level lint and runway pre-flight green; journeys green in every language and size; the oldest and newest test devices passed; StoreKit matrix passed; privacy manifest unchanged; listings in 6 languages; a 48-hour TestFlight soak with at least 5 adult tester codes (once TestFlight exists).
+
+### 7.8 Device matrix
+
+| Device                                                                          | Why                                           |
+| ------------------------------------------------------------------------------- | --------------------------------------------- |
+| The oldest real iPhone available (ideally an iPhone 6s or SE 1st gen on iOS 15) | The performance floor and the smallest screen |
+| A current iPhone with Dynamic Island                                            | The main target                               |
+| Simulator: iPhone SE (3rd gen)                                                  | Home button, 375×667                          |
+| Simulator: iPhone 13 mini                                                       | Notch, 375×812                                |
+| Simulator: a Pro Max with 120 Hz                                                | Physics must not depend on frame rate         |
+| Simulator: an iPad in compatibility mode                                        | App Review often tests on iPad                |
+| iOS 15 (the floor), 17 and the current version                                  |                                               |
+
+Run in all 6 languages (German for length, Japanese for characters), with Reduce Motion, larger text, a VoiceOver smoke test, colour filters for biome legibility, Low Power Mode, airplane mode (everything except purchases must work), notifications allowed and denied, and the silent switch on.
+
+---
+
+## 8. Delivery plan
+
+Milestones are in build order. Each is sized to be built, tested, translated and reviewed in one push. Sizes are first estimates in team-weeks (S about 1, M about 2, L about 3), with Codex doing most of the coding; the engineering manager re-plans after M1 once the team's pace is known. Every milestone follows the QA loop in 7.7. Once a developer account exists, every milestone also goes to TestFlight.
+
+**The launch candidate is M0 through M12.** The game is pre-launch, so changing the economy, the Homeworld and the store before launch costs nothing: no save migrations, no grandfathering, no product changes in App Store Connect. The same changes after launch would need all of that. M13-M16 are the first updates after launch.
+
+| Milestone | Goal                                                          | Size | Launch?               | Headline gate                                         |
+| --------- | ------------------------------------------------------------- | ---- | --------------------- | ----------------------------------------------------- |
+| M0        | Kid-safe trust update (the compliance fixes)                  | S    | Yes; ships on its own | Every policy test green                               |
+| M1        | Measure and guard (no visible change)                         | M    | Yes                   | 0 direct wallet writes; sims in CI                    |
+| M2        | The round engine and the unlock ladder (no visible change)    | L    | Yes                   | Planets 1-60 unchanged byte for byte                  |
+| M3        | The first ten minutes                                         | M    | Yes                   | 0 prices, pop-up walls or system prompts in session 1 |
+| M4        | One clear Home, Missions and Wishes                           | M    | Yes                   | ≤ 12 Home targets; nothing clipped at 320×568         |
+| M5        | Grown-ups and a fair checkout                                 | L    | Yes                   | Store and paywall tests green                         |
+| M6        | Read every throw: HUD, Supernova 2.0, stats, feel             | L    | Yes                   | 0 overlapping text; 2-3 Supernovas per planet         |
+| M7        | Fusions and the first Clash                                   | M    | Yes                   | Aware vs blind gap ≥ 10 points                        |
+| M8        | Troubles, traits, the Buddy and the help ladder; rules freeze | L    | Yes                   | Every difficulty band green                           |
+| M9        | Remix (as designed)                                           | M    | Yes                   | REMIX.md test list green                              |
+| M10       | Labs: your shots learn tricks                                 | L    | Yes                   | Max-loadout band; Labs last ≥ 28 days                 |
+| M11       | Homeworld Level and a fair economy                            | M    | Yes                   | Idle ≤ 1.5× active; no stranded currency              |
+| M12       | Star Roads, the Styles catalogue and launch prep              | L    | Yes                   | 7 products pass the StoreKit matrix                   |
+| M13       | Friends and trips (update 1.1)                                | M    | After launch          | Frost from trips ≈ 30%                                |
+| M14       | Road 1 and the live-ops calendar                              | M    | After launch          | 98-day runway                                         |
+| M15       | Content drop: more reactions and Troubles, Wonder, Star Motes | L    | After launch          | Bands still green                                     |
+| M16       | Collector's Edition and experiments                           | M    | After launch          | Price rule met                                        |
+
+**Team roles in every milestone.** Engineering manager: Claude (plans packages with separate file ownership, reviews diffs, runs checks, commits, reports). Lead developer: Codex (implements each package from a self-contained brief). Test engineer: writes tests from the spec first. QA analyst: Playwright journeys and Simulator checks. Data analyst: sims and the economy sim. Translators: one per language (es, fr, de, pt-BR, ja). Adversarial reviewers: correctness, economy and kid safety, UX and i18n, and originality, with Codex as a read-only second opinion. The line under each milestone says where the weight falls.
+
+### M0: Kid-safe trust update (launch candidate; ships on its own)
+
+**Goal.** Fix every compliance problem in today's build before anything else ships, so the current game is safe to put in front of children and testers.
+
+| #    | Scope                                                                                                                                                                                                                                                                                                                                                     | Files                                                                                                                                                                                                                              |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1  | **Gate every outbound action.** Sharing (Daily result, Challenge code, postcards, Passport card, Homeworld photos) goes through the parental gate. The automatic App Store rating prompt is removed; "Rate Pocket Planet" moves to Settings behind the gate.                                                                                              | `src/ui/share.ts`, `src/ui/postcard.ts`, `src/ui/flows/modes.ts`, `src/ui/screens/passport.ts`, `src/ui/screens/homeworld.ts`, `src/ui/platform.ts`, `src/ui/flows/results.ts`, `src/ui/flows/settings.ts`, `src/ui/flows/gate.ts` |
+| 0.2  | **No system prompts to the child.** No Game Center sign-in at launch; sign-in only from Settings behind the gate. Notifications are off by default; the "Want a nudge?" ask after a win is removed; a grown-up turns them on behind the gate. At most one per calendar day, never 21:00-09:00, plain informational copy with no streak or reward promise. | `src/ui/app.ts`, `src/ui/gamecenter.ts`, `src/ui/platform.ts`, `src/ui/flows/results.ts`, `src/ui/flows/settings.ts`                                                                                                               |
+| 0.3  | **Plain dates, not countdowns** on the weekly event, Voyage, Festival and quests ("until Sunday", "new quests tomorrow"). Homeworld build timers show a clock time ("Ready at 14:30").                                                                                                                                                                    | `src/ui/flows/event.ts`, `src/ui/screens/voyage.ts`, `src/ui/flows/festival.ts`, `src/ui/flows/quests.ts`, `src/ui/screens/homeworld.ts`                                                                                           |
+| 0.4  | **Visitors without chance.** No gems from visitors. Mementos come on a fixed schedule (a species' 3rd visit), and every gift shows at once on one card. Replace the dice icon on "New challenge" and "Surprise me".                                                                                                                                       | `src/meta/visitors.ts`, `src/ui/flows/visitors.ts`, `src/ui/flows/modes.ts`, `src/ui/screens/passport.ts`, `src/locales/*.json`                                                                                                    |
+| 0.5  | **The continue rule** (4c): never on planets 1-10, never after a win, only from the 2nd fail in a row, flat 50 gems, at most 2, a small secondary button. Remove the "So close!" bar and the "grab a pack in the Shop" toast. "Ways to earn gems" opens only on a tap.                                                                                    | `src/ui/game.ts`, `src/meta/config.ts`, `src/ui/app.ts`                                                                                                                                                                            |
+| 0.6  | **No selling before value.** Hide the OFFER badge and the Starter card until the chapter-1 chest. Move the Cosmic Pass banner below the free tiers. Remove "Popular", "Best value", "+25%" and "Over 5× the value". Hide the Piggy Bank. Remove "×2 for 10 gems". The Star Calendar can be closed and never shows before the first Home view.             | `src/ui/screens/home.ts`, `src/ui/screens/shop.ts`, `src/ui/screens/road.ts`, `src/meta/config.ts`, `src/ui/flows/offers.ts`, `src/ui/flows/daily.ts`                                                                              |
+| 0.7  | **Booster tiles explain before spending.** The first tap opens a sheet: "Use 1 (you have 2)" or "Get 1 for ✨150".                                                                                                                                                                                                                                        | `src/ui/flows/prelevel.ts`                                                                                                                                                                                                         |
+| 0.8  | **Fair competitive modes.** Extra Throws, Wide Impact and Aim Guide no longer apply in Daily Planet, Meteor Rush and Challenge.                                                                                                                                                                                                                           | `src/ui/app.ts` (`sceneOpts`)                                                                                                                                                                                                      |
+| 0.9  | **Churn stops paying.** Magnet pays only on a species' first arrival per planet; Bloom only when a region reaches a new best; the preview leaves out the Lab bonus on throws that make the planet worse. Creature sightings, festival spots and quest ticks count only on first arrival. Zen no longer counts toward festivals.                           | `src/meta/lab.ts`, `src/core/world.ts`, `src/ui/game.ts`, `src/ui/app.ts`, `src/meta/festivals.ts`                                                                                                                                 |
+| 0.10 | **Homeworld housekeeping.** Clock guards in both directions on builds, producers and expeditions (credit at most the real time elapsed). The badge counts only things you can act on. Pass `now` into `capHours`. Remove the unused `HomeState.started`.                                                                                                  | `src/meta/homeworld.ts`, `src/meta/economy.ts`                                                                                                                                                                                     |
+
+**Acceptance.** A fresh install plays planets 1-3 with zero gem prompts, zero system prompts and zero offers. Every share, rating and link path shows the gate. No countdown or urgency string in any locale. A destroy-and-rebuild sequence at Lab 5 earns nothing on the throws that make the planet worse.
+
+**Test plan.** Unit: new `tests/policy.test.ts` (every `Share.share`, `navigator.share`, `requestReview` and outside-link path calls `parentalGate`; continue rules; no `Math.random` or `rngFrom` on visitor grants; a string scan of all locales for countdown and urgency words), `tests/platform.test.ts` (at most 1 reminder per calendar day, none 21:00-09:00), Homeworld clock tests. Sim: `npm run sim` before and after; bands unchanged except the Lab-5 churn. Playwright: none yet (M1). Simulator: fresh install on a small and a current iPhone; share shows the gate; Settings → notifications shows the gate, then the system prompt; no Game Center sheet at launch.
+
+**Strings.** About 30 (gate reasons, settings rows, notification copy, plain dates, booster sheet, continue copy, "Ways to earn gems", visitor card), × 5 languages.
+
+**Team.** Three packages (outbound actions and prompts; money surfaces; rules and Homeworld). The test engineer writes `policy.test.ts` first. Reviewers: kid safety and correctness.
+
+### M1: Measure and guard (launch candidate; no visible change)
+
+**Goal.** Build the instruments before changing the game: one wallet, one private ledger, one tuning file, the safety lints, the sims in CI and the first layout robots.
+
+| #   | Scope                                                                                                                                                                                                                                                                                   | Files                                                                                                                                                                           |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.1 | **One wallet.** `earn` and `spend` with named sources and sinks. Route the ~35 direct writes through it. A lint fails CI on any write to gems, stardust or materials outside `wallet.ts` and `profile.ts`.                                                                              | new `src/meta/wallet.ts`; `homeworld.ts`, `economy.ts`, `modes.ts`, `progression.ts`, `visitors.ts`, `cosmetics.ts`, `lab.ts`, `src/ui/flows/offers.ts`                         |
+| 1.2 | **One on-device ledger** as in 7.2, with a dev-only Balance Report on a long-press of the version number.                                                                                                                                                                               | new `src/meta/ledger.ts`, `src/ui/app.ts`, `src/ui/game.ts`, `src/ui/flows/settings.ts`                                                                                         |
+| 1.3 | **One tuning file** for every price, reward and cost, re-exported by the old modules; a snapshot test of the totals.                                                                                                                                                                    | new `src/meta/tuning.ts`, `config.ts`, `shop.ts`, `offers.ts`, `game.ts`, `results.ts`, `lab.ts`, `homeworld.ts`, `progression.ts`, `modes.ts`; `tests/tuning.snapshot.test.ts` |
+| 1.4 | **Lints:** privacy (no network code, dependency allowlist, privacy manifest unchanged, no `server.url`) and terms (no hit names or hit terms in player strings or store listings, 6 languages).                                                                                         | `tests/privacy.test.ts`, `tests/terms.test.ts`                                                                                                                                  |
+| 1.5 | **One sim harness** with `sim:quick` (casual, decent and sharp on planets 1-60, 90 seconds or less) in CI as Watch; a committed `baseline.json`; a shadow-seed `salt` option in `makeLevel`; the level lint as Watch; a `LEVEL_SALT` table used now only for planet 24, the worst wall. | `tests/sim/*`, `src/core/levels.ts`, `tests/levels.lint.sim.ts`, `package.json`                                                                                                 |
+| 1.6 | **Economy sim v0** over the real meta code with an injected clock and the 7 player types (7.4); a baseline report of today's economy.                                                                                                                                                   | `tests/economy.sim.ts`                                                                                                                                                          |
+| 1.7 | **Saves and time.** Golden saves and the time-travel suite.                                                                                                                                                                                                                             | `tests/fixtures/saves/*`, `tests/time.test.ts`                                                                                                                                  |
+| 1.8 | **Playwright** as a dev dependency: J1 and J3 at 320×568 and 390×844 in 6 languages, plus a pseudo-locale 40% longer; layout assertions from 7.7.                                                                                                                                       | `playwright.config.ts`, `e2e/j1.spec.ts`, `e2e/j3.spec.ts`, `package.json`                                                                                                      |
+| 1.9 | **CI:** `verify`, `sim-quick` and `e2e` jobs on Linux; `nightly.yml` for the full sims; the macOS `ios-build` only on main and tags once the repo is private.                                                                                                                           | `.github/workflows/ci.yml`, `.github/workflows/nightly.yml`                                                                                                                     |
+
+**Acceptance.** 0 direct wallet writes. In the economy sim, earnings minus spending equals the change in the wallet exactly, for every currency and player type. The ledger stays at 16 KB or less after a simulated 90-day Engaged career. `sim:quick` runs in 90 seconds or less. J1 and J3 pass (today's known clipping is listed as an expected failure, fixed in M4). Planet 24's decent-bot fail rate is 35% or less.
+
+**Test plan.** Unit: wallet lint, ledger size and aggregation, tuning snapshot, privacy and terms lints, save goldens, time travel. Sim: baseline committed. Playwright: J1 and J3. Simulator: smoke test that nothing visible changed.
+
+**Strings.** None (the dev tools are English only).
+
+**Team.** The data analyst owns the sims and the economy sim; the test engineer owns the lints and goldens; the QA analyst owns Playwright; Codex builds the wallet, ledger and tuning file. Reviewers: correctness and privacy.
+
+### M2: The round engine and the unlock ladder (launch candidate; no visible change)
+
+**Goal.** One pure rules engine that the game, the aim preview, the solver and the bots all share, so what the solver plans is exactly what the child plays. Plus the single unlock table that enforces one idea per planet.
+
+| #   | Scope                                                                                                                                                                                                                                                                                                                                                                                             | Files                                                                                                |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 2.1 | **`stepRound`**: one pure step that returns before, after, changed sectors, creatures spawned, creatures lost with their sector, reactions and Trouble events. The level scene, the preview, `greedyPlan` and the bots all call it.                                                                                                                                                               | new `src/core/round.ts`, `src/core/world.ts`, `src/core/levels.ts`, `src/ui/game.ts`, `tests/sim/*`  |
+| 2.2 | **`RoundModifiers`** with a per-mode allowlist (4b).                                                                                                                                                                                                                                                                                                                                              | new `src/core/modifiers.ts`, `src/ui/app.ts`                                                         |
+| 2.3 | **Flight code extracted** from the game scene into a pure module, plus dev-only hooks for the Scene Bot.                                                                                                                                                                                                                                                                                          | new `src/core/flight.ts`, `src/ui/game.ts`                                                           |
+| 2.4 | **Faster levels.** Memoise `makeLevel` by rules version; a cheap `levelMeta` (name, hue, twist) so Home never runs the solver.                                                                                                                                                                                                                                                                    | `src/core/levels.ts`, `src/ui/screens/home.ts`, `src/meta/voyage.ts`                                 |
+| 2.5 | **Solver 2.0 and the kid floor.** Solver 2.0 models reactions and Troubles, fires the Supernova when charged, never swaps and ignores player-side bonuses; it sets stars 2 and 3. Solver 0 (today's blind choice rule) guarantees star 1 and picks goals on normal planets. Rules come from a separate `${seed}-rules` random stream. With rules empty, planets 1-60 are byte-identical to today. | `src/core/levels.ts`, `src/core/round.ts`, `tests/levels.test.ts`                                    |
+| 2.6 | **`unlocks.ts`**: one ladder table (planet, placement, intro card, letter). Every screen asks `unlocked(p, id)`. CI fails on two intros on one planet or a missing translation.                                                                                                                                                                                                                   | new `src/meta/unlocks.ts`, `tests/unlocks.test.ts`                                                   |
+| 2.7 | **Split the 1,615-line game scene** into round, HUD, preview and effects modules. Add the glossary test.                                                                                                                                                                                                                                                                                          | `src/ui/game.ts`, new `src/ui/hud.ts`, `src/ui/preview.ts`, `src/ui/fx.ts`, `tests/glossary.test.ts` |
+
+**Acceptance.** The 17-land × 6-object snapshot is unchanged. Planets 1-60 are byte-identical. `levels.test` covers planets 1-120: Solver 2.0 reaches 3 stars and meets goals; Solver 0 reaches 1 star. `makeLevel` takes 30 ms or less per planet, and Home makes zero solver calls. J1 screenshots match M1's.
+
+**Test plan.** Unit: matrix snapshot, LevelDef snapshot, determinism, solver floors, unlocks lint, glossary. Sim: bands unchanged within noise. Playwright: J1 visual diff. Simulator: one full planet on the oldest device to check nothing got slower.
+
+**Strings.** None.
+
+**Team.** Codex-heavy refactor in three packages (engine, solver, UI split). The test engineer writes the snapshot tests before the refactor starts. The data analyst checks the sims match before and after. Reviewer: correctness.
+
+### M3: The first ten minutes (launch candidate)
+
+**Goal.** A 6-year-old knows what the game is for within a minute, never loses the first planet, never sees a price or a system prompt in the first session, and reaches the Homeworld in under 10 minutes.
+
+| #   | Scope                                                                                                                                                                                                                                                | Files                                                                                                                            |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 3.1 | **Title beat** on first launch (5 seconds or less, tap to skip) with the purpose line.                                                                                                                                                               | `src/ui/app.ts`, new `src/ui/flows/title.ts`                                                                                     |
+| 3.2 | **Practice planets 1-3 can't be failed** (3 free throws from the Keeper, up to twice). The star tip shows at throw 0; the first creature's points fly into the bar.                                                                                  | `src/ui/hud.ts`, `src/meta/coach.ts`                                                                                             |
+| 3.3 | **Purpose moment** on the first win: the planet shrinks into the galaxy with a stardust trickle. Results show at most 3 reward types; materials are hidden until planet 5.                                                                           | `src/ui/flows/results.ts`                                                                                                        |
+| 3.4 | **Pop-up governor.** At most 1 interrupting pop-up per app open, none before the first Home view, none on a resume within 30 minutes. The Star Calendar becomes a chip. Passport naming becomes a Next Up card after planet 5.                       | `src/ui/app.ts`, `src/ui/screens/home.ts`, `src/ui/flows/daily.ts`                                                               |
+| 3.5 | **"While you were away" card.** It replaces the Welcome-back and Visitors pop-ups: one Collect all (Vault, Homeworld producers, visitor gifts, counted for the collect quest), no gem button, and after 7+ days a 3-line recap and a warm-up planet. | new `src/ui/flows/away.ts`, `src/ui/flows/offers.ts`, `src/ui/flows/visitors.ts`, `src/meta/economy.ts`, `src/meta/homeworld.ts` |
+| 3.6 | **Coach 2.0.** Intro cards from `unlocks.ts` (an icon, 12 words or fewer, "Show me"), hidden on the next tap and copied to the Inbox. In-round tips triggered by events.                                                                             | `src/meta/coach.ts`, `src/meta/unlocks.ts`, `src/ui/hud.ts`, `src/meta/inbox.ts`                                                 |
+| 3.7 | **Ladder moves.** The first Hard planet is 15 (planets 5 and 10 become normal). Momentum moves to planet 17 and pauses on a fail. The Supernova meter is hidden before planet 9, and the solver matches.                                             | `src/core/levels.ts`, `src/meta/momentum.ts`, `src/core/round.ts`                                                                |
+| 3.8 | **Text size** (Standard, Large, Extra large, from one CSS variable; nothing under 12 px) and a VoiceOver live region that reads each landing.                                                                                                        | `src/styles.css`, `src/ui/flows/settings.ts`, `src/ui/hud.ts`                                                                    |
+
+**Acceptance.** J1: install to first fling in 15 seconds or less; planets 1-6 in 10 minutes or less on the scripted path; 0 pop-ups before the first Home view; 0 prices or gem prompts in session 1. The casual bot clears planet 1 every time. Extra-large text passes at 320×568. T0: 4 of 5 children aged 6-9 can say what the game is for after 10 minutes.
+
+**Test plan.** Unit: governor, away card, Momentum pause, `difficultyOf`, unlock ladder. Sim: planets 1-20 bands; planet 15 in the Hard band. Playwright: J1 in 6 languages at 2 sizes, text size XL. Simulator: fresh install on iPhone SE (3rd gen) and a current iPhone; VoiceOver smoke test.
+
+**Strings.** About 55.
+
+**Team.** Codex builds the flows; the QA analyst owns J1; the owner runs the T0 playtest; reviewers: UX and i18n, kid safety.
+
+### M4: One clear Home, Missions and Wishes (launch candidate)
+
+**Goal.** Home shows your galaxy and one obvious next step. Everything else is one tap away in a place that makes sense. Nothing is cut off on small phones, and daily goals come from creatures instead of chores.
+
+| #   | Scope                                                                                                                                                                                                                                                                                                                                                                                                 | Files                                                                                                                                            |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 4.1 | **Five tabs:** Play (galaxy, Collect all chip, one Next Up card, Play, and a "More ways to play" row once modes unlock), Missions (Wishes, Star Road, Calendar chip, letters; "Opens at planet 12" until then), Homeworld ("Opens at planet 5" until then), Collection (Lifebook, Sticker Album, Field Guide), Styles (looks bought with stardust or gems; paid items stay in the old Shop until M5). | `src/ui/screens/home.ts`, `src/ui/app.ts`, `src/styles.css`, new `src/ui/screens/missions.ts`, `collection.ts`, `styles.ts` (from `workshop.ts`) |
+| 4.2 | **A real Back button**: a screen stack; Back and a left-edge swipe pop it.                                                                                                                                                                                                                                                                                                                            | `src/ui/app.ts`                                                                                                                                  |
+| 4.3 | **Next Up picker** (pure and tested): the next ladder step, then a finished build, then a Wish at 80% or more, then a mid-term goal, then "Play planet N". Never an offer.                                                                                                                                                                                                                            | new `src/meta/nextup.ts`                                                                                                                         |
+| 4.4 | **Badges:** one numeric style, only for things you can claim, at most 3 on Home. Disabled buttons are muted and say why, with a clock time.                                                                                                                                                                                                                                                           | `src/ui/screens/home.ts`, `src/styles.css`                                                                                                       |
+| 4.5 | **One tap from results to the next throw.** "Next" opens the level with the pre-level info as an overlay the first fling dismisses.                                                                                                                                                                                                                                                                   | `src/ui/flows/prelevel.ts`, `src/ui/flows/results.ts`                                                                                            |
+| 4.6 | **Wishes replace daily quests** (4e): creature-voiced, reward shown up front, unfinished ones never expire, one free swap a day, feats that name lands and creatures.                                                                                                                                                                                                                                 | `src/meta/progression.ts`, new `src/meta/wishes.ts`, `src/ui/screens/missions.ts`, `src/ui/flows/quests.ts` (removed)                            |
+| 4.7 | **Explorer Rank retires.** Modes unlock by planet (Daily Planet 27, Zen 30, Meteor Rush 38, Challenge 40). Rank rewards move to chapter chests, rank cosmetics to chapter milestones, and the two rank achievements are re-pointed to chapters.                                                                                                                                                       | `src/meta/rank.ts`, `src/ui/flows/rank.ts`, `src/meta/cosmetics.ts`, `src/meta/progression.ts`, `src/ui/flows/modes.ts`, `store/gamecenter.md`   |
+| 4.8 | **Field Guide** replaces "How to play", with pages for Objects (the identity cards) and Creatures; Fusions and Troubles pages arrive with M7 and M8.                                                                                                                                                                                                                                                  | new `src/ui/screens/fieldguide.ts`, `src/ui/flows/settings.ts`                                                                                   |
+| 4.9 | **The 320×568 fix:** no absolutely positioned side rails; the duplicate `.ribbon` rules removed.                                                                                                                                                                                                                                                                                                      | `src/styles.css`                                                                                                                                 |
+
+**Acceptance.** 12 or fewer tap targets on Home. J2 (Back) passes. 0 clipped controls at 320×568 in 6 languages. Styles and the Star Atlas are 2 taps or fewer from Home; the next throw is 1 tap from results. Free gems per active day for the Regular player are 95 or more. 20 or fewer meta nouns by planet 20. T0: 5 of 5 children find the Lifebook and the Homeworld unaided.
+
+**Test plan.** Unit: Next Up picker, Wishes (seeding, never expiring, swap, rewards), rank retirement, noun budget. Sim: economy sim gem band. Playwright: J2 new; J1 and J3 in all sizes. Simulator: every tab on SE (3rd gen) and a current iPhone.
+
+**Strings.** About 70, mostly Wish templates.
+
+**Team.** Codex in two packages (navigation; Wishes and rank); the QA analyst runs layout in every size; the data analyst checks the gem band; reviewers: UX and i18n, economy and kid safety.
+
+### M5: Grown-ups and a fair checkout (launch candidate; needs owner decision 1)
+
+**Goal.** Money moves to the parent. Real money buys looks only, from a gated Grown-ups area, through a checkout that follows the charter.
+
+| #   | Scope                                                                                                                                                                                                                                                                                  | Files                                                                                                                    |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| 5.1 | **Catalogue reset.** Retire the 4 gem packs and the Piggy Bank. The Starter Pack becomes Starter Crew ($2.99, looks only). The Cosmic Pass loses its gems, stardust, boosters and drone. Purchases grant looks only. Family Sharing on. Product names and descriptions in 5 languages. | `src/meta/config.ts`, `ios/App/PocketPlanet.storekit`, `src/meta/economy.ts`, `src/meta/iap.ts`, `src/meta/homeworld.ts` |
+| 5.2 | **Grown-ups area** as in 6.6 (What's new, shop, Favourites, purchases, spending reminder, play time, grown-up settings, Restore, help, clear play history). Notifications, Game Center and "rate the app" move here from Settings.                                                     | new `src/ui/screens/grownups.ts`, `src/ui/screens/shop.ts`, `src/ui/flows/settings.ts`, `src/meta/ledger.ts`             |
+| 5.3 | **Gate v2** as in 6.6, with number words generated per language and an optional parent PIN.                                                                                                                                                                                            | `src/ui/flows/gate.ts`, new `src/i18n/numberWords.ts`                                                                    |
+| 5.4 | **A price-free kid side.** Styles shows paid looks with "Try on" and a heart; no price and no Buy; a small gated Grown-ups link; a parent can hide paid looks; one "New" dot per release.                                                                                              | `src/ui/screens/styles.ts`, `src/meta/cosmetics.ts`                                                                      |
+| 5.5 | **The checkout charter in code** (6.6): gate, contents sheet, Apple's sheet, receipt card; an Ask to Buy "waiting" state; nothing new announced for 7 days after a refund.                                                                                                             | `src/ui/app.ts` (`buy`), `src/meta/iap.ts`, new `src/ui/flows/receipt.ts`                                                |
+| 5.6 | **Tests:** `store.test.ts` (non-consumable only; contents resolve to looks only; 5 languages; banned words; one currency per item) and `paywall.test.ts` (no product touches gameplay; every planet can be 3-starred with base rules, no boosters and no continues).                   | `tests/store.test.ts`, `tests/paywall.test.ts`                                                                           |
+| 5.7 | **Tester build flavour** with an adult-consent screen and the Balance Report code, compiled out of App Store builds. `privacy.html` updated in 6 languages.                                                                                                                            | `vite.config.ts`, `src/ui/flows/settings.ts`, `docs/privacy.html`                                                        |
+
+**Acceptance.** Store and paywall tests green. J3: a failed gate means no purchase; a pass grants exactly once; a replayed transaction is ignored; Ask to Buy pending, then approved on a later launch. Xcode StoreKit tests: success, cancel, pending, Screen Time "Don't Allow" shows a friendly message, restore after reinstall. No currency symbol appears anywhere outside Grown-ups (Playwright text scan). T0: the gate stops children aged 6-8 and 9-11 in at least 95% of tries.
+
+**Test plan.** Unit: store, paywall, gate number words for 100-999 in 6 languages, spending reminder, receipt contents. Playwright: J3 extended; kid-screen price scan. Simulator: StoreKit configuration file tests; VoiceOver reads the gate prompt.
+
+**Strings.** About 90 (Grown-ups, charter, product texts, gate).
+
+**Team.** Codex in three packages (store and entitlements; Grown-ups UI; gate). The test engineer writes the store and paywall tests first. Reviewers: kid safety and economy (lead lens), correctness. The owner then creates the 7 products in App Store Connect.
+
+### M6: Read every throw (launch candidate)
+
+**Goal.** Every throw becomes a visible choice. The preview shows who moves in and who would wander off, the Supernova becomes a moment worth earning, objects get stats and feel, and nothing overlaps on screen.
+
+| #   | Scope                                                                                                                                                                                                                                                                                              | Files                                                                                                  |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 6.1 | **Queue and landing card.** Current + next 2, drawn as objects circling the launcher; swap current and next only. Row 1: the new land. Row 2 only when a creature would leave or a reaction or Trouble applies. Changed sectors outlined. Tappable goal chips with the recipe and "Show me where". | `src/ui/hud.ts`, `src/ui/preview.ts`, `src/ui/flows/prelevel.ts`                                       |
+| 6.2 | **Wander off and come back.** The creature walks to the rim and leaves a grey ghost with a thought bubble of the land it wants; "Came back!" when it returns. Events fire on first arrival only.                                                                                                   | `src/ui/fx.ts`, `src/core/round.ts`, `src/ui/art/critters.ts`                                          |
+| 6.3 | **Feedback governor.** One popup queue, at most 2 at once, at least 250 ms apart, dark outlines. The "×N" chain is removed. At most 4 overlay types on the planet.                                                                                                                                 | `src/ui/fx.ts`, `src/ui/hud.ts`                                                                        |
+| 6.4 | **Supernova 2.0** (4c).                                                                                                                                                                                                                                                                            | `src/core/round.ts`, `src/ui/hud.ts`, `src/ui/fx.ts`                                                   |
+| 6.5 | **Object stats in data** with the identity card; the deal re-weighting together with the Solver 2.0 retune.                                                                                                                                                                                        | `src/core/world.ts`, `src/core/levels.ts`, `src/ui/screens/fieldguide.ts`                              |
+| 6.6 | **Feel.** A per-object table of sound, haptics, trail and impact; a round tally of 2 seconds or less (1.5 after planet 3), skippable, with creatures walking home and the planet flying into the galaxy, and no on-screen formula.                                                                 | `src/ui/fx.ts`, `src/ui/audio.ts`, `src/ui/haptics.ts`, `src/ui/flows/results.ts`                      |
+| 6.7 | **Boosters re-scoped.** Star Scope shows the next 5 objects (and Fusion spots once Fusions exist). Life Spark seeds the 3 sectors nearest the planet's goal lands.                                                                                                                                 | `src/core/round.ts`, `src/ui/flows/prelevel.ts`                                                        |
+| 6.8 | **Colour and motion.** A "Clear" planet palette with biome markers, patterns for every state, and at most 3 full-screen flashes a second.                                                                                                                                                          | `src/core/world.ts` (colours), `src/ui/art/planet.ts`, `src/ui/flows/settings.ts`, `tests/cvd.test.ts` |
+| 6.9 | **Resume a round.** Auto-pause when the app goes to the background; the exact round restores if iOS closes the web view.                                                                                                                                                                           | `src/ui/app.ts`, `src/core/round.ts`, `src/meta/profile.ts`                                            |
+
+**Acceptance.** 20 scripted throws show 0 overlapping text. At most 4 overlay types. 2-3 Supernovas per planet in the sim. J7 resume passes. Every "Clear" palette pair differs by at least 10 (colour distance) under all three colour-blindness models. T0: 4 of 5 children can say why a creature left.
+
+**Test plan.** Unit: first-arrival events, Supernova charge and thresholds, stats snapshot, resume, colour-blind test. Sim: Supernova count, dead-throw rate recorded. Playwright: overlap capture, J7. Simulator: frame time on the oldest device, haptics, Reduce Motion.
+
+**Strings.** About 60.
+
+**Team.** Codex in three packages (HUD and preview; Supernova and stats; feel and colour). The QA analyst owns the overlap capture. Reviewers: UX and i18n, correctness.
+
+### M7: Fusions and the first Clash (launch candidate)
+
+**Goal.** Answer the owner's "synergies and combos": two shots you already have do something new together, and one pair backfires in a way children can see and learn from.
+
+| #   | Scope                                                                                                                                                                                                                       | Files                                                                                                                    |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| 7.1 | **The reaction rules** (4a) in the round step, modelled by the solver, with teaching planets for Steam (8), Rain Garden (13), Wildflowers (22), Glacier (25) and Scorch (32).                                               | `src/core/round.ts`, `src/core/levels.ts`, `src/meta/unlocks.ts`                                                         |
+| 7.2 | **Discovery.** The NEW FUSION card; the Field Guide chart; +50 stardust and a sticker on first discovery; the "Little Chemist" title.                                                                                       | `src/ui/fx.ts`, `src/ui/screens/fieldguide.ts`, `src/meta/stickers.ts`, `src/ui/art/stickers.ts`, `src/meta/passport.ts` |
+| 7.3 | **The Fusion moment.** Arc, banner, icon, haptic and sound; a 150 ms pause on impact (off with Reduce Motion); fully readable with the sound off.                                                                           | `src/ui/fx.ts`, `src/ui/audio.ts`                                                                                        |
+| 7.4 | **Wishes** gain Fusion feats.                                                                                                                                                                                               | `src/meta/wishes.ts`                                                                                                     |
+| 7.5 | **Frost at the source.** Frost lands pay 1 frost per sector; frost and ember goals appear on about 15% of planets from 25; Glacier makes frost lands. The Star Atlas lets any two neighbouring constellations open at once. | `src/meta/constellations.ts`, `src/core/levels.ts`                                                                       |
+
+**Acceptance.** The Fusion bands in 4a pass as CI gates. On each debut planet the solver's path fires that reaction. Frost supply is 3-10 per 10 planets. T0: 4 of 5 children can name what a Fusion did.
+
+**Test plan.** Unit: each reaction's trigger and effect; one reaction per throw; untaught reactions don't fire; solver on debut planets. Sim: aware vs blind, spread, dead throws, Clash frequency, frost. Playwright: the NEW FUSION card in 6 languages. Simulator: sound-off playthrough of planets 8 and 13.
+
+**Strings.** About 35.
+
+**Team.** Codex builds the rules first, then the effects. The data analyst runs the reaction bands (heavy). Reviewers: originality (lead lens), correctness.
+
+### M8: Troubles, traits, the Buddy and the help ladder, then the rules freeze (launch candidate)
+
+**Goal.** Answer the owner's "negative interactions that make the game harder", fairly: forecast threats with a counter, creatures as the keys, one free help ladder, and difficulty that finally matches its targets.
+
+| #   | Scope                                                                                                                                                                                                                                   | Files                                                                                             |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 8.1 | **Troubles** (4d): Ember Vent (14), Tanglevine (28) and Frost Creep (36), with their rules, settled state, frequency and ticks.                                                                                                         | `src/core/round.ts`, `src/core/levels.ts`, `src/meta/unlocks.ts`                                  |
+| 8.2 | **Forecast strip** and firebreak wall icons.                                                                                                                                                                                            | `src/ui/hud.ts`, `src/ui/art/planet.ts`                                                           |
+| 8.3 | **Traits** from each creature's home land, shown in the Lifebook and in rounds, with the shield puff (intro at planet 16).                                                                                                              | `src/core/world.ts`, `src/ui/screens/lifebook.ts`, `src/ui/fx.ts`                                 |
+| 8.4 | **The Buddy helps** (planet 18): one chip on the pre-level overlay, suggested from the forecast; once per planet its trait skips the first action of the matching Trouble; off in competitive modes and Remix.                          | `src/meta/buddy.ts`, `src/ui/flows/prelevel.ts`, `src/core/modifiers.ts`                          |
+| 8.5 | **One help ladder** (4c), with "What happened" built from the round's events.                                                                                                                                                           | new `src/meta/help.ts`, `src/ui/flows/results.ts`, `src/meta/ledger.ts`                           |
+| 8.6 | **Gentle planets** in Grown-ups.                                                                                                                                                                                                        | `src/ui/screens/grownups.ts`, `src/core/modifiers.ts`                                             |
+| 8.7 | **Rules freeze.** Set `RULES_VERSION` to 1. Retune Hard into its band using Troubles. Re-salt every wall. Make WALL a CI gate. Pre-flight 90 days of Daily Planets and 12 weeks of Voyage stops. Add the Daily Planet's Weather Report. | `src/core/levels.ts`, `src/meta/modes.ts`, `tests/levels.lint.sim.ts`, `.github/workflows/ci.yml` |
+
+**Acceptance.** Every difficulty band in 7.5 is green. The median round is 60-100 seconds on planets 21-60 with every layer on. p95 frame time is 16 ms or less at planet 30 on the oldest test device. T0: 4 of 5 children can name what a Trouble did and its counter, and 3 of 5 use a creature on purpose by their third Trouble planet.
+
+**Test plan.** Unit: each Trouble's rule, firebreaks, traits table (all 36 creatures), Buddy mitigation limit, help-ladder fail definition, Gentle planets. Sim: the Trouble invariants, surprise losses, Hard band, casual with ladder, round time; Daily and Voyage pre-flight. Playwright: the forecast in 6 languages; J1 still green. Simulator: planets 14, 28 and 36 with sound off, and on the oldest device.
+
+**Strings.** About 55.
+
+**Team.** Codex in three packages (Troubles and forecast; traits and Buddy; help ladder). The data analyst leads the retune and re-salt (heavy). Reviewers: kid safety (copy and pressure), correctness, UX.
+
+### M9: Remix (launch candidate)
+
+**Goal.** Build [REMIX.md](REMIX.md) exactly as designed, steps 1-3, on the frozen rules.
+
+| #   | Scope                                                                                                                                                                                    | Files                                                                                                                                 |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 9.1 | Step 1: `remixLevel`, the target shift, the Short Supply twist, `profile.remix` and its tests.                                                                                           | `src/core/levels.ts`, new `src/meta/remix.ts`, `src/meta/profile.ts`, new `tests/remix.test.ts`                                       |
+| 9.2 | Step 2: the Star Map Classic/Remix toggle, the pre-level chip, the result card, the dusk palette with a gold rim, and the music variant.                                                 | `src/ui/screens/starmap.ts`, `src/ui/flows/prelevel.ts`, new `src/ui/flows/remixResult.ts`, `src/ui/art/planet.ts`, `src/ui/audio.ts` |
+| 9.3 | Step 3: frames, titles, the album sticker, and 3 achievements totalling 75 points or less.                                                                                               | `src/meta/passport.ts`, `src/meta/stickers.ts`, `src/ui/art/stickers.ts`, `store/gamecenter.md`                                       |
+| 9.4 | **Integration:** the modifier allowlist switches off every player-side bonus; no continues and no help ladder; no Troubles; Remix never feeds the Star Road, Wishes, chests or Momentum. | `src/core/modifiers.ts`, `src/meta/wishes.ts`                                                                                         |
+
+**Acceptance.** REMIX.md's test list is green. The decent bot's Remix 3-star rate is 25-45%. Remix never changes campaign stars, stardust, level or the Star Road. J6 passes.
+
+**Test plan.** Unit: REMIX.md's list. Sim: Remix bands for chapters 1-50. Playwright: J6. Simulator: the music variant and the dusk palette.
+
+**Strings.** About 25.
+
+**Team.** Codex; the data analyst for the bands; reviewers: kid safety (no pressure copy), originality.
+
+### M10: Labs: your shots learn tricks (launch candidate)
+
+**Goal.** The Homeworld finally reaches the fling: six Labs where each object learns new rules, paid for with the lands you grew.
+
+| #    | Scope                                                                                                                                                                                                                 | Files                                                                                                                                                           |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 10.1 | **Six Labs** as Homeworld buildings. The Object Lab screen retires.                                                                                                                                                   | `src/meta/homeworld.ts`, `src/ui/art/structures.ts`, `src/ui/screens/homeworld.ts`, `src/meta/lab.ts` (to new `src/meta/labs.ts`), `src/ui/screens/upgrades.ts` |
+| 10.2 | **The Lab ladder and top forms** (4b): instant level-ups; costs in stardust and one Essence; cap = Homeworld Level + 1; perks shown only once taught; top forms by feat, switched in the Lab; the flat perks removed. | `src/core/modifiers.ts`, `src/meta/labs.ts`, `src/core/round.ts`                                                                                                |
+| 10.3 | **Essences.** Materials are renamed. A pouch in the Homeworld header, Lab cards, and one results line from planet 6 ("+6 leaf for your Seed Lab"). Replays pay half.                                                  | `src/meta/constellations.ts`, `src/ui/flows/results.ts`, `src/ui/screens/homeworld.ts`, `src/locales/*.json`                                                    |
+| 10.4 | **"Homeworld helped"** line on results; the object card shows its Lab level and perks.                                                                                                                                | `src/ui/flows/results.ts`, `src/ui/screens/fieldguide.ts`                                                                                                       |
+| 10.5 | **The first hour at planet 5**, in 2 steps (4e).                                                                                                                                                                      | `src/ui/screens/homeworld.ts`, `src/meta/unlocks.ts`                                                                                                            |
+
+**Acceptance.** Economy sim: all six Labs at level 5 no earlier than day 28 for the Regular player, and at least 30% sooner for the Engaged player (play-gated, not wait-gated); no Lab stuck past day 60 for want of one colour. The max-loadout band holds. Greedy play with every perk and top form meets every goal on planets 1-120. J5 passes. T0: children can say what one Lab does.
+
+**Test plan.** Unit: ladder costs and caps, perk gating, top-form feats and toggles, allowlist, Essence rename and replay rule. Sim: max-loadout band; goals with every perk on; economy bands. Playwright: J5 with an injected clock. Simulator: the Homeworld on the oldest device.
+
+**Strings.** About 80 (24 perk lines, 6 top forms, Lab names, UI).
+
+**Team.** Codex in two packages (rules; Homeworld UI and art). The data analyst runs the economy sizing (heavy). Reviewers: economy and kid safety, originality.
+
+### M11: Homeworld Level and a fair economy (launch candidate)
+
+**Goal.** One number shows your Homeworld growing, stardust stops outrunning play, and every retired system is gone.
+
+| #    | Scope                                                                                                                                                                                                                                                                                      | Files                                                                                                                                   |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 11.1 | **Homeworld Level** replaces Ring (4e table): a visible change each level, the badge on the tab, Passport and Star Map; the third drone free at level 3; Lab level 2 allowed at level 1.                                                                                                   | `src/meta/homeworld.ts`, `src/ui/screens/homeworld.ts`, `src/ui/art/structures.ts`, `src/meta/passport.ts`, `src/ui/screens/starmap.ts` |
+| 11.2 | **Idle income that doesn't outrun play.** The galaxy rate is capped by Vault level (40/60/80/100/120 stardust an hour; storage 4/6/8/10/12 hours; upgrades 1,000/3,000/8,000/20,000), bought from the Collect chip.                                                                        | `src/meta/economy.ts`, `src/meta/tuning.ts`, `src/ui/screens/home.ts`                                                                   |
+| 11.3 | **Retire** the Upgrades screen (aim line fixed at today's level 2, plus a "Full aim line" assist; Extra Throws and Wide Impact gone), Stardust Mills, Crystal Groves, the Observatory, charm and the 6-hour requests. Friendship now grows from Wishes and wins with that friend as Buddy. | `src/ui/screens/upgrades.ts`, `src/meta/config.ts`, `src/meta/homeworld.ts`, `src/ui/screens/homeworld.ts`, `src/meta/buddy.ts`         |
+| 11.4 | **Greenhouse:** you choose the booster; it holds 1 and refills every 12 hours; at most 2.                                                                                                                                                                                                  | `src/meta/homeworld.ts`                                                                                                                 |
+| 11.5 | **Overview panel:** what each building does for your next throw, the next level's checklist, and one Next Up inside the base.                                                                                                                                                              | `src/ui/screens/homeworld.ts`, `src/meta/nextup.ts`                                                                                     |
+| 11.6 | **Pre-launch saves:** reset tester saves, or map Lab levels one to one and refund retired buildings. No letters, no grandfathering.                                                                                                                                                        | `src/meta/profile.ts`                                                                                                                   |
+| 11.7 | **Stardust looks** at 5,000-50,000, rising within each series.                                                                                                                                                                                                                             | `src/meta/cosmetics.ts`, `src/ui/screens/styles.ts`                                                                                     |
+
+**Acceptance.** The economy bands in 7.5 for idle income, Homeworld Level 5, stranded currencies, free gems, boosters and replays are all green. J5 passes. T0: children can find their Homeworld Level and say what it opens.
+
+**Test plan.** Unit: level requirements, Vault cap, retirements, Greenhouse choice and cap, save reset or mapping. Sim: all economy bands; the exchange-rate sheet. Playwright: J5, J2. Simulator: an old save and a fresh save.
+
+**Strings.** About 50 (and about 60 retired).
+
+**Team.** Codex; the data analyst leads (heavy); reviewers: economy and kid safety, UX.
+
+### M12: Star Roads, the Styles catalogue and launch prep (launch candidate)
+
+**Goal.** The recurring revenue line and the launch catalogue, every paid item previewable on the child's own world, plus everything App Review and the owner need to launch.
+
+| #    | Scope                                                                                                                                                                                                                                                                                                                                                    | Files                                                                                                                        |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 12.1 | **Star Roads** (6.2): 20 steps, points with a daily cap, Past Roads, "a Road ends only when the next is in the app", Cosmic Road as Road 0.                                                                                                                                                                                                              | `src/meta/progression.ts`, new `src/meta/starroad.ts`, `src/ui/screens/road.ts`, `src/ui/screens/pass.ts`                    |
+| 12.2 | **One weekly and one monthly headline.** The Weekly Event merges into the Voyage (the theme shapes the 7 stops, the last stop pays the theme's atmosphere, event tokens retire, weekly gems stay about 130); themes are hemisphere-aware; "Bloom Week" becomes "Blossom Week".                                                                           | `src/meta/events.ts`, `src/meta/voyage.ts`, `src/ui/screens/voyage.ts`, `src/ui/flows/event.ts` (removed)                    |
+| 12.3 | **Cosmetic slots and one try-on renderer:** shot trail and burst per object, Supernova style, Fusion style, Homeworld theme, friend outfit. Try-on lasts until Done and is never next to Buy.                                                                                                                                                            | `src/meta/cosmetics.ts`, `src/ui/art/projectiles.ts`, `src/ui/art/structures.ts`, `src/ui/fx.ts`, `src/ui/screens/styles.ts` |
+| 12.4 | **Readability CI:** skins keep each object's element colour, silhouette and badge (only trail and burst restyle); nothing recolours lands, threats, the forecast, the aim line, the preview or goal chips; particle caps; the colour-blind check.                                                                                                        | new `tests/readability.test.ts`                                                                                              |
+| 12.5 | **The launch catalogue** (6.1), each Theme and Pack's free sampler, gem-priced singles and new stardust looks.                                                                                                                                                                                                                                           | `src/meta/config.ts`, `ios/App/PocketPlanet.storekit`, `src/meta/cosmetics.ts`                                               |
+| 12.6 | **Launch prep:** store listings and screenshots that lead with the fling and name no other game; App Store age-rating answers (no loot boxes; parental controls); the Kids Category decision; a short COPPA retention and security note; a light Children's Code assessment; In-App Event text for Cosmic Road; the owner's App Store Connect checklist. | `store/*.md`, `store/screenshots/*`, new `docs/compliance.md`                                                                |
+
+**Acceptance.** The Star Road free lane takes 6-8 weeks for anyone playing daily. New gem sinks per Road are at least 0.8× the free gem supply. Readability and store tests are green for all 7 products. J3 passes for every product. The StoreKit matrix and the release checklist (7.7) pass. With TestFlight: a 48-hour soak with at least 5 adult tester codes.
+
+**Test plan.** Unit: Road points and cap, Past Roads overflow, entitlement per product, readability, weekly theme merge. Sim: Road pacing, gem sinks. Playwright: J3 for all products, J2, all journeys in all sizes. Simulator: purchases in the StoreKit configuration file; Family Sharing restore on a second test account.
+
+**Strings.** About 90 (Roads, product texts, new looks, listings).
+
+**Team.** Codex in three packages (Roads; cosmetics pipeline; catalogue content). The QA analyst runs the full release checklist. Reviewers: all four lenses, with originality checking the store listing. This milestone closes the launch candidate.
+
+### After launch
+
+**M13: Friends and trips (update 1.1, M).** Wishes come first from friends living in your Den, asking for their home-land feats. Friendship also grows from trips. Trips: pick one of your own planets; the game picks the best friend and shows the yield (that planet's Essences and a few gems) before you send; 1/4/8 hours by Tower level; one at a time; about 8-10 frost from an 8-hour trip with a match; the postcard shows the real planet and shares through the gate. Also: progress backup with iCloud key-value storage (owner decision 7) and an iPad layout pass. Files: `src/meta/homeworld.ts`, `src/meta/wishes.ts`, `src/ui/screens/homeworld.ts`, `src/meta/profile.ts`, new `src/meta/backup.ts`, `src/styles.css`. Gate: trips give about 30% of frost income by day 14 in the sim; frost stays at 3-10 per 10 planets. About 40 strings.
+
+**M14: Road 1 and the live-ops calendar (M).** Road 1's content (Cosmic Pass lane of 12 looks, free lane, one Theme or Pack, 1-2 Style Singles, at least 3,000 gems of singles, new stardust looks). A data table of weeks with a fall-back to today's rotation; the 98-day runway test; App Store In-App Events; the release train. Festival edition 2 if there is an art budget. Files: `src/meta/starroad.ts`, new `src/meta/almanac.ts`, `src/meta/cosmetics.ts`, `src/meta/festivals.ts`, `tests/runway.test.ts`. About 40 strings per Road.
+
+**M15: Content drop: more reactions and Troubles (L).** Space Pebble and the Comet Guardian's pebbles from the planet-50 boss (after the Scene Bot confirms the flight model). Firemount, Rainbow and Flood. Wonder: a mark above 3 stars set at 95% of an offline planner's score (precomputed `par.json`), shown only after a planet is 3-starred, earned only, never with help or assists. Star Motes: at most 1 per planet (+1 throw or a wider shot, no picker). All bands must stay green. About 60 strings.
+
+**M16: Collector's Edition and experiments (M).** The Collector's Edition (6.3) once at least 3 Themes and one Past Road exist, after checking that the purchase plugin exposes the original purchase date. Experiments behind sim gates: a rule only Pocket Planet could have (for example, the sunlit and night halves of the spinning planet changing what Sunburst and Ice Comet do); an optional, reward-only terraforming round on the Homeworld; Homeworld Levels 6 and up. Revisit the family subscription if the owner wants it (decision 2).
+
+---
+
+## 9. Risks and what we cut
+
+### 9.1 Risks
+
+| Risk                            | What could happen                                                                                               | What we do                                                                                                                                              |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scope                           | The launch candidate is 13 milestones, about 7 months of team-weeks at first estimate.                          | Every milestone is shippable to TestFlight. The engineering manager re-plans after M1. The order puts the cheapest high-value work (M0, M3-M5) first.   |
+| Bots aren't children            | Every balance number is from bots; the sim ignores some physics until M2.                                       | T0 kid playtests on every visible milestone; the Scene Bot checks the flight model; tester codes and App Store data re-baseline the bands after launch. |
+| The new rules may not add depth | The land-based reactions change the prototype's numbers.                                                        | M7 re-measures and gates on the aware-vs-blind gap. If it fails, we tune the trigger lands before shipping, not after.                                  |
+| Too much on screen              | Queue, landing card, ghosts, forecast, traits and Buddy all compete for a small screen.                         | The overlay budget (at most 4 types on the planet) is a Playwright gate, and round time is a sim gate.                                                  |
+| Performance                     | The solver and preview get heavier; nothing has been profiled on an old iPhone.                                 | Memoised levels, no solver on Home, p95 frame time as an M8 gate on the oldest device. Revisit the iOS 15 floor if needed.                              |
+| Revenue lower than modelled     | No telemetry; kid-safe conversion runs low; no paid growth.                                                     | Plan on the conservative numbers (mid $0.22 per install). Retention is the lever. Price tests only per territory, going forward, never per child.       |
+| Translation quality             | About 640 new strings; earlier translations were never checked by native speakers.                              | A glossary fixed before translation; a pseudo-locale and German length test; a native review before launch (decision 6).                                |
+| App Review and regulation       | Kids Category rules (1.3), copycat rules (4.1), the EU Digital Fairness Act, US state age laws (Texas SB 2420). | Built to the Kids Category standard now; the terms lint; no currency for sale; M12 compliance pack.                                                     |
+| Owner-only work                 | App Store Connect products, Game Center IDs, TestFlight, In-App Events can only be created by the owner.        | Batched into two moments: after M5 (products) and M12 (launch).                                                                                         |
+| Lost progress                   | No server, so a new phone loses progress (purchases restore, progress doesn't).                                 | iCloud key-value backup in M13 (decision 7).                                                                                                            |
+| Content cadence                 | A new Star Road every 8 weeks needs about 20 looks and 40 strings each time.                                    | Looks are code-drawn palette and shape variants; a Road ends only when the next is in the app, so a late Road never takes anything away.                |
+| Originality drift               | Borrowed methods can slide into copies.                                                                         | The originality lens in every review, the "describe it without our nouns" test and the terms lint.                                                      |
+
+### 9.2 What we cut, and why
+
+Every critic "cut" was applied.
+
+| Proposal                                                                                                | Critic verdict                                              | What happened                                                                    | Why                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| meta-homeworld-5: adjacency feeds and clashes between buildings                                         | Cut (player advocate, engineering)                          | Cut                                                                              | A production spreadsheet on an idle base that optimises passive income; "-50% Thaw" means nothing to a 7-year-old.                                                                                                            |
+| meta-homeworld-6: Weather Fronts, dimmed buildings, repairs, Wards, Meteor Watch                        | Cut (engineering)                                           | Cut. An optional, reward-only terraforming round is listed as an M16 experiment. | XL cost; a check-in penalty; a third hazard vocabulary; the shoot-down round read as Missile Command. The player advocate liked Meteor Watch, but the cut stands, and Troubles bring the negative interaction into the round. |
+| monetization-7: a second ledger and Balance Report                                                      | Cut (kid safety, economy, engineering)                      | Merged into the one ledger (liveops-data-1)                                      | Two privacy surfaces; a production export of a child's play data.                                                                                                                                                             |
+| monetization-8: the family subscription                                                                 | Cut (engineering)                                           | Not built; owner decision 2                                                      | Needs a monthly drop in every binary and has Apple ongoing-value risk, for about $0.03 per install. Its paid Collect all would sell something everyone gets free.                                                             |
+| Glow reaction rings (core-loop-3)                                                                       | Change (originality)                                        | Replaced by land-based triggers                                                  | The aura-consume-decay model is Genshin Impact's.                                                                                                                                                                             |
+| Reach/Power/Echo paths, respec, Master resident, boss hatch (meta-homeworld-2, core-loop-8)             | Change (originality, engineering, economy, player advocate) | One fixed ladder in six Labs; top forms by feat                                  | Bloons TD 6 cross-paths and Vampire Survivors evolutions; too many sim cells.                                                                                                                                                 |
+| Star Dock as the level-setting building (meta-homeworld-1, -8)                                          | Change (originality)                                        | The Homeworld Level is the planet growing                                        | Clash of Clans' Town Hall.                                                                                                                                                                                                    |
+| Kit loadout, Helper, Ward charms (meta-homeworld-3)                                                     | Change (player advocate, engineering, economy)              | One Buddy chip                                                                   | A loadout before a 1-minute round; stacked mitigations deleted Troubles.                                                                                                                                                      |
+| Hearts with a daily cap and greeting (meta-homeworld-4)                                                 | Change (originality, kid safety, player advocate)           | Friendship stays, earned from play                                               | Pokemon GO's buddy hearts; a daily habit loop for children.                                                                                                                                                                   |
+| 8 reactions at planets 5-14 (core-loop-3)                                                               | Change (player advocate)                                    | 4 Fusions and 1 Clash spread over planets 8-32; 3 more after launch              | 2-4 new ideas per planet.                                                                                                                                                                                                     |
+| Tap-to-arm Supernova (core-loop-5)                                                                      | Change (player advocate)                                    | Auto-fire stays; holding is optional                                             | Opt-in would take free Supernovas away from the youngest players.                                                                                                                                                             |
+| Star Motes and Wild Pod (core-loop-5)                                                                   | Change (engineering, player advocate)                       | Deferred to M15, without Wild Pod                                                | Needs the flight code; a 6-way picker mid-round slows the waiting-room pace.                                                                                                                                                  |
+| Per-object gravity and speed (core-loop-6)                                                              | Change (player advocate, engineering)                       | Cut; feel through sound and haptics                                              | Breaks learned aim; needs a reachability sweep.                                                                                                                                                                               |
+| Wonder "within 10%" mention and paid ring styles (core-loop-9)                                          | Change (kid safety)                                         | Wonder shown only when reached; rings earned only                                | Near-miss framing; paid status on an earned mark.                                                                                                                                                                             |
+| Balatro-style tally with a formula (ux-6)                                                               | Change (originality)                                        | A count-up with creatures walking home, no formula                               | The staged-formula tally is what the owner rejected in Lucky Pips.                                                                                                                                                            |
+| Kid-facing "new look" cards and "Ask a grown-up" card (monetization-2, -6)                              | Change (kid safety, player advocate)                        | Cut; announcements live in Grown-ups; Favourites is private                      | Marketing to children at reward moments; pester power is banned under EU UCPD Annex I No. 28.                                                                                                                                 |
+| Dual prices ("$2.99 or 360 gems") and gem-pack "fallback"                                               | Change (kid safety, economy)                                | One item, one price; no fallback                                                 | Launders real money through a currency.                                                                                                                                                                                       |
+| A 3-day pay advantage in the economy bands (liveops-data-3, -7)                                         | Change (kid safety)                                         | 0 days                                                                           | Money buys no power.                                                                                                                                                                                                          |
+| Game Center leaderboard reader (liveops-data-7 T4)                                                      | Change (kid safety)                                         | Dropped                                                                          | Processes other players' data.                                                                                                                                                                                                |
+| Refinery, Orbit, Monuments, Blueprints, jobs, Explorer Bundle, a Homeworld leaderboard and notification | Change (several critics)                                    | Cut or deferred                                                                  | More nouns, more timers, and more reasons to check in.                                                                                                                                                                        |
+
+Also retired from today's game to pay for the new nouns: Explorer Rank, the Weekly Event and its tokens, the Upgrades screen, Mills, Groves, the Observatory, charm, resident requests, the Piggy Bank and gem packs.
+
+### 9.3 Critic verdicts we did not follow in full, and why
+
+1. **The noun cap of about 12 by planet 20 (player advocate).** We land at 18 and cap it at 20 in CI. Reaching 12 would mean hiding the Homeworld and Missions until after planet 20, and then the game can't show what it is for in the first session. Today's count is about 35.
+2. **Frost Creep "later" (player advocate).** It ships at launch, but at planet 36, well past the dense early game. Without it the Frostproof trait would have no job at launch. It shares code with the Ember Vent, which is why engineering wanted it in v1.
+3. **Tide Otter as a Swimmer (core-loop-7's hand-made list).** Traits come strictly from each creature's home land, so Tide Otter (home: forest) is Weedproof, and Grass Elephant (home: savanna) is Fireproof. One rule a child can predict beats a hand-made list.
+4. **Cutting free gems to about 60 a day (economy).** Kid safety and the player advocate win: free gem income stays at about 100 a day. We add gem sinks instead (at least 3,000 gems of new singles per Road).
+5. **A daily Essence harvest allowance (economy).** Replaced by "replays pay half", which has no daily clock and so creates no check-in habit.
+6. **Friendship renamed Hearts with a 5-a-day cap (engineering).** Originality, kid safety and the player advocate were stricter.
+7. **Launch after M0-M2 plus Remix (engineering).** The launch candidate runs to M12. Changing the economy, Homeworld and store after launch would need migrations and new App Store products, and the owner's core question (what is the Homeworld for?) must be answered at launch. Every milestone still ships to TestFlight, so the risk is managed.
+8. **All 8 reactions in v1 (engineering "keep").** The stricter player-advocate pacing wins.
+9. **The Homeworld Level as the Star Dock's level with a feat checklist (economy).** Originality wins (no headquarters building), and the kid-safety critic removed skill feats as gates. The economy critic's pacing band (Level 5 no earlier than day 28) is kept.
+
+---
+
+## 10. Owner decisions needed
+
+| #   | Decision                                                                                                                                                                                        | Recommendation                                                                                                                                                                                                                                            | If you don't answer                                                        |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| 1   | **Retire gem packs and the Piggy Bank before launch**, so real money buys looks only.                                                                                                           | Yes. Nothing exists in App Store Connect yet, so it costs nothing now. It removes about $0.018 of today's modelled $0.076 per install, and the new lines replace that many times over. It also gets ahead of EU rules on in-game currencies for children. | M5 builds the looks-only store. No products are created until you confirm. |
+| 2   | **A family subscription** ($3.99 a month for cosmetic drops).                                                                                                                                   | Not now. Revisit after two Star Roads ship on time.                                                                                                                                                                                                       | Not built.                                                                 |
+| 3   | **Kids Category.** List the game in the Kids Category (ages 6-8) or in Games → Casual at 4+.                                                                                                    | We build to the Kids Category rules either way. Launch in Games → Casual at 4+, and apply for the Kids Category once App Review has seen the gate and Grown-ups.                                                                                          | Games → Casual, 4+.                                                        |
+| 4   | **Momentum pauses after a fail instead of resetting.**                                                                                                                                          | Yes. Resetting a streak punishes a child for failing.                                                                                                                                                                                                     | Pauses.                                                                    |
+| 5   | **Game Center leaderboards,** which show other players' public nicknames.                                                                                                                       | Keep achievements. Show only the player's own rank in the game, and sign in only through the gate in Grown-ups.                                                                                                                                           | As recommended.                                                            |
+| 6   | **A paid native-speaker review** of about 1,550 strings in 5 languages before launch.                                                                                                           | Yes, once, before submission.                                                                                                                                                                                                                             | AI translation plus a second AI review, flagged in the release notes.      |
+| 7   | **Progress backup through iCloud** (Apple's storage; the privacy label stays "Data Not Collected").                                                                                             | Yes, in M13.                                                                                                                                                                                                                                              | Built in M13.                                                              |
+| 8   | **Approve the retire list** in 4h: Explorer Rank, the Weekly Event (folded into the Voyage), daily quests (now Wishes), the Upgrades screen, Mills, Groves, the Observatory and the Piggy Bank. | Yes. Each retirement pays for a new idea and keeps the game learnable.                                                                                                                                                                                    | Retired as planned.                                                        |
+| 9   | **Ratify the balance bands** in 7.5 (difficulty, pace and economy).                                                                                                                             | Yes, before M6.                                                                                                                                                                                                                                           | The bands in 7.5 apply.                                                    |
+| 10  | **The launch cut:** launch after M12 (full), or earlier.                                                                                                                                        | Full (M0-M12), with TestFlight builds from M0 on.                                                                                                                                                                                                         | Full.                                                                      |
+
+**Owner to-dos (not decisions):** create the Apple Developer account, TestFlight group and bundle ID; create the 7 products after M5 and the Game Center IDs after M4 and M9; run the T0 kid playtests (5 children, parent present, 15 minutes, paper notes); make the repository private and switch the default branch to `main`.
