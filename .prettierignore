@@ -5,3 +5,4 @@ package-lock.json
 resources/*.png
 store/screenshots
 src/locales
+docs/handoff/07-transcript.md

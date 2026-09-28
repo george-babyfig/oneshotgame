@@ -23,6 +23,8 @@ Before doing anything else:
    docs/handoff/04-research.md      (market research + principles)
    docs/handoff/05-status-and-next.md (what's in progress and what's next)
    docs/handoff/06-workflow.md      (commands, QA, translations, git/PR rules)
+   docs/handoff/07-transcript.md    (our full conversation word for word; skim it, and search it
+                                     whenever you need the exact detail of something)
    Then skim ROADMAP.md and README.md.
 3. Run npm install, then npm run format:check, npm run typecheck, npm test and npm run build,
    and confirm everything passes (84 tests).
