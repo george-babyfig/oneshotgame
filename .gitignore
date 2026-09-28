@@ -7,3 +7,4 @@ coverage/
 ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
 test-results/
 playwright-report/
+tests/sim/economy/report.json
