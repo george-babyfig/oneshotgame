@@ -1,6 +1,6 @@
 # 01: Conversation history
 
-The owner (George, GitHub `george-babyfig`) worked with Claude Code in one long cloud session. Their messages are quoted as sent, typos included; the notes under each say what happened.
+The owner (George, GitHub `george-babyfig`) worked with Claude Code in two cloud sessions: a long first one (27–28 September) and a short second one (28 September evening) that scoped the next big roadmap. Their messages are quoted as sent, typos included; the notes under each say what happened.
 
 ## Day 1 — 27 September 2026
 
@@ -123,6 +123,54 @@ The owner wants a session running **on their Mac**, so it can open the iOS Simul
 
 This handoff folder is the result.
 
+## Day 2, evening — the second cloud session (28 September 2026)
+
+The owner pasted PROMPT.md into a new session intended to run on their Mac. It started as **another cloud session** instead (Linux, no Simulator), in the same "Default – trusted network access" environment. Its session id is `session_01RcshJCJeurVYQrUSHyZjG2`. The first session was archived.
+
+### 11. Pause, re-read, resume
+
+> "hold on the old claude is still updating the md files, please puase, and then reread everything including my prompt in 5 minutes"
+
+> "you can resume now, do as I said in my last message"
+
+The only doc change was the new `07-transcript.md`. The session then:
+
+- **Music check:** recorded all 11 themes offline to WAV (now `npm run music`) and sent the owner the festival, Voyage and home themes. Loudness matched the other themes.
+- **Music bug found and fixed** (`911d004`): a festival runs every month, so the festival tune had permanently replaced the home music for anyone past planet 8. Now it plays only until that month's festival tiers are claimed, and the Voyage map uses the Voyage theme.
+- **Playable build republished** as Version 12 at https://claude.ai/artifact/K5sPveYA8weiBttagqJjsR.
+- **Round 7 research** on replay/remix modes and iMessage stickers (see [04-research.md](04-research.md)). The Remix build was postponed because of the next request.
+
+### 12. "Think like a senior product manager"
+
+> "we need to flesh this out further. I need you to take on the mindsert of a senior product manager at a large game studio and scope out what more this app needs from functionality, design, features, user journeys, pain points etc. We then want to make the complexity bwetter and figure out how we can increase revenue off a simple game like this. So we need to have a mode that is like clash of clans that we already started building out but its so simple. What is the point of the game? The stardust? The characters? We need synergies with different shots, combos, stats, boosts, power ups etc and then negative interactions th make the game harder. Once you scope that out and write out a full roadmap, I want you to take on the role of a full dev team, freom engineering manager, lead developer, test engineer, QA analyst, data analyst, etc and build this fully. I want you to rope in codex into this as well and prime and prompt it as your lead developer too so you can orchestrate efficiently without burning too many tokens. Set up adversarial reviews too."
+
+The session ran a staged review with sub-agents:
+
+1. Code, journey and data audits of the current game.
+2. Market research.
+3. Five product managers wrote proposals: core loop, meta/Homeworld, monetization, UX, and live-ops/data.
+4. Five critics tried to break the proposals: kid safety, originality, engineering, economy, and a player advocate.
+5. A head of product wrote the roadmap.
+
+The result is [docs/product/ROADMAP-v2.md](../product/ROADMAP-v2.md). The build of its milestones is handed to the next session.
+
+### 13. Codex
+
+> "how is that possible its usable in my other claude chat?" / "check again. Other chat figured it out"
+
+Codex could not run in the cloud session:
+
+- **Network:** the cloud environment's network policy returns 403 for `api.openai.com`, `auth.openai.com`, `chatgpt.com` and `openai.com`.
+- **Setup:** Codex wasn't installed, and there was no OpenAI key.
+
+The owner's other Claude Code sessions (the BabyFig / vectorlabs-site ones) are Remote Control sessions running **on their own computer**, where Codex is installed and signed in. That is why Codex works there.
+
+### 14. Hand off to a local session
+
+> "ok finish your work, I will transfer this to a new chat as soon as youre done. I will need you to update the prompt and all of the md's for transfer to a new local session"
+
+This updated handoff (all docs plus a new PROMPT.md) is the result. The next session runs **locally on the Mac**, with Codex as lead developer, and builds ROADMAP-v2 milestone by milestone.
+
 ## Recurring patterns in how the owner works
 
 - The most common instruction is "keep going": continue with the next roadmap round without asking.
@@ -131,3 +179,7 @@ This handoff folder is the result.
 - Originality matters a lot. Never clone a hit.
 - They want monetization that entices spending, but it must stay kid-safe: no gambling themes, no random paid rewards, fixed-price and previewable purchases, and a parental gate.
 - They want to _play_ it: keep the playable build updated, and on a Mac, launch the Simulator.
+- They want the work run like a studio: a product manager's scoping, then a dev team (engineering manager, lead developer, test engineer, QA analyst, data analyst) with adversarial reviews, and Codex as lead developer to save tokens.
+- They want depth with a clear purpose: shot synergies, combos, stats, power-ups, hazards that make levels harder, and a Homeworld that matters. "What is the point of the game?" must have a crisp answer.
+- They want more revenue, still within the kid-safe rules.
+- They hand work between sessions often. Keep `docs/handoff/` current whenever a session ends.
