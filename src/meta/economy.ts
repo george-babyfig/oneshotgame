@@ -19,9 +19,9 @@ export function vaultHours(p: Profile) {
   return VAULT_HOURS[Math.min(p.upgrades.vault, VAULT_HOURS.length - 1)];
 }
 
-/** If the device clock went backwards, don't freeze the vault until it catches up. */
+/** Keep the last collect time as a high-water mark through clock rollbacks. */
 export function fixClock(p: Profile, now = Date.now()) {
-  if (p.lastCollect > now) p.lastCollect = now;
+  if (p.lastCollect > now) return;
 }
 
 export function pendingDust(p: Profile, now = Date.now()) {

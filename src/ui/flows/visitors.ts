@@ -1,4 +1,4 @@
-// Reveal the gifts visiting creatures left while you were away, one at a time.
+// Gifts from visiting creatures appear together on one card.
 import { h, btn, fmt, modal } from '../dom';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
@@ -11,30 +11,45 @@ import { t } from '../../i18n';
 export function visitorsFlow(app: App) {
   const p = app.p;
   if (!p.visitors.length) return;
-  const stage = h('div', { class: 'visit' });
-  let total = { dust: 0, gems: 0 };
-  let m: ReturnType<typeof modal>;
-  const next = () => {
-    const v = openVisitor(p);
-    app.save();
-    if (!v) {
-      m.close();
-      app.refresh();
-      return;
-    }
-    total = { dust: total.dust + v.dust, gems: total.gems + v.gems };
-    const sp = SPECIES_BY_ID[v.species];
-    sfx.creature(!!v.memento);
-    haptic.success();
-    const kids = [
-      h('div', { class: 'visit-emoji' }, critterCanvas(v.species, 120)),
-      h('div', { class: 'm-title' }, t('{name} dropped by!', { name: sp ? t(sp.name) : t('A visitor') })),
-      h('div', { class: 'reward-list' }, h('span', null, `✨ ${fmt(v.dust)}`), v.gems ? h('span', null, `💎 ${v.gems}`) : null),
-      v.memento ? h('div', { class: 'memento' }, h('small', null, t('Memento')), h('b', null, `🎀 ${mementoName(v.memento)}`)) : null,
-      btn(p.visitors.length ? t('Next visitor ({n})', { n: p.visitors.length }) : t('Lovely!'), 'primary wide', next),
-    ];
-    stage.replaceChildren(...kids.filter((k) => k !== null));
-  };
-  m = modal([h('div', { class: 'm-sub' }, t('While you were away…')), stage], { dismiss: false, cls: 'visitors' });
-  next();
+  const gifts = [...p.visitors];
+  const groups = new Map<string, { species: string; count: number; dust: number; mementos: string[] }>();
+  for (const gift of gifts) {
+    const group = groups.get(gift.species) ?? { species: gift.species, count: 0, dust: 0, mementos: [] };
+    group.count++;
+    group.dust += gift.dust;
+    if (gift.memento) group.mementos.push(gift.memento);
+    groups.set(gift.species, group);
+  }
+  const m = modal(
+    [
+      h('div', { class: 'm-sub' }, t('While you were away…')),
+      h(
+        'div',
+        { class: 'visit' },
+        ...[...groups.values()].map((v) =>
+          h(
+            'div',
+            { class: `visit-row${v.mementos.length ? ' has-memento' : ''}` },
+            critterCanvas(v.species, 36),
+            h(
+              'div',
+              { class: 'visit-name' },
+              h('b', null, t(SPECIES_BY_ID[v.species]?.name ?? 'A visitor'), v.count > 1 ? ` ${t('×{n}', { n: v.count })}` : ''),
+              ...v.mementos.map((id) => h('small', { class: 'visit-memento' }, `🎀 ${t('Memento')}: ${mementoName(id)}`)),
+            ),
+            h('span', { class: 'visit-reward' }, `✨ ${fmt(v.dust)}`),
+          ),
+        ),
+      ),
+      btn(t('Collect all'), 'primary wide', () => {
+        for (const _ of gifts) openVisitor(p);
+        sfx.creature(gifts.some((v) => !!v.memento));
+        haptic.success();
+        app.save();
+        m.close();
+        app.refresh();
+      }),
+    ],
+    { dismiss: false, cls: 'visitors' },
+  );
 }

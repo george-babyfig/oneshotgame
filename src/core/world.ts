@@ -178,6 +178,24 @@ export function labBonus(lv: number, changed: number, spawned: number) {
   return b;
 }
 
+/** Track first arrivals and each region's best land, even on a worse throw. */
+export function landingLabBonus(lv: number, result: ImpactResult, planet: Planet, regionBests: number[], arrived: Set<string>): number {
+  let newBests = 0;
+  for (const i of result.changed) {
+    const value = BIOMES[planet.sectors[i].biome].value;
+    if (value > regionBests[i]) newBests++;
+  }
+  planet.sectors.forEach((sector, i) => {
+    regionBests[i] = Math.max(regionBests[i] ?? 0, BIOMES[sector.biome].value);
+  });
+  let firstArrivals = 0;
+  for (const species of result.spawned) {
+    if (!arrived.has(species.id)) firstArrivals++;
+    arrived.add(species.id);
+  }
+  return result.after < result.before ? 0 : labBonus(lv, newBests, firstArrivals);
+}
+
 export function boostRadius(b: ImpactBoost = {}) {
   return b.nova ? 1 : 0;
 }

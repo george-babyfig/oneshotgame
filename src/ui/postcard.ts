@@ -5,9 +5,10 @@ import { Share } from '@capacitor/share';
 import { SPECIES_BY_ID, type Planet } from '../core/world';
 import { renderPlanet } from './art/planet';
 import { drawCreature } from './art/critters';
-import { shareText } from './share';
+import { shareTextUngated } from './share';
 import { toast } from './dom';
 import { t } from '../i18n';
+import { parentalGate } from './flows/gate';
 
 export interface PostcardInfo {
   title: string;
@@ -78,6 +79,7 @@ export async function sharePostcard(planet: Planet, info: PostcardInfo, text: st
 
 /** Hand any rendered image to the share sheet (or download it on the web). */
 export async function shareCanvas(canvas: HTMLCanvasElement, text: string, name = 'pocket-planet') {
+  if (!(await parentalGate('share'))) return;
   const dataUrl = canvas.toDataURL('image/png');
   try {
     if (Capacitor.isNativePlatform()) {
@@ -103,6 +105,6 @@ export async function shareCanvas(canvas: HTMLCanvasElement, text: string, name 
     a.click();
     toast(t('Image saved'), 'good');
   } catch (e) {
-    if (!/cancel|abort/i.test(String((e as Error)?.message ?? e))) shareText(text);
+    if (!/cancel|abort/i.test(String((e as Error)?.message ?? e))) await shareTextUngated(text);
   }
 }

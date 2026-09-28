@@ -41,6 +41,7 @@ export function preLevel(app: App, n: number) {
   const p = app.p;
   const L = makeLevel(n);
   const chosen: Boosters = { shower: false, spark: false, scope: false };
+  const explained = new Set<BoosterId>();
   const kinds = Object.values(KINDS).filter((k) => k.unlock <= n);
   const newKind = kinds.find((k) => k.unlock === n);
   const row = h('div', { class: 'boosters' });
@@ -61,19 +62,56 @@ export function preLevel(app: App, n: number) {
         );
         el.addEventListener('click', () => {
           sfx.click();
-          if (free(id)) return toast(t('Already free with Momentum!'), 'good');
-          if (chosen[id]) chosen[id] = false;
-          else if (owned > 0) chosen[id] = true;
-          else if (spendDust(p, b.dust)) {
-            p.boosters[id]++;
-            chosen[id] = true;
-            sfx.coin();
-            app.save();
-          } else {
-            sfx.error();
-            toast(t('Needs ✨{dust} stardust — or 💎{gems} in the Shop', { dust: b.dust, gems: b.gems }), 'bad');
+          if (free(id)) {
+            if (explained.has(id)) return toast(t('Already free with Momentum!'), 'good');
+            explained.add(id);
+            const sheet = modal([
+              h('div', { class: 'm-title' }, t(b.name)),
+              h('p', null, t(b.desc)),
+              h('p', null, t('Already free with Momentum!')),
+              btn(t('OK'), 'ghost wide', () => sheet.close()),
+            ]);
+            return;
           }
-          renderBoosters();
+          if (chosen[id]) {
+            chosen[id] = false;
+            renderBoosters();
+            return;
+          }
+          if (p.boosters[id] > 0 && explained.has(id)) {
+            chosen[id] = true;
+            renderBoosters();
+            return;
+          }
+          const count = p.boosters[id];
+          explained.add(id);
+          const canGet = count > 0 || p.dust >= b.dust;
+          const getButton = btn(
+            count > 0
+              ? t('Use 1 (you have {n})', { n: count })
+              : canGet
+                ? t('Get 1 for ✨{price}', { price: b.dust })
+                : t('Needs ✨{dust} stardust', { dust: b.dust }),
+            canGet ? 'primary wide' : 'primary wide dim',
+            () => {
+              if (count > 0) chosen[id] = true;
+              else if (spendDust(p, b.dust)) {
+                p.boosters[id]++;
+                chosen[id] = true;
+                sfx.coin();
+                app.save();
+              }
+              sheet.close();
+              renderBoosters();
+            },
+          );
+          getButton.disabled = !canGet;
+          const sheet = modal([
+            h('div', { class: 'm-title' }, t(b.name)),
+            h('p', null, t(b.desc)),
+            getButton,
+            btn(t('Cancel'), 'ghost wide', () => sheet.close()),
+          ]);
         });
         return el;
       }),

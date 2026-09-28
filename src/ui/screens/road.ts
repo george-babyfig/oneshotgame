@@ -92,9 +92,9 @@ export function showRoad(app: App) {
       h(
         'div',
         { class: 'scroll' },
-        pitch,
         h('div', { class: 'rhead' }, h('span', null, t('Free')), h('span', null, ''), h('span', { class: 'gold' }, t('Cosmic Pass'))),
         ...rows,
+        pitch,
         h('p', { class: 'muted' }, t('Earn stars by finishing planets. Replay old planets for 3★ to climb faster.')),
       ),
     ),

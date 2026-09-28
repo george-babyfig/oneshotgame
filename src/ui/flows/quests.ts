@@ -7,13 +7,6 @@ import { QUEST_BONUS, QUEST_BY_ID, claimQuest, claimQuestBonus, ensureQuests, re
 import type { App } from '../app';
 import { t } from '../../i18n';
 
-function untilMidnight() {
-  const d = new Date();
-  const m = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime() - d.getTime();
-  const hrs = Math.floor(m / 3600000);
-  return hrs > 0 ? `${hrs}h ${Math.floor((m % 3600000) / 60000)}m` : `${Math.floor(m / 60000)}m`;
-}
-
 export function questsFlow(app: App) {
   const p = app.p;
   ensureQuests(p, today());
@@ -67,15 +60,8 @@ export function questsFlow(app: App) {
     body.replaceChildren(...rows, bonus);
   };
   render();
-  modal(
-    [
-      h('div', { class: 'm-title' }, t('Daily quests')),
-      h('p', { class: 'muted' }, t('New quests in {time}', { time: untilMidnight() })),
-      body,
-    ],
-    {
-      cls: 'tall',
-      onClose: () => app.refresh(),
-    },
-  );
+  modal([h('div', { class: 'm-title' }, t('Daily quests')), h('p', { class: 'muted' }, t('New quests tomorrow')), body], {
+    cls: 'tall',
+    onClose: () => app.refresh(),
+  });
 }

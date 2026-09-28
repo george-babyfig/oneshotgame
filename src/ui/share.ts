@@ -3,8 +3,15 @@ import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import { toast } from './dom';
 import { t } from '../i18n';
+import { parentalGate } from './flows/gate';
 
 export async function shareText(text: string, title = 'Pocket Planet') {
+  if (!(await parentalGate('share'))) return;
+  return shareTextUngated(text, title);
+}
+
+/** Used only when an image share has already passed the gate. */
+export async function shareTextUngated(text: string, title = 'Pocket Planet') {
   try {
     if (Capacitor.isNativePlatform()) {
       await Share.share({ title, text, dialogTitle: title });

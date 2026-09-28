@@ -43,7 +43,8 @@ describe('visitors', () => {
     expect(rollVisitors(p, 10 * 60e3)).toEqual([]);
     const n = addVisitors(p, 8 * 3600e3);
     expect(n).toBeGreaterThan(1);
-    expect(rollVisitors(p, 8 * 3600e3)).toEqual(p.visitors); // deterministic
+    expect(p.visitors).toHaveLength(n);
+    expect(p.visitors.every((v) => v.gems === 0)).toBe(true);
     const dust = p.dust;
     while (openVisitor(p));
     expect(p.dust).toBeGreaterThan(dust);
@@ -162,11 +163,12 @@ describe('review fixes', async () => {
     expect(C.canStamp(p, '2026-09-27')).toBe(false);
     expect(C.canStamp(p, '2026-09-29')).toBe(true);
   });
-  it('vault recovers when lastCollect is in the future', () => {
+  it('vault cannot gain dust when the clock moves back', () => {
     const p = defaultProfile(0);
     p.lastCollect = 10_000_000;
     E.fixClock(p, 5_000);
-    expect(p.lastCollect).toBe(5_000);
+    expect(p.lastCollect).toBe(10_000_000);
+    expect(E.pendingDust(p, 5_000)).toBe(0);
   });
   it('habitat rewards can only be claimed once, and only when complete', () => {
     const p = defaultProfile(0);

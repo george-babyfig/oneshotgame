@@ -2,13 +2,14 @@
 import { h, btn, fmt, modal, toast } from '../dom';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
-import { FESTIVAL_TIERS, claimFestival, ensureFestival, festivalDaysLeft } from '../../meta/festivals';
+import { FESTIVAL_TIERS, claimFestival, ensureFestival } from '../../meta/festivals';
 import { RESIDENT_ACCS } from '../../meta/homeworld';
 import { rewardText } from '../../meta/progression';
 import { critterCanvas } from '../art/critters';
 import { stickerCanvas } from '../art/stickers';
 import type { App } from '../app';
-import { t, tp } from '../../i18n';
+import { getLang, t } from '../../i18n';
+import { untilText } from '../../meta/dates';
 
 const MODELS = ['bunny', 'penguin', 'otter'];
 
@@ -62,14 +63,23 @@ export function festivalFlow(app: App) {
     );
   };
   render();
-  const days = festivalDaysLeft();
+  const now = Date.now();
+  const today = new Date(now);
+  const end = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59).getTime();
+  const until = untilText(end + 1000, now, getLang());
+  const untilLabel =
+    until.key === 'until tonight'
+      ? t('until tonight')
+      : until.key === 'until {day}'
+        ? t('until {day}', until.vars)
+        : t('until {date}', until.vars);
   modal(
     [
       h(
         'div',
         { class: 'ev-banner', style: `--ev:${f.color}` },
         h('span', { class: 'ev-emoji' }, f.emoji),
-        h('div', null, h('b', null, t(f.name)), h('small', null, tp(days, '{n} day left', '{n} days left'))),
+        h('div', null, h('b', null, t(f.name)), h('small', null, untilLabel)),
       ),
       h('div', { class: 'fest-models' }, ...MODELS.map((id, k) => critterCanvas(id, 64, 0.4 + k, f.acc))),
       h(

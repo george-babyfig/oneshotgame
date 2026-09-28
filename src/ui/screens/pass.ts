@@ -116,7 +116,7 @@ export function showPass(app: App) {
       p.pass
         ? h('div', { class: 'pass-owned' }, t('🌌 Cosmic Pass active — you get both lanes!'))
         : waiting
-          ? h('div', { class: 'pass-waiting' }, t('🎁 {n} golden rewards are already waiting for you on the Star Road', { n: waiting }))
+          ? h('div', { class: 'pass-waiting' }, t('Includes the {n} rewards you reached on the Star Road.', { n: waiting }))
           : null,
       h(
         'div',

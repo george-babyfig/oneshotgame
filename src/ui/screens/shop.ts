@@ -1,15 +1,13 @@
 // Shop: one-time offers, piggy bank, gem packs, boosters and atmospheres.
 import { h, btn, fmt, toast, confirmBox } from '../dom';
 import { sfx } from '../audio';
-import { BOOSTERS, PIGGY_MAX, PIGGY_PER_WIN, PRODUCTS, SKINS, type BoosterId } from '../../meta/config';
+import { BOOSTERS, PRODUCTS, SKINS, type BoosterId } from '../../meta/config';
 import { spendGems } from '../../meta/economy';
 import type { App } from '../app';
 import { t } from '../../i18n';
+import { parentalGate } from '../flows/gate';
 
 const PACK_ICONS = ['💎', '👝', '🧰', '🌌'];
-export const PIGGY_MIN = 40;
-/** The piggy bank appears from chapter 2, once players are invested. */
-export const PIGGY_FROM_LEVEL = 10;
 
 export function skinSwatch(glow: string) {
   if (glow === 'aurora') return 'conic-gradient(#ff8fc8,#6ec8ff,#b8ff6e,#ffd24a,#ff8fc8)';
@@ -19,23 +17,22 @@ export function skinSwatch(glow: string) {
 
 export function showShop(app: App) {
   const p = app.p;
-  const starter = !p.starter
-    ? h(
-        'div',
-        { class: 'offer' },
-        h('div', { class: 'ribbon' }, t('ONE-TIME')),
-        h('div', { class: 'offer-t' }, t('Starter Pack')),
-        h(
-          'ul',
-          null,
-          h('li', null, t('💎 300 gems')),
-          h('li', null, t('🌠 ✨ 🔭 5 of every booster')),
-          h('li', null, t('🌈 Aurora atmosphere')),
-        ),
-        h('div', { class: 'value' }, t('Over 5× the value of gems alone')),
-        btn(app.priceOf('starter'), 'buy-real wide', () => app.buy('starter')),
-      )
-    : null;
+  const starter =
+    !p.starter && p.chapters.length >= 1
+      ? h(
+          'div',
+          { class: 'offer' },
+          h('div', { class: 'offer-t' }, t('Starter Pack')),
+          h(
+            'ul',
+            null,
+            h('li', null, t('💎 300 gems')),
+            h('li', null, t('🌠 ✨ 🔭 5 of every booster')),
+            h('li', null, t('🌈 Aurora atmosphere')),
+          ),
+          btn(app.priceOf('starter'), 'buy-real wide', () => app.buy('starter')),
+        )
+      : null;
   const pass = !p.pass
     ? h(
         'div',
@@ -56,25 +53,6 @@ export function showShop(app: App) {
         ),
       )
     : null;
-  const piggy = h(
-    'div',
-    { class: 'piggy' },
-    h('div', { class: 'piggy-ic' }, '🐷'),
-    h(
-      'div',
-      { class: 'piggy-body' },
-      h('b', null, t('Piggy bank: 💎 {n}', { n: p.piggy })),
-      h(
-        'small',
-        null,
-        t('Every planet you finish drops 💎{n} in (max {max}). Break it to keep them all.', { n: PIGGY_PER_WIN, max: PIGGY_MAX }),
-      ),
-      h('div', { class: 'pbar' }, h('i', { style: `width:${(p.piggy / PIGGY_MAX) * 100}%` })),
-    ),
-    btn(app.priceOf('piggy'), `buy-real${p.piggy >= PIGGY_MIN ? '' : ' dim'}`, () =>
-      p.piggy >= PIGGY_MIN ? app.buy('piggy') : toast(t('Fill it to {n} gems first — finish more planets!', { n: PIGGY_MIN })),
-    ),
-  );
   const packs = h(
     'div',
     { class: 'packs' },
@@ -82,7 +60,6 @@ export function showShop(app: App) {
       h(
         'button',
         { class: 'pack', onclick: () => app.buy(x.key) },
-        x.tag ? h('div', { class: 'tag' }, t(x.tag)) : null,
         h('div', { class: 'pi' }, PACK_ICONS[i]),
         h('b', null, fmt(x.gems)),
         h('small', null, t(x.title)),
@@ -167,7 +144,6 @@ export function showShop(app: App) {
         'div',
         { class: 'scroll' },
         starter,
-        p.level > PIGGY_FROM_LEVEL ? piggy : null,
         h('div', { class: 'sec-title' }, t('Gems')),
         packs,
         pass,
@@ -175,7 +151,9 @@ export function showShop(app: App) {
         boosters,
         h('div', { class: 'sec-title' }, t('Atmospheres')),
         skins,
-        btn(t('Restore purchases'), 'ghost small', () => app.restore()),
+        btn(t('Restore purchases'), 'ghost small', async () => {
+          if (await parentalGate('buy')) await app.restore();
+        }),
         h(
           'p',
           { class: 'tiny muted' },

@@ -13,7 +13,7 @@ import { t } from '../../i18n';
 export function dailyGiftFlow(app: App, then?: () => void) {
   const day = today();
   const p = app.p;
-  if (!canStamp(p, day)) return then?.();
+  if (app.screen !== 'home' || p.stats.wins < 2 || !canStamp(p, day)) return then?.();
   const n = stamps(p);
   const cycle = Math.floor(n / CALENDAR_DAYS);
   const todayIdx = calendarIndex(n);
@@ -31,22 +31,27 @@ export function dailyGiftFlow(app: App, then?: () => void) {
     );
   });
   const reward = calendarReward(n);
+  const claim = () => {
+    if (!stamp(p, day)) return;
+    app.save();
+    sfx.chest();
+    haptic.success();
+    app.refresh();
+  };
   const m = modal(
     [
       h('div', { class: 'm-title' }, t('Star Calendar')),
       h('p', { class: 'muted' }, t('One stamp for every day you visit. Missing a day never resets it!')),
       h('div', { class: 'calendar' }, ...cells),
       h('div', { class: 'reward-list' }, ...rewardText(reward).map((x) => h('span', null, x))),
-      btn(t('Stamp day {n}', { n: todayIdx + 1 }), 'primary wide', () => {
-        if (!stamp(p, day)) return;
-        app.save();
-        sfx.chest();
-        haptic.success();
-        m.close();
-        app.refresh();
-        then?.();
-      }),
+      btn(t('Stamp day {n}', { n: todayIdx + 1 }), 'primary wide', () => m.close()),
+      btn(t('Close'), 'ghost small', () => m.close()),
     ],
-    { dismiss: false },
+    {
+      onClose: () => {
+        claim();
+        then?.();
+      },
+    },
   );
 }

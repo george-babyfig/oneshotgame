@@ -77,6 +77,7 @@ import { drawMeteors, drawSeason } from '../art/seasons';
 import { passportName } from '../../meta/passport';
 import type { App } from '../app';
 import { getLang, t, tp } from '../../i18n';
+import { whenText } from '../../meta/dates';
 
 const TAU = Math.PI * 2;
 
@@ -348,20 +349,23 @@ export function showHomeworld(app: App) {
         g.fillText('+', 0, -s * 0.12);
       }
       g.restore();
-      // ready bubble / timer, drawn upright just outside the building
+      // ready bubble, drawn upright just outside the building
       const lq = surf(a, s * 1.05);
       g.textAlign = 'center';
       g.textBaseline = 'middle';
       if (b?.done && b.done > nowMs) {
-        const label = fmtTime(b.done - nowMs);
-        g.font = `700 ${Math.round(s * 0.2)}px Fredoka, ui-rounded, system-ui, sans-serif`;
-        const tw = g.measureText(label).width + s * 0.24;
         g.fillStyle = 'rgba(10,6,30,0.8)';
         g.beginPath();
-        g.roundRect(lq.x - tw / 2, lq.y - s * 0.15, tw, s * 0.3, s * 0.15);
+        g.arc(lq.x, lq.y, s * 0.18, 0, TAU);
         g.fill();
-        g.fillStyle = '#ffd76a';
-        g.fillText(label, lq.x, lq.y + 1);
+        g.strokeStyle = '#ffd76a';
+        g.lineWidth = Math.max(1.5, s * 0.025);
+        g.beginPath();
+        g.arc(lq.x, lq.y, s * 0.11, 0, TAU);
+        g.moveTo(lq.x, lq.y - s * 0.065);
+        g.lineTo(lq.x, lq.y);
+        g.lineTo(lq.x + s * 0.055, lq.y + s * 0.035);
+        g.stroke();
       } else if (b && ready(home, i) > 0) {
         const bob = Math.sin(time * 4 + i) * s * 0.04;
         g.fillStyle = isFull(home, i) ? '#ffb13d' : 'rgba(255,255,255,0.92)';
@@ -488,10 +492,10 @@ export function showHomeworld(app: App) {
   canvas.addEventListener('pointercancel', () => (drag = null));
 
   // ---------------------------------------------------------------- panel
-  /** Things that only need their text refreshed each second (timers). */
+  /** Labels that change when a build or expedition completes. */
   let live: (() => void)[] = [];
   let lastSig = '';
-  /** Everything the panel shows except countdown text; a change means re-render. */
+  /** Re-render when an action becomes available. */
   const signature = () => {
     const now = Date.now();
     return JSON.stringify([
@@ -650,8 +654,7 @@ export function showHomeworld(app: App) {
       );
       if (building) {
         const done = b.done!;
-        const label = () => t('🛸 Building… {time} left', { time: fmtTime(done - Date.now()) });
-        kids.push(liveText(h('div', { class: 'hw-timer' }, label()), label));
+        kids.push(h('div', { class: 'hw-timer' }, t('Ready at {time}', { time: whenText(done, now, getLang()) })));
       } else if (PRODUCES[b.type]) {
         const kind = PRODUCES[b.type]!;
         const perH = rateOf(b);
@@ -669,7 +672,7 @@ export function showHomeworld(app: App) {
                   ? t('1 gem every {time}', { time: every })
                   : t('1 booster every {time}', { time: every }),
             ),
-            h('span', null, t('Holds {h}h', { h: capHours(home) })),
+            h('span', null, t('Holds {h}h', { h: capHours(home, now) })),
           ),
         );
       } else if (b.type === 'den') kids.push(h('div', { class: 'hw-prod' }, t('Room for {n} residents', { n: b.lv + 1 })));
@@ -744,11 +747,11 @@ export function showHomeworld(app: App) {
     const e = home.expedition;
     if (!e) return t('Expedition');
     if (expeditionBack(home)) return t('🎒 Back home!');
-    return t('🚀 {time}', { time: fmtTime(e.ends - Date.now()) });
+    return t('Back at {time}', { time: whenText(e.ends, Date.now(), getLang()) });
   }
 
   renderPanel();
-  const tick = setInterval(tickPanel, 1000);
+  const tick = setInterval(tickPanel, 15000);
   raf = requestAnimationFrame(frame);
 
   app.mount(
@@ -960,7 +963,11 @@ function expeditionSheet(app: App, after: () => void) {
     modal([
       h('div', { class: 'm-title' }, t('Expedition')),
       critterCanvas(e.species, 90),
-      h('p', null, t('{name} is exploring your galaxy. Back in {time}.', { name: t(sp.name), time: fmtTime(e.ends - Date.now()) })),
+      h(
+        'p',
+        null,
+        t('{name} is exploring your galaxy. Back at {time}.', { name: t(sp.name), time: whenText(e.ends, Date.now(), getLang()) }),
+      ),
     ]);
     return;
   }

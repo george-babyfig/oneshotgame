@@ -25,7 +25,10 @@ export interface Settings {
   music: boolean;
   haptics: boolean;
   reduceMotion: boolean;
+  /** Reminders; off until a grown-up turns them on behind the parental gate. */
   notifications: boolean;
+  /** Game Center; off until a grown-up signs in behind the parental gate. */
+  gameCenter: boolean;
   /** '' = follow the device language. */
   lang: string;
   /** For real-calendar seasons. */
@@ -139,6 +142,12 @@ export interface Profile {
   /** This week's Voyage: difficulty base, stops cleared, best stars per stop; and voyages ever finished. */
   voyage: { week: string; base: number; cleared: number; stars: number[] };
   voyageDone: number;
+  /** Campaign fails in a row per planet (cleared on a win); drives the continue rule. */
+  fails: Record<number, number>;
+  /** Continues bought on each campaign planet, across attempts. */
+  continuesUsed: Record<number, number>;
+  /** Visits per species; a memento arrives on a species' 3rd visit. */
+  visits: Record<string, number>;
   /** Sticker Album: festival stickers kept, milestones and pages claimed, and the scrapbook pages. */
   album: {
     fest: string[];
@@ -178,7 +187,16 @@ export function defaultProfile(now = Date.now()): Profile {
     road: [],
     chapters: [],
     dailyPlanet: { day: '', best: 0, stars: 0, rewarded: false },
-    settings: { sound: true, music: true, haptics: true, reduceMotion: false, notifications: true, lang: '', hemi: 'north' },
+    settings: {
+      sound: true,
+      music: true,
+      haptics: true,
+      reduceMotion: false,
+      notifications: false,
+      gameCenter: false,
+      lang: '',
+      hemi: 'north',
+    },
     tutorial: false,
     meta: { installed: now, lastSeen: now, sessions: 0, rated: false, starterOffered: false, notifAsked: false },
     stats: {
@@ -225,6 +243,9 @@ export function defaultProfile(now = Date.now()): Profile {
     festival: { key: '', spotted: 0, claimed: [] },
     voyage: { week: '', base: 8, cleared: 0, stars: [] },
     voyageDone: 0,
+    fails: {},
+    continuesUsed: {},
+    visits: {},
     album: {
       fest: [],
       milestones: 0,
@@ -254,6 +275,11 @@ function merge<T>(base: T, saved: unknown): T {
 /** Upgrade older save formats in place. */
 export function migrate(raw: Record<string, unknown>): Profile {
   const p = merge(defaultProfile(), raw);
+  const savedSettings = raw.settings as Record<string, unknown> | undefined;
+  if (!savedSettings || !Object.hasOwn(savedSettings, 'gameCenter')) {
+    p.settings.notifications = false;
+    p.settings.gameCenter = false;
+  }
   if ((raw.v as number | undefined) === undefined || (raw.v as number) < 2) {
     // v1 → v2: galaxy entries gained colours; stats gained counters.
     p.galaxy = p.galaxy.map((g) => ({ ...g, colors: g.colors ?? [] }));

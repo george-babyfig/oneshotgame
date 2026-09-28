@@ -241,7 +241,8 @@ export interface HomeState {
   debris: number[];
   /** Last debris check (a meteor may fall every few hours). */
   lastDebris: number;
-  started: number;
+  /** Latest observed clock time; a rollback cannot finish work early. */
+  lastTick?: number;
   /** The welcome card was shown. */
   intro: boolean;
   /** Paint job: ground and water palette ids. */
@@ -316,7 +317,7 @@ export function defaultHome(now = Date.now()): HomeState {
     expedition: null,
     debris: [],
     lastDebris: now,
-    started: now,
+    lastTick: now,
     intro: false,
     paint: { ground: 'meadow', sea: 'blue' },
     paints: [],
@@ -352,6 +353,7 @@ export type BuildCheck = 'ok' | 'ring' | 'max' | 'drones' | 'dust' | 'gems' | 'b
 export function canBuild(p: Profile, plot: number, type: BuildingType, now = Date.now()): BuildCheck {
   const h = p.home;
   const d = BUILDINGS[type];
+  if (now < (h.lastTick ?? 0)) return 'busy';
   if (plot < 0 || plot >= h.plots.length) return 'occupied';
   if (h.plots[plot]) return 'occupied';
   if (h.debris.includes(plot)) return 'debris';
@@ -374,6 +376,7 @@ export function build(p: Profile, plot: number, type: BuildingType, now = Date.n
 }
 
 export function canUpgrade(p: Profile, plot: number, now = Date.now()): BuildCheck {
+  if (now < (p.home.lastTick ?? 0)) return 'busy';
   const b = p.home.plots[plot];
   if (!b) return 'occupied';
   if (BUILDINGS[b.type].decor || b.lv >= MAX_LEVEL) return 'maxlv';
@@ -398,6 +401,7 @@ export function upgrade(p: Profile, plot: number, now = Date.now()): BuildCheck 
 /** Finish builds whose timers ran out; returns the plots that just completed. */
 export function tickBuilds(h: HomeState, now = Date.now()): number[] {
   const out: number[] = [];
+  if (now < (h.lastTick ?? 0)) return out;
   h.plots.forEach((b, i) => {
     if (b?.done && b.done <= now) {
       b.since = b.done;
@@ -410,6 +414,7 @@ export function tickBuilds(h: HomeState, now = Date.now()): number[] {
 
 /** A campaign win speeds every active build up. */
 export function speedUpBuilds(h: HomeState, ms = WIN_SPEEDUP, now = Date.now()) {
+  if (now < (h.lastTick ?? 0)) return 0;
   let n = 0;
   for (const b of h.plots) {
     // only builds still in progress, and never into the past (no free production)
@@ -483,14 +488,15 @@ export function rateOf(b: Building) {
 export function ready(h: HomeState, plot: number, now = Date.now()): number {
   const b = h.plots[plot];
   if (!b || b.done || !PRODUCES[b.type]) return 0;
-  const hours = Math.min(capHours(h), Math.max(0, (now - b.since) / H));
+  if (now < (h.lastTick ?? 0)) return 0;
+  const hours = Math.min(capHours(h, now), Math.max(0, (now - b.since) / H));
   return Math.floor(hours * rateOf(b) + 1e-9);
 }
 
 export function isFull(h: HomeState, plot: number, now = Date.now()) {
   const b = h.plots[plot];
   if (!b || b.done || !PRODUCES[b.type]) return false;
-  return (now - b.since) / H >= capHours(h);
+  return now >= (h.lastTick ?? 0) && (now - b.since) / H >= capHours(h, now);
 }
 
 const BOOSTER_CYCLE: BoosterId[] = ['shower', 'spark', 'scope'];
@@ -520,7 +526,7 @@ export function collect(p: Profile, plot: number, now = Date.now()): Collected {
   p.gems += out.gems;
   for (const [k, v] of Object.entries(out.boosters)) p.boosters[k as BoosterId] += v ?? 0;
   // keep the partial unit so nothing is lost between collections
-  const elapsed = Math.min(capHours(h), (now - b.since) / H);
+  const elapsed = Math.min(capHours(h, now), (now - b.since) / H);
   b.since = now - (elapsed - n / rateOf(b)) * H;
   return out;
 }
@@ -675,7 +681,7 @@ export function expeditionLoot(hours: number, towerLv: number, species: string) 
 
 export function startExpedition(p: Profile, species: string, hours: number, now = Date.now()): boolean {
   const h = p.home;
-  if (h.expedition || !expeditionOptions(h).includes(hours)) return false;
+  if (now < (h.lastTick ?? 0) || h.expedition || !expeditionOptions(h).includes(hours)) return false;
   if (!h.residents.some((r) => r.species === species)) return false;
   const planet = p.galaxy.length ? Math.floor(rngFrom(`EXP-${species}-${now}`)() * p.galaxy.length) : -1;
   h.expedition = { species, hours, ends: now + hours * H, planet };
@@ -683,13 +689,13 @@ export function startExpedition(p: Profile, species: string, hours: number, now 
 }
 
 export function expeditionBack(h: HomeState, now = Date.now()) {
-  return !!h.expedition && h.expedition.ends <= now;
+  return now >= (h.lastTick ?? 0) && !!h.expedition && h.expedition.ends <= now;
 }
 
 export function finishExpedition(p: Profile, now = Date.now()) {
   const h = p.home;
   const e = h.expedition;
-  if (!e || e.ends > now) return null;
+  if (!e || e.ends > now || now < (h.lastTick ?? 0)) return null;
   const loot = expeditionLoot(e.hours, towerLevel(h), e.species);
   p.dust += loot.dust;
   p.gems += loot.gems;
@@ -708,6 +714,7 @@ export const DEBRIS_DUST = 60;
 /** Meteors fall on empty plots while you're away (never on buildings). */
 export function tickDebris(h: HomeState, now = Date.now()): number {
   let added = 0;
+  if (now < (h.lastTick ?? 0)) return 0;
   while (now - h.lastDebris >= DEBRIS_EVERY) {
     h.lastDebris += DEBRIS_EVERY;
     if (h.debris.length >= DEBRIS_MAX) continue;
@@ -735,9 +742,17 @@ export function homeBadge(p: Profile, now = Date.now()) {
   const h = p.home;
   let n = 0;
   if (anyReady(h, now)) n++;
-  if (h.plots.some((b) => b?.done && b.done <= now)) n++;
+  if (now >= (h.lastTick ?? 0) && h.plots.some((b) => b?.done && b.done <= now)) n++;
   if (expeditionBack(h, now)) n++;
-  n += requestsWaiting(h, now) ? 1 : 0;
+  n += h.residents.some((r) => {
+    if (h.expedition?.species === r.species) return false;
+    const req = requestOf(r, now, h.ring);
+    return (
+      req && (req.kind === 'pat' || (req.kind === 'treat' && p.dust >= (req.dust ?? 0)) || (req.kind === 'decor' && countOf(h, req.decor!)))
+    );
+  })
+    ? 1
+    : 0;
   n += h.debris.length ? 1 : 0;
   return n;
 }
@@ -746,7 +761,9 @@ export function homeBadge(p: Profile, now = Date.now()) {
 export function tickHome(p: Profile, now = Date.now()) {
   const h = p.home;
   while (h.plots.length < RING_PLOTS[h.ring]) h.plots.push(null);
+  if (now < (h.lastTick ?? 0)) return [];
   const done = tickBuilds(h, now);
   tickDebris(h, now);
+  h.lastTick = now;
   return done;
 }

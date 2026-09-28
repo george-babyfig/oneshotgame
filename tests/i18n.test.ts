@@ -58,7 +58,7 @@ export function allKeys(): string[] {
   Object.values(BOOSTERS).forEach((b) => (add(b.name), add(b.desc)));
   Object.values(UPGRADES).forEach((u) => add(u.name));
   SKINS.forEach((s) => add(s.name));
-  PRODUCTS.forEach((p) => (add(p.title), add(p.tag)));
+  PRODUCTS.forEach((p) => add(p.title));
   HABITATS.forEach((h) => add(h.name));
   EVENTS.forEach((e) => (add(e.name), add(e.desc)));
   RANK_TITLES.forEach(add);

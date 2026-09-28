@@ -5,7 +5,7 @@ import { LEADERBOARDS, pendingAchievements } from '../meta/achievements';
 import { totalStars, type Profile } from '../meta/profile';
 
 interface GameCenterPlugin {
-  authenticate(): Promise<{ authenticated: boolean }>;
+  authenticate(o: { interactive: boolean }): Promise<{ authenticated: boolean }>;
   submitScore(o: { leaderboardId: string; score: number }): Promise<{ submitted: boolean }>;
   reportAchievements(o: { achievements: { id: string; percent: number }[] }): Promise<{ reported: boolean }>;
   showDashboard(): Promise<{ shown: boolean }>;
@@ -15,18 +15,31 @@ const GC = registerPlugin<GameCenterPlugin>('GameCenter');
 const available = () => Capacitor.getPlatform() === 'ios';
 let signedIn = false;
 
-export async function gcSignIn() {
+export async function gcSignIn(interactive = false) {
   if (!available()) return false;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
-    signedIn = (await GC.authenticate()).authenticated;
+    const result = await Promise.race([
+      GC.authenticate({ interactive }),
+      new Promise<{ authenticated: boolean }>((resolve) => {
+        timeout = setTimeout(() => resolve({ authenticated: false }), 20000);
+      }),
+    ]);
+    signedIn = result.authenticated;
   } catch {
     signedIn = false;
+  } finally {
+    clearTimeout(timeout);
   }
   return signedIn;
 }
 
 export function gcAvailable() {
   return available();
+}
+
+export function gcIsSignedIn() {
+  return signedIn;
 }
 
 export async function gcScore(board: keyof typeof LEADERBOARDS, score: number) {
@@ -58,9 +71,8 @@ export async function gcSync(p: Profile, save: () => void) {
   gcScore('rush', p.stats.rushBest);
 }
 
-export async function gcDashboard() {
-  if (!available()) return false;
-  if (!signedIn) await gcSignIn();
+export async function gcDashboard(p: Profile) {
+  if (!available() || !p.settings.gameCenter || !signedIn) return false;
   try {
     return (await GC.showDashboard()).shown;
   } catch {

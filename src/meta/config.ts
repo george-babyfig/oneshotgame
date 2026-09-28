@@ -4,10 +4,6 @@ import { t, tp } from '../i18n';
 export const GAME_NAME = 'Pocket Planet';
 export const VERSION = '1.0.0';
 
-/** Gems for "+5 throws" when you run out; rises each time within a level. */
-export const CONTINUE_COSTS = [40, 70, 110];
-export const CONTINUE_THROWS = 5;
-
 export const PIGGY_PER_WIN = 4;
 export const PIGGY_MAX = 250;
 export const GEMS_PER_NEW_SPECIES = 3;
@@ -20,7 +16,6 @@ export interface ProductDef {
   gems: number;
   consumable: boolean;
   fallbackPrice: string;
-  tag?: string;
 }
 
 export const PRODUCTS: ProductDef[] = [
@@ -32,7 +27,6 @@ export const PRODUCTS: ProductDef[] = [
     gems: 500,
     consumable: true,
     fallbackPrice: '$4.99',
-    tag: '+25%',
   },
   {
     key: 'gems_l',
@@ -41,7 +35,6 @@ export const PRODUCTS: ProductDef[] = [
     gems: 1200,
     consumable: true,
     fallbackPrice: '$9.99',
-    tag: 'Popular',
   },
   {
     key: 'gems_xl',
@@ -50,7 +43,6 @@ export const PRODUCTS: ProductDef[] = [
     gems: 2800,
     consumable: true,
     fallbackPrice: '$19.99',
-    tag: 'Best value',
   },
   { key: 'piggy', id: 'com.pocketplanet.game.piggy', title: 'Gem Piggy Bank', gems: 0, consumable: true, fallbackPrice: '$1.99' },
   { key: 'starter', id: 'com.pocketplanet.game.starter', title: 'Starter Pack', gems: 300, consumable: false, fallbackPrice: '$2.99' },

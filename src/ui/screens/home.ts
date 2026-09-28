@@ -5,14 +5,12 @@ import { haptic } from '../haptics';
 import { makeLevel, TWISTS } from '../../core/levels';
 import { SPECIES } from '../../core/world';
 import { totalStars } from '../../meta/profile';
-import { collectDust, galaxyRate, pendingDust, planetRate, spendGems, vaultHours } from '../../meta/economy';
-import { DOUBLE_DUST_GEMS } from '../flows/offers';
+import { collectDust, galaxyRate, pendingDust, planetRate, vaultHours } from '../../meta/economy';
 import { chapterOf, chestsReady, questsClaimable, roadReady } from '../../meta/progression';
 import { drawGalaxy } from './galaxy';
 import { ensureEvent, eventActive, eventReady } from '../../meta/events';
 import { rankReady } from '../../meta/rank';
 import { modesBadge } from '../flows/modes';
-import { PIGGY_FROM_LEVEL, PIGGY_MIN } from './shop';
 import type { App } from '../app';
 import { icon as iconEl } from '../icons';
 import { t, tp } from '../../i18n';
@@ -135,27 +133,9 @@ export function showHome(app: App, quiet = false) {
         navBtn('pad', t('Modes'), modesBadge(app), () => app.modes(), 'side-btn'),
         voyageActive(p) ? navBtn('rocket', t('Voyage'), voyageBadge(p), () => app.showVoyage(), 'side-btn') : null,
         eventActive(p) ? navBtn(ensureEvent(p).emoji, t('Event'), eventReady(p).length, () => app.events(), 'side-btn event-btn') : null,
-        p.level > PIGGY_FROM_LEVEL && p.piggy >= PIGGY_MIN ? navBtn('pig', `💎${p.piggy}`, '', () => app.showShop(), 'side-btn') : null,
       ),
     ),
-    p.galaxy.length
-      ? h(
-          'div',
-          { class: 'collect-row' },
-          collect,
-          pending >= 100
-            ? btn(h('span', { class: 'stack' }, h('b', null, '×2'), h('small', null, `💎${DOUBLE_DUST_GEMS}`)), 'gem double', () => {
-                if (!spendGems(p, DOUBLE_DUST_GEMS)) return app.needGems();
-                const d = collectDust(p, Date.now(), 2);
-                sfx.coin();
-                haptic.success();
-                toast(t('+{n} stardust (doubled!)', { n: fmt(d) }), 'good');
-                app.save();
-                showHome(app);
-              })
-            : null,
-        )
-      : null,
+    p.galaxy.length ? h('div', { class: 'collect-row' }, collect) : null,
     btn(
       h(
         'span',
@@ -172,7 +152,7 @@ export function showHome(app: App, quiet = false) {
       navBtn('map', t('Star Map'), `${stars}★`, () => app.showStarMap()),
       navBtn('book', t('Lifebook'), `${p.seen.length}/${SPECIES.length}`, () => app.showLifebook()),
       navBtn('up', t('Upgrades'), '', () => app.showUpgrades()),
-      navBtn('bag', t('Shop'), p.starter ? '' : t('OFFER'), () => app.showShop()),
+      navBtn('bag', t('Shop'), p.starter || p.chapters.length < 1 ? '' : t('OFFER'), () => app.showShop()),
     ),
   );
   const view = drawGalaxy(canvas, p.galaxy, {

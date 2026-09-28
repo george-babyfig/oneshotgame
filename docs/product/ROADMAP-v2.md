@@ -1,6 +1,6 @@
 # Pocket Planet: Product Scope and Roadmap v2
 
-**Status:** the plan to build from, pending the owner decisions in section 10. Nothing in it is built yet.
+**Status:** the plan to build from, pending the owner decisions in section 10. **Built so far: M0** (28 September 2026). M6.5 (Showtime) was added at the owner's request.
 **Written:** 28 September 2026 by the Head of Product.
 **Built from:** four audits of the game, three market-research sweeps, 45 proposals from five product managers, and five adversarial critiques. All of it is kept in [scope/](scope/README.md) so any number here can be checked.
 **Built by:** a local session with Claude as engineering manager and Codex as lead developer (see [../handoff/06-workflow.md](../handoff/06-workflow.md)). Remix is already designed in [REMIX.md](REMIX.md); this roadmap only schedules it.
@@ -803,29 +803,32 @@ Milestones are in build order. Each is sized to be built, tested, translated and
 
 **The launch candidate is M0 through M12.** The game is pre-launch, so changing the economy, the Homeworld and the store before launch costs nothing: no save migrations, no grandfathering, no product changes in App Store Connect. The same changes after launch would need all of that. M13-M16 are the first updates after launch.
 
-| Milestone | Goal                                                          | Size | Launch?               | Headline gate                                         |
-| --------- | ------------------------------------------------------------- | ---- | --------------------- | ----------------------------------------------------- |
-| M0        | Kid-safe trust update (the compliance fixes)                  | S    | Yes; ships on its own | Every policy test green                               |
-| M1        | Measure and guard (no visible change)                         | M    | Yes                   | 0 direct wallet writes; sims in CI                    |
-| M2        | The round engine and the unlock ladder (no visible change)    | L    | Yes                   | Planets 1-60 unchanged byte for byte                  |
-| M3        | The first ten minutes                                         | M    | Yes                   | 0 prices, pop-up walls or system prompts in session 1 |
-| M4        | One clear Home, Missions and Wishes                           | M    | Yes                   | ≤ 12 Home targets; nothing clipped at 320×568         |
-| M5        | Grown-ups and a fair checkout                                 | L    | Yes                   | Store and paywall tests green                         |
-| M6        | Read every throw: HUD, Supernova 2.0, stats, feel             | L    | Yes                   | 0 overlapping text; 2-3 Supernovas per planet         |
-| M7        | Fusions and the first Clash                                   | M    | Yes                   | Aware vs blind gap ≥ 10 points                        |
-| M8        | Troubles, traits, the Buddy and the help ladder; rules freeze | L    | Yes                   | Every difficulty band green                           |
-| M9        | Remix (as designed)                                           | M    | Yes                   | REMIX.md test list green                              |
-| M10       | Labs: your shots learn tricks                                 | L    | Yes                   | Max-loadout band; Labs last ≥ 28 days                 |
-| M11       | Homeworld Level and a fair economy                            | M    | Yes                   | Idle ≤ 1.5× active; no stranded currency              |
-| M12       | Star Roads, the Styles catalogue and launch prep              | L    | Yes                   | 7 products pass the StoreKit matrix                   |
-| M13       | Friends and trips (update 1.1)                                | M    | After launch          | Frost from trips ≈ 30%                                |
-| M14       | Road 1 and the live-ops calendar                              | M    | After launch          | 98-day runway                                         |
-| M15       | Content drop: more reactions and Troubles, Wonder, Star Motes | L    | After launch          | Bands still green                                     |
-| M16       | Collector's Edition and experiments                           | M    | After launch          | Price rule met                                        |
+| Milestone | Goal                                                           | Size | Launch?               | Headline gate                                         |
+| --------- | -------------------------------------------------------------- | ---- | --------------------- | ----------------------------------------------------- |
+| M0        | Kid-safe trust update (the compliance fixes)                   | S    | Yes; ships on its own | Every policy test green                               |
+| M1        | Measure and guard (no visible change)                          | M    | Yes                   | 0 direct wallet writes; sims in CI                    |
+| M2        | The round engine and the unlock ladder (no visible change)     | L    | Yes                   | Planets 1-60 unchanged byte for byte                  |
+| M3        | The first ten minutes                                          | M    | Yes                   | 0 prices, pop-up walls or system prompts in session 1 |
+| M4        | One clear Home, Missions and Wishes                            | M    | Yes                   | ≤ 12 Home targets; nothing clipped at 320×568         |
+| M5        | Grown-ups and a fair checkout                                  | L    | Yes                   | Store and paywall tests green                         |
+| M6        | Read every throw: HUD, Supernova 2.0, stats, feel              | L    | Yes                   | 0 overlapping text; 2-3 Supernovas per planet         |
+| M6.5      | Showtime: animations, celebrations, living characters, avatars | L    | Yes                   | Every screen animated; 60 fps on the oldest device    |
+| M7        | Fusions and the first Clash                                    | M    | Yes                   | Aware vs blind gap ≥ 10 points                        |
+| M8        | Troubles, traits, the Buddy and the help ladder; rules freeze  | L    | Yes                   | Every difficulty band green                           |
+| M9        | Remix (as designed)                                            | M    | Yes                   | REMIX.md test list green                              |
+| M10       | Labs: your shots learn tricks                                  | L    | Yes                   | Max-loadout band; Labs last ≥ 28 days                 |
+| M11       | Homeworld Level and a fair economy                             | M    | Yes                   | Idle ≤ 1.5× active; no stranded currency              |
+| M12       | Star Roads, the Styles catalogue and launch prep               | L    | Yes                   | 7 products pass the StoreKit matrix                   |
+| M13       | Friends and trips (update 1.1)                                 | M    | After launch          | Frost from trips ≈ 30%                                |
+| M14       | Road 1 and the live-ops calendar                               | M    | After launch          | 98-day runway                                         |
+| M15       | Content drop: more reactions and Troubles, Wonder, Star Motes  | L    | After launch          | Bands still green                                     |
+| M16       | Collector's Edition and experiments                            | M    | After launch          | Price rule met                                        |
 
 **Team roles in every milestone.** Engineering manager: Claude (plans packages with separate file ownership, reviews diffs, runs checks, commits, reports). Lead developer: Codex (implements each package from a self-contained brief). Test engineer: writes tests from the spec first. QA analyst: Playwright journeys and Simulator checks. Data analyst: sims and the economy sim. Translators: one per language (es, fr, de, pt-BR, ja). Adversarial reviewers: correctness, economy and kid safety, UX and i18n, and originality, with Codex as a read-only second opinion. The line under each milestone says where the weight falls.
 
-### M0: Kid-safe trust update (launch candidate; ships on its own)
+### M0: Kid-safe trust update (launch candidate; ships on its own) ✅ built
+
+**Built 28 September 2026.** Every item below shipped, plus fixes from four adversarial reviews (continues capped per planet and never on cleared planets, event tokens and quest ticks count only first arrivals and new bests, silent Game Center at launch, a gated Restore Purchases, end dates that name the last playable day, clock times with a day). Decisions made while building: continues are campaign-only (not the Voyage); the Star Calendar opens only on Home after 2 wins and closing it still stamps the day; the welcome-back gift stays until M3's away card; old saves have reminders and Game Center switched off. Not done: the rating button can't fall back to the App Store page until the app has a store ID.
 
 **Goal.** Fix every compliance problem in today's build before anything else ships, so the current game is safe to put in front of children and testers.
 
@@ -988,6 +991,30 @@ Milestones are in build order. Each is sized to be built, tested, translated and
 **Strings.** About 60.
 
 **Team.** Codex in three packages (HUD and preview; Supernova and stats; feel and colour). The QA analyst owns the overlap capture. Reviewers: UX and i18n, correctness.
+
+### M6.5: Showtime, the art and animation pass (launch candidate; added by the owner, 28 September 2026)
+
+**Goal.** The owner asked for "way more animations like pop-up on-screen effects, more razzle dazzle and pizazz, more custom assets, characters, avatars". The game should feel like a studio made it: every tap answers with motion and sound, every reward is a small show, and the characters are alive. It comes right after M6, because M6 builds the effects module (`src/ui/fx.ts`) and the feedback governor that this pass uses. From here on, **every milestone ships its new features with their animations** (the Showtime rule below), so this is also a standing track, not only a one-off.
+
+| #     | Scope                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Files                                                                                                   |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| 6.5.1 | **A motion kit.** One library of reusable effects with shared timings: springy pop-in and pop-out for every card and sheet (overshoot, then settle), button squash on press, number count-ups with a tick sound, rewards that fly from where they were earned into the top-bar pill, burst and sparkle variants, light screen shake for big impacts, screen transitions (slide for tabs, zoom into a planet). Every effect has a Reduce Motion version (a fade) and a paired sound and haptic. | new `src/ui/motion.ts`, `src/ui/fx.ts`, `src/styles.css`, `src/ui/dom.ts`, `src/ui/audio.ts`            |
+| 6.5.2 | **Celebration moments,** each a short, skippable show: stars stamp in one at a time on the results card; a new creature is revealed from its silhouette under a spotlight and does a little dance; the chapter chest opens with its fixed contents shown; the Homeworld Level-up plays a skyline change; the first Fusion card flips over; a Passport title unfurls like a banner; festival costumes get a curtain reveal.                                                                     | `src/ui/flows/results.ts`, `src/ui/flows/*.ts`, `src/ui/fx.ts`, `src/ui/art/*`                          |
+| 6.5.3 | **Living characters.** All 36 creatures get an idle loop (blink, bob, wiggle) and three reaction poses (happy, surprised, wave), used on the planet, in the Lifebook, on the Homeworld and in letters. The Keeper gets expressions (focused while aiming, cheering on a star, a shrug on a miss) and a victory dance. The Buddy reacts to your throws with emotes.                                                                                                                             | `src/ui/art/critters.ts`, `src/ui/art/keeper.ts`, `src/ui/game.ts`, `src/ui/screens/lifebook.ts`        |
+| 6.5.4 | **Avatars and more custom assets.** A Keeper avatar creator: face shapes, skin tones, hair styles and colours, eyes and expressions, on top of today's suits, hats, launchers, trails and dyes. More suits, hats and launchers with animated details; Passport portrait frames; a Homeworld building art tier per Homeworld Level; a painted backdrop with slow parallax for each chapter; new festival creature variants. Everything stays drawn in code, in the house style.                 | `src/ui/art/keeper.ts`, `src/meta/cosmetics.ts`, `src/ui/screens/styles.ts`, `src/ui/art/structures.ts` |
+| 6.5.5 | **Home and menus come alive.** An animated galaxy on Home (planets orbit, the Keeper waves, creatures peek out), animated tab icons, a title beat with the Keeper landing on a planet, drifting particles behind menus, and small idle surprises (a comet streaks past, a creature waves).                                                                                                                                                                                                     | `src/ui/screens/home.ts`, `src/ui/screens/*.ts`, `src/ui/art/*`                                         |
+
+**Guardrails.** Pizazz goes into celebrations, menus and moments between throws, never on top of the planet while the child aims: the M6 feedback governor (at most 2 pop-ups at once, at most 4 overlay types on the planet) still applies inside a round. At most 3 full-screen flashes a second. Every show can be skipped with a tap and is shorter than 2 seconds (the first-ever reveals up to 4). Reduce Motion gets a calm version of everything. 60 fps on the oldest test device. No reward is hidden behind an animation, and no animation is ever used to sell (no sparkling price tags, no "shiny" paid items that out-glow earned ones).
+
+**The Showtime rule** (applies to M7 onwards): a feature is not done until it has its motion, sound and haptic, checked in the Simulator. Each milestone's QA step includes a "juice pass" screenshot and screen recording.
+
+**Acceptance.** Every screen and sheet uses the motion kit (no bare pop-ins). All 36 creatures animate in the Lifebook. The avatar creator works at 320×568 in 6 languages. p95 frame time 16 ms or less on Home and in a round on the oldest test device. Reduce Motion turns every effect into a fade. T0: children react to at least 3 of the celebration moments.
+
+**Test plan.** Unit: motion kit timings and the Reduce Motion switch; avatar options saved and migrated. Playwright: every screen opens with its animation and no console errors; screenshots at the end of each animation. Simulator: screen recordings of each celebration; frame time on the oldest device; Reduce Motion on and off.
+
+**Strings.** About 40 (avatar creator, new cosmetics).
+
+**Team.** Codex in three packages (motion kit and screens; celebrations and characters; avatar creator and assets). The QA analyst owns the screen recordings. Reviewers: UX (lead lens), kid safety (no selling through sparkle), performance.
 
 ### M7: Fusions and the first Clash (launch candidate)
 

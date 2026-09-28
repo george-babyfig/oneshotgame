@@ -164,7 +164,7 @@ function modeEnded(app: App, mode: Mode, r: LevelResult, vs?: { code: string; se
       h(
         'div',
         { class: 'm-title' },
-        vs.score ? (out.won ? t('You win! 🏆') : r.score === vs.score ? t("It's a tie!") : t('So close!')) : t('Challenge ready!'),
+        vs.score ? (out.won ? t('You win! 🏆') : r.score === vs.score ? t("It's a tie!") : t('Good try!')) : t('Challenge ready!'),
       ),
       vs.score
         ? h(
@@ -219,7 +219,7 @@ function challengeMenu(app: App) {
   const m = modal([
     h('div', { class: 'm-title' }, t('Challenge a Friend')),
     h('p', { class: 'muted' }, t('Start a new challenge, or enter a code a friend sent you.')),
-    btn(t('🎲 New challenge'), 'primary wide', () => {
+    btn(t('✨ New challenge'), 'primary wide', () => {
       m.close();
       const seed = newChallengeSeed();
       play(app, challengeLevel(seed), 'challenge', { code: seed, seed, score: 0 });

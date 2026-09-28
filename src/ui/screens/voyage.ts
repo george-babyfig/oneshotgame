@@ -23,7 +23,8 @@ import { drawCreature } from '../art/critters';
 import { SPECIES_BY_ID } from '../../core/world';
 import { goalChips } from '../flows/prelevel';
 import { NO_BOOSTERS, type App } from '../app';
-import { t, tp } from '../../i18n';
+import { getLang, t, tp } from '../../i18n';
+import { untilText } from '../../meta/dates';
 
 // Levels are pure functions of week + base + stop, so cache them for the session.
 const cache = new Map<string, LevelDef>();
@@ -62,17 +63,19 @@ function thumb(L: LevelDef, px: number, dim: boolean) {
   return c;
 }
 
-function timeLeft(ms: number) {
-  const d = Math.floor(ms / 86400000);
-  const hr = Math.floor((ms % 86400000) / 3600000);
-  return d > 0 ? t('{d}d {h}h left', { d, h: hr }) : t('{h}h {m}m left', { h: hr, m: Math.floor((ms % 3600000) / 60000) });
-}
-
 const X = [22, 60, 78, 44, 18, 52, 80];
 
 export function showVoyage(app: App) {
   const p = app.p;
   const v = ensureVoyage(p);
+  const now = Date.now();
+  const until = untilText(now + eventEndsIn(new Date(now)), now, getLang());
+  const untilLabel =
+    until.key === 'until tonight'
+      ? t('until tonight')
+      : until.key === 'until {day}'
+        ? t('until {day}', until.vars)
+        : t('until {date}', until.vars);
   const stops = Array.from({ length: VOYAGE_LEN }, (_, i) => {
     const L = stopLevel(v.week, v.base, i);
     const open = voyageUnlocked(p, i);
@@ -107,7 +110,7 @@ export function showVoyage(app: App) {
         'div',
         { class: 'voy-head' },
         h('b', null, t(voyageName(v.week))),
-        h('small', null, `${timeLeft(eventEndsIn())} · ★ ${voyageStars(p)}/${VOYAGE_LEN * 3}`),
+        h('small', null, `${untilLabel} · ★ ${voyageStars(p)}/${VOYAGE_LEN * 3}`),
         h('div', { class: 'qbar' }, h('i', { style: `width:${(v.cleared / VOYAGE_LEN) * 100}%` })),
         h(
           'small',

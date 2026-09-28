@@ -1,12 +1,16 @@
 // Settings, language, how-to-play, credits and reset.
-import { h, btn, modal, confirmBox } from '../dom';
+import { h, btn, modal, confirmBox, toast } from '../dom';
+import { Capacitor } from '@capacitor/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { InAppReview } from '@capacitor-community/in-app-review';
 import { sfx } from '../audio';
 import { defaultProfile, saveProfile, type Settings } from '../../meta/profile';
 import { GAME_NAME, VERSION } from '../../meta/config';
 import type { App } from '../app';
-import { askForReminders, scheduleReminders } from '../platform';
+import { scheduleReminders } from '../platform';
 import { LANGS, detectLang, t } from '../../i18n';
-import { gcAvailable, gcDashboard } from '../gamecenter';
+import { gcAvailable, gcDashboard, gcIsSignedIn, gcSignIn } from '../gamecenter';
+import { parentalGate } from './gate';
 import { ensureQuests } from '../../meta/progression';
 import { today } from '../../meta/profile';
 
@@ -16,17 +20,43 @@ export function settingsFlow(app: App) {
   const s: Settings = app.p.settings;
   const tog = (label: string, key: Toggle) => {
     const b = h('button', { class: `toggle${s[key] ? ' on' : ''}`, role: 'switch', 'aria-checked': String(s[key]) }, label, h('i'));
-    b.addEventListener('click', () => {
+    b.addEventListener('click', async () => {
+      if (key === 'notifications' && !s.notifications) {
+        b.setAttribute('disabled', '');
+        try {
+          if (!(await parentalGate('reminders'))) return;
+          app.p.meta.notifAsked = true;
+          if (Capacitor.isNativePlatform()) {
+            try {
+              const permission = await LocalNotifications.requestPermissions();
+              if (permission.display !== 'granted') throw new Error('Permission denied');
+            } catch {
+              s.notifications = false;
+              b.classList.remove('on');
+              b.setAttribute('aria-checked', 'false');
+              app.save();
+              toast(t('Reminders are off in the iPhone Settings app.'));
+              return;
+            }
+          }
+          s.notifications = true;
+          b.classList.add('on');
+          b.setAttribute('aria-checked', 'true');
+          app.save();
+          sfx.click();
+          await scheduleReminders(app.p);
+        } finally {
+          b.removeAttribute('disabled');
+        }
+        return;
+      }
       s[key] = !s[key];
       b.classList.toggle('on', s[key]);
       b.setAttribute('aria-checked', String(s[key]));
       app.applySettings();
       app.save();
       sfx.click();
-      if (key === 'notifications') {
-        if (s.notifications && !app.p.meta.notifAsked) askForReminders(app.p, () => app.save());
-        else scheduleReminders(app.p);
-      }
+      if (key === 'notifications') scheduleReminders(app.p);
     });
     return b;
   };
@@ -57,6 +87,27 @@ export function settingsFlow(app: App) {
     app.save();
     app.refresh();
   });
+  const gameCenterButton: HTMLButtonElement | null = gcAvailable()
+    ? btn(app.p.settings.gameCenter ? t('Game Center') : t('Game Center: sign in'), 'ghost wide', async () => {
+        gameCenterButton!.disabled = true;
+        try {
+          if (!gcIsSignedIn()) {
+            if (!(await parentalGate('gamecenter'))) return;
+            if (!(await gcSignIn(true))) {
+              toast(t("Game Center didn't sign in. You can sign in from the iPhone Settings app."));
+              return;
+            }
+            app.p.settings.gameCenter = true;
+            app.save();
+            app.syncGameCenter();
+            gameCenterButton!.textContent = t('Game Center');
+          }
+          await gcDashboard(app.p);
+        } finally {
+          gameCenterButton!.disabled = false;
+        }
+      })
+    : null;
   const m = modal([
     h('div', { class: 'm-title' }, t('Settings')),
     tog(t('Sound effects'), 'sound'),
@@ -67,8 +118,20 @@ export function settingsFlow(app: App) {
     h('label', { class: 'toggle lang' }, t('Language'), lang),
     h('label', { class: 'toggle lang' }, t('Seasons'), hemi),
     btn(t('How to play'), 'ghost wide', () => (m.close(), howTo())),
-    btn(t('Restore purchases'), 'ghost wide', () => app.restore()),
-    gcAvailable() ? btn(t('Game Center'), 'ghost wide', () => gcDashboard()) : null,
+    btn(t('Restore purchases'), 'ghost wide', async () => {
+      if (await parentalGate('buy')) await app.restore();
+    }),
+    gameCenterButton,
+    Capacitor.isNativePlatform()
+      ? btn(t('Rate Pocket Planet'), 'ghost wide', async () => {
+          if (!(await parentalGate('rate'))) return;
+          try {
+            await InAppReview.requestReview();
+          } catch {
+            /* the system may decline to show a rating sheet */
+          }
+        })
+      : null,
     btn(t('Credits'), 'ghost wide', () => (m.close(), credits())),
     btn(t('Reset progress'), 'danger wide', async () => {
       m.close();

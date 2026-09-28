@@ -1,6 +1,6 @@
 // Weekly events: a rotating theme picked from the ISO week number, so every player
 // sees the same event with no server (Two Dots / Royal Match style live-ops).
-import type { BiomeId } from '../core/world';
+import { BIOMES, type BiomeId, type ImpactResult, type Planet } from '../core/world';
 import type { Profile } from './profile';
 import { applyReward, type Reward } from './progression';
 
@@ -123,6 +123,14 @@ export function tokensForLand(ev: EventDef, changed: BiomeId[], spawned: number)
   if (ev.biomes) n += changed.filter((b) => ev.biomes!.includes(b)).length;
   if (ev.creatures) n += spawned * 2;
   return n;
+}
+
+/** Count first arrivals and improved regions before the Lab updates their history. */
+export function earnedLandingProgress(result: ImpactResult, planet: Planet, regionBests: number[], arrived: Set<string>) {
+  const firstArrivals = new Set(result.spawned.filter((s) => !arrived.has(s.id)).map((s) => s.id));
+  if (result.after < result.before) return { regions: [] as BiomeId[], arrivals: 0, firstArrivals };
+  const regions = result.changed.filter((i) => BIOMES[planet.sectors[i].biome].value > regionBests[i]).map((i) => planet.sectors[i].biome);
+  return { regions, arrivals: firstArrivals.size, firstArrivals };
 }
 
 export function addTokens(p: Profile, n: number) {

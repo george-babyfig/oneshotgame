@@ -11,7 +11,6 @@ import { FINISH_DUST_PER_THROW, type LevelResult } from '../game';
 import type { App } from '../app';
 import { sharePostcard } from '../postcard';
 import { addTokens, ensureEvent, eventActive, eventReady } from '../../meta/events';
-import { askForReminders, maybeAskReview } from '../platform';
 import { t, tp } from '../../i18n';
 import { homeUnlocked, speedUpBuilds } from '../../meta/homeworld';
 import { MAT_EMOJI, addDrops, dropsFor, type Mat } from '../../meta/constellations';
@@ -70,9 +69,7 @@ export function levelResults(app: App, r: LevelResult) {
   const home = () => {
     m.close();
     app.showHome();
-    if (!wasTutorial && p.galaxy.length >= 2) askForReminders(p, () => app.save());
   };
-  maybeAskReview(p, () => app.save(), r.stars, n);
   const m = modal(
     [
       h('div', { class: 'm-title' }, out.firstClear ? t('Planet added to your galaxy!') : t('Planet improved!')),

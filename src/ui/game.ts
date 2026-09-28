@@ -7,7 +7,7 @@ import {
   clonePlanet,
   impact,
   lifeScore,
-  labBonus,
+  landingLabBonus,
   novaCharge,
   settle,
   type Kind,
@@ -29,6 +29,9 @@ import { haptic } from './haptics';
 import { t, tp } from '../i18n';
 import { rarityName } from './text';
 import { toast } from './dom';
+import { CONTINUE_COST, CONTINUE_THROWS } from '../meta/continues';
+import { waysToEarnGems } from './flows/earn';
+import { earnedLandingProgress } from '../meta/events';
 
 export interface SceneOpts {
   scopeLevel: number; // 0..3 aim guide length
@@ -72,7 +75,8 @@ export interface SceneOpts {
   endLabel?: string;
   gems: () => number;
   spendGems: (n: number) => boolean;
-  continueCost: (i: number) => number;
+  continueOk?: (won: boolean) => boolean;
+  onContinue?: () => void;
   onNewSpecies: (id: string) => void;
   onSpecies?: (id: string) => void;
   onThrow?: (kind: Kind) => void;
@@ -92,6 +96,7 @@ export interface LevelResult {
   planet: Planet;
   won: boolean;
   throwsUsed: number;
+  throwsTotal: number;
   /** Throws left unused when the player finished early. */
   leftover: number;
   /** A Comet Guardian was defeated on this planet. */
@@ -165,6 +170,7 @@ export class LevelScene {
   private throwsLeft: number;
   private timeLeft = 0;
   private throwsUsed = 0;
+  private throwsTotal = 0;
   private qi = 0; // index of the next object to deal
   private cur: Kind;
   private next: Kind;
@@ -187,7 +193,8 @@ export class LevelScene {
   private score: number;
   private shownScore: number;
   private starsGot = 0;
-  private continues = 0;
+  private regionBests: number[];
+  private arrived: Set<string>;
   private ended = false;
   private paused = false;
   private raf = 0;
@@ -221,7 +228,10 @@ export class LevelScene {
       for (const i of [3, 11, 19]) this.planet.sectors[i].life = Math.max(1, this.planet.sectors[i].life);
       settle(this.planet);
     }
+    this.regionBests = this.planet.sectors.map((s) => BIOMES[s.biome].value);
+    this.arrived = new Set(this.planet.sectors.map((s) => s.species).filter((id): id is string => !!id));
     this.throwsLeft = level.throws + opts.extraThrows + (opts.boosters.shower ? 3 : 0);
+    this.throwsTotal = this.throwsLeft;
     if (opts.timeLimit) this.timeLeft = opts.timeLimit;
     if (opts.timeLimit || opts.endless) this.throwsLeft = Infinity;
     this.cur = level.queue[0];
@@ -808,7 +818,8 @@ export class LevelScene {
     this.shot = null;
     const lv = this.o.lab?.[sh.kind] ?? 1;
     const res = impact(this.planet, sh.kind, i, this.o.splash, { nova: sh.nova });
-    const bonus = labBonus(lv, res.changed.length, res.spawned.length);
+    const earned = earnedLandingProgress(res, this.planet, this.regionBests, this.arrived);
+    const bonus = landingLabBonus(lv, res, this.planet, this.regionBests, this.arrived);
     this.bonus += bonus;
     if (bonus) setTimeout(() => this.popup(sh.x - 34, sh.y + 16, t('🧪 +{n}', { n: bonus }), '#c9a8ff', 16, 1.2), 380);
     if (sh.nova) {
@@ -847,15 +858,12 @@ export class LevelScene {
     }
     this.score = res.after + this.bonus;
     this.heat(delta);
+    if (earned.regions.length) this.o.onTransform?.(earned.regions.length);
     if (res.changed.length) {
-      this.o.onTransform?.(res.changed.length);
       this.cheerUntil = Math.max(this.cheerUntil, this.time + 0.9);
     }
     this.o.onPlanet?.(this.planet);
-    const tokens = this.o.onLand?.(
-      res.changed.map((ci) => this.planet.sectors[ci].biome),
-      res.spawned.length,
-    );
+    const tokens = this.o.onLand?.(earned.regions, earned.arrivals);
     if (tokens) setTimeout(() => this.popup(sh.x + 30, sh.y + 10, `+${tokens} ${this.o.eventEmoji ?? '⭐'}`, '#ffd84a', 18, 1.3), 500);
     if (delta !== 0) this.popup(sh.x, sh.y - 20, `${delta > 0 ? '+' : ''}${delta}`, delta > 0 ? '#9dffb0' : '#ff9db0', 26);
     // name up to two newly formed biomes
@@ -876,19 +884,19 @@ export class LevelScene {
       }
     });
     res.spawned.forEach((s, k) => {
-      setTimeout(() => this.announce(s.id, s.at), 350 + k * 450);
+      setTimeout(() => this.announce(s.id, s.at, earned.firstArrivals.has(s.id)), 350 + k * 450);
     });
     this.afterShot();
   }
 
-  private announce(id: string, at: number) {
+  private announce(id: string, at: number, firstArrival: boolean) {
     const sp = SPECIES_BY_ID[id];
     if (!sp) return;
     this.spawnAnim.set(at, 0.9);
     const [x, y] = this.sectorPoint(at, 1.55);
     const rare = sp.rarity === 'rare' || sp.rarity === 'legendary';
     const isNew = !this.o.seen.has(id);
-    this.o.onSpecies?.(id);
+    if (firstArrival) this.o.onSpecies?.(id);
     sfx.creature(rare || isNew);
     haptic.success();
     this.burst(x, y, rare ? '#ffd84a' : '#ffffff', rare ? 40 : 20, rare ? 7 : 4);
@@ -980,35 +988,31 @@ export class LevelScene {
     this.endModal(this.starsNow());
   }
 
-  /** Stars already won before buying "+5 throws" (a continue can't lose them). */
-  private minStars = 0;
-
   private endModal(stars: number) {
-    stars = Math.max(stars, this.minStars);
-    const cost = this.o.continueCost(this.continues);
-    const canCont = this.continues < 3 && this.leftover === 0 && !this.o.competitive && !this.o.timeLimit;
     const won = stars > 0;
+    const canCont = this.leftover === 0 && !!this.o.continueOk?.(won);
     const finish = () => {
       m.close();
       this.modalOpen = null;
       this.finish(stars);
     };
     const cont = () => {
-      if (!this.o.spendGems(cost)) {
+      if (!this.o.continueOk?.(won)) return;
+      if (!this.o.spendGems(CONTINUE_COST)) {
         sfx.error();
-        toast(t('Not enough gems — grab a pack in the Shop!'), 'bad');
+        toast(t('Not enough gems yet'), 'bad');
         return;
       }
       m.close();
       this.modalOpen = null;
-      this.continues++;
-      this.minStars = Math.max(this.minStars, stars);
-      this.throwsLeft += 5;
+      this.o.onContinue?.();
+      this.throwsLeft += CONTINUE_THROWS;
+      this.throwsTotal += CONTINUE_THROWS;
       sfx.gem();
       haptic.success();
       this.renderHud();
     };
-    const need = won ? (stars < 3 ? this.L.stars[stars] - this.score : 0) : Math.max(0, this.L.stars[0] - this.score);
+    const need = won ? 0 : Math.max(0, this.L.stars[0] - this.score);
     const missing = this.L.goals.filter((g) => goalProgress(this.planet, g) < g.count);
     const missingEl =
       !won && missing.length
@@ -1021,12 +1025,6 @@ export class LevelScene {
             ),
           )
         : null;
-    // how close was it? (0..1) — drives the "so close" framing on the continue button
-    const lifeK = Math.min(1, this.score / this.L.stars[0]);
-    const goalK = this.L.goals.length
-      ? this.L.goals.reduce((a, g) => a + Math.min(1, goalProgress(this.planet, g) / g.count), 0) / this.L.goals.length
-      : 1;
-    const close = Math.min(lifeK, goalK);
     const m = modal(
       [
         h(
@@ -1045,34 +1043,10 @@ export class LevelScene {
               }),
             )
           : null,
-        need > 0 && !this.leftover
-          ? h(
-              'p',
-              { class: 'end-need' },
-              won ? t('Only {n} life from the next star!', { n: fmt(need) }) : t('Just {n} life short of a star.', { n: fmt(need) }),
-            )
+        need > 0 && !this.leftover && !canCont
+          ? h('p', { class: 'end-need' }, t('Just {n} life short of a star.', { n: fmt(need) }))
           : null,
         missingEl,
-        !won && close >= 0.75
-          ? h(
-              'div',
-              { class: 'so-close' },
-              h('i', { style: `width:${Math.round(close * 100)}%` }),
-              h('span', null, t('So close! {p}% there', { p: Math.round(close * 100) })),
-            )
-          : null,
-        canCont && (need > 0 || !won)
-          ? btn(
-              h(
-                'span',
-                { class: 'stack' },
-                h('b', null, t('+5 THROWS')),
-                h('small', null, t('💎 {c} · you have {g}', { c: cost, g: this.o.gems() })),
-              ),
-              'gem wide',
-              cont,
-            )
-          : null,
         won || this.o.competitive || this.o.timeLimit
           ? btn(this.o.endLabel ?? t('Collect'), 'primary wide', finish)
           : btn(t('Try again'), 'primary wide', () => {
@@ -1080,6 +1054,19 @@ export class LevelScene {
               this.modalOpen = null;
               this.finish(0);
             }),
+        canCont ? btn(t('+5 throws · 💎{n}', { n: CONTINUE_COST }), 'ghost small', cont) : null,
+        canCont && this.o.gems() < CONTINUE_COST
+          ? h(
+              'button',
+              {
+                class: 'btn small',
+                type: 'button',
+                style: 'background:none;box-shadow:none;color:#bfe8ff;text-decoration:underline',
+                onclick: () => waysToEarnGems(),
+              },
+              t('Ways to earn gems'),
+            )
+          : null,
       ],
       { dismiss: false, cls: 'end' },
     );
@@ -1108,6 +1095,7 @@ export class LevelScene {
         planet: this.planet,
         won: stars > 0,
         throwsUsed: this.throwsUsed,
+        throwsTotal: this.throwsTotal,
         leftover: this.leftover,
         boss: this.L.twist === 'boss' && this.bossHp <= 0,
       });
@@ -1138,7 +1126,16 @@ export class LevelScene {
           if (this.ended) return;
           m.close();
           this.ended = true;
-          this.o.onEnd({ level: this.L, score: 0, stars: 0, planet: this.planet, won: false, throwsUsed: -1, leftover: 0 });
+          this.o.onEnd({
+            level: this.L,
+            score: 0,
+            stars: 0,
+            planet: this.planet,
+            won: false,
+            throwsUsed: -1,
+            throwsTotal: this.throwsTotal,
+            leftover: 0,
+          });
         }),
         btn(t('Leave to galaxy'), 'ghost wide', () => {
           if (this.ended) return;
@@ -1466,7 +1463,8 @@ export class LevelScene {
       this.predictCache = {
         key,
         label: after.id !== before.id ? `${after.deco} ${t(after.name)}` : '',
-        delta: res.after - res.before + labBonus(this.o.lab?.[this.cur] ?? 1, res.changed.length, res.spawned.length),
+        delta:
+          res.after - res.before + landingLabBonus(this.o.lab?.[this.cur] ?? 1, res, sim, [...this.regionBests], new Set(this.arrived)),
         spawn: res.spawned.length ? SPECIES_BY_ID[res.spawned[0].id].emoji : '',
       };
     }

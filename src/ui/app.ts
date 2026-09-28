@@ -12,7 +12,8 @@ import { makeLevel, type LevelDef } from '../core/levels';
 import { KINDS, type Kind } from '../core/world';
 import { loadProfile, saveProfile, today, type Profile } from '../meta/profile';
 import { createIap } from '../meta/iap';
-import { CONTINUE_COSTS, PRODUCT_BY_ID, PRODUCT_BY_KEY, SKINS, type BoosterId } from '../meta/config';
+import { PRODUCT_BY_ID, PRODUCT_BY_KEY, SKINS, type BoosterId } from '../meta/config';
+import { clearFails, continueAllowed, countsAsFail, recordFail } from '../meta/continues';
 import { discoverSpecies, grantProduct, spendGems, track } from '../meta/economy';
 import { chapterOf, ensureQuests } from '../meta/progression';
 import { MOMENTUM_PERKS, momentumActive, momentumLoss, momentumWin } from '../meta/momentum';
@@ -150,7 +151,7 @@ export class App {
     if (!this.p.tutorial) this.startLevel(1, { tutorial: true });
     else this.showHome(); // the first home screen of a session runs the daily-gift sequence
     this.save();
-    gcSignIn().then((ok) => ok && this.syncGameCenter());
+    if (this.p.settings.gameCenter) gcSignIn().then((ok) => ok && this.syncGameCenter());
   }
 
   /** Report achievements and leaderboard scores (iOS Game Center; no-op elsewhere). */
@@ -324,12 +325,14 @@ export class App {
 
       h('div', { class: 'grow' }),
       h('button', { class: 'pill dust', 'aria-label': t('Stardust'), onclick: () => this.showUpgrades() }, `✨ ${fmt(this.p.dust)}`),
-      h(
-        'button',
-        { class: 'pill gems', 'aria-label': t('Gems'), onclick: () => this.showShop() },
-        `💎 ${fmt(this.p.gems)}`,
-        h('span', { class: 'plus' }, '+'),
-      ),
+      this.p.chapters.length
+        ? h(
+            'button',
+            { class: 'pill gems', 'aria-label': t('Gems'), onclick: () => this.showShop() },
+            `💎 ${fmt(this.p.gems)}`,
+            h('span', { class: 'plus' }, '+'),
+          )
+        : h('span', { class: 'pill gems', 'aria-label': t('Gems') }, `💎 ${fmt(this.p.gems)}`),
     );
   }
 
@@ -354,7 +357,6 @@ export class App {
         if (ok) this.save();
         return ok;
       },
-      continueCost: (i) => CONTINUE_COSTS[Math.min(i, CONTINUE_COSTS.length - 1)],
       onNewSpecies: (id) => {
         discoverSpecies(this.p, id);
         this.save();
@@ -362,11 +364,11 @@ export class App {
       onSpecies: (id) => {
         this.p.stats.creatures++;
         sight(this.p, id);
-        if (festivalActive(this.p)) {
+        if (!extra.endless && festivalActive(this.p)) {
           spotFestival(this.p);
           track(this.p, 'spot');
         }
-        track(this.p, 'creature');
+        if (!extra.endless) track(this.p, 'creature');
       },
       onThrow: (kind) => {
         this.p.stats.throws++;
@@ -376,14 +378,17 @@ export class App {
         this.p.mastery[l] = (this.p.mastery[l] ?? 0) + 1;
         track(this.p, 'throw');
       },
-      onTransform: (n) => track(this.p, 'land', n),
-      eventEmoji: eventActive(this.p) ? ensureEvent(this.p).emoji : undefined,
-      onLand: (changed, spawned) => {
-        if (!eventActive(this.p)) return 0;
-        const n = tokensForLand(ensureEvent(this.p), changed, spawned);
-        addTokens(this.p, n);
-        return n;
-      },
+      onTransform: extra.endless || extra.competitive ? undefined : (n) => track(this.p, 'land', n),
+      eventEmoji: !extra.endless && !extra.competitive && eventActive(this.p) ? ensureEvent(this.p).emoji : undefined,
+      onLand:
+        extra.endless || extra.competitive
+          ? undefined
+          : (changed, spawned) => {
+              if (!eventActive(this.p)) return 0;
+              const n = tokensForLand(ensureEvent(this.p), changed, spawned);
+              addTokens(this.p, n);
+              return n;
+            },
       onQuit: () => this.showHome(),
       onShop: () => this.showShop(),
       // Object Lab levels apply to the campaign and Zen, not to the score-competitive modes
@@ -394,6 +399,10 @@ export class App {
       // the meteor-shower bonus stays out of score-competitive modes
       shower: !extra.competitive && !!skyEventOn(new Date()),
       ...extra,
+      // Score modes use the same base throw, aim, and loadout for every player.
+      ...(extra.competitive
+        ? { scopeLevel: 0, splash: 0, extraThrows: 0, boosters: NO_BOOSTERS, momentum: 0, lab: undefined, shower: false }
+        : {}),
     };
   }
 
@@ -407,7 +416,25 @@ export class App {
     const merged: Boosters = { shower: boosters.shower, spark: boosters.spark || perk.spark, scope: boosters.scope || perk.scope };
     const debut = (Object.values(KINDS) as { id: Kind; unlock: number }[]).find((k) => k.unlock === n && n > 2);
     const opts = this.sceneOpts(
-      { onEnd: (r) => this.levelEnded(r), momentum: tier, coach: COACH[n], intro: debut && n === this.p.level ? debut.id : undefined },
+      {
+        onEnd: (r) => this.levelEnded(r),
+        continueOk: (won) =>
+          continueAllowed({
+            mode: o.tutorial || n === 1 ? 'tutorial' : 'campaign',
+            planet: n,
+            won,
+            cleared: n < this.p.level,
+            failsBefore: this.p.fails[n] ?? 0,
+            used: this.p.continuesUsed[n] ?? 0,
+          }),
+        onContinue: () => {
+          this.p.continuesUsed[n] = (this.p.continuesUsed[n] ?? 0) + 1;
+          this.save();
+        },
+        momentum: tier,
+        coach: COACH[n],
+        intro: debut && n === this.p.level ? debut.id : undefined,
+      },
       merged,
       !!o.tutorial || n === 1,
     );
@@ -421,6 +448,7 @@ export class App {
   private levelEnded(r: LevelResult) {
     if (r.throwsUsed === -1) return this.startLevel(r.level.n); // restart: no penalty, same as leaving
     if (!r.won) {
+      if (r.level.n >= this.p.level && countsAsFail(r.throwsUsed, r.throwsTotal)) recordFail(this.p, r.level.n);
       const res = momentumLoss(this.p, today());
       this.save();
       // campaign retries go through the pre-level sheet, where boosters can help
@@ -432,6 +460,7 @@ export class App {
       if (res === 'lost') toast(t('Momentum lost — win to build it back up'), 'bad');
       return;
     }
+    clearFails(this.p, r.level.n);
     momentumWin(this.p);
     levelResults(this, r);
   }
@@ -448,7 +477,7 @@ export class App {
 
   needGems() {
     sfx.error();
-    toast(t('Not enough gems — grab a pack in the Shop!'), 'bad');
+    toast(t('Not enough gems yet'), 'bad');
   }
 
   async buy(key: string) {
