@@ -1,0 +1,22 @@
+const { open, shot, txt, drag } = require('./lib.cjs');
+const clickText = async (page, re) => await page.evaluate((src) => { const r = new RegExp(src); const b = [...document.querySelectorAll('button')].filter(b=>b.offsetParent && r.test(b.innerText)); if(!b.length) return false; b[b.length-1].click(); return true; }, re.source);
+(async () => {
+  const { b, page, logs } = await open();
+  await page.goto('http://127.0.0.1:5173/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForTimeout(2000);
+  const L = await page.evaluate(() => window.__app.scene.launch);
+  await drag(page, { x: L.x, y: L.y }, { x: L.x + 10, y: L.y + 90 }); await page.waitForTimeout(3000);
+  await page.evaluate(() => window.__app.scene.finish(3));
+  await page.waitForTimeout(3500);
+  await clickText(page, /Next/); await page.waitForTimeout(2000);
+  await page.evaluate(() => window.__app.scene.finish(2));
+  await page.waitForTimeout(3500);
+  await clickText(page, /^Galaxy/); await page.waitForTimeout(2500);
+  console.log('cal', await clickText(page, /Stamp day/)); await page.waitForTimeout(1800);
+  await shot(page, 'b07-after-stamp');
+  console.log('T:', (await txt(page)).replace(/\n+/g,' | '));
+  console.log('modals', await page.evaluate(() => [...document.querySelectorAll('.modal')].map(m => m.innerText.slice(0,80))));
+  await b.close();
+})();
