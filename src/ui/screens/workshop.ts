@@ -29,12 +29,24 @@ import type { App } from '../app';
 import { t } from '../../i18n';
 import { DYES, applyDye, ownsDye, unlockDye } from '../../meta/dyes';
 import { MAT_EMOJI, type Mat } from '../../meta/constellations';
+import { BUDDY_AT, buddyAccs, buddyEligible, currentBuddy, setBuddy, setBuddyAcc } from '../../meta/buddy';
+import { ensureFestival, festivalActive } from '../../meta/festivals';
+import { RESIDENT_ACCS } from '../../meta/homeworld';
+import { SPECIES_BY_ID } from '../../core/world';
+import { critterCanvas, drawCreature } from '../art/critters';
 
-type Tab = Slot | 'dye';
+type Tab = Slot | 'dye' | 'buddy';
 let lastSlot: Tab = 'suit';
 
 /** Animated stage: the Keeper flings a rock every couple of seconds. */
-function stage(canvas: HTMLCanvasElement, getLook: () => Look, reduceMotion: boolean, mastered: (id: string) => boolean, emoting = false) {
+function stage(
+  canvas: HTMLCanvasElement,
+  getLook: () => Look,
+  reduceMotion: boolean,
+  mastered: (id: string) => boolean,
+  emoting = false,
+  buddy: { species: string; acc: string } | null = null,
+) {
   const g = canvas.getContext('2d')!;
   let raf = 0;
   const t0 = performance.now();
@@ -66,6 +78,10 @@ function stage(canvas: HTMLCanvasElement, getLook: () => Look, reduceMotion: boo
     g.beginPath();
     g.arc(px, py, 30, 0, Math.PI * 2);
     g.fill();
+    if (buddy) {
+      const hop = flying > 0.8 ? Math.abs(Math.sin(time * 9)) * hh * 0.08 : 0;
+      drawCreature(g, buddy.species, w * 0.1, hh * 0.94 - hop, 0, Math.min(44, hh * 0.26), time + 0.7, buddy.acc);
+    }
     drawKeeper(g, look, w * 0.28, hh * 0.92, Math.min(130, hh * 0.72), time, {
       lean: emoting ? 0 : pull,
       cheer: flying > 0.8 ? 1 : 0,
@@ -91,6 +107,81 @@ function stage(canvas: HTMLCanvasElement, getLook: () => Look, reduceMotion: boo
   };
   raf = requestAnimationFrame(frame);
   return () => cancelAnimationFrame(raf);
+}
+
+/** Buddy tab: pick a befriended creature and what it wears. */
+function buddyPanel(app: App) {
+  const p = app.p;
+  const friends = buddyEligible(p);
+  const pick = (species: string | null) => {
+    if (!setBuddy(p, species)) return;
+    sfx.click();
+    haptic.light();
+    app.save();
+    showWorkshop(app, 'buddy');
+  };
+  const wear = (acc: string | null) => {
+    if (!setBuddyAcc(p, acc)) return;
+    sfx.click();
+    haptic.light();
+    app.save();
+    showWorkshop(app, 'buddy');
+  };
+  const cur = p.buddy.species;
+  return h(
+    'div',
+    { class: 'buddy-panel' },
+    h(
+      'p',
+      { class: 'muted' },
+      t('See a creature {n} times on your planets to befriend it. Your buddy cheers you on in every level.', { n: BUDDY_AT }),
+    ),
+    h(
+      'div',
+      { class: 'ws-grid' },
+      h(
+        'button',
+        { class: `ws-item${cur ? '' : ' on'}`, onclick: () => pick(null) },
+        h('div', { class: 'buddy-none' }, '✕'),
+        h('b', null, t('No buddy')),
+      ),
+      ...friends.map((id) =>
+        h(
+          'button',
+          { class: `ws-item${cur === id ? ' on' : ''}`, onclick: () => pick(id) },
+          critterCanvas(id, 64, 0.4, p.buddy.acc ?? ''),
+          h('b', null, t(SPECIES_BY_ID[id].name)),
+        ),
+      ),
+    ),
+    friends.length ? null : h('p', { class: 'muted' }, t('No friends yet — keep growing life on your planets!')),
+    cur
+      ? h(
+          'div',
+          null,
+          h('div', { class: 'sec-title' }, t('Accessory')),
+          h(
+            'div',
+            { class: 'acc-grid' },
+            h(
+              'button',
+              { class: `acc${p.buddy.acc === null ? ' on' : ''}`, onclick: () => wear(null) },
+              h('div', { class: 'buddy-none' }, '🎪'),
+              h('small', null, t('Festival costume')),
+            ),
+            ...buddyAccs(p).map((a) =>
+              h(
+                'button',
+                { class: `acc${p.buddy.acc === a ? ' on' : ''}`, onclick: () => wear(a) },
+                critterCanvas(cur, 54, 0.4, a),
+                h('small', null, t(RESIDENT_ACCS.find((x) => x.id === a)?.name ?? '')),
+              ),
+            ),
+          ),
+          h('p', { class: 'muted small' }, t('More accessories come from festivals and your Homeworld.')),
+        )
+      : null,
+  );
 }
 
 /** Dye tab: recolour the suit body and trim; locked dyes unlock with materials. */
@@ -203,7 +294,7 @@ export function showWorkshop(app: App, slot: Tab = lastSlot, tryOn?: string) {
   const worn = currentLook(p);
   const preview: Look = { ...worn };
   if (tryOn && COSMETIC_BY_ID[tryOn]) preview[COSMETIC_BY_ID[tryOn].slot] = tryOn;
-  const sel = tryOn ?? worn[slot === 'dye' ? 'suit' : slot];
+  const sel = tryOn ?? (slot === 'buddy' ? '' : worn[slot === 'dye' ? 'suit' : slot]);
   const item = COSMETIC_BY_ID[sel];
   const canvas = h('canvas', { class: 'ws-stage' }) as HTMLCanvasElement;
 
@@ -258,41 +349,44 @@ export function showWorkshop(app: App, slot: Tab = lastSlot, tryOn?: string) {
   const tabs = h(
     'div',
     { class: 'tabs' },
-    ...[...SLOTS, 'dye' as const].map((s) =>
+    ...[...SLOTS, 'dye' as const, 'buddy' as const].map((s) =>
       h(
         'button',
         { class: `tab${s === slot ? ' on' : ''}`, onclick: () => (sfx.click(), showWorkshop(app, s)) },
-        s === 'dye' ? t('Dye') : t(SLOT_NAMES[s]),
+        s === 'dye' ? t('Dye') : s === 'buddy' ? t('Buddy') : t(SLOT_NAMES[s]),
       ),
     ),
   );
   const grid =
     slot === 'dye'
       ? dyePanel(app)
-      : h(
-          'div',
-          { class: 'ws-grid' },
-          ...COSMETICS.filter((x) => x.slot === slot).map((x) => {
-            const have = owns(p, x.id);
-            const on = worn[x.slot] === x.id;
-            return h(
-              'button',
-              {
-                class: `ws-item t-${x.tier}${have ? '' : ' locked'}${on ? ' on' : ''}${x.id === sel ? ' sel' : ''}`,
-                onclick: () => (sfx.click(), haptic.light(), showWorkshop(app, slot, x.id)),
-              },
-              itemCanvas(x.id, worn, 64),
-              h('b', null, t(x.name)),
-              h('small', null, on ? t('Equipped') : have ? t('Owned') : sourceText(x)),
-            );
-          }),
-        );
+      : slot === 'buddy'
+        ? buddyPanel(app)
+        : h(
+            'div',
+            { class: 'ws-grid' },
+            ...COSMETICS.filter((x) => x.slot === slot).map((x) => {
+              const have = owns(p, x.id);
+              const on = worn[x.slot] === x.id;
+              return h(
+                'button',
+                {
+                  class: `ws-item t-${x.tier}${have ? '' : ' locked'}${on ? ' on' : ''}${x.id === sel ? ' sel' : ''}`,
+                  onclick: () => (sfx.click(), haptic.light(), showWorkshop(app, slot, x.id)),
+                },
+                itemCanvas(x.id, worn, 64),
+                h('b', null, t(x.name)),
+                h('small', null, on ? t('Equipped') : have ? t('Owned') : sourceText(x)),
+              );
+            }),
+          );
   const stop = stage(
     canvas,
     () => preview,
     p.settings.reduceMotion,
     (id) => masteryLevel(p.mastery[id] ?? 0) >= MASTERY_STEPS.length,
     slot === 'emote',
+    currentBuddy(p, festivalActive(p) ? ensureFestival(p).acc : undefined),
   );
   app.mount(
     h(
@@ -304,7 +398,16 @@ export function showWorkshop(app: App, slot: Tab = lastSlot, tryOn?: string) {
         'div',
         { class: 'ws-top' },
         canvas,
-        h('div', { class: 'ws-bar' }, h('div', { class: 'ws-name' }, item ? t(item.name) : ''), action),
+        h(
+          'div',
+          { class: 'ws-bar' },
+          h(
+            'div',
+            { class: 'ws-name' },
+            item ? t(item.name) : slot === 'buddy' && p.buddy.species ? t(SPECIES_BY_ID[p.buddy.species].name) : '',
+          ),
+          action,
+        ),
       ),
       h(
         'div',

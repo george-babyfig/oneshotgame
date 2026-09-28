@@ -22,7 +22,7 @@ Open your app, then _Services → Game Center_. Create these leaderboards and ac
 
 ### Achievements
 
-22 achievements in total. The points add up to under Apple's limit of 1000, and a test enforces that.
+27 achievements in total. The points add up to under Apple's limit of 1000, and a test enforces that.
 
 | ID                                         | Title            | Points |
 | ------------------------------------------ | ---------------- | ------ |
@@ -48,5 +48,10 @@ Open your app, then _Services → Game Center_. Create these leaderboards and ac
 | `com.pocketplanet.game.ach.memento_10`     | Keepsake Keeper  | 30     |
 | `com.pocketplanet.game.ach.challenge_win`  | Friendly Rival   | 20     |
 | `com.pocketplanet.game.ach.zen_100`        | Inner Peace      | 15     |
+| `com.pocketplanet.game.ach.voyage_1`       | Bon Voyage       | 15     |
+| `com.pocketplanet.game.ach.voyage_10`      | Seasoned Sailor  | 40     |
+| `com.pocketplanet.game.ach.festival_1`     | Party Planet     | 15     |
+| `com.pocketplanet.game.ach.stickers_30`    | Sticker Star     | 25     |
+| `com.pocketplanet.game.ach.buddy_1`        | Best Buddies     | 10     |
 
 Achievement descriptions and images are entered in App Store Connect. The game reports each achievement once, when it is earned.

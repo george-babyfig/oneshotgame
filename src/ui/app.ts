@@ -47,6 +47,7 @@ import { showHomeworld } from './screens/homeworld';
 import { parentalGate } from './flows/gate';
 import { inboxFlow } from './flows/inbox';
 import { showSky } from './screens/sky';
+import { currentBuddy } from '../meta/buddy';
 import { showVoyage } from './screens/voyage';
 import { showAlbum } from './screens/album';
 import { festivalFlow } from './flows/festival';
@@ -361,7 +362,10 @@ export class App {
       onSpecies: (id) => {
         this.p.stats.creatures++;
         sight(this.p, id);
-        spotFestival(this.p);
+        if (festivalActive(this.p)) {
+          spotFestival(this.p);
+          track(this.p, 'spot');
+        }
         track(this.p, 'creature');
       },
       onThrow: (kind) => {
@@ -386,6 +390,7 @@ export class App {
       lab: extra.competitive ? undefined : labLevels(this.p),
       season: seasonOf(new Date(), this.p.settings.hemi),
       festAcc: festivalActive(this.p) ? ensureFestival(this.p).acc : undefined,
+      buddy: currentBuddy(this.p, festivalActive(this.p) ? ensureFestival(this.p).acc : undefined),
       // the meteor-shower bonus stays out of score-competitive modes
       shower: !extra.competitive && !!skyEventOn(new Date()),
       ...extra,

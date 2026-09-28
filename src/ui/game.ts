@@ -39,6 +39,8 @@ export interface SceneOpts {
   shower?: boolean;
   /** This month's festival costume, worn by every creature on the planet. */
   festAcc?: string;
+  /** Buddy creature beside the Keeper. */
+  buddy?: { species: string; acc: string } | null;
   /** Object Lab level per object (campaign/Zen only). */
   lab?: Partial<Record<Kind, number>>;
   /** The launcher is fully mastered (gold glow). */
@@ -1543,6 +1545,13 @@ export class LevelScene {
     const kx = L.x - Math.min(96, this.w * 0.24);
     const ky = L.y + 46;
     const cheer = this.cheerUntil > this.time ? Math.min(1, (this.cheerUntil - this.time) * 3) : 0;
+    const bd = this.o.buddy;
+    if (bd) {
+      // the buddy hops when land changes and faces the planet
+      const hop = cheer > 0 ? Math.abs(Math.sin(this.time * 9)) * 14 * cheer : Math.abs(Math.sin(this.time * 2)) * 1.5;
+      const bx = kx - Math.min(46, this.w * 0.11);
+      drawCreature(g, bd.species, bx, ky - hop, 0, 26, this.time + 0.7, bd.acc);
+    }
     drawKeeper(g, this.look, kx, ky, 62, this.time, {
       lean: aiming && this.aimFrom ? Math.min(1, p.len / MAX_PULL) : 0,
       cheer,

@@ -1,5 +1,8 @@
 // Inbox: letters shipped with the app, delivered when something happens
 // (milestones, seasons, meteor showers, new friends). Some carry a small gift.
+import { festivalActive, festivalKey, festivalOn } from './festivals';
+import { voyageActive } from './voyage';
+import { buddyEligible } from './buddy';
 import type { Profile } from './profile';
 import { applyReward, type Reward } from './progression';
 import { seasonOf, skyEventOn } from './seasons';
@@ -127,6 +130,38 @@ const RULES: Rule[] = [
       from: MC,
       title: 'Welcome aboard, Captain',
       body: 'Your Star Captain uniform is waiting in the Workshop, and the golden lane of the Star Road is open. Thank you for supporting Pocket Planet!',
+    }),
+  },
+  {
+    kind: 'festival',
+    key: (p, now) => (festivalActive(p) ? `fest-${festivalKey(now)}` : null),
+    vars: (_p, now) => ({ e: festivalOn(now).name }),
+    letter: () => ({
+      from: MC,
+      title: '{e} has begun!',
+      body: 'All month long, every creature on your planets wears a festival costume. Spot them to earn a sticker and a keepsake your residents can wear.',
+      gift: { dust: 150 },
+    }),
+  },
+  {
+    kind: 'voyage',
+    key: (p) => (voyageActive(p) ? 'voyage-intro' : null),
+    letter: () => ({
+      from: MC,
+      title: 'Set sail on the Weekly Voyage',
+      body: 'Every Monday a new route of seven planets opens. Clear them one by one, and watch out for the Comet Guardian at the end!',
+      gift: { dust: 200 },
+    }),
+  },
+  {
+    kind: 'buddy',
+    key: (p) => (buddyEligible(p).length ? 'buddy-intro' : null),
+    vars: (p) => ({ c: buddyEligible(p)[0] ?? '' }),
+    letter: () => ({
+      from: '{c}',
+      face: '{c}',
+      title: 'Can I come along?',
+      body: 'I have seen you on so many planets. Could I be your buddy? Pick me in the Workshop and I will cheer for every throw.',
     }),
   },
   {

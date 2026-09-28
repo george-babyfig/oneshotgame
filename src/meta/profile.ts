@@ -146,6 +146,8 @@ export interface Profile {
     pagesClaimed: string[];
     pages: { bg: number; items: { id: string; x: number; y: number; r: number; s: number }[] }[];
   };
+  /** Buddy creature beside the Keeper, and the accessory it wears (null = festival costume). */
+  buddy: { species: string | null; acc: string | null };
 }
 
 const KEY = 'pp.profile';
@@ -233,6 +235,7 @@ export function defaultProfile(now = Date.now()): Profile {
         { bg: 0, items: [] },
       ],
     },
+    buddy: { species: null, acc: null },
   };
 }
 

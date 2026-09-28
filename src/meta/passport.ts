@@ -149,6 +149,11 @@ const BADGE_EMOJI: Record<string, string> = {
   memento_10: '🎁',
   challenge_win: '🤝',
   zen_100: '🧘',
+  voyage_1: '🚀',
+  voyage_10: '🧭',
+  festival_1: '🎪',
+  stickers_30: '📒',
+  buddy_1: '🐾',
 };
 export const BADGE_SLOTS = 3;
 

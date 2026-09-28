@@ -86,6 +86,17 @@ Sources: Animal Crossing (monthly events and seasonal items), Pokémon GO (costu
 
 Next up: an optional New Game+ (replay the campaign with remixed planets), sticker packs for iMessage, and festival music themes.
 
+## Round 6: a buddy and tying round 5 together
+
+| Finding                                       | Where it comes from                            | What we built                                                                                                                                |
+| --------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| A companion makes the avatar feel less alone  | Pokémon GO buddies, Sky's spirits, Cats & Soup | ✅ **Buddy**: befriend a creature (5 sightings); it stands beside your Keeper in every level, hops when land changes, shows on your Passport |
+| Companions are a second customization canvas  | Pokémon GO buddy outfits, Animal Crossing      | ✅ Buddies wear any resident accessory you own, or this month's festival costume                                                             |
+| New systems need to show up in the daily loop | Royal Match / Candy Crush daily tasks          | ✅ Daily quests for Voyage stops and festival spotting (only offered once unlocked)                                                          |
+| Tell players when something new starts        | Animal Crossing letters                        | ✅ Inbox letters when each festival begins, when the Voyage unlocks, and when a creature asks to be your buddy                               |
+| Events should touch the whole world           | Animal Crossing villagers dressing up          | ✅ Homeworld residents join the festival in costume                                                                                          |
+| Platform achievements for new systems         | Game Center                                    | ✅ 5 new achievements (27 total, still under Apple's 1000-point limit)                                                                       |
+
 ## 1. Foundation
 
 - ✅ Clean repository (`main` + feature branch + PR), CI (format, typecheck, tests, build)

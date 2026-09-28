@@ -130,7 +130,7 @@ export function claimRoad(p: Profile, i: number, stars: number): Reward[] {
 export const PASS_GEMS = STAR_ROAD.reduce((a, t) => a + (t.pass.gems ?? 0), 0);
 
 // ------------------------------------------------------------------ quests
-export type QuestEvent = 'throw' | 'win' | 'star' | 'creature' | 'three' | 'booster' | 'collect' | 'land';
+export type QuestEvent = 'throw' | 'win' | 'star' | 'creature' | 'three' | 'booster' | 'collect' | 'land' | 'voyage' | 'spot';
 
 export interface QuestDef {
   id: string;
@@ -139,6 +139,8 @@ export interface QuestDef {
   gems: number;
   text: (goal: number) => string;
   emoji: string;
+  /** Only offered once the feature it needs is unlocked. */
+  need?: (p: Profile) => boolean;
 }
 
 export const QUESTS: QuestDef[] = [
@@ -150,6 +152,24 @@ export const QUESTS: QuestDef[] = [
   { id: 'booster1', event: 'booster', goal: 1, gems: 6, emoji: '🌠', text: () => t('Use a booster') },
   { id: 'collect2', event: 'collect', goal: 2, gems: 8, emoji: '✨', text: (g) => t('Collect stardust {n} times', { n: g }) },
   { id: 'land20', event: 'land', goal: 20, gems: 10, emoji: '🌍', text: (g) => t('Transform {n} regions', { n: g }) },
+  {
+    id: 'voyage1',
+    event: 'voyage',
+    goal: 1,
+    gems: 10,
+    emoji: '🚀',
+    text: () => t('Clear a Weekly Voyage stop'),
+    need: (p) => p.level >= 12,
+  },
+  {
+    id: 'spot6',
+    event: 'spot',
+    goal: 6,
+    gems: 8,
+    emoji: '🎪',
+    text: (g) => t('Spot {n} costumed critters', { n: g }),
+    need: (p) => p.level >= 8,
+  },
 ];
 export const QUEST_BY_ID: Record<string, QuestDef> = Object.fromEntries(QUESTS.map((q) => [q.id, q]));
 export const QUEST_BONUS: Reward = { gems: 20, boosters: { shower: 1 } };
@@ -158,7 +178,7 @@ export const QUEST_BONUS: Reward = { gems: 20, boosters: { shower: 1 } };
 export function ensureQuests(p: Profile, day: string) {
   if (p.quests.day === day && p.quests.list.length) return;
   const rnd = rngFrom(`Q-${day}`);
-  const pool = [...QUESTS];
+  const pool = QUESTS.filter((q) => !q.need || q.need(p));
   const list: QuestState[] = [];
   while (list.length < 3 && pool.length) {
     const q = pool.splice(Math.floor(rnd() * pool.length), 1)[0];

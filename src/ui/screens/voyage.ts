@@ -17,6 +17,7 @@ import {
   voyageUnlocked,
 } from '../../meta/voyage';
 import { rewardText } from '../../meta/progression';
+import { track } from '../../meta/economy';
 import { renderPlanet } from '../art/planet';
 import { drawCreature } from '../art/critters';
 import { SPECIES_BY_ID } from '../../core/world';
@@ -223,6 +224,7 @@ function ended(app: App, i: number, week: string, r: LevelResult) {
     return;
   }
   const res = clearStop(p, i, r.stars);
+  track(p, 'voyage');
   app.save();
   sfx.win();
   haptic.success();

@@ -3844,3 +3844,24 @@ button.lb {
 .vstop + .vstop {
   margin-top: -14px;
 }
+.buddy-none {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: var(--muted);
+}
+.acc .buddy-none {
+  width: 54px;
+  height: 54px;
+}
+.pp-av {
+  position: relative;
+}
+.pp-buddy {
+  position: absolute;
+  left: -10px;
+  bottom: -4px;
+}

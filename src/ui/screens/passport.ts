@@ -25,9 +25,14 @@ import {
 import { rankTitle } from '../../meta/rank';
 import { SPECIES } from '../../core/world';
 import { drawKeeper, keeperCanvas } from '../art/keeper';
+import { critterCanvas, drawCreature } from '../art/critters';
+import { currentBuddy } from '../../meta/buddy';
+import { ensureFestival, festivalActive } from '../../meta/festivals';
 import { shareCanvas } from '../postcard';
 import type { App } from '../app';
 import { t } from '../../i18n';
+
+const festAcc = (p: App['p']) => (festivalActive(p) ? ensureFestival(p).acc : undefined);
 
 /** The card itself (used on the Passport screen and in the setup sheet). */
 export function passportCard(app: App, compact = false) {
@@ -38,7 +43,14 @@ export function passportCard(app: App, compact = false) {
   return h(
     'div',
     { class: `pp-card${p.pass ? ' gold' : ''}${compact ? ' compact' : ''}`, style: `--b1:${banner.colors[0]};--b2:${banner.colors[1]}` },
-    h('div', { class: 'pp-av' }, keeperCanvas(currentLook(p), compact ? 96 : 120, 0.3)),
+    h(
+      'div',
+      { class: 'pp-av' },
+      keeperCanvas(currentLook(p), compact ? 96 : 120, 0.3),
+      p.buddy.species
+        ? h('span', { class: 'pp-buddy' }, critterCanvas(p.buddy.species, compact ? 40 : 48, 0.4, currentBuddy(p, festAcc(p))?.acc ?? ''))
+        : null,
+    ),
     h(
       'div',
       { class: 'pp-id' },
@@ -252,6 +264,7 @@ function renderPassportImage(app: App): HTMLCanvasElement {
   g.font = font(700, 40);
   g.fillText(t('PLANET PASSPORT'), W / 2, 130);
   drawKeeper(g, currentLook(p), W / 2, 640, 480, 0.3, { cheer: 1 });
+  if (p.buddy.species) drawCreature(g, p.buddy.species, W / 2 - 250, 640, 0, 150, 0.7, currentBuddy(p, festAcc(p))?.acc ?? '');
   g.fillStyle = p.pass ? '#ffd24a' : '#ffffff';
   g.font = font(700, 88);
   g.fillText(passportName(p), W / 2, 770);

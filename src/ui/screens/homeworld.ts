@@ -69,6 +69,7 @@ import { drawCreature, critterCanvas } from '../art/critters';
 import { drawKeeper } from '../art/keeper';
 import { drawDebris, drawDrone, drawStructure } from '../art/structures';
 import { shareCanvas } from '../postcard';
+import { ensureFestival, festivalActive } from '../../meta/festivals';
 import { CONSTELLATION_BY_ID, constellationsReady } from '../../meta/constellations';
 import { drawConstellation } from './sky';
 import { SEASON_EMOJI, SEASON_NAMES, nightness, seasonOf } from '../../meta/seasons';
@@ -135,6 +136,11 @@ const SKY_SLOTS: [number, number][] = [
 
 let selected = -1;
 let moving = -1;
+
+/** Residents without an accessory join in this month's festival. */
+function festCostume(p: App['p']) {
+  return festivalActive(p) ? ensureFestival(p).acc : '';
+}
 
 export function showHomeworld(app: App) {
   const p = app.p;
@@ -372,7 +378,7 @@ export function showHomeworld(app: App) {
       if (home.expedition?.species === r.species) return;
       const base = rot + ((k + 0.5) * TAU) / Math.max(1, n) + Math.sin(time * 0.3 + k * 2) * (TAU / n) * 0.35;
       const q = surf(base);
-      drawCreature(g, r.species, q.x, q.y, base + Math.PI / 2, s * 0.42, time + k, r.acc);
+      drawCreature(g, r.species, q.x, q.y, base + Math.PI / 2, s * 0.42, time + k, r.acc ?? festCostume(app.p));
     });
     // the Keeper strolls in the gap before the first plot
     const ka = rot - (TAU / n) * 0.5 + Math.sin(time * 0.4) * (TAU / n) * 0.15;
