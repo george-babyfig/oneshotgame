@@ -42,21 +42,21 @@ These are the owner's "what is the point?" questions, answered by the audits:
 
 The plan is **[docs/product/ROADMAP-v2.md](../product/ROADMAP-v2.md)**. Read it in full; section 8 has each milestone's scope, the files it touches, acceptance criteria, test plan and string count. **The launch candidate is M0–M12.** The game is pre-launch, so changing the economy, the Homeworld and the store now costs nothing. M13–M16 are the first updates after launch.
 
-| Milestone | Goal | Size | Headline gate |
-| --- | --- | --- | --- |
-| **M0** | Kid-safe trust update: the compliance fixes in today's build. **Start here.** | S | Every policy test green |
-| M1 | Measure and guard: one wallet, a private on-device ledger, sims in CI (no visible change) | M | 0 direct wallet writes; sims in CI |
-| M2 | The shared round engine and the one-idea-per-planet unlock ladder (no visible change) | L | Planets 1–60 unchanged byte for byte |
-| M3 | The first ten minutes | M | 0 prices, pop-up walls or system prompts in session 1 |
-| M4 | One clear Home, Missions and Wishes | M | ≤ 12 Home targets; nothing clipped at 320×568 |
-| M5 | Grown-ups area and a fair checkout (**needs owner decision 1**) | L | Store and paywall tests green |
-| M6 | Read every throw: HUD, Supernova 2.0, object stats, feel | L | 0 overlapping text; 2–3 Supernovas per planet |
-| M7 | Fusions and the first Clash (shot synergies) | M | Aware vs blind 3★ gap ≥ 10 points |
-| M8 | Troubles (hazards), creature traits, the Buddy, the help ladder; rules freeze | L | Every difficulty band green |
-| M9 | Remix, as designed in REMIX.md | M | REMIX.md test list green |
-| M10 | Labs: your shots learn tricks on the Homeworld | L | Max-loadout band; Labs last ≥ 28 days |
-| M11 | Homeworld Level and a fair economy | M | Idle ≤ 1.5× active; no stranded currency |
-| M12 | Star Roads, the Styles catalogue and launch prep | L | 7 products pass the StoreKit matrix |
+| Milestone | Goal                                                                                      | Size | Headline gate                                         |
+| --------- | ----------------------------------------------------------------------------------------- | ---- | ----------------------------------------------------- |
+| **M0**    | Kid-safe trust update: the compliance fixes in today's build. **Start here.**             | S    | Every policy test green                               |
+| M1        | Measure and guard: one wallet, a private on-device ledger, sims in CI (no visible change) | M    | 0 direct wallet writes; sims in CI                    |
+| M2        | The shared round engine and the one-idea-per-planet unlock ladder (no visible change)     | L    | Planets 1–60 unchanged byte for byte                  |
+| M3        | The first ten minutes                                                                     | M    | 0 prices, pop-up walls or system prompts in session 1 |
+| M4        | One clear Home, Missions and Wishes                                                       | M    | ≤ 12 Home targets; nothing clipped at 320×568         |
+| M5        | Grown-ups area and a fair checkout (**needs owner decision 1**)                           | L    | Store and paywall tests green                         |
+| M6        | Read every throw: HUD, Supernova 2.0, object stats, feel                                  | L    | 0 overlapping text; 2–3 Supernovas per planet         |
+| M7        | Fusions and the first Clash (shot synergies)                                              | M    | Aware vs blind 3★ gap ≥ 10 points                     |
+| M8        | Troubles (hazards), creature traits, the Buddy, the help ladder; rules freeze             | L    | Every difficulty band green                           |
+| M9        | Remix, as designed in REMIX.md                                                            | M    | REMIX.md test list green                              |
+| M10       | Labs: your shots learn tricks on the Homeworld                                            | L    | Max-loadout band; Labs last ≥ 28 days                 |
+| M11       | Homeworld Level and a fair economy                                                        | M    | Idle ≤ 1.5× active; no stranded currency              |
+| M12       | Star Roads, the Styles catalogue and launch prep                                          | L    | 7 products pass the StoreKit matrix                   |
 
 Sizes are first estimates in team-weeks (S ≈ 1, M ≈ 2, L ≈ 3), with Codex doing most of the coding. Re-plan after M1 once the pace is known.
 
