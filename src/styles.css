@@ -4267,10 +4267,14 @@ button.lb {
 /* Grown-ups */
 .grownups .scroll {
   display: grid;
+  /* one column that never outgrows the screen, even with long German labels */
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   padding-bottom: 32px;
 }
 .grownups-section {
+  min-width: 0;
+  overflow-wrap: anywhere;
   padding: 16px;
   border-radius: 18px;
   background: #222b50;
