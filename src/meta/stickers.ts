@@ -9,8 +9,9 @@ import type { Profile } from './profile';
 import { FESTIVALS } from './festivals';
 import { STUDIED_AT } from './lore';
 import { applyReward, type Reward } from './progression';
+import { REACTIONS, type ReactionId } from '../core/round';
 
-export type StickerKind = 'critter' | 'fest' | 'voyage' | 'feat';
+export type StickerKind = 'critter' | 'fest' | 'voyage' | 'feat' | 'fusion';
 
 export interface Sticker {
   id: string;
@@ -58,6 +59,42 @@ const FEATS: Feat[] = [
   { id: 'rank', name: 'Seasoned Explorer', hint: 'Open chapter {n} chest', n: 10, earned: (p) => p.rank >= 10 || p.chapters.includes(10) },
 ];
 
+const REACTION_STICKERS: Sticker[] = (Object.keys(REACTIONS) as ReactionId[])
+  .filter((id) => REACTIONS[id].kind === 'fusion')
+  .map((id) => ({
+    id: `r_${id}`,
+    kind: 'fusion',
+    name: REACTIONS[id].name,
+    art: id,
+    hint: ['Discover {name}', { name: REACTIONS[id].name }],
+    earned: (p) => p.fusionsFound.includes(id),
+  }));
+
+export const COMBO_STAMP_NAMES = [
+  'Combo 2',
+  'Combo 3',
+  'Combo 4',
+  'Steam in a Combo',
+  'Rain Garden in a Combo',
+  'Wildflowers in a Combo',
+  'Glacier in a Combo',
+  'Four Fusions in Combos',
+  'Super Steam',
+  'Super Rain Garden',
+  'Super Wildflowers',
+  'Super Glacier',
+  'Four Super Fusions',
+];
+
+const COMBO_STICKERS: Sticker[] = COMBO_STAMP_NAMES.map((name, i) => ({
+  id: `combo_${i}`,
+  kind: 'feat',
+  name,
+  art: `combo_${i}`,
+  hint: ['Earn the {name} stamp', { name }],
+  earned: (p) => !!(p.combo.stamps & (1 << i)),
+}));
+
 export const STICKERS: Sticker[] = [
   ...SPECIES.map((s): Sticker => ({
     id: `c_${s.id}`,
@@ -91,6 +128,8 @@ export const STICKERS: Sticker[] = [
     hint: f.n ? [f.hint, { n: f.n }] : [f.hint],
     earned: f.earned,
   })),
+  ...REACTION_STICKERS,
+  ...COMBO_STICKERS,
 ];
 
 export const STICKER_BY_ID: Record<string, Sticker> = Object.fromEntries(STICKERS.map((s) => [s.id, s]));
@@ -104,7 +143,7 @@ export interface AlbumPage {
 /** Collection pages; filling one pays its reward once. */
 export { ALBUM_PAGES } from './tuning';
 
-export const pageStickers = (kind: StickerKind) => STICKERS.filter((s) => s.kind === kind);
+export const pageStickers = (kind: StickerKind) => STICKERS.filter((s) => s.kind === kind || (kind === 'feat' && s.kind === 'fusion'));
 
 export function ownedStickers(p: Profile) {
   return STICKERS.filter((s) => s.earned(p));

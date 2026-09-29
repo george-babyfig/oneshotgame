@@ -6,6 +6,8 @@ import { ACHIEVEMENTS } from './achievements';
 import { RANK_TITLES } from './rank';
 import { recordTitles } from './records';
 import { t } from '../i18n';
+import { FUSION_IDS } from './reactions';
+import { ALL_COMBO_STAMPS } from './reactions';
 
 // Names are proper nouns: they stay the same in every language, like a gamer tag.
 export const NAME_A = [
@@ -90,6 +92,8 @@ export function titlesOwned(p: Profile): TitleDef[] {
   const out: TitleDef[] = RANK_TITLES.slice(0, Math.min(p.rank, RANK_TITLES.length)).map((x) => ({ id: `rank:${x}`, text: x }));
   for (const a of ACHIEVEMENTS) if (a.done(p)) out.push({ id: `ach:${a.id}`, text: a.title });
   for (const x of recordTitles(p)) out.push({ id: `rec:${x}`, text: x });
+  if (FUSION_IDS.every((id) => p.fusionsFound.includes(id))) out.push({ id: 'reactions', text: 'Little Chemist' });
+  if ((p.combo.stamps & ALL_COMBO_STAMPS) === ALL_COMBO_STAMPS) out.push({ id: 'combo', text: 'Chain Maker' });
   if (p.pass && !p.settings.hidePaidLooks) out.push({ id: 'pass', text: 'Star Captain', gold: true });
   return out;
 }

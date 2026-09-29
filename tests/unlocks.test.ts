@@ -40,6 +40,21 @@ describe('unlock ladder', () => {
     expect(crowded).toEqual(KNOWN_UNTIL_M3);
   });
 
+  it('teaches the M7 reactions and Combo on their ladder planets', () => {
+    const debuts = { steam: 8, rainGarden: 13, wildflowers: 22, glacier: 25, combo: 26, scorch: 32 } as const;
+    for (const [id, planet] of Object.entries(debuts)) {
+      const row = UNLOCKS.find((x) => x.id === id)!;
+      expect(row.planet).toBe(planet);
+      expect(row.intro?.icon).toBeTruthy();
+      expect(row.intro!.body.split(/\s+/).length).toBeLessThanOrEqual(row.id === 'scorch' ? 20 : 12);
+      const p = defaultProfile();
+      p.level = planet - 1;
+      expect(unlocked(p, id as typeof row.id)).toBe(false);
+      p.level = planet;
+      expect(unlocked(p, id as typeof row.id)).toBe(true);
+    }
+  });
+
   it('has translations for every intro and letter in all five locales', () => {
     const keys = [...UNLOCKS.flatMap((entry) => (entry.intro ? [entry.intro.title, entry.intro.body] : [])), ...letterStrings()];
     for (const lang of ['de', 'pt', 'es', 'ja', 'fr']) {

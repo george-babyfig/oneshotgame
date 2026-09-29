@@ -169,6 +169,21 @@ export const sfx = {
   },
   whoosh: () => noise(0.3, 0.15, 1800, 0.7, 0, 'bandpass'),
   combo: (n: number) => [0, 4, 7].forEach((s, i) => tone(semi(523, s + Math.min(n, 8) * 2), 0.18, 'square', 0.05, i * 0.05)),
+  reaction: (kind: 'fusion' | 'clash') => {
+    if (kind === 'fusion') {
+      noise(0.28, 0.1, 2400, 0.5);
+      [0, 4, 7].forEach((step, i) => tone(semi(659, step), 0.28, 'sine', 0.07, i * 0.055));
+    } else {
+      tone(440, 0.22, 'sine', 0.07, 0, 370);
+      tone(330, 0.26, 'triangle', 0.035, 0.09);
+    }
+  },
+  comboStep: (step: number) => {
+    const notes = [0, 2, 4, 7, 12];
+    const note = notes[Math.min(Math.max(step, 2), 4)];
+    tone(semi(659, note), 0.36, 'sine', 0.085);
+    if (step >= 4) tone(semi(659, 16), 0.48, 'sine', 0.055, 0.09);
+  },
 };
 
 // Generative ambient music. Each theme is a chord loop plus a gentle arpeggio;

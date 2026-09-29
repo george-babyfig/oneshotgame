@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { NO_MODIFIERS } from '../src/core/modifiers';
-import { NOVA_CHARGE, ROUND_RULES_V0, previewStep, restoreRound, roundState, serializeRound, stepRound } from '../src/core/round';
+import {
+  NOVA_CHARGE,
+  ROUND_RULES_V0,
+  novaForThrow,
+  previewStep,
+  restoreRound,
+  roundState,
+  serializeRound,
+  stepRound,
+} from '../src/core/round';
 import { BIOMES, clonePlanet, impact, landingLabBonus, newPlanet, settle } from '../src/core/world';
 
 describe('round engine', () => {
@@ -15,7 +24,7 @@ describe('round engine', () => {
     expect(step.reactions).toEqual([]);
     expect(step.troubleEvents).toEqual([]);
     expect(step.changed).toContain(3);
-    expect(step.spawned).toContainEqual({ id: 'goat', at: 3 });
+    expect(step.spawned).toContainEqual({ id: 'goat', at: 2 });
     expect(step.firstArrivals).toContain('goat');
     expect(step.newRegionBests).toContain(3);
   });
@@ -76,5 +85,26 @@ describe('round engine', () => {
     expect(stepRound(restored!, { kind: 'seed', sector: 4 })).toEqual(stepRound(state, { kind: 'seed', sector: 4 }));
     expect(restoreRound('{"version":2,"state":{}}')).toBeNull();
     expect(restoreRound('broken')).toBeNull();
+  });
+
+  it('restores a version 1 round with a fresh Combo', () => {
+    const state = roundState(newPlanet());
+    const saved = JSON.parse(serializeRound(state));
+    saved.version = 1;
+    delete saved.state.combo;
+    delete saved.state.comboCharge;
+    expect(restoreRound(JSON.stringify(saved))).toEqual(state);
+    saved.state.planet.sectors.pop();
+    expect(restoreRound(JSON.stringify(saved))).toBeNull();
+  });
+
+  it('previews the held Supernova on the final throw', () => {
+    const state = roundState(newPlanet());
+    state.nova = { ...state.nova, charge: NOVA_CHARGE, held: true };
+    state.charge = NOVA_CHARGE;
+    state.throwsLeft = 2;
+    expect(novaForThrow(state)).toBe(false);
+    state.throwsLeft = 1;
+    expect(novaForThrow(state)).toBe(true);
   });
 });

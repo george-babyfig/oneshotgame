@@ -70,6 +70,16 @@ describe('celebrate', () => {
     await show.done;
     expect(played).toEqual([true]);
   });
+
+  it('with reduce motion a card that disappears still stays up for its reading time', async () => {
+    const el = root();
+    const show = celebrate('fusion', { root: el, reduceMotion: true, holdForReading: true, duration: 1700, beats: [] });
+    vi.advanceTimersByTime(220);
+    expect(el.classList.contains('celebrate-done')).toBe(false);
+    vi.advanceTimersByTime(1480);
+    await show.done;
+    expect(el.classList.contains('celebrate-done')).toBe(true);
+  });
 });
 
 it('draws every creature in each reaction pose', () => {

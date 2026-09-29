@@ -25,8 +25,11 @@ import { haptic } from '../haptics';
 import { celebrate } from '../celebrate';
 import { effectiveReduceMotion } from '../motion';
 import { countUp, flyReward } from '../motion';
-import { takeRoundDiscoveries } from '../hud';
+import { showBestCombo, takeRoundDiscoveries } from '../hud';
 import { rarityName } from '../text';
+import { recordCombo, recordReaction } from '../../meta/reactions';
+import { REACTIONS, rulesForLevel, type ReactionId } from '../../core/round';
+import { reactionCanvas, reactionPair } from '../art/reactions';
 
 export function levelResults(app: App, r: LevelResult) {
   const p = app.p;
@@ -43,6 +46,9 @@ export function levelResults(app: App, r: LevelResult) {
     difficulty: r.level.difficulty,
     bonusDust: r.leftover * FINISH_DUST_PER_THROW,
   });
+  const newReactions: ReactionId[] = [];
+  if (!r.reactionRecorded) for (const id of r.reactionEvents ?? r.reactions ?? []) if (recordReaction(p, id).first) newReactions.push(id);
+  if (!r.comboRecorded) for (const event of r.comboEvents ?? []) recordCombo(p, event.links, event.reaction, event.superFusion);
   recordWishRound(p, 'campaign', r.planet, today(), r.level.start);
   if (out.newStars && eventActive(p) && ensureEvent(p).stars) addTokens(p, out.newStars * 4);
   p.tutorial = true;
@@ -112,6 +118,27 @@ export function levelResults(app: App, r: LevelResult) {
         h('div', null, h('small', null, t('New creature · {r}', { r: rarityName(creature.rarity) })), h('b', null, t(creature.name))),
       )
     : null;
+  const fusionCards = newReactions.map((id) =>
+    h(
+      'div',
+      { class: `result-fusion ${REACTIONS[id].kind}` },
+      reactionCanvas(id, 44),
+      h(
+        'div',
+        null,
+        h('small', null, REACTIONS[id].kind === 'fusion' ? t('NEW FUSION') : t('NEW CLASH')),
+        h('b', null, t(REACTIONS[id].name)),
+        reactionPair(id, 25),
+        h(
+          'span',
+          null,
+          REACTIONS[id].kind === 'fusion'
+            ? t('+50 stardust · new sticker!')
+            : t('It dries the land and hurts the planet. Watch for the red chip.'),
+        ),
+      ),
+    ),
+  );
   let pose: CreaturePose = 'idle';
   let stopDance = () => {};
   const cancelCounts: (() => void)[] = [];
@@ -136,6 +163,13 @@ export function levelResults(app: App, r: LevelResult) {
           )
         : null,
       h('div', { class: 'rewards' }, ...rewards),
+      showBestCombo(r.comboBest ?? 0, rulesForLevel(r.level.n))
+        ? h('p', { class: 'end-combo' }, t('Best Combo: {n}', { n: r.comboBest ?? 0 }))
+        : null,
+      showBestCombo(r.comboBest ?? 0, rulesForLevel(r.level.n)) && r.comboIcons?.length
+        ? h('div', { class: 'result-combo-chain', 'aria-hidden': 'true' }, ...r.comboIcons.slice(0, 4).map((id) => reactionCanvas(id, 28)))
+        : null,
+      ...fusionCards,
       creatureCard,
       firstEverWin
         ? null
@@ -181,6 +215,25 @@ export function levelResults(app: App, r: LevelResult) {
   if (creatureCanvas && creature) {
     stopDance = animateCreatureGallery([{ canvas: creatureCanvas, id: creature.id, pose: () => pose }], effectiveReduceMotion(p));
   }
+  fusionCards.forEach((card, index) => {
+    if (REACTIONS[newReactions[index]].kind === 'clash') return;
+    celebrate('fusion', {
+      root: card,
+      reduceMotion: effectiveReduceMotion(p),
+      duration: 1200,
+      beats: [
+        {
+          at: 120,
+          play: (instant) => {
+            if (!instant) {
+              sfx.reaction(REACTIONS[newReactions[index]].kind);
+              if (REACTIONS[newReactions[index]].kind === 'fusion') haptic.combo();
+            }
+          },
+        },
+      ],
+    });
+  });
   const count = (el: HTMLElement, icon: string, amount: number, instant: boolean) => {
     if (instant) el.textContent = `${icon} ${fmt(amount)}`;
     else cancelCounts.push(countUp(el, 0, amount, `${icon} `));

@@ -16,6 +16,8 @@ function checkpoint(): RoundCheckpoint {
   state.nova.charge = state.charge = 9;
   state.bonus = 7;
   state.queueIndex = 5;
+  state.combo = { links: 2, rest: true, best: 3 };
+  state.comboCharge = 5;
   return {
     n: 3,
     state,
@@ -34,6 +36,11 @@ function checkpoint(): RoundCheckpoint {
     timeLeft: 0,
     bossHp: 2,
     shot: { kind: 'rock', x: 84, y: 190, vx: 7, vy: -4, t: 0.2, carry: 0, t0: 11.2, rot0: 0.7, trail: [{ x: 80, y: 194 }] },
+    comboIconsCurrent: ['steam', 'glacier'],
+    comboIconsBest: ['steam', 'rainGarden', 'glacier'],
+    reactionEvents: ['steam', 'rainGarden', 'glacier'],
+    reactionsSeen: ['steam', 'rainGarden', 'glacier'],
+    comboEvents: [{ links: 2, reaction: 'steam', superFusion: false }],
   };
 }
 
@@ -45,6 +52,19 @@ describe('interrupted campaign rounds', () => {
     saveInterruptedRound(p, before);
     const reopened = migrate(JSON.parse(JSON.stringify(p)));
     expect(readInterruptedRound(reopened)).toEqual(before);
+  });
+
+  it('accepts a checkpoint from before reaction history was saved', () => {
+    const p = defaultProfile(0);
+    p.level = 3;
+    saveInterruptedRound(p, checkpoint());
+    const saved = JSON.parse(p.savedRound!);
+    for (const field of ['comboIconsCurrent', 'comboIconsBest', 'reactionEvents', 'reactionsSeen', 'comboEvents'])
+      delete saved.scene[field];
+    p.savedRound = JSON.stringify(saved);
+    const restored = readInterruptedRound(p);
+    expect(restored?.state.combo).toEqual({ links: 2, rest: true, best: 3 });
+    expect(restored?.comboIconsBest).toBeUndefined();
   });
 
   it('expires after a normal finish or a quit', () => {

@@ -16,9 +16,19 @@ import { COACH_EVENTS, practiceHelp, type CoachEvent } from '../meta/coach';
 import type { Unlock } from '../meta/unlocks';
 
 import type { LevelScene } from './game';
-import { previewStep, novaReady } from '../core/round';
+import { previewStep, novaReady, REACTIONS, type ReactionId, type RoundRules } from '../core/round';
+import { reactionCanvas, reactionPair } from './art/reactions';
+import { celebrate } from './celebrate';
 
 const roundDiscoveries = new WeakMap<LevelScene, string[]>();
+
+export const showBestCombo = (best: number, rules: RoundRules) => rules.combo !== false && best > 0;
+
+export function starMarkerPositions(targets: readonly number[], max: number, width: number, gap: number): number[] {
+  const positions = targets.map((target) => (target / max) * width);
+  for (let i = positions.length - 2; i >= 0; i--) positions[i] = Math.max(10, Math.min(positions[i], positions[i + 1] - gap));
+  return positions;
+}
 
 export function takeRoundDiscoveries(scene: LevelScene | null): string[] {
   if (!scene) return [];
@@ -156,6 +166,13 @@ export function heat(scene: LevelScene, delta: number) {
 
 export function renderScore(scene: LevelScene) {
   const max = scene.barMax();
+  const barWidth = scene.hudStars[0]?.parentElement?.clientWidth ?? 0;
+  if (barWidth) {
+    const gap =
+      23 * (scene.previewTextScale || parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--text-scale')) || 1);
+    const positions = starMarkerPositions(scene.L.stars, max, barWidth, gap);
+    scene.hudStars.forEach((star, i) => (star.style.left = `${positions[i]}px`));
+  }
   scene.hudFill.style.width = `${Math.min(100, (scene.shownScore / max) * 100)}%`;
   scene.hudScore.textContent = t('{n} life', { n: fmt(scene.shownScore) });
   const met = goalsMet(scene.planet, scene.L.goals);
@@ -232,6 +249,7 @@ export function showGoalRecipe(scene: LevelScene, goal: Goal) {
           scene.roundState(),
           { kind: scene.cur, sector, nova: scene.novaOn && novaReady(scene.roundState()) && !scene.nova.held },
           scene.roundModifiers(),
+          scene.rules,
         );
         return goalProgress(next.state.planet, goal) > before ? [sector] : [];
       });
@@ -433,6 +451,7 @@ export function flyCreaturePoints(scene: LevelScene, at: number, points: number)
 }
 
 export function showDiscover(scene: LevelScene) {
+  if (scene.fusionDiscoverQueue.length) return showFusionDiscovery(scene);
   if (scene.discoverBusy || scene.ended || scene.aimFrom) return;
   const id = scene.discoverQueue.shift();
   if (!id) return;
@@ -458,6 +477,65 @@ export function showDiscover(scene: LevelScene) {
       scene.showDiscover();
     }, 300);
   }, 1100);
+}
+
+export function showFusionDiscovery(scene: LevelScene, id?: ReactionId) {
+  if (id) scene.fusionDiscoverQueue.push(id);
+  if (scene.discoverBusy || scene.ended || scene.aimFrom) return;
+  const next = scene.fusionDiscoverQueue.shift();
+  if (!next) return;
+  scene.discoverBusy = true;
+  const def = REACTIONS[next];
+  const hud = scene.discoverEl.closest('.hud');
+  const banners = scene.discoverEl.parentElement;
+  if (hud && banners) {
+    const bottom = Math.max(
+      scene.goalsEl.getBoundingClientRect().bottom,
+      scene.el.querySelector('.twist')?.getBoundingClientRect().bottom ?? 0,
+    );
+    banners.style.top = `${Math.max(112, bottom - hud.getBoundingClientRect().top + 8)}px`;
+  }
+  scene.discoverEl.className = `discover show ${def.kind === 'fusion' ? 'fusion-discover' : 'clash-discover'}`;
+  scene.discoverEl.replaceChildren(
+    h('div', { class: 'd-emoji' }, reactionCanvas(next, 48)),
+    h(
+      'div',
+      { class: 'd-body' },
+      h('small', null, def.kind === 'fusion' ? t('NEW FUSION') : t('NEW CLASH')),
+      h('b', null, t(def.name)),
+      reactionPair(next, 28),
+      h(
+        'span',
+        null,
+        def.kind === 'fusion' ? t('+50 stardust · new sticker!') : t('It dries the land and hurts the planet. Watch for the red chip.'),
+      ),
+    ),
+  );
+  const show = celebrate('fusion', {
+    root: scene.discoverEl,
+    reduceMotion: !!scene.o.reduceMotion || def.kind === 'clash',
+    duration: 1700,
+    holdForReading: true,
+    beats: [
+      {
+        at: 80,
+        play: (instant) => {
+          if (!instant) {
+            sfx.reaction(def.kind);
+            if (def.kind === 'fusion') haptic.combo();
+          }
+        },
+      },
+    ],
+  });
+  void show.done.then(() => {
+    scene.discoverEl.classList.remove('show');
+    window.setTimeout(() => {
+      scene.discoverBusy = false;
+      if (scene.fusionDiscoverQueue.length) showFusionDiscovery(scene);
+      else showDiscover(scene);
+    }, 250);
+  });
 }
 
 export function showCoach(scene: LevelScene, k: number) {
@@ -600,6 +678,7 @@ export function endModal(scene: LevelScene, stars: number) {
       ),
       h('div', { class: 'end-stars' }, ...[0, 1, 2].map((i) => h('span', { class: i < stars ? 'on' : '' }, '★'))),
       h('div', { class: 'end-score' }, t('{n} life', { n: fmt(scene.score) })),
+      showBestCombo(scene.combo.best, scene.rules) ? h('p', { class: 'end-combo' }, t('Best Combo: {n}', { n: scene.combo.best })) : null,
       scene.leftover ? h('p', { class: 'end-need' }, t('Unused throws became stardust')) : null,
       need > 0 && !scene.leftover && !canCont ? h('p', { class: 'end-need' }, t('Just {n} life short of a star.', { n: fmt(need) })) : null,
       missingEl,
@@ -664,6 +743,13 @@ export function finish(scene: LevelScene, stars: number) {
       throwsTotal: scene.throwsTotal,
       leftover: scene.leftover,
       boss: scene.L.twist === 'boss' && scene.bossHp <= 0,
+      comboBest: scene.combo.best,
+      comboIcons: [...scene.comboIconsBest],
+      reactions: [...scene.reactionsSeen],
+      reactionEvents: [...scene.reactionEvents],
+      comboEvents: [...scene.comboEvents],
+      reactionRecorded: !!scene.o.onReaction,
+      comboRecorded: !!scene.o.onCombo,
     });
   if (stars === 0 || scene.o.reduceMotion || scene.o.endless) return send();
   // The finished planet and its creatures travel home together.
@@ -745,7 +831,7 @@ export function afterShot(scene: LevelScene) {
 
 export function checkEnd(scene: LevelScene) {
   if (scene.ended || (scene.modalOpen && !scene.paused) || !scene.over) return;
-  if (scene.shot || scene.paused) {
+  if (scene.shot || scene.paused || scene.discoverBusy || scene.fusionDiscoverQueue.length) {
     scene.endTimer = window.setTimeout(() => scene.checkEnd(), 300);
     return;
   }

@@ -9,15 +9,17 @@ import { unlocked } from './unlocks';
 import { addFriendship } from './homeworld';
 import { addRoadPoints } from './roadpoints';
 import { checkMail } from './inbox';
+import { REACTIONS, type ReactionId } from '../core/round';
 
 export type WishMode = 'campaign' | 'voyage' | 'zen' | 'daily' | 'rush' | 'challenge' | 'remix';
-type Feat = 'land' | 'neighbor' | 'creature';
+type Feat = 'land' | 'neighbor' | 'creature' | 'fusion' | 'combo' | 'superFusion';
 interface Template {
   id: string;
   text: string;
   feat: Feat;
   land?: BiomeId;
   near?: BiomeId;
+  reaction?: ReactionId;
   minLevel: number;
   goal: number;
 }
@@ -117,6 +119,27 @@ export const WISH_TEMPLATES: Template[] = [
   },
   { id: 'creature1', text: '{creature} wishes you would welcome a creature on a planet', feat: 'creature', minLevel: 2, goal: 1 },
   { id: 'creature2', text: '{creature} wishes you would welcome five creatures as you play', feat: 'creature', minLevel: 2, goal: 5 },
+  { id: 'steam', text: '{creature} wishes you would make Steam', feat: 'fusion', reaction: 'steam', minLevel: 8, goal: 1 },
+  {
+    id: 'rainGarden',
+    text: '{creature} wishes you would make a Rain Garden',
+    feat: 'fusion',
+    reaction: 'rainGarden',
+    minLevel: 13,
+    goal: 1,
+  },
+  {
+    id: 'wildflowers',
+    text: '{creature} wishes you would grow Wildflowers',
+    feat: 'fusion',
+    reaction: 'wildflowers',
+    minLevel: 22,
+    goal: 1,
+  },
+  { id: 'glacier', text: '{creature} wishes you would make a Glacier', feat: 'fusion', reaction: 'glacier', minLevel: 25, goal: 1 },
+  { id: 'combo2', text: '{creature} wishes for a Combo of 2', feat: 'combo', minLevel: 26, goal: 2 },
+  { id: 'combo3', text: '{creature} wishes for a Combo of 3', feat: 'combo', minLevel: 26, goal: 3 },
+  { id: 'superSteam', text: '{creature} wishes for a Super Steam', feat: 'superFusion', reaction: 'steam', minLevel: 26, goal: 1 },
 ];
 const BY_ID = Object.fromEntries(WISH_TEMPLATES.map((x) => [x.id, x])) as Record<string, Template>;
 const wishState = (p: Profile) => p.quests as unknown as WishState;
@@ -141,7 +164,9 @@ function payLegacy(p: Profile) {
 
 function makeCard(p: Profile, day: string, slot: number, avoid: Set<string>, serial: number): WishCard {
   const rnd = rngFrom(`W-${day}-${slot}-${serial}-${p.level}-${[...p.seen].sort().join(',')}`);
-  const pool = WISH_TEMPLATES.filter((x) => x.minLevel <= p.level && !avoid.has(x.id));
+  const pool = WISH_TEMPLATES.filter(
+    (x) => x.minLevel <= p.level && (!x.reaction || REACTIONS[x.reaction].debut <= p.level) && !avoid.has(x.id),
+  );
   const template = pool[Math.floor(rnd() * pool.length)] ?? WISH_TEMPLATES[0];
   const seen = p.seen.filter((id) => !!SPECIES_BY_ID[id]).sort();
   const species = seen[Math.floor(rnd() * seen.length)];
@@ -205,6 +230,7 @@ export function recordWishRound(p: Profile, mode: WishMode, planet: Planet, day:
     if (card.claimed) continue;
     const def = BY_ID[card.template];
     if (!def) continue;
+    if (def.feat === 'fusion' || def.feat === 'combo' || def.feat === 'superFusion') continue;
     const count = (world: Planet) =>
       def.feat === 'creature'
         ? new Set(world.sectors.map((s) => s.species).filter(Boolean)).size
@@ -223,6 +249,42 @@ export function recordWishRound(p: Profile, mode: WishMode, planet: Planet, day:
         ? Math.min(card.goal, card.progress + value)
         : Math.max(card.progress, Math.min(card.goal, value));
     if (!wasDone && card.progress >= card.goal) done.push(card.id);
+  }
+  return done;
+}
+
+const wishMode = (mode: WishMode) => ['campaign', 'voyage', 'zen', 'daily'].includes(mode);
+
+export function recordWishReaction(p: Profile, id: ReactionId, mode: WishMode = 'campaign'): string[] {
+  if (!wishMode(mode) || !unlocked(p, 'quests')) return [];
+  const done: string[] = [];
+  for (const card of wishState(p).list) {
+    if (!isWish(card) || card.claimed || card.progress >= card.goal) continue;
+    const def = BY_ID[card.template];
+    if (def?.feat !== 'fusion' || def.reaction !== id) continue;
+    card.progress = card.goal;
+    done.push(card.id);
+  }
+  return done;
+}
+
+export function recordWishCombo(
+  p: Profile,
+  links: number,
+  reaction?: ReactionId,
+  superFusion = false,
+  mode: WishMode = 'campaign',
+): string[] {
+  if (!wishMode(mode) || !unlocked(p, 'quests')) return [];
+  const done: string[] = [];
+  for (const card of wishState(p).list) {
+    if (!isWish(card) || card.claimed || card.progress >= card.goal) continue;
+    const def = BY_ID[card.template];
+    if (!def) continue;
+    if ((def.feat === 'combo' && links >= def.goal) || (def.feat === 'superFusion' && superFusion && def.reaction === reaction)) {
+      card.progress = card.goal;
+      done.push(card.id);
+    }
   }
   return done;
 }

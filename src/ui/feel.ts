@@ -4,6 +4,9 @@ export type FeelSound = 'thud' | 'chime' | 'pop' | 'rumble' | 'patter' | 'sparkl
 export type FeelHaptic = 'light' | 'medium';
 export type TrailStyle = 'stone' | 'crystal' | 'leaf' | 'ember' | 'drop' | 'star';
 
+export const REACTION_HAPTIC: Record<'fusion' | 'clash', FeelHaptic> = { fusion: 'medium', clash: 'light' };
+export const COMBO_HAPTIC: FeelHaptic = 'light';
+
 export const OBJECT_FEEL: Record<Kind, { launch: FeelSound; impact: FeelSound; haptic: FeelHaptic; trail: TrailStyle; burst: string }> = {
   rock: { launch: 'thud', impact: 'thud', haptic: 'medium', trail: 'stone', burst: '#d6c8bb' },
   ice: { launch: 'chime', impact: 'chime', haptic: 'light', trail: 'crystal', burst: '#b9efff' },

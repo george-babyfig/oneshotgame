@@ -201,6 +201,22 @@ const RESULTS = `${OPEN_MODAL}:has(.end-stars)`;
 test.describe('M6.5 Showtime: celebrations [en]', () => {
   test.use({ locale: 'en-US' });
 
+  test('round canvas keeps its layout width through the entry zoom', async ({ page }, info) => {
+    only(info, ['chromium-390x844'], 'canvas layout at 390×844');
+    await freshInstall(page);
+    await midGame(page, { level: 30 });
+    await page.evaluate(() => (window as any).__app.startLevel(26));
+    await waitScreen(page, 'level');
+    await expect
+      .poll(() =>
+        page.evaluate(() => ({
+          width: (window as any).__scene?.w,
+          client: document.querySelector<HTMLCanvasElement>('.game-canvas')?.clientWidth,
+        })),
+      )
+      .toEqual({ width: 390, client: 390 });
+  });
+
   test('first-ever win: 3 stars stamp, the new creature is revealed from its silhouette (≤ 4 s)', async ({ page }, info) => {
     only(info, W390, 'celebrations at 390×844 (chromium and webkit)');
     const guard = watchErrors(page);

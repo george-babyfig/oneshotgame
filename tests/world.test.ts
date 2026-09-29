@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { biomeOf, impact, lifeScore, neededHabitat, newPlanet, SPECIES } from '../src/core/world';
-import { makeLevel, greedyScore } from '../src/core/levels';
+import { makeLevel, solve2 } from '../src/core/levels';
+import { rulesForLevel } from '../src/core/round';
 
 describe('biomes', () => {
   it('maps sector values to biomes', () => {
@@ -48,7 +49,7 @@ describe('levels', () => {
       expect(L.queue.length).toBeGreaterThanOrEqual(L.throws);
       expect(L.stars[0]).toBeLessThan(L.stars[1]);
       expect(L.stars[1]).toBeLessThan(L.stars[2]);
-      expect(greedyScore(L.start, L.queue, L.throws)).toBeGreaterThanOrEqual(L.stars[2]);
+      expect(lifeScore(solve2(L, rulesForLevel(L.n)))).toBeGreaterThanOrEqual(L.stars[2]);
     }
   });
 });

@@ -25,15 +25,16 @@ import { SPECIES_BY_ID } from '../../core/world';
 import { goalChips } from '../flows/prelevel';
 import { NO_BOOSTERS, type App } from '../app';
 import { getLang, t, tp } from '../../i18n';
+import { rulesForLevel } from '../../core/round';
 import { untilText } from '../../meta/dates';
 
 // Levels are pure functions of week + base + stop, so cache them for the session.
 const cache = new Map<string, LevelDef>();
-function stopLevel(week: string, base: number, i: number) {
-  const key = `${week}|${base}|${i}`;
+function stopLevel(week: string, base: number, i: number, taught: number) {
+  const key = `${week}|${base}|${i}|${taught}`;
   let L = cache.get(key);
   if (!L) {
-    L = voyageLevel(week, base, i);
+    L = voyageLevel(week, base, i, taught);
     cache.set(key, L);
   }
   return L;
@@ -78,7 +79,7 @@ export function showVoyage(app: App) {
         ? t('until {day}', until.vars)
         : t('until {date}', until.vars);
   const stops = Array.from({ length: VOYAGE_LEN }, (_, i) => {
-    const L = stopLevel(v.week, v.base, i);
+    const L = stopLevel(v.week, v.base, i, p.level);
     const open = voyageUnlocked(p, i);
     const s = v.stars[i] ?? 0;
     const last = i === VOYAGE_LEN - 1;
@@ -163,7 +164,7 @@ function drawRoute(app: App) {
 function stopSheet(app: App, i: number) {
   const p = app.p;
   const v = p.voyage;
-  const L = stopLevel(v.week, v.base, i);
+  const L = stopLevel(v.week, v.base, i, p.level);
   const first = i === v.cleared;
   const m = modal([
     h('div', { class: 'm-sub' }, t('{voyage} · Stop {n}', { voyage: t(voyageName(v.week)), n: i + 1 })),
@@ -199,11 +200,12 @@ function play(app: App, i: number) {
   const p = app.p;
   const v = p.voyage;
   const week = v.week;
-  const L = stopLevel(week, v.base, i);
+  const L = stopLevel(week, v.base, i, p.level);
   p.stats.plays++;
   const opts = app.sceneOpts(
     'voyage',
     {
+      rules: rulesForLevel(Math.min(L.n, p.level)),
       label: t('Voyage · Stop {n}', { n: i + 1 }),
       onEnd: (r) => ended(app, i, week, r),
     },

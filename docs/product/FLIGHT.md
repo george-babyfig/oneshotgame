@@ -278,7 +278,7 @@ One new idea per planet (ROADMAP-v2 5.1). Teaching planets are Normal (never a m
 | 29     | Landmarks (HOMEWORLD.md)            | Homeworld  | After the win, on Home                                                                      |
 | 30     | Zen Garden                          | (existing) |                                                                                             |
 | 31     | **Launch Bay and the Swoop**        | Launcher   | After the win, on Home. The planet itself is a plain Normal planet.                         |
-| 32     | Scorch                              | (existing) |                                                                                             |
+| 32     | Dry Spell                           | (existing) |                                                                                             |
 | 33     | **Drift Rocks**                     | Obstacle   | 3 rocks, slow; practice bonk on                                                             |
 | 34     | Festival                            | (existing) |                                                                                             |
 | 36     | Frost Creep                         | (existing) |                                                                                             |
@@ -361,7 +361,7 @@ Caps: reach from every source stays at 4 at most; a Combo can add at most +12 ch
 - **The Sparkler** is the combo launcher: its Fusions reach 1 further (stacking with Combo 3, inside the cap) and add +2 charge, so a Sparkler Combo reaches the Supernova fast. Its cost (plain throws charge 1 less) falls exactly on the rest throws a Combo needs, so the Sparkler rewards planning setups with little waste.
 - **Thumper** makes Fusions easier to start (a wider footprint makes more partner land) but its wide landings end Combos more often (it is more likely to make something worse).
 - **Pinpoint** makes the "neither link nor harmful" rest throw safe, because the landing card shows every change.
-- **Objects.** Rain Cloud and Sunburst chain well (wide reach finds partner land); Rock and Ice Comet set up Glacier and Steam; Magma is the Combo's risk (Scorch, the Clash, ends it). Settling a Trouble links in, so on a Trouble planet the chain can run "cool the vent → Steam → Rain Garden".
+- **Objects.** Rain Cloud and Sunburst chain well (wide reach finds partner land); Rock and Ice Comet set up Glacier and Steam; Magma is the Combo's risk (Dry Spell, the Clash, ends it). Settling a Trouble links in, so on a Trouble planet the chain can run "cool the vent → Steam → Rain Garden".
 - **Labs.** Lab level 3 (Fusion reach) and Combo 3 stack inside the reach cap. The top forms change land, so they create new partner land; the solver sees them only in the max-loadout bot.
 
 ### 3.4 What the child sees

@@ -4,6 +4,7 @@ import { VOYAGE_REWARDS } from './tuning';
 // one has a Comet Guardian, and finishing the whole trip counts toward Voyage
 // stickers. Difficulty follows your campaign progress, fixed for the week.
 import { makeLevel, type LevelDef } from '../core/levels';
+import { rulesForLevel } from '../core/round';
 import type { Profile } from './profile';
 import { applyReward, type Reward } from './progression';
 import { isoWeek, weekAtMostOneAhead } from './events';
@@ -58,8 +59,12 @@ export function portName(week: string, i: number) {
 }
 
 /** Stop i (0-based): a little harder each stop; the last has a Comet Guardian. */
-export function voyageLevel(week: string, base: number, i: number): LevelDef {
-  const L = makeLevel(base + i * 2, `VOY-${week}-${i}`, { goals: true, boss: i === VOYAGE_LEN - 1 });
+export function voyageLevel(week: string, base: number, i: number, taught = base + i * 2): LevelDef {
+  const L = makeLevel(base + i * 2, `VOY-${week}-${i}`, {
+    goals: true,
+    boss: i === VOYAGE_LEN - 1,
+    rules: rulesForLevel(Math.min(base + i * 2, taught)),
+  });
   return { ...L, name: portName(week, i) };
 }
 

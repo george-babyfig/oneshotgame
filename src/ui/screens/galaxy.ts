@@ -30,14 +30,15 @@ export function drawGalaxy(
     raf = 0;
     if (stopped || document.hidden) return;
     dpr = Math.min(2, devicePixelRatio || 1);
-    const r = c.getBoundingClientRect();
-    if (c.width !== Math.round(r.width * dpr) || c.height !== Math.round(r.height * dpr)) {
-      c.width = Math.round(r.width * dpr);
-      c.height = Math.round(r.height * dpr);
+    const width = c.clientWidth;
+    const height = c.clientHeight;
+    if (c.width !== Math.round(width * dpr) || c.height !== Math.round(height * dpr)) {
+      c.width = Math.round(width * dpr);
+      c.height = Math.round(height * dpr);
     }
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const w = r.width;
-    const H = r.height;
+    const w = width;
+    const H = height;
     const cx = w / 2;
     const cy = H / 2;
     const t = (now / 1000) * speed;

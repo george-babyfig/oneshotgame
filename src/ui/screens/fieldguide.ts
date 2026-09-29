@@ -3,6 +3,9 @@ import type { App } from '../app';
 import { KINDS, type Kind } from '../../core/world';
 import { projectileCanvas } from '../art/projectiles';
 import { t } from '../../i18n';
+import { REACTIONS, REACTION_IDS, type ReactionId } from '../../core/round';
+import { reactionCanvas } from '../art/reactions';
+import { FUSION_IDS } from '../../meta/reactions';
 
 // The i18n inventory reads these data strings until its key list moves to KindDef.
 export const FACTS = Object.fromEntries(Object.values(KINDS).map((kind) => [kind.id, kind.stats])) as Record<
@@ -28,15 +31,32 @@ function statBar(label: string, icon: string, value: number) {
   );
 }
 
-export function showFieldGuide(app: App, page: 'basics' | 'objects' | 'creatures' = 'basics') {
-  const pageLabel = (id: 'basics' | 'objects' | 'creatures') =>
-    id === 'basics' ? t('Basics') : id === 'objects' ? t('Objects') : t('Creatures');
+type GuidePage = 'basics' | 'objects' | 'reactions' | 'combos' | 'creatures';
+
+export function reactionForPair(a: Kind, b: Kind): ReactionId | null {
+  if (a === b) return null;
+  return REACTION_IDS.find((id) => REACTIONS[id].pair.includes(a) && REACTIONS[id].pair.includes(b)) ?? null;
+}
+
+export function showFieldGuide(app: App, page: GuidePage = 'basics') {
+  if (page === 'reactions' && app.p.level < 8) page = 'basics';
+  if (page === 'combos' && app.p.level < 26) page = 'basics';
+  const pageLabel = (id: GuidePage) =>
+    id === 'basics'
+      ? t('Basics')
+      : id === 'objects'
+        ? t('Objects')
+        : id === 'reactions'
+          ? t('Reactions')
+          : id === 'combos'
+            ? t('Combos')
+            : t('Creatures');
   const pages = h(
     'div',
     { class: 'guide-tabs' },
-    ...(['basics', 'objects', 'creatures'] as const).map((id) =>
-      btn(pageLabel(id), `ghost${id === page ? ' on' : ''}`, () => showFieldGuide(app, id)),
-    ),
+    ...(['basics', 'objects', 'reactions', 'combos', 'creatures'] as const)
+      .filter((id) => (id === 'reactions' ? app.p.level >= 8 : id === 'combos' ? app.p.level >= 26 : true))
+      .map((id) => btn(pageLabel(id), `ghost${id === page ? ' on' : ''}`, () => showFieldGuide(app, id))),
   );
   const basics = h(
     'div',
@@ -70,6 +90,90 @@ export function showFieldGuide(app: App, page: 'basics' | 'objects' | 'creatures
         );
       }),
   );
+  const kinds = Object.keys(KINDS) as Kind[];
+  const tried = new Set(app.p.reactionPairsTried);
+  const reactionCells = (a: Kind, b: Kind) => {
+    if (a === b) return h('span', { class: 'reaction-empty' }, '–');
+    const id = reactionForPair(a, b);
+    const found = !!id && app.p.fusionsFound.includes(id);
+    const pairKey = [a, b].sort().join('+');
+    const name = found ? t(REACTIONS[id].name) : tried.has(pairKey) ? t('Nothing happens') : '?';
+    return h(
+      'span',
+      { class: `reaction-cell ${found ? REACTIONS[id].kind : ''}`, title: name },
+      found ? reactionCanvas(id, 24) : tried.has(pairKey) ? '·' : '?',
+    );
+  };
+  const reactions = h(
+    'div',
+    { class: 'guide-reactions' },
+    h('p', null, t('Try two objects together. Their land remembers!')),
+    h(
+      'div',
+      { class: 'reaction-chart', role: 'table', 'aria-label': t('Reactions chart') },
+      h(
+        'div',
+        { role: 'row' },
+        h('span', { role: 'columnheader' }, ''),
+        ...kinds.map((kind) => h('span', { role: 'columnheader', title: t(KINDS[kind].name) }, projectileCanvas(kind, 26))),
+      ),
+      ...kinds.map((a) =>
+        h(
+          'div',
+          { role: 'row' },
+          h('span', { role: 'rowheader', title: t(KINDS[a].name) }, projectileCanvas(a, 26)),
+          ...kinds.map((b) =>
+            h(
+              'span',
+              {
+                role: 'cell',
+                'aria-label': t('{first} and {second}: {result}', {
+                  first: t(KINDS[a].name),
+                  second: t(KINDS[b].name),
+                  result:
+                    reactionForPair(a, b) && app.p.fusionsFound.includes(reactionForPair(a, b)!)
+                      ? t(REACTIONS[reactionForPair(a, b)!].name)
+                      : tried.has([a, b].sort().join('+'))
+                        ? t('Nothing happens')
+                        : '?',
+                }),
+              },
+              reactionCells(a, b),
+            ),
+          ),
+        ),
+      ),
+    ),
+    h('p', { class: 'reaction-legend' }, `· = ${t('Nothing happens')}`),
+    h(
+      'div',
+      { class: 'reaction-list' },
+      ...REACTION_IDS.filter((id) => app.p.fusionsFound.includes(id)).map((id) =>
+        h('div', null, reactionCanvas(id, 28), h('b', null, t(REACTIONS[id].name))),
+      ),
+    ),
+  );
+  const stampNames = [
+    ...[2, 3, 4].map((n) => t('Combo {n}', { n })),
+    ...FUSION_IDS.map((id) => t('{name} in a Combo', { name: t(REACTIONS[id].name) })),
+    t('Four Fusions in Combos'),
+    ...FUSION_IDS.map((id) => t('Super {name}', { name: t(REACTIONS[id].name) })),
+    t('Four Super Fusions'),
+  ];
+  const combos = h(
+    'div',
+    { class: 'guide-combos' },
+    h('p', null, t('Link Fusions together. One gentle throw can rest between links.')),
+    h('p', null, t('Best Combo: {n}', { n: app.p.combo.best })),
+    h(
+      'div',
+      { class: 'combo-stamps' },
+      ...stampNames.map((name, index) => {
+        const found = !!(app.p.combo.stamps & (1 << index));
+        return h('div', { class: `combo-stamp ${found ? 'found' : ''}`, title: found ? name : '?' }, found ? name : '?');
+      }),
+    ),
+  );
   app.mount(
     h(
       'div',
@@ -80,7 +184,15 @@ export function showFieldGuide(app: App, page: 'basics' | 'objects' | 'creatures
       h(
         'div',
         { class: 'scroll' },
-        page === 'basics' ? basics : page === 'objects' ? objects : btn(t('Open Lifebook'), 'primary wide', () => app.showLifebook()),
+        page === 'basics'
+          ? basics
+          : page === 'objects'
+            ? objects
+            : page === 'reactions'
+              ? reactions
+              : page === 'combos'
+                ? combos
+                : btn(t('Open Lifebook'), 'primary wide', () => app.showLifebook()),
       ),
     ),
     'fieldguide',

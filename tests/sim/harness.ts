@@ -1,7 +1,7 @@
 import { goalProgress, goalsMet, makeLevel, rngFrom, starsEarned, starsFor, type Difficulty, type LevelDef } from '../../src/core/levels';
 import { SECTORS, lifeScore, type Planet } from '../../src/core/world';
 import { NO_MODIFIERS } from '../../src/core/modifiers';
-import { ROUND_RULES_V0, novaReady, roundState, stepRound, type RoundState } from '../../src/core/round';
+import { ROUND_RULES_V0, novaReady, roundState, rulesForLevel, stepRound, type RoundRules, type RoundState } from '../../src/core/round';
 
 export interface BotContext {
   level: LevelDef;
@@ -19,13 +19,14 @@ export interface BotPolicy {
   chooseAim: (context: BotContext) => number;
 }
 
-function oneStep(context: BotContext): number {
+export function oneStep(context: BotContext, rules: RoundRules = ROUND_RULES_V0, gainOut?: { best: number }): number {
   const { level, turn, nova, labLevel } = context;
   const state = context.state ?? roundState(context.planet, level.nova);
   let best = -Infinity;
   let aim = 0;
   for (let sector = 0; sector < SECTORS; sector++) {
-    const result = stepRound(state, { kind: level.queue[turn], sector, nova }, NO_MODIFIERS, ROUND_RULES_V0);
+    const result = stepRound(state, { kind: level.queue[turn], sector, nova }, NO_MODIFIERS, rules);
+    if (gainOut) gainOut.best = Math.max(gainOut.best, result.after - result.before);
     const value =
       result.after +
       (labLevel >= 2 ? result.changed.length * 2 : 0) +
@@ -40,14 +41,14 @@ function oneStep(context: BotContext): number {
   return aim;
 }
 
-function blindPolicy(name: string, aimError: number, randomShare: number, labLevel: number): BotPolicy {
+function aimingPolicy(name: string, aimError: number, randomShare: number, labLevel: number, aware = false): BotPolicy {
   return {
     name,
     labLevel,
     chooseAim(context) {
       const { random } = context;
       if (random() < randomShare) return Math.floor(random() * SECTORS);
-      let aim = oneStep(context);
+      let aim = oneStep(context, aware ? rulesForLevel(context.level.n) : ROUND_RULES_V0);
       if (random() < aimError) aim += random() < 0.5 ? -1 : 1;
       return aim;
     },
@@ -56,36 +57,82 @@ function blindPolicy(name: string, aimError: number, randomShare: number, labLev
 
 // More policies can supply their own chooseAim without changing the runner.
 export const POLICIES = {
-  casual: blindPolicy('casual', 0.4, 0.3, 1),
-  decent: blindPolicy('decent', 0.25, 0.1, 1),
-  sharp: blindPolicy('sharp', 0.1, 0, 1),
-  'decent+lab3': blindPolicy('decent+lab3', 0.25, 0.1, 3),
+  casual: aimingPolicy('casual', 0.4, 0.3, 1),
+  decent: aimingPolicy('decent', 0.25, 0.1, 1),
+  'decent-blind': aimingPolicy('decent-blind', 0.25, 0.1, 1),
+  'decent-aware': aimingPolicy('decent-aware', 0.25, 0.1, 1, true),
+  sharp: aimingPolicy('sharp', 0.1, 0, 1, true),
+  'decent+lab3': aimingPolicy('decent+lab3', 0.25, 0.1, 3),
 } satisfies Record<string, BotPolicy>;
 
 export interface PlayResult {
+  score: number;
+  frostSectors: number;
   stars: number;
   halfStars: number;
   scoreMet: boolean;
   goalsMet: boolean;
   novas: number;
+  fusion: number;
+  clash: number;
+  reactionCounts: Record<string, number>;
+  bestCombo: number;
+  deadThrows: number;
+  bestDeadThrows: number;
+  totalThrows: number;
+  gainByKind: Partial<Record<(typeof levelKinds)[number], { gain: number; throws: number }>>;
+  deadByKind: Partial<Record<(typeof levelKinds)[number], number>>;
+  choiceDifferences: number;
 }
 
-export function playLevel(level: LevelDef, policy: BotPolicy, random: () => number): PlayResult {
+const levelKinds = ['rock', 'ice', 'magma', 'seed', 'storm', 'sun'] as const;
+
+export function playLevel(level: LevelDef, policy: BotPolicy, random: () => number, rules = rulesForLevel(level.n)): PlayResult {
   let state = roundState(level.start, level.nova);
   let halfStars = 0;
   let throws = level.throws;
   let gifts = 0;
   let novas = 0;
+  let fusion = 0;
+  let clash = 0;
+  const reactionCounts: Record<string, number> = {};
+  let deadThrows = 0;
+  let bestDeadThrows = 0;
+  let choiceDifferences = 0;
+  const gainByKind: PlayResult['gainByKind'] = {};
+  const deadByKind: PlayResult['deadByKind'] = {};
   for (let turn = 0; turn < throws; turn++) {
     const nova = novaReady(state);
+    const blindBest = oneStep({ level, planet: state.planet, state, turn, nova, labLevel: policy.labLevel, random });
+    const bestGain = { best: -Infinity };
+    const awareBest = oneStep(
+      { level, planet: state.planet, state, turn, nova, labLevel: policy.labLevel, random },
+      rulesForLevel(level.n),
+      bestGain,
+    );
+    if (blindBest !== awareBest) choiceDifferences++;
+    if (bestGain.best <= 3) bestDeadThrows++;
     const aim = policy.chooseAim({ level, planet: state.planet, state, turn, nova, labLevel: policy.labLevel, random });
     const step = stepRound(
       state,
       { kind: level.queue[turn], sector: ((aim % SECTORS) + SECTORS) % SECTORS, nova },
       { ...NO_MODIFIERS, lab: { [level.queue[turn]]: policy.labLevel } },
-      ROUND_RULES_V0,
+      rules,
     );
     state = step.state;
+    for (const reaction of step.reactions) {
+      reactionCounts[reaction.id] = (reactionCounts[reaction.id] ?? 0) + 1;
+      if (reaction.id === 'scorch') clash++;
+      else fusion++;
+    }
+    if (step.after - step.before <= 3) {
+      deadThrows++;
+      deadByKind[level.queue[turn]] = (deadByKind[level.queue[turn]] ?? 0) + 1;
+    }
+    const kindGain = gainByKind[level.queue[turn]] ?? { gain: 0, throws: 0 };
+    kindGain.gain += step.after - step.before;
+    kindGain.throws++;
+    gainByKind[level.queue[turn]] = kindGain;
     if (step.novaFired) novas++;
     if (turn + 1 === Math.floor(level.throws / 2)) halfStars = starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level);
     if (level.n <= 3 && turn + 1 === throws && starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level) === 0) {
@@ -99,11 +146,23 @@ export function playLevel(level: LevelDef, policy: BotPolicy, random: () => numb
   }
   const score = lifeScore(state.planet) + state.bonus;
   return {
+    score,
+    frostSectors: state.planet.sectors.filter((sector) => ['tundra', 'icesheet', 'taiga'].includes(sector.biome)).length,
     stars: starsEarned(state.planet, score, level),
     halfStars,
     scoreMet: starsFor(score, level.stars) > 0,
     goalsMet: goalsMet(state.planet, level.goals),
     novas,
+    fusion,
+    clash,
+    reactionCounts,
+    bestCombo: state.combo.best,
+    deadThrows,
+    bestDeadThrows,
+    totalThrows: throws,
+    gainByKind,
+    deadByKind,
+    choiceDifferences,
   };
 }
 

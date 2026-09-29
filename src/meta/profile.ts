@@ -9,6 +9,7 @@ import { ROUND_RULES_V0 } from '../core/round';
 import { LEVEL_SALT, makeLevel } from '../core/levels';
 import type { RoundModifiers } from '../core/modifiers';
 import { DEFAULT_AVATAR, type AvatarParts } from './cosmetics';
+import type { ReactionId } from '../core/round';
 
 export interface GalaxyPlanet {
   n: number;
@@ -81,6 +82,12 @@ export interface RoundCheckpoint {
     trail: { x: number; y: number }[];
     nova?: boolean;
   } | null;
+  landedKinds?: (Kind | null)[];
+  comboIconsCurrent?: ReactionId[];
+  comboIconsBest?: ReactionId[];
+  reactionEvents?: ReactionId[];
+  reactionsSeen?: ReactionId[];
+  comboEvents?: { links: number; reaction?: ReactionId; superFusion: boolean }[];
   warmup?: boolean;
   practiceFirstClear?: boolean;
   practiceGifts?: number;
@@ -180,6 +187,10 @@ export interface Profile {
   roadDay: { day: string; earned: number };
   /** Lifebook: every creature ever discovered. */
   seen: string[];
+  fusionsFound: ReactionId[];
+  reactionPairsTried: string[];
+  /** Best links and the thirteen Field Guide stamp bits. */
+  combo: { best: number; stamps: number };
   galaxy: GalaxyPlanet[];
   lastCollect: number;
   upgrades: Record<UpgradeId, number>;
@@ -306,6 +317,9 @@ export function defaultProfile(now = Date.now()): Profile {
     roadPoints: 0,
     roadDay: { day: '', earned: 0 },
     seen: [],
+    fusionsFound: [],
+    reactionPairsTried: [],
+    combo: { best: 0, stamps: 0 },
     galaxy: [],
     lastCollect: now,
     upgrades: { scope: 0, throws: 0, splash: 0, vault: 0 },

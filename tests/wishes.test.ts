@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { defaultProfile } from '../src/meta/profile';
 import { clonePlanet, newPlanet, type Planet } from '../src/core/world';
-import { claimWish, ensureWishes, recordWishRound, swapWish, WISH_TEMPLATES } from '../src/meta/wishes';
+import {
+  claimWish,
+  ensureWishes,
+  recordWishCombo,
+  recordWishReaction,
+  recordWishRound,
+  swapWish,
+  WISH_TEMPLATES,
+} from '../src/meta/wishes';
 import { totalStars } from '../src/meta/profile';
 
 const day = '2026-09-28';
@@ -144,5 +152,22 @@ describe('Wishes', () => {
     recordWishRound(p, 'campaign', planet, day, before);
     expect(land.progress).toBe(3);
     expect(neighbor.progress).toBe(1);
+  });
+  it('offers Fusion and Combo Wishes only after their teaching planets and counts their feats', () => {
+    const p = player();
+    p.level = 12;
+    expect(WISH_TEMPLATES.filter((x) => x.feat === 'fusion' && x.minLevel <= p.level).map((x) => x.id)).toEqual(['steam']);
+    p.level = 26;
+    const cards = ensureWishes(p, day);
+    cards[0].template = 'rainGarden';
+    cards[0].goal = 1;
+    cards[1].template = 'combo3';
+    cards[1].goal = 3;
+    cards[2].template = 'superSteam';
+    cards[2].goal = 1;
+    expect(recordWishReaction(p, 'rainGarden', 'rush')).toEqual([]);
+    expect(recordWishReaction(p, 'rainGarden', 'campaign')).toEqual([cards[0].id]);
+    expect(recordWishCombo(p, 2, 'steam', true)).toEqual([cards[2].id]);
+    expect(recordWishCombo(p, 3, 'steam')).toEqual([cards[1].id]);
   });
 });

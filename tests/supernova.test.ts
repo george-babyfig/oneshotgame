@@ -24,9 +24,9 @@ describe('Supernova 2.0', () => {
   });
 
   it('gives no charge for a worse throw or before planet 9', () => {
-    const planet = newPlanet((i) => ({ life: 2, heat: i === 12 ? 2 : 1 }));
+    const planet = newPlanet((i) => (i < 6 ? { water: 3 } : {}));
     settle(planet);
-    const worse = stepRound(roundState(planet), { kind: 'magma', sector: 0 });
+    const worse = stepRound(roundState(planet), { kind: 'rock', sector: 3 });
     expect(worse.after).toBeLessThan(worse.before);
     expect(worse.novaGain).toBe(0);
     const early = makeLevel(8);
@@ -36,12 +36,12 @@ describe('Supernova 2.0', () => {
   });
 
   it.each([
-    ['rock', 'land', 2, 3],
-    ['ice', 'water', 2, 3],
+    ['rock', 'land', 2, 4],
+    ['ice', 'water', 2, 4],
     ['seed', 'life', 2, 3],
     ['magma', 'heat', 2, 3],
     ['storm', 'water', 4, 2],
-    ['sun', 'life', 4, 2],
+    ['sun', 'life', 4, 1],
   ] as const)('%s repeats its main effect through the extra reach', (kind, field, distance, gain) => {
     const plain = newPlanet();
     const nova = clonePlanet(plain);

@@ -5,6 +5,7 @@ import { sfx, setMusicTheme } from '../audio';
 import { haptic } from '../haptics';
 import { LevelScene, type LevelResult } from '../game';
 import { starsFor, type LevelDef } from '../../core/levels';
+import { rulesForLevel } from '../../core/round';
 import { clonePlanet } from '../../core/world';
 import { today } from '../../meta/profile';
 import {
@@ -86,9 +87,9 @@ export function modesFlow(app: App) {
 }
 
 function startMode(app: App, mode: Mode) {
-  if (mode === 'daily') return play(app, dailyLevel(today()), 'daily');
-  if (mode === 'rush') return play(app, rushLevel(rushSeed()), 'rush');
-  if (mode === 'zen') return play(app, zenLevel(app.p.zen), 'zen');
+  if (mode === 'daily') return play(app, dailyLevel(today(), app.p.level), 'daily');
+  if (mode === 'rush') return play(app, rushLevel(rushSeed(), app.p.level), 'rush');
+  if (mode === 'zen') return play(app, zenLevel(app.p.zen, app.p.level), 'zen');
   challengeMenu(app);
 }
 
@@ -98,6 +99,7 @@ function play(app: App, L: LevelDef, mode: Mode, vs?: { code: string; seed: stri
   const opts = app.sceneOpts(
     mode,
     {
+      rules: rulesForLevel(Math.min(L.n, p.level)),
       label: {
         daily: t('Daily #{n}', { n: dailyNumber(today()) }),
         rush: t('Meteor Rush'),
@@ -124,10 +126,10 @@ function modeEnded(app: App, mode: Mode, r: LevelResult, vs?: { code: string; se
   const p = app.p;
   if (r.throwsUsed === -1) {
     // restart from the pause menu
-    if (mode === 'daily') return play(app, dailyLevel(today()), mode);
-    if (mode === 'rush') return play(app, rushLevel(rushSeed()), mode);
-    if (mode === 'challenge' && vs) return play(app, challengeLevel(vs.seed), mode, vs);
-    return play(app, zenLevel(p.zen), mode);
+    if (mode === 'daily') return play(app, dailyLevel(today(), app.p.level), mode);
+    if (mode === 'rush') return play(app, rushLevel(rushSeed(), app.p.level), mode);
+    if (mode === 'challenge' && vs) return play(app, challengeLevel(vs.seed, p.level), mode, vs);
+    return play(app, zenLevel(p.zen, p.level), mode);
   }
   const stars = starsFor(r.score, r.level.stars);
   if (mode === 'daily' || mode === 'zen') recordWishRound(p, mode, r.planet, today(), r.level.start);
@@ -226,7 +228,7 @@ function challengeMenu(app: App) {
     btn(t('✨ New challenge'), 'primary wide', () => {
       m.close();
       const seed = newChallengeSeed();
-      play(app, challengeLevel(seed), 'challenge', { code: seed, seed, score: 0 });
+      play(app, challengeLevel(seed, app.p.level), 'challenge', { code: seed, seed, score: 0 });
     }),
     h('div', { class: 'sec-title' }, t('Have a code?')),
     input,
@@ -237,7 +239,7 @@ function challengeMenu(app: App) {
         return toast(t("That code doesn't look right — check it and try again"), 'bad');
       }
       m.close();
-      play(app, challengeLevel(c.seed), 'challenge', { code: encodeChallenge(c.seed, c.score), seed: c.seed, score: c.score });
+      play(app, challengeLevel(c.seed, app.p.level), 'challenge', { code: encodeChallenge(c.seed, c.score), seed: c.seed, score: c.score });
     }),
   ]);
   setTimeout(() => input.focus(), 250);

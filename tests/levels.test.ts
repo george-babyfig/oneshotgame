@@ -7,6 +7,7 @@ import {
   greedyScore,
   levelMeta,
   makeLevel,
+  rulesForLevel,
   solve0,
   solve2,
   starsEarned,
@@ -22,10 +23,11 @@ describe('level generator', () => {
       expect(L.stars[1]).toBeLessThan(L.stars[2]);
       expect(L.stars[0]).toBeGreaterThan(lifeScore(L.start));
       // the solver that set the targets can reach 3 stars
-      expect(greedyScore(L.start, L.queue, L.throws, 0, L.nova)).toBeGreaterThanOrEqual(L.stars[2]);
+      const rules = rulesForLevel(n);
+      expect(greedyScore(L.start, L.queue, L.throws, 0, L.nova, rules)).toBeGreaterThanOrEqual(L.stars[2]);
       expect(L.queue.length).toBeGreaterThanOrEqual(L.throws);
       // goals come from the solver's own line of play, so stars and goals are reachable together
-      expect(goalsMet(greedyPlan(L.start, L.queue, L.throws, 0, L.nova), L.goals)).toBe(true);
+      expect(goalsMet(greedyPlan(L.start, L.queue, L.throws, 0, L.nova, rules), L.goals)).toBe(true);
       const plan2 = solve2(L);
       expect(starsEarned(plan2, lifeScore(plan2), L), `solver 2 planet ${n}`).toBe(3);
       expect(goalsMet(plan2, L.goals), `solver 2 goals planet ${n}`).toBe(true);
@@ -68,6 +70,15 @@ describe('level generator', () => {
         boss: level.twist === 'boss',
       });
     }
+  });
+
+  it('offers frost and ember goals from planet 25', () => {
+    const source = new Set(['tundra', 'icesheet', 'taiga', 'volcano', 'desert', 'savanna']);
+    const count = Array.from({ length: 96 }, (_, index) => makeLevel(index + 25)).filter((level) =>
+      level.goals.some((goal) => goal.type === 'biome' && source.has(goal.id)),
+    ).length;
+    expect(count).toBeGreaterThanOrEqual(10);
+    expect(count).toBeLessThanOrEqual(22);
   });
 
   it.skipIf(process.env.BENCH !== '1')('measures uncached generation and metadata', () => {

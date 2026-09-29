@@ -47,12 +47,12 @@ export interface BiomeDef {
 
 export const BIOMES: Record<BiomeId, BiomeDef> = {
   barren: { id: 'barren', name: 'Bare Rock', value: 0, color: '#a08aa6', deco: '', recipe: 'Where nothing has landed yet' },
-  ocean: { id: 'ocean', name: 'Ocean', value: 2, color: '#2f7fe0', deco: '🌊', sea: true, recipe: '☄️ Ice on low ground' },
+  ocean: { id: 'ocean', name: 'Ocean', value: 3, color: '#2f7fe0', deco: '🌊', sea: true, recipe: '☄️ Ice on low ground' },
   reef: { id: 'reef', name: 'Reef', value: 5, color: '#1fc6c0', deco: '🪸', sea: true, recipe: '🌱 Seeds in the ocean' },
   icesheet: {
     id: 'icesheet',
     name: 'Ice Sheet',
-    value: 2,
+    value: 3,
     color: '#bfe8ff',
     deco: '🧊',
     sea: true,
@@ -70,22 +70,22 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
   meadow: { id: 'meadow', name: 'Meadow', value: 3, color: '#8fd65a', deco: '🌼', recipe: '🌱 The edges of where a seed lands' },
   forest: { id: 'forest', name: 'Forest', value: 5, color: '#2f9e4f', deco: '🌲', recipe: '🌱 Right where a seed lands' },
   jungle: { id: 'jungle', name: 'Jungle', value: 6, color: '#1f8a3b', deco: '🌴', recipe: '🌱🌱 A forest that gets warm (🔥 or ☀️)' },
-  mountain: { id: 'mountain', name: 'Mountain', value: 2, color: '#8a7f8d', deco: '⛰️', recipe: '🪨 A rock on bare ground' },
-  highland: { id: 'highland', name: 'Highland', value: 4, color: '#7fa36a', deco: '🌳', recipe: '🌱 Seeds on a mountain' },
-  desert: { id: 'desert', name: 'Desert', value: 2, color: '#e6c170', deco: '🏜️', recipe: '🔥 Magma on flat ground' },
-  savanna: { id: 'savanna', name: 'Savanna', value: 4, color: '#d9b84a', deco: '🌾', recipe: '🌱 Seeds in a desert' },
+  mountain: { id: 'mountain', name: 'Mountain', value: 5, color: '#8a7f8d', deco: '⛰️', recipe: '🪨 A rock on bare ground' },
+  highland: { id: 'highland', name: 'Highland', value: 7, color: '#7fa36a', deco: '🌳', recipe: '🌱 Seeds on a mountain' },
+  desert: { id: 'desert', name: 'Desert', value: 5, color: '#e6c170', deco: '🏜️', recipe: '🔥 Magma on flat ground' },
+  savanna: { id: 'savanna', name: 'Savanna', value: 7, color: '#d9b84a', deco: '🌾', recipe: '🌱 Seeds in a desert' },
   tundra: {
     id: 'tundra',
     name: 'Tundra',
-    value: 2,
+    value: 3,
     color: '#dfe9f2',
     deco: '❄️',
     recipe: '☄️☄️ Two ices on a tall mountain (or a frozen planet)',
   },
-  taiga: { id: 'taiga', name: 'Taiga', value: 4, color: '#5f9a7f', deco: '🌲', recipe: '🌱 Seeds on tundra' },
+  taiga: { id: 'taiga', name: 'Taiga', value: 5, color: '#5f9a7f', deco: '🌲', recipe: '🌱 Seeds on tundra' },
   swamp: { id: 'swamp', name: 'Swamp', value: 3, color: '#6f8a4a', deco: '🟫', recipe: '☄️ Ice on a hill or mountain' },
   marsh: { id: 'marsh', name: 'Marsh', value: 5, color: '#4f8f5a', deco: '🍃', recipe: '🌱 Seeds in a swamp' },
-  volcano: { id: 'volcano', name: 'Volcano', value: 3, color: '#d9533b', deco: '🌋', recipe: '🔥 Magma on a hill or mountain' },
+  volcano: { id: 'volcano', name: 'Volcano', value: 6, color: '#d9533b', deco: '🌋', recipe: '🔥 Magma on a hill or mountain' },
 };
 
 export function biomeOf(s: Pick<Sector, 'land' | 'water' | 'heat' | 'life'>): BiomeId {
@@ -124,7 +124,7 @@ export const KINDS: Record<Kind, KindDef> = {
     color: '#b8a9c9',
     desc: 'Raises land',
     unlock: 1,
-    stats: { element: 'earth', power: 2, reach: 1, job: 'Builds tall mountains' },
+    stats: { element: 'earth', power: 3, reach: 1, job: 'Builds tall mountains' },
   },
   ice: {
     id: 'ice',
@@ -286,14 +286,14 @@ function applyKind(p: Planet, kind: Kind, at: number, splash: number) {
   switch (kind) {
     case 'rock':
       touch(p, at, (s) => (s.land += KINDS.rock.stats.power));
-      for (let d = 1; d <= r; d++) for (const j of [at - d, at + d]) touch(p, j, (s) => (s.land += 1));
+      for (let d = 1; d <= r; d++) for (const j of [at - d, at + d]) touch(p, j, (s) => (s.land += 2));
       break;
     case 'ice':
       touch(p, at, (s) => {
         s.water += KINDS.ice.stats.power;
         s.heat -= 1;
       });
-      for (let d = 1; d <= r; d++) for (const j of [at - d, at + d]) touch(p, j, (s) => (s.water += 1));
+      for (let d = 1; d <= r; d++) for (const j of [at - d, at + d]) touch(p, j, (s) => (s.water += 2));
       break;
     case 'magma':
       touch(p, at, (s) => {
@@ -301,7 +301,12 @@ function applyKind(p: Planet, kind: Kind, at: number, splash: number) {
         s.land += 1;
         s.water -= 1;
       });
-      for (let d = 1; d <= r; d++) for (const j of [at - d, at + d]) touch(p, j, (s) => (s.heat += 1));
+      for (let d = 1; d <= r; d++)
+        for (const j of [at - d, at + d])
+          touch(p, j, (s) => {
+            s.heat += 1;
+            if (s.water === 0) s.land += 1;
+          });
       break;
     case 'seed':
       for (let d = -r; d <= r; d++)
@@ -312,7 +317,7 @@ function applyKind(p: Planet, kind: Kind, at: number, splash: number) {
     case 'storm':
       for (let d = -r; d <= r; d++)
         touch(p, at + d, (s) => {
-          s.water += KINDS.storm.stats.power;
+          s.water += KINDS.storm.stats.power + Number(Math.abs(d) <= 1);
           if (s.heat > 0) s.heat -= 1;
           else if (s.heat < 0) s.heat += 1;
         });
@@ -321,7 +326,7 @@ function applyKind(p: Planet, kind: Kind, at: number, splash: number) {
       for (let d = -r; d <= r; d++)
         touch(p, at + d, (s) => {
           s.heat += KINDS.sun.stats.power;
-          if (habitable(s)) s.life += KINDS.sun.stats.power;
+          if (Math.abs(d) < r && habitable(s)) s.life += KINDS.sun.stats.power;
         });
       break;
   }
@@ -511,12 +516,20 @@ export interface ImpactResult {
   lost: string[];
 }
 
-export function impact(p: Planet, kind: Kind, at: number, splash = 0, boost: ImpactBoost = {}): ImpactResult {
+export function impact(
+  p: Planet,
+  kind: Kind,
+  at: number,
+  splash = 0,
+  boost: ImpactBoost = {},
+  beforeSettle?: (planet: Planet) => void,
+): ImpactResult {
   const before = lifeScore(p);
   const prev = p.sectors.map((s) => s.biome);
   const extra = boostRadius(boost);
   applyKind(p, kind, wrap(at), splash + extra);
   if (boost.nova) applyBoost(p, kind, wrap(at), splash);
+  beforeSettle?.(p);
   const { spawned, lost } = settle(p);
   const changed = p.sectors.map((s, i) => (s.biome !== prev[i] ? i : -1)).filter((i) => i >= 0);
   return { before, after: lifeScore(p), changed, spawned, lost };

@@ -4,6 +4,8 @@ import { drawCreature } from './critters';
 import { SPECIES_BY_ID } from '../../core/world';
 import { FESTIVALS, FESTIVAL_BY_ID } from '../../meta/festivals';
 import { STICKER_BY_ID } from '../../meta/stickers';
+import { REACTIONS, type ReactionId } from '../../core/round';
+import { drawReactionIcon } from './reactions';
 
 type G = CanvasRenderingContext2D;
 
@@ -231,6 +233,7 @@ export function drawSticker(g: G, id: string, r: number, t = 0.4, locked = false
   g.clip();
   let bg: [string, string] = ['#e8e4ff', '#b8b0ff'];
   if (s.kind === 'critter') bg = RARITY_BG[SPECIES_BY_ID[s.art]?.rarity ?? 'common'];
+  else if (s.id.startsWith('r_') || s.id.startsWith('combo_')) bg = ['#fff8d6', '#dca94a'];
   else if (s.kind === 'fest') {
     const c = FESTIVAL_BY_ID[s.art]?.color ?? '#ffd84a';
     bg = ['#fffaf0', c];
@@ -242,7 +245,21 @@ export function drawSticker(g: G, id: string, r: number, t = 0.4, locked = false
   g.fillStyle = locked ? '#3a3560' : gr;
   g.fillRect(-r, -r, r * 2, r * 2);
   if (locked) g.globalAlpha = 0.35;
-  if (s.kind === 'critter') drawCreature(g, s.art, 0, inner * 0.72, 0, inner * 1.05, t);
+  if (s.id.startsWith('r_') && s.art in REACTIONS) drawReactionIcon(g, s.art as ReactionId, 0, 0, inner * 1.25);
+  else if (s.id.startsWith('combo_')) {
+    g.strokeStyle = '#fff1b5';
+    g.lineWidth = inner * 0.12;
+    g.beginPath();
+    g.moveTo(-inner * 0.55, 0);
+    g.lineTo(inner * 0.55, 0);
+    g.stroke();
+    for (const x of [-0.55, 0, 0.55]) {
+      g.fillStyle = '#ffe38a';
+      g.beginPath();
+      g.arc(x * inner, 0, inner * 0.19, 0, Math.PI * 2);
+      g.fill();
+    }
+  } else if (s.kind === 'critter') drawCreature(g, s.art, 0, inner * 0.72, 0, inner * 1.05, t);
   else if (s.kind === 'fest') {
     const i = FESTIVALS.findIndex((f) => f.id === s.art);
     drawCreature(g, FEST_MODEL[i] ?? 'bunny', 0, inner * 0.85, 0, inner * 0.9, t, FESTIVALS[i]?.acc ?? '');

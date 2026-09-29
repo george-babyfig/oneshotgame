@@ -40,7 +40,7 @@ const MILESTONES = [
 type Milestone = (typeof MILESTONES)[number];
 
 /** Milestones that are built. Later milestones append themselves here when they ship. */
-export const BUILT: Milestone[] = ['M0', 'M1', 'M2', 'M3', 'M4', 'M5'];
+export const BUILT: Milestone[] = ['M0', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M6.5', 'M7'];
 
 const built = (m: Milestone) => BUILT.includes(m);
 
@@ -391,7 +391,7 @@ const NEW: [string, 'round' | 'meta', Milestone][] = [
   ['Rain Garden', 'round', 'M7'],
   ['Wildflowers', 'round', 'M7'],
   ['Glacier', 'round', 'M7'],
-  ['Scorch', 'round', 'M7'],
+  ['Dry Spell', 'round', 'M7'],
   ['Combo', 'round', 'M7'],
   ['Combo Bloom', 'round', 'M7'],
   ['Chain Maker', 'meta', 'M7'],

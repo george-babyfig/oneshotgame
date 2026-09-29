@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { it } from 'vitest';
 import { BANDS, POLICIES, runSurvey, type BandMetrics } from './harness';
+import './reactions.sim';
 
 interface Baseline {
   runs: number;
@@ -31,6 +32,10 @@ if (process.env.SIM === '1') {
           `${band.padEnd(7)} ${difficulty.padEnd(10)} ${policies.map((policy) => cell(byKey.get(`${band}:${difficulty}:${policy.name}`)).padEnd(25)).join('')}`,
         );
       }
+    }
+    for (const band of ['21-30', '31-45', '46-60']) {
+      const sharp = byKey.get(`${band}:normal:sharp`);
+      if (sharp && sharp.threeStar > 0.8) throw new Error(`Sharp 3★ on normal planets ${band}: ${percentage(sharp.threeStar)} exceeds 80%`);
     }
 
     const decentActive = runSurvey(POLICIES.decent, runs, 9, 60).planets;

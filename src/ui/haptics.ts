@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import type { Kind } from '../core/world';
-import { OBJECT_FEEL } from './feel';
+import { COMBO_HAPTIC, OBJECT_FEEL, REACTION_HAPTIC, type FeelHaptic } from './feel';
 
 let on = true;
 const native = Capacitor.isNativePlatform();
@@ -12,6 +12,7 @@ const allowed = () => {
   lastHaptic = performance.now();
   return true;
 };
+const impactStyle = (feel: FeelHaptic) => (feel === 'medium' ? ImpactStyle.Medium : ImpactStyle.Light);
 
 export const haptic = {
   tick: () => allowed() && Haptics.selectionChanged().catch(() => {}),
@@ -20,9 +21,11 @@ export const haptic = {
   heavy: () => allowed() && Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {}),
   success: () => allowed() && Haptics.notification({ type: NotificationType.Success }).catch(() => {}),
   warn: () => allowed() && Haptics.notification({ type: NotificationType.Warning }).catch(() => {}),
+  reaction: (kind: 'fusion' | 'clash') => allowed() && Haptics.impact({ style: impactStyle(REACTION_HAPTIC[kind]) }).catch(() => {}),
+  combo: () => allowed() && Haptics.impact({ style: impactStyle(COMBO_HAPTIC) }).catch(() => {}),
   object: (kind: Kind) => {
     if (!allowed()) return;
     const pattern = OBJECT_FEEL[kind].haptic;
-    Haptics.impact({ style: pattern === 'medium' ? ImpactStyle.Medium : ImpactStyle.Light }).catch(() => {});
+    Haptics.impact({ style: impactStyle(pattern) }).catch(() => {});
   },
 };

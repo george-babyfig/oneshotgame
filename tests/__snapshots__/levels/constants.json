@@ -1,6 +1,6 @@
 [
-{"id":"TUNE","data":{"rampLevels":20,"f1":[0.42,0.22],"f2":[0.66,0.15],"f3":[0.83,0.05],"saw":0.05,"bump":{"normal":[0,0,0],"hard":[0.06,0.04,0.02],"super":[0.09,0.06,0.03]}}},
-{"id":"LEVEL_SALT","data":{"24":48}},
+{"id":"TUNE","data":{"rampLevels":20,"f1":[0.42,0.17],"f2":[0.66,0.15],"f3":[0.845,0.05],"saw":0.05,"bump":{"normal":[0,0,0],"hard":[0.06,0.04,0.02],"super":[0.09,0.06,0.03]}}},
+{"id":"LEVEL_SALT","data":{"16":2,"22":1,"23":46,"24":48,"27":9,"28":19,"32":3,"44":5,"51":7}},
 {"id":"NOVA_CHARGE/BOSS_HP/GOALS_FROM","data":[12,3,6]},
 {"id":"DIFFICULTY_DUST","data":{"normal":1,"hard":2,"super":3}},
 {"id":"TWISTS","data":["none","fast","tiny","moon","hot","frozen","ocean","wind","heavy","wobble","twin","boss"]},

@@ -812,6 +812,8 @@ export const CHAPTER_REWARD = { baseGems: 25, gemsPerChapter: 5, dustPerChapter:
 // Seven retired rank payouts are spread over the first seven chapter chests.
 export const CHAPTER_RANK_REWARD = { gems: [0, 30, 35, 40, 45, 50, 55, 60], dust: [0, 300, 450, 600, 750, 900, 1050, 1200] };
 export const WISH_REWARD = { gems: 12, dust: 50, roadPoints: 1, allThreeGems: 15 };
+export const DISCOVERY_DUST = 50;
+export const COMBO_STAMP_DUST = 30;
 export const CALENDAR_REPEAT_ITEM_GEMS = 40;
 export const FINISH_DUST_PER_THROW = 15;
 export const VISITOR_DUST = { common: 20, uncommon: 30, rare: 50, legendary: 80 };
@@ -830,7 +832,7 @@ export const INBOX_GIFTS: Record<string, Reward> = {
 };
 
 export const STARTER_BOOSTERS = 5;
-export const MATERIAL_DROP = { regionsPerDrop: 2, threeStarBonus: 1 };
+export const MATERIAL_DROP = { regionsPerDrop: 2, threeStarBonus: 1, frostPerRegion: 1 };
 export const EXPEDITION_MULTIPLIER = { perTowerLevel: 0.1, legendary: 1.5, rare: 1.25 };
 
 // Homeworld pacing and unlock tables.

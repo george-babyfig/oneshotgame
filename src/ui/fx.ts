@@ -1,5 +1,5 @@
-import { BIOMES, KINDS, SPECIES_BY_ID, neededHabitat, settle, type Planet } from '../core/world';
-import { stepRound, novaReady, type RoundState } from '../core/round';
+import { BIOMES, KINDS, SPECIES_BY_ID, neededHabitat, settle, wrap, type Planet } from '../core/world';
+import { stepRound, novaReady, REACTIONS, REACTION_IDS, type RoundState } from '../core/round';
 import { fly, STAR_SLING, type FlightLaunch, type FlightWorld } from '../core/flight';
 import type { RoundModifiers } from '../core/modifiers';
 import { BOSS_HP } from '../core/levels';
@@ -14,6 +14,7 @@ import { t, tp } from '../i18n';
 import * as hud from './hud';
 import * as preview from './preview';
 import { OBJECT_FEEL, advanceFeedback, enqueueFeedback } from './feel';
+import { drawReactionIcon, reactionColor } from './art/reactions';
 
 import type { LevelScene, Shot } from './game';
 
@@ -204,6 +205,23 @@ export function draw(scene: LevelScene) {
   if (overlayCount() > 4 && scene.goalPulse) scene.goalPulse = null;
   if (overlayCount() > 4) scene.popups = [];
   scene.drawPlanet();
+  if (scene.reactionArc && scene.reactionArc.until > scene.time) {
+    const { from, to, id, until } = scene.reactionArc;
+    const [x1, y1] = scene.sectorPoint(from, 1.24);
+    const [x2, y2] = scene.sectorPoint(to, 1.24);
+    g.save();
+    g.globalAlpha = scene.o.reduceMotion ? 1 : Math.min(1, (until - scene.time) * 2);
+    g.strokeStyle = reactionColor(id);
+    g.lineWidth = 4;
+    g.shadowColor = reactionColor(id);
+    g.shadowBlur = scene.o.reduceMotion ? 0 : 12;
+    g.beginPath();
+    g.moveTo(x1, y1);
+    g.quadraticCurveTo(scene.cx, scene.cy - scene.R * 1.65, x2, y2);
+    g.stroke();
+    drawReactionIcon(g, id, (x1 + x2) / 2, Math.min(y1, y2) - 22, 28);
+    g.restore();
+  }
   preview.drawGoalPulse(scene);
   for (const ghost of scene.ghosts) {
     const progress = scene.o.reduceMotion ? 1 : Math.min(1, (scene.time - ghost.started) / 0.55);
@@ -379,6 +397,7 @@ export function drawPlanet(scene: LevelScene) {
 }
 
 export function update(scene: LevelScene, dt: number) {
+  if (!scene.o.reduceMotion && performance.now() < scene.hitStopUntil) return;
   scene.time += dt;
   if (scene.o.timeLimit && !scene.ended && !scene.modalOpen && scene.timeLeft > 0) {
     scene.timeLeft -= dt;
@@ -413,6 +432,8 @@ export function update(scene: LevelScene, dt: number) {
       carry: path.state.carry ?? 0,
     });
     if (path.hit?.kind === 'boss') {
+      scene.combo = { links: 0, rest: false, best: scene.combo.best };
+      scene.comboIconsCurrent = [];
       if (sh.nova) {
         scene.nova = { charge: 0, threshold: 18, fired: scene.nova.fired + 1, held: false };
         scene.bossHp = Math.max(1, scene.bossHp - 1);
@@ -421,6 +442,8 @@ export function update(scene: LevelScene, dt: number) {
       scene.shot = null;
       scene.afterShot();
     } else if (path.hit?.kind === 'blocked') {
+      scene.combo = { links: 0, rest: false, best: scene.combo.best };
+      scene.comboIconsCurrent = [];
       scene.burst(sh.x, sh.y, '#c9c3d6', 14, 4);
       scene.popup(sh.x, sh.y - 10, t('Blocked!'), '#fff', 18);
       sfx.miss();
@@ -429,6 +452,8 @@ export function update(scene: LevelScene, dt: number) {
     } else if (path.hit?.kind === 'land') {
       scene.land(sh, path.hit.sector);
     } else if (path.hit?.kind === 'miss') {
+      scene.combo = { links: 0, rest: false, best: scene.combo.best };
+      scene.comboIconsCurrent = [];
       scene.popup(Math.min(Math.max(sh.x, 60), scene.w - 60), Math.min(Math.max(sh.y, 120), scene.h - 200), t('Missed!'), '#ffb3c1', 20);
       sfx.miss();
       scene.shot = null;
@@ -487,9 +512,58 @@ export function land(scene: LevelScene, sh: Shot, i: number) {
   scene.shot = null;
   const beforeReady = novaReady(scene.roundState());
   const oldPlanet = scene.planet;
-  const res = stepRound(scene.roundState(), { kind: sh.kind, sector: i, nova: sh.nova }, scene.roundModifiers());
+  const oldCombo = scene.combo;
+  const res = stepRound(
+    { ...scene.roundState(), throwsLeft: Number.isFinite(scene.throwsLeft) ? scene.throwsLeft + 1 : scene.throwsLeft },
+    { kind: sh.kind, sector: i, nova: sh.nova },
+    scene.roundModifiers(),
+    scene.rules,
+  );
   scene.planet = res.state.planet;
   scene.nova = res.state.nova;
+  scene.combo = res.state.combo;
+  scene.comboCharge = res.state.comboCharge;
+  scene.predictCache = null;
+  const reaction = res.reactions[0];
+  for (const offset of [-1, 0, 1]) {
+    const previous = scene.landedKinds[wrap(i + offset)];
+    if (
+      previous &&
+      previous !== sh.kind &&
+      !REACTION_IDS.some((id) => REACTIONS[id].pair.includes(previous) && REACTIONS[id].pair.includes(sh.kind))
+    )
+      scene.o.onPairTried?.(previous, sh.kind);
+  }
+  for (const sector of res.changed) scene.landedKinds[sector] = sh.kind;
+  scene.landedKinds[wrap(i)] = sh.kind;
+  if (res.combo.links > 0 && reaction) {
+    if (oldCombo.links === 0) scene.comboIconsCurrent = [];
+    scene.comboIconsCurrent.push(reaction.id);
+    if (res.combo.links > oldCombo.best) scene.comboIconsBest = [...scene.comboIconsCurrent];
+  } else if (res.combo.links === 0) scene.comboIconsCurrent = [];
+  if (reaction) {
+    const def = REACTIONS[reaction.id];
+    scene.reactionsSeen.add(reaction.id);
+    scene.reactionEvents.push(reaction.id);
+    scene.reactionArc = { from: reaction.partner, to: reaction.at, id: reaction.id, until: scene.time + 1.05 };
+    scene.hitStopUntil = scene.o.reduceMotion ? 0 : performance.now() + 150;
+    const label = res.combo.superFusion
+      ? t('SUPER {name}!', { name: t(def.name).toUpperCase() })
+      : t('{name}!', { name: t(def.name).toUpperCase() });
+    scene.popup(scene.cx, scene.cy - scene.R * 1.35, label, reactionColor(reaction.id), 28, 1.5, 4);
+    sfx.reaction(def.kind);
+    haptic.reaction(def.kind);
+    if (scene.o.onReaction?.(reaction.id).first) hud.showFusionDiscovery(scene, reaction.id);
+  }
+  if (res.combo.links > 0) scene.o.onCombo?.(res.combo.links, reaction?.id, !!res.combo.superFusion);
+  if (res.combo.step >= 2) {
+    const [x, y] = scene.sectorPoint(i, 1.55);
+    scene.popup(x, y, t('COMBO {n}!', { n: res.combo.step }), '#ffe38a', 23, 1.3, 3);
+    sfx.comboStep(res.combo.step);
+    haptic.combo();
+    if (res.combo.step >= 4) scene.ring(sh.x, sh.y, '#a5ef9e', scene.R * 1.25);
+  }
+  if (res.combo.links > 0) scene.comboEvents.push({ links: res.combo.links, reaction: reaction?.id, superFusion: !!res.combo.superFusion });
   if (scene.L.n >= 24 && !beforeReady && novaReady(res.state)) hud.showNovaHoldTip(scene);
   scene.bonus = res.state.bonus;
   scene.regionBests = res.state.regionBests;
@@ -628,6 +702,9 @@ export function roundState(scene: LevelScene): RoundState {
     planet: scene.planet,
     charge: scene.nova.charge,
     nova: { ...scene.nova },
+    combo: { ...scene.combo },
+    comboCharge: scene.comboCharge,
+    throwsLeft: scene.throwsLeft,
     bonus: scene.bonus,
     regionBests: scene.regionBests,
     arrived: [...scene.arrived],
@@ -674,13 +751,13 @@ export function moons(scene: LevelScene): { x: number; y: number; r: number }[] 
 }
 
 export function resize(scene: LevelScene) {
-  const r = scene.el.getBoundingClientRect();
-  scene.w = r.width;
-  scene.h = r.height;
+  scene.w = scene.el.clientWidth;
+  scene.h = scene.el.clientHeight;
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   scene.canvas.width = Math.round(scene.w * dpr);
   scene.canvas.height = Math.round(scene.h * dpr);
   scene.g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  scene.renderScore();
   const rnd = mulberry(scene.L.n * 7919);
   scene.stars = Array.from({ length: 90 }, () => ({ x: rnd() * scene.w, y: rnd() * scene.h, r: rnd() * 1.4 + 0.3, tw: rnd() * 6 }));
 }

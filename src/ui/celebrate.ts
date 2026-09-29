@@ -10,6 +10,8 @@ export interface CelebrationOptions {
   root: HTMLElement;
   reduceMotion: boolean;
   firstEver?: boolean;
+  /** A card that disappears when it finishes: with Reduce Motion it still stays up for its full reading time. */
+  holdForReading?: boolean;
   duration?: number;
   beats: CelebrationBeat[];
   onComplete?: () => void;
@@ -45,7 +47,7 @@ export function celebrate(kind: CelebrationKind, opts: CelebrationOptions): { sk
   opts.root.addEventListener('pointerdown', skip);
   if (opts.reduceMotion) {
     playThrough(Infinity, true);
-    pending.push(window.setTimeout(finish, Math.min(220, duration)));
+    pending.push(window.setTimeout(finish, opts.holdForReading ? duration : Math.min(220, duration)));
   } else {
     for (const beat of beats) pending.push(window.setTimeout(() => playThrough(beat.at, false), Math.min(duration, Math.max(0, beat.at))));
     pending.push(window.setTimeout(skip, duration));

@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { LEVEL_SALT, goalsMet, greedyPlan, makeLevel } from '../../src/core/levels';
+import { LEVEL_SALT, goalsMet, makeLevel, solve2 } from '../../src/core/levels';
 import originalHashes from './levels.default.snapshot.json';
 
 describe('campaign level seeds', () => {
@@ -19,16 +19,18 @@ describe('campaign level seeds', () => {
   });
 
   it('changes only reviewed default layouts', () => {
-    expect(LEVEL_SALT).toEqual({ 24: 48 });
+    expect(LEVEL_SALT).toEqual({ 16: 2, 22: 1, 23: 46, 24: 48, 27: 9, 28: 19, 32: 3, 44: 5, 51: 7 });
     for (let n = 1; n <= 60; n++) {
-      if (n === 24) continue;
+      if (LEVEL_SALT[n]) continue;
       expect(makeLevel(n)).toEqual(makeLevel(n, 'PP', { salt: 0 }));
     }
-    const original = makeLevel(24, 'PP', { salt: 0 });
-    const revised = makeLevel(24);
-    expect(revised).toEqual(makeLevel(24, 'PP', { salt: 48 }));
-    expect(revised).not.toEqual(original);
-    expect(revised.difficulty).toBe('normal');
-    expect(goalsMet(greedyPlan(revised.start, revised.queue, revised.throws), revised.goals)).toBe(true);
+    for (const [planet, salt] of Object.entries(LEVEL_SALT)) {
+      const n = Number(planet);
+      const revised = makeLevel(n);
+      expect(revised).toEqual(makeLevel(n, 'PP', { salt }));
+      expect(revised).not.toEqual(makeLevel(n, 'PP', { salt: 0 }));
+      expect(revised.difficulty).toBe('normal');
+      expect(goalsMet(solve2(revised), revised.goals)).toBe(true);
+    }
   });
 });

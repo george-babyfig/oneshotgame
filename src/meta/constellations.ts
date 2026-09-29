@@ -8,6 +8,7 @@ import { earn, spend, type EarnSource } from './wallet';
 import type { BiomeId, Planet } from '../core/world';
 import type { Profile } from './profile';
 import { applyReward, type Reward } from './progression';
+import { unlocked } from './unlocks';
 
 export type Mat = 'stone' | 'dew' | 'leaf' | 'ember' | 'frost';
 export const MATS: Mat[] = ['stone', 'dew', 'leaf', 'ember', 'frost'];
@@ -42,8 +43,8 @@ export function dropsFor(planet: Planet, stars: number): Partial<Record<Mat, num
   }
   const out: Partial<Record<Mat, number>> = {};
   for (const m of MATS) {
-    const n = Math.floor((count[m] ?? 0) / MATERIAL_DROP.regionsPerDrop);
-    if (n) out[m] = n + (stars >= 3 ? MATERIAL_DROP.threeStarBonus : 0);
+    const n = m === 'frost' ? (count[m] ?? 0) * MATERIAL_DROP.frostPerRegion : Math.floor((count[m] ?? 0) / MATERIAL_DROP.regionsPerDrop);
+    if (n) out[m] = n + (m !== 'frost' && stars >= 3 ? MATERIAL_DROP.threeStarBonus : 0);
   }
   return out;
 }
@@ -71,9 +72,13 @@ export { CONSTELLATIONS } from './tuning';
 
 export const CONSTELLATION_BY_ID: Record<string, Constellation> = Object.fromEntries(CONSTELLATIONS.map((c) => [c.id, c]));
 
-/** A constellation is available once the one before it is lit. */
+/** The Atlas keeps two neighbouring unfinished constellations open. */
 export function unlockedConstellation(p: Profile, i: number) {
-  return i === 0 || p.constellations.includes(CONSTELLATIONS[i - 1].id);
+  const first = CONSTELLATIONS.findIndex((c) => !p.constellations.includes(c.id));
+  if (i < 0 || i >= CONSTELLATIONS.length) return false;
+  if (p.constellations.includes(CONSTELLATIONS[i].id)) return true;
+  if (first < 0) return false;
+  return i >= first && i < first + (unlocked(p, 'star_atlas') ? 2 : 1);
 }
 
 export function bundleDone(p: Profile, id: string) {

@@ -88,6 +88,7 @@ import { letterOf } from '../meta/inbox';
 import { homeBadge } from '../meta/homeworld';
 import { wishClaimable } from '../meta/wishes';
 import { countUp, effectiveReduceMotion, screenTransition } from './motion';
+import { recordCombo, recordReaction } from '../meta/reactions';
 
 export type ScreenName =
   | 'home'
@@ -297,6 +298,12 @@ export class App {
       timeLeft: scene.timeLeft,
       bossHp: scene.bossHp,
       shot: scene.shot,
+      landedKinds: scene.landedKinds,
+      comboIconsCurrent: scene.comboIconsCurrent,
+      comboIconsBest: scene.comboIconsBest,
+      reactionEvents: scene.reactionEvents,
+      reactionsSeen: [...scene.reactionsSeen],
+      comboEvents: scene.comboEvents,
       warmup: !!scene.o.practice,
       practiceFirstClear: !!scene.o.practiceFirstClear,
       practiceGifts: scene.practiceGifts,
@@ -745,6 +752,21 @@ export class App {
         const l = currentLook(this.p).launcher;
         this.p.mastery[l] = (this.p.mastery[l] ?? 0) + 1;
       },
+      onReaction: (id) => {
+        const result = recordReaction(this.p, id, mode === 'tutorial' ? 'campaign' : mode);
+        this.saveNow();
+        return result;
+      },
+      onCombo: (links, reaction, superFusion) => {
+        recordCombo(this.p, links, reaction, superFusion, mode === 'tutorial' ? 'campaign' : mode);
+        this.saveNow();
+      },
+      onPairTried: (first, second) => {
+        const pair = [first, second].sort().join('+');
+        if (this.p.reactionPairsTried.includes(pair)) return;
+        this.p.reactionPairsTried.push(pair);
+        this.saveNow();
+      },
       eventEmoji: !extra.endless && !extra.competitive && eventActive(this.p) ? ensureEvent(this.p).emoji : undefined,
       onLand:
         extra.endless || extra.competitive
@@ -852,6 +874,13 @@ export class App {
       const s = o.resume;
       scene.planet = s.state.planet;
       scene.nova = s.state.nova;
+      scene.combo = s.state.combo;
+      scene.comboCharge = s.state.comboCharge;
+      scene.comboIconsCurrent = s.comboIconsCurrent ?? [];
+      scene.comboIconsBest = s.comboIconsBest ?? [];
+      scene.reactionEvents = s.reactionEvents ?? [];
+      scene.reactionsSeen = new Set(s.reactionsSeen ?? scene.reactionEvents);
+      scene.comboEvents = s.comboEvents ?? [];
       scene.bonus = s.state.bonus;
       scene.regionBests = s.state.regionBests;
       scene.arrived = new Set(s.state.arrived);
@@ -869,6 +898,11 @@ export class App {
       scene.timeLeft = s.timeLeft;
       scene.bossHp = s.bossHp;
       scene.shot = s.shot;
+      if (
+        s.landedKinds?.length === scene.landedKinds.length &&
+        s.landedKinds.every((kind) => kind === null || (typeof kind === 'string' && kind in KINDS))
+      )
+        scene.landedKinds = [...s.landedKinds];
       scene.practiceGifts = s.practiceGifts ?? 0;
       scene.paused = true;
     }

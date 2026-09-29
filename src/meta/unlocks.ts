@@ -43,14 +43,20 @@ export type UnlockId =
   | 'workshop'
   | 'object_lab'
   | 'upgrades'
-  | 'inbox';
+  | 'inbox'
+  | 'steam'
+  | 'rainGarden'
+  | 'wildflowers'
+  | 'glacier'
+  | 'combo'
+  | 'scorch';
 
 export interface Unlock {
   id: UnlockId;
   /** Campaign p.level; 0 means an achievement gate. */
   planet: number;
   placement: 'round' | 'home' | 'homeworld' | 'missions' | 'modes' | 'collection';
-  intro?: { title: string; body: string };
+  intro?: { title: string; body: string; icon?: string };
   letter?: string;
   /** A newly visible entry point, even when there is no card. */
   button?: boolean;
@@ -68,6 +74,36 @@ export const UNLOCKS: readonly Unlock[] = [
   { id: 'swap', planet: 2, placement: 'round' },
   { id: 'goals', planet: GOALS_FROM, placement: 'round' },
   { id: 'supernova', planet: 9, placement: 'round' },
+  { id: 'steam', planet: 8, placement: 'round', intro: { title: 'Steam', body: 'Magma finds icy land and makes Steam!', icon: '♨️' } },
+  {
+    id: 'rainGarden',
+    planet: 13,
+    placement: 'round',
+    intro: { title: 'Rain Garden', body: 'Rain Cloud finds a meadow and grows a Rain Garden!', icon: '🌿' },
+  },
+  {
+    id: 'wildflowers',
+    planet: 22,
+    placement: 'round',
+    intro: { title: 'Wildflowers', body: 'Sunburst finds a meadow and grows Wildflowers!', icon: '🌼' },
+  },
+  {
+    id: 'glacier',
+    planet: 25,
+    placement: 'round',
+    intro: { title: 'Glacier', body: 'Ice Comet finds a mountain and makes a Glacier!', icon: '❄️' },
+  },
+  { id: 'combo', planet: 26, placement: 'round', intro: { title: 'Combo', body: 'Make Fusions together to grow a Combo!', icon: '✨' } },
+  {
+    id: 'scorch',
+    planet: 32,
+    placement: 'round',
+    intro: {
+      title: 'Dry Spell',
+      body: 'On hot or dry land, Magma or Sunburst can cause Dry Spell. It hurts the planet. Watch the red chip!',
+      icon: '🍂',
+    },
+  },
   { id: 'hard', planet: 15, placement: 'round' },
   { id: 'super_hard', planet: 19, placement: 'round' },
   { id: 'guardian', planet: 10, placement: 'round' },
@@ -112,7 +148,7 @@ export const UNLOCKS: readonly Unlock[] = [
   { id: 'star_calendar', planet: 21, placement: 'home', button: true },
   { id: 'star_atlas', planet: 23, placement: 'homeworld', button: true },
   { id: 'lifebook', planet: 3, placement: 'home', button: true },
-  { id: 'sticker_album', planet: 13, placement: 'collection', button: true },
+  { id: 'sticker_album', planet: 13, placement: 'collection' },
   {
     id: 'buddy',
     planet: 0,

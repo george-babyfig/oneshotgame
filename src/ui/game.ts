@@ -10,7 +10,7 @@ import { roundIntro, type CoachEvent } from '../meta/coach';
 import { UNLOCKS } from '../meta/unlocks';
 import { surfaceK } from './art/planet';
 import { DEFAULT_LOOK, type Look } from '../meta/cosmetics';
-import { lifeSparkSectors, type RoundState } from '../core/round';
+import { lifeSparkSectors, novaForThrow, rulesForLevel, type ReactionId, type RoundRules, type RoundState } from '../core/round';
 import { feedbackState, type FeedbackState, type FeedbackItem } from './feel';
 import type { FlightWorld } from '../core/flight';
 import type { RoundModifiers } from '../core/modifiers';
@@ -21,6 +21,7 @@ import { drawChapterBackdrop } from './art/backdrops';
 import { chapterOf } from '../meta/progression';
 
 export interface SceneOpts {
+  rules?: RoundRules;
   scopeLevel: number; // 0..3 aim guide length
   /** The player's Keeper outfit, launcher and trail. */
   look?: Look;
@@ -75,6 +76,10 @@ export interface SceneOpts {
   onTransform?: (regions: number) => void;
   /** Weekly event hook: returns event tokens earned by this landing. */
   onLand?: (changed: BiomeId[], spawned: number) => number;
+  /** The owner records first discoveries and pays their fixed reward. */
+  onReaction?: (id: ReactionId) => { first: boolean };
+  onCombo?: (links: number, reaction?: ReactionId, superFusion?: boolean) => void;
+  onPairTried?: (first: Kind, second: Kind) => void;
   eventEmoji?: string;
   onEnd: (r: LevelResult) => void;
   onQuit: () => void;
@@ -92,6 +97,13 @@ export interface LevelResult {
   leftover: number;
   /** A Comet Guardian was defeated on this planet. */
   boss?: boolean;
+  comboBest?: number;
+  comboIcons?: ReactionId[];
+  reactions?: ReactionId[];
+  reactionEvents?: ReactionId[];
+  comboEvents?: { links: number; reaction?: ReactionId; superFusion: boolean }[];
+  reactionRecorded?: boolean;
+  comboRecorded?: boolean;
 }
 
 interface Ring {
@@ -170,6 +182,7 @@ export class LevelScene {
   particles: Particle[] = [];
   rings: Ring[] = [];
   discoverQueue: string[] = [];
+  fusionDiscoverQueue: ReactionId[] = [];
   discoverBusy = false;
   finishing = false;
   leftover = 0;
@@ -178,6 +191,16 @@ export class LevelScene {
   ghosts: { species: string; sector: number; wants: BiomeId; started: number; throw: number }[] = [];
   goalPulse: { sectors: number[]; until: number } | null = null;
   nova: RoundState['nova'] = { charge: 0, threshold: 12, fired: 0, held: false };
+  combo: RoundState['combo'] = { links: 0, rest: false, best: 0 };
+  comboCharge = 0;
+  reactionsSeen = new Set<ReactionId>();
+  reactionEvents: ReactionId[] = [];
+  landedKinds: (Kind | null)[] = Array(SECTORS).fill(null);
+  comboEvents: { links: number; reaction?: ReactionId; superFusion: boolean }[] = [];
+  comboIconsCurrent: ReactionId[] = [];
+  comboIconsBest: ReactionId[] = [];
+  hitStopUntil = 0;
+  reactionArc: { from: number; to: number; id: ReactionId; until: number } | null = null;
   shake = 0;
   flash: { i: number; t: number }[] = [];
   spawnAnim = new Map<number, number>(); // sector -> anim time
@@ -250,7 +273,11 @@ export class LevelScene {
     this.el = h('div', { class: 'screen level' }, this.canvas, this.buildHud());
     this.bindInput();
     if (import.meta.env.DEV) {
+      const scene = this;
       this.devHook = {
+        get w() {
+          return scene.w;
+        },
         aimAt: (sector) => this.aimAt(sector),
         fire: (vector) => {
           if (this.canAim()) this.fire(vector.vx, vector.vy);
@@ -272,6 +299,10 @@ export class LevelScene {
       this.raf = requestAnimationFrame(this.frame);
     });
     window.addEventListener('resize', this.resize);
+  }
+
+  get rules(): RoundRules {
+    return this.o.rules ?? rulesForLevel(this.L.n);
   }
 
   // ---------------------------------------------------------------- HUD
@@ -384,7 +415,7 @@ export class LevelScene {
   bindInput() {
     const pos = (e: PointerEvent) => {
       const r = this.canvas.getBoundingClientRect();
-      return { x: e.clientX - r.left, y: e.clientY - r.top };
+      return { x: ((e.clientX - r.left) * this.w) / r.width, y: ((e.clientY - r.top) * this.h) / r.height };
     };
     this.canvas.addEventListener('pointerdown', (e) => {
       if (this.aimPointer !== null || !this.canAim()) return;
@@ -473,7 +504,7 @@ export class LevelScene {
   fire(vx: number, vy: number) {
     this.scoreAtThrow = this.score;
     const { x, y } = this.launch;
-    const nova = this.novaOn && this.nova.charge >= this.nova.threshold && (!this.nova.held || this.throwsLeft === 1);
+    const nova = novaForThrow(this.roundState());
     this.shot = { kind: this.cur, x, y, vx, vy, t: 0, carry: 0, t0: this.time, rot0: this.rot, trail: [], nova };
     if (nova) {
       sfx.combo(6);
@@ -640,7 +671,15 @@ export class LevelScene {
     return fx.drawPlanet(this);
   }
 
-  predictCache: { key: string; title: string; lost: string; changed: number[] } | null = null;
+  predictCache: {
+    key: string;
+    title: string;
+    lost: string;
+    reaction?: ReactionId;
+    comboStep: number;
+    comboEnd: boolean;
+    changed: number[];
+  } | null = null;
   previewTextScale = 0;
 
   /** Highlight the landing region and preview what it will become. */
@@ -679,6 +718,10 @@ export class LevelScene {
 
 declare global {
   interface Window {
-    __scene?: { aimAt: (sector: number) => { vx: number; vy: number }; fire: (vector: { vx: number; vy: number }) => void };
+    __scene?: {
+      readonly w: number;
+      aimAt: (sector: number) => { vx: number; vy: number };
+      fire: (vector: { vx: number; vy: number }) => void;
+    };
   }
 }

@@ -4809,3 +4809,132 @@ button.lb {
 .reduce-motion .celebrate-curtain.open::after {
   opacity: 0;
 }
+/* Fusions */
+.fusion-discover {
+  border: 2px solid #ffe38a;
+  background: #3b2b58;
+}
+.clash-discover {
+  border: 2px solid #ff9a91;
+  background: #3b2b58;
+}
+.clash-discover.show {
+  animation: none;
+}
+.reaction-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+.reaction-pair canvas,
+.result-fusion canvas {
+  vertical-align: middle;
+}
+.result-fusion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 2px solid #ffe38a;
+  border-radius: 14px;
+  background: #392b50;
+}
+.result-fusion.clash {
+  border-color: #ff9a91;
+}
+.result-fusion > div {
+  display: grid;
+  gap: 2px;
+}
+.result-fusion small {
+  color: #ffe38a;
+  font-weight: 800;
+}
+.result-fusion.clash small {
+  color: #ffb8b0;
+}
+.guide-tabs {
+  flex-wrap: wrap;
+}
+.guide-reactions,
+.guide-combos {
+  display: grid;
+  gap: 14px;
+}
+.reaction-chart {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.reaction-chart > div {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+  min-width: 0;
+}
+.reaction-chart > div > span {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 36px;
+  background: #28213f;
+  border-radius: 8px;
+  font-weight: 700;
+}
+.reaction-chart > div > span[role='columnheader'],
+.reaction-chart > div > span[role='rowheader'] {
+  background: #3a3159;
+}
+.reaction-cell.fusion {
+  color: #ffe38a;
+}
+.reaction-cell.clash {
+  color: #ffaaa4;
+}
+.reaction-legend {
+  margin: 0;
+  text-align: center;
+}
+.reaction-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.reaction-list > div {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  background: #3a3159;
+}
+.combo-stamps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 8px;
+}
+.combo-stamp {
+  display: grid;
+  place-items: center;
+  min-height: 52px;
+  border: 2px dashed #79738f;
+  border-radius: 12px;
+  color: #c6c2d4;
+  text-align: center;
+}
+.combo-stamp.found {
+  border: 2px solid #ffe38a;
+  background: #493c53;
+  color: #fff2bb;
+}
+.end-combo {
+  text-align: center;
+  font-weight: 800;
+  color: #ffe38a;
+}
+.result-combo-chain {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}

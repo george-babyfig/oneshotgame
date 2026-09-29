@@ -3,6 +3,7 @@ import { earn } from './wallet';
 // Level builders and scoring for the extra modes: Daily Planet, Meteor Rush,
 // Zen Garden and Challenge a Friend. All seeded, so no server is needed.
 import { greedyScore, makeLevel, rngFrom, type LevelDef } from '../core/levels';
+import { rulesForLevel } from '../core/round';
 import { BIOMES, clonePlanet, lifeScore, settle, type Planet } from '../core/world';
 import { dayGap, type Profile } from './profile';
 import { t } from '../i18n';
@@ -16,14 +17,14 @@ export function dailyNumber(day: string) {
   return dayGap(DAILY_EPOCH, day) + 1;
 }
 
-export function dailyLevel(day: string): LevelDef {
-  const L = makeLevel(16, `DAY-${day}`);
+export function dailyLevel(day: string, taught = 16): LevelDef {
+  const L = makeLevel(16, `DAY-${day}`, { rules: rulesForLevel(Math.min(16, taught)) });
   return L;
 }
 
 /** Meteor Rush: same generator, but star targets assume ~22 throws in 60 seconds. */
-export function rushLevel(seed: string): LevelDef {
-  const L = makeLevel(14, `RUSH-${seed}`);
+export function rushLevel(seed: string, taught = 14): LevelDef {
+  const L = makeLevel(14, `RUSH-${seed}`, { rules: rulesForLevel(Math.min(14, taught)) });
   const best = greedyScore(L.start, L.queue.concat(L.queue, L.queue), 22);
   const base = lifeScore(L.start);
   const t = (f: number) => Math.max(base + 5, Math.round((base + (best - base) * f) / 5) * 5);
@@ -33,8 +34,8 @@ export function rushLevel(seed: string): LevelDef {
   return { ...L, stars, name: 'Beat the clock!', queue: L.queue.concat(L.queue, L.queue, L.queue) };
 }
 
-export function zenLevel(saved: Planet | null): LevelDef {
-  const L = makeLevel(20, 'ZEN');
+export function zenLevel(saved: Planet | null, taught = 20): LevelDef {
+  const L = makeLevel(20, 'ZEN', { rules: rulesForLevel(Math.min(20, taught)) });
   const start = saved ? clonePlanet(saved) : L.start;
   settle(start);
   return { ...L, start, name: 'Your garden', twist: 'none', size: 1, spin: 0.25, queue: L.queue.concat(L.queue, L.queue, L.queue) };
@@ -75,8 +76,8 @@ export function decodeChallenge(code: string): { seed: string; score: number } |
   return { seed, score };
 }
 
-export function challengeLevel(seed: string): LevelDef {
-  const L = makeLevel(14, `CH-${seed}`);
+export function challengeLevel(seed: string, taught = 14): LevelDef {
+  const L = makeLevel(14, `CH-${seed}`, { rules: rulesForLevel(Math.min(14, taught)) });
   return { ...L, name: `Code ${seed}` };
 }
 

@@ -31,6 +31,8 @@ import { SEASON_NAMES, SKY_EVENTS } from '../src/meta/seasons';
 import { WISH_TEMPLATES } from '../src/meta/wishes';
 import { NEW_FEATURE } from '../src/meta/nextup';
 import { FACTS } from '../src/ui/screens/fieldguide';
+import { REACTIONS } from '../src/core/round';
+import { UNLOCKS } from '../src/meta/unlocks';
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
@@ -58,6 +60,8 @@ export function allKeys(): string[] {
   Object.values(BIOMES).forEach((b) => (add(b.name), add(b.recipe)));
   Object.values(KINDS).forEach((k) => (add(k.name), add(k.desc)));
   Object.values(TWISTS).forEach((x) => (add(x.name), add(x.desc)));
+  Object.values(REACTIONS).forEach((x) => add(x.name));
+  UNLOCKS.forEach((x) => (add(x.intro?.title), add(x.intro?.body)));
   SPECIES.forEach((s) => (add(s.name), !s.home && add(s.hint)));
   Object.values(BOOSTERS).forEach((b) => (add(b.name), add(b.desc)));
   Object.values(UPGRADES).forEach((u) => add(u.name));
@@ -91,6 +95,8 @@ export function allKeys(): string[] {
   BANNERS.forEach((b) => (add(b.name), add(b.how)));
   ACHIEVEMENTS.forEach((a) => add(a.title));
   add('Star Captain');
+  add('Little Chemist');
+  add('Chain Maker');
   Object.values(BUILDINGS).forEach((b) => (add(b.name), add(b.desc)));
   Object.values(REASON).forEach(add);
   PAINTS.forEach((x) => add(x.name));

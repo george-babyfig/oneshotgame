@@ -7,32 +7,32 @@
       "policy": "casual",
       "planets": 10,
       "runs": 160,
+      "fail": 0.0875,
+      "threeStar": 0.4,
+      "attemptsPerClear": 1.095890410958904,
+      "novas": 0.35
+    },
+    {
+      "band": "11-20",
+      "difficulty": "normal",
+      "policy": "casual",
+      "planets": 7,
+      "runs": 112,
+      "fail": 0.21428571428571427,
+      "threeStar": 0.20535714285714285,
+      "attemptsPerClear": 1.2727272727272727,
+      "novas": 1.9107142857142858
+    },
+    {
+      "band": "11-20",
+      "difficulty": "hard",
+      "policy": "casual",
+      "planets": 2,
+      "runs": 32,
       "fail": 0.15625,
-      "threeStar": 0.36875,
+      "threeStar": 0.25,
       "attemptsPerClear": 1.1851851851851851,
-      "novas": 0.29375
-    },
-    {
-      "band": "11-20",
-      "difficulty": "normal",
-      "policy": "casual",
-      "planets": 7,
-      "runs": 112,
-      "fail": 0.2767857142857143,
-      "threeStar": 0.24107142857142858,
-      "attemptsPerClear": 1.382716049382716,
-      "novas": 1.5446428571428572
-    },
-    {
-      "band": "11-20",
-      "difficulty": "hard",
-      "policy": "casual",
-      "planets": 2,
-      "runs": 32,
-      "fail": 0.75,
-      "threeStar": 0.03125,
-      "attemptsPerClear": 4,
-      "novas": 1.875
+      "novas": 2.03125
     },
     {
       "band": "11-20",
@@ -40,10 +40,10 @@
       "policy": "casual",
       "planets": 1,
       "runs": 16,
-      "fail": 0.5625,
-      "threeStar": 0.125,
-      "attemptsPerClear": 2.2857142857142856,
-      "novas": 1.6875
+      "fail": 0.3125,
+      "threeStar": 0.4375,
+      "attemptsPerClear": 1.4545454545454546,
+      "novas": 2
     },
     {
       "band": "21-30",
@@ -51,10 +51,10 @@
       "policy": "casual",
       "planets": 7,
       "runs": 112,
-      "fail": 0.44642857142857145,
-      "threeStar": 0.30357142857142855,
-      "attemptsPerClear": 1.8064516129032258,
-      "novas": 1.9732142857142858
+      "fail": 0.32142857142857145,
+      "threeStar": 0.1875,
+      "attemptsPerClear": 1.4736842105263157,
+      "novas": 2.3214285714285716
     },
     {
       "band": "21-30",
@@ -62,21 +62,21 @@
       "policy": "casual",
       "planets": 2,
       "runs": 32,
-      "fail": 0.5625,
-      "threeStar": 0.15625,
-      "attemptsPerClear": 2.2857142857142856,
-      "novas": 2.28125
-    },
-    {
-      "band": "21-30",
-      "difficulty": "super",
-      "policy": "casual",
-      "planets": 1,
-      "runs": 16,
-      "fail": 0.75,
+      "fail": 0.65625,
       "threeStar": 0.0625,
-      "attemptsPerClear": 4,
-      "novas": 2.25
+      "attemptsPerClear": 2.909090909090909,
+      "novas": 2.59375
+    },
+    {
+      "band": "21-30",
+      "difficulty": "super",
+      "policy": "casual",
+      "planets": 1,
+      "runs": 16,
+      "fail": 0.5,
+      "threeStar": 0.375,
+      "attemptsPerClear": 2,
+      "novas": 2.625
     },
     {
       "band": "31-45",
@@ -84,10 +84,10 @@
       "policy": "casual",
       "planets": 11,
       "runs": 176,
-      "fail": 0.35795454545454547,
-      "threeStar": 0.1590909090909091,
-      "attemptsPerClear": 1.5575221238938053,
-      "novas": 1.9943181818181819
+      "fail": 0.3806818181818182,
+      "threeStar": 0.05113636363636364,
+      "attemptsPerClear": 1.614678899082569,
+      "novas": 2.3579545454545454
     },
     {
       "band": "31-45",
@@ -95,10 +95,10 @@
       "policy": "casual",
       "planets": 3,
       "runs": 48,
-      "fail": 0.2708333333333333,
-      "threeStar": 0.5416666666666666,
-      "attemptsPerClear": 1.3714285714285714,
-      "novas": 1.875
+      "fail": 0.4375,
+      "threeStar": 0.020833333333333332,
+      "attemptsPerClear": 1.7777777777777777,
+      "novas": 2.3333333333333335
     },
     {
       "band": "31-45",
@@ -106,10 +106,10 @@
       "policy": "casual",
       "planets": 1,
       "runs": 16,
-      "fail": 0.5,
-      "threeStar": 0.125,
-      "attemptsPerClear": 2,
-      "novas": 2.25
+      "fail": 0.5625,
+      "threeStar": 0.0625,
+      "attemptsPerClear": 2.2857142857142856,
+      "novas": 2.75
     },
     {
       "band": "46-60",
@@ -117,10 +117,10 @@
       "policy": "casual",
       "planets": 10,
       "runs": 160,
-      "fail": 0.35625,
-      "threeStar": 0.3125,
-      "attemptsPerClear": 1.5533980582524272,
-      "novas": 2.09375
+      "fail": 0.34375,
+      "threeStar": 0.1,
+      "attemptsPerClear": 1.5238095238095237,
+      "novas": 2.425
     },
     {
       "band": "46-60",
@@ -128,10 +128,10 @@
       "policy": "casual",
       "planets": 3,
       "runs": 48,
-      "fail": 0.7083333333333334,
-      "threeStar": 0.125,
-      "attemptsPerClear": 3.4285714285714284,
-      "novas": 1.9791666666666667
+      "fail": 0.2708333333333333,
+      "threeStar": 0.020833333333333332,
+      "attemptsPerClear": 1.3714285714285714,
+      "novas": 2.4583333333333335
     },
     {
       "band": "46-60",
@@ -140,9 +140,9 @@
       "planets": 2,
       "runs": 32,
       "fail": 0.8125,
-      "threeStar": 0.0625,
+      "threeStar": 0,
       "attemptsPerClear": 5.333333333333333,
-      "novas": 2.09375
+      "novas": 2.28125
     },
     {
       "band": "1-10",
@@ -150,10 +150,10 @@
       "policy": "decent",
       "planets": 10,
       "runs": 160,
-      "fail": 0.06875,
-      "threeStar": 0.60625,
-      "attemptsPerClear": 1.0738255033557047,
-      "novas": 0.31875
+      "fail": 0.0125,
+      "threeStar": 0.7125,
+      "attemptsPerClear": 1.0126582278481013,
+      "novas": 0.39375
     },
     {
       "band": "11-20",
@@ -161,10 +161,10 @@
       "policy": "decent",
       "planets": 7,
       "runs": 112,
-      "fail": 0.08035714285714286,
-      "threeStar": 0.5803571428571429,
-      "attemptsPerClear": 1.087378640776699,
-      "novas": 1.6071428571428572
+      "fail": 0.10714285714285714,
+      "threeStar": 0.5,
+      "attemptsPerClear": 1.12,
+      "novas": 1.9910714285714286
     },
     {
       "band": "11-20",
@@ -172,10 +172,10 @@
       "policy": "decent",
       "planets": 2,
       "runs": 32,
-      "fail": 0.4375,
-      "threeStar": 0.40625,
-      "attemptsPerClear": 1.7777777777777777,
-      "novas": 1.96875
+      "fail": 0,
+      "threeStar": 0.6875,
+      "attemptsPerClear": 1,
+      "novas": 2.03125
     },
     {
       "band": "11-20",
@@ -184,9 +184,9 @@
       "planets": 1,
       "runs": 16,
       "fail": 0.125,
-      "threeStar": 0.5625,
+      "threeStar": 0.625,
       "attemptsPerClear": 1.1428571428571428,
-      "novas": 1.875
+      "novas": 2.0625
     },
     {
       "band": "21-30",
@@ -194,10 +194,10 @@
       "policy": "decent",
       "planets": 7,
       "runs": 112,
-      "fail": 0.17857142857142858,
-      "threeStar": 0.4732142857142857,
-      "attemptsPerClear": 1.2173913043478262,
-      "novas": 2
+      "fail": 0.13392857142857142,
+      "threeStar": 0.29464285714285715,
+      "attemptsPerClear": 1.1546391752577319,
+      "novas": 2.3660714285714284
     },
     {
       "band": "21-30",
@@ -205,10 +205,10 @@
       "policy": "decent",
       "planets": 2,
       "runs": 32,
-      "fail": 0.375,
+      "fail": 0.5,
       "threeStar": 0.21875,
-      "attemptsPerClear": 1.6,
-      "novas": 2.46875
+      "attemptsPerClear": 2,
+      "novas": 2.78125
     },
     {
       "band": "21-30",
@@ -216,9 +216,9 @@
       "policy": "decent",
       "planets": 1,
       "runs": 16,
-      "fail": 0.375,
-      "threeStar": 0.125,
-      "attemptsPerClear": 1.6,
+      "fail": 0.3125,
+      "threeStar": 0.625,
+      "attemptsPerClear": 1.4545454545454546,
       "novas": 2.5
     },
     {
@@ -228,9 +228,9 @@
       "planets": 11,
       "runs": 176,
       "fail": 0.17613636363636365,
-      "threeStar": 0.5340909090909091,
+      "threeStar": 0.21022727272727273,
       "attemptsPerClear": 1.2137931034482758,
-      "novas": 2.096590909090909
+      "novas": 2.5795454545454546
     },
     {
       "band": "31-45",
@@ -238,10 +238,10 @@
       "policy": "decent",
       "planets": 3,
       "runs": 48,
-      "fail": 0.10416666666666667,
-      "threeStar": 0.6041666666666666,
-      "attemptsPerClear": 1.1162790697674418,
-      "novas": 1.9166666666666667
+      "fail": 0.3958333333333333,
+      "threeStar": 0.14583333333333334,
+      "attemptsPerClear": 1.6551724137931034,
+      "novas": 2.4375
     },
     {
       "band": "31-45",
@@ -249,10 +249,10 @@
       "policy": "decent",
       "planets": 1,
       "runs": 16,
-      "fail": 0.25,
-      "threeStar": 0.5625,
-      "attemptsPerClear": 1.3333333333333333,
-      "novas": 2.25
+      "fail": 0.5,
+      "threeStar": 0,
+      "attemptsPerClear": 2,
+      "novas": 2.625
     },
     {
       "band": "46-60",
@@ -260,10 +260,10 @@
       "policy": "decent",
       "planets": 10,
       "runs": 160,
-      "fail": 0.125,
-      "threeStar": 0.525,
-      "attemptsPerClear": 1.1428571428571428,
-      "novas": 2.23125
+      "fail": 0.14375,
+      "threeStar": 0.25,
+      "attemptsPerClear": 1.167883211678832,
+      "novas": 2.58125
     },
     {
       "band": "46-60",
@@ -271,10 +271,10 @@
       "policy": "decent",
       "planets": 3,
       "runs": 48,
-      "fail": 0.1875,
-      "threeStar": 0.3333333333333333,
-      "attemptsPerClear": 1.2307692307692308,
-      "novas": 2.1458333333333335
+      "fail": 0.16666666666666666,
+      "threeStar": 0.10416666666666667,
+      "attemptsPerClear": 1.2,
+      "novas": 2.4583333333333335
     },
     {
       "band": "46-60",
@@ -282,10 +282,10 @@
       "policy": "decent",
       "planets": 2,
       "runs": 32,
-      "fail": 0.5625,
-      "threeStar": 0.1875,
-      "attemptsPerClear": 2.2857142857142856,
-      "novas": 2.125
+      "fail": 0.65625,
+      "threeStar": 0.03125,
+      "attemptsPerClear": 2.909090909090909,
+      "novas": 2.28125
     },
     {
       "band": "1-10",
@@ -293,10 +293,10 @@
       "policy": "sharp",
       "planets": 10,
       "runs": 160,
-      "fail": 0.01875,
-      "threeStar": 0.8375,
-      "attemptsPerClear": 1.019108280254777,
-      "novas": 0.3875
+      "fail": 0.00625,
+      "threeStar": 0.93125,
+      "attemptsPerClear": 1.0062893081761006,
+      "novas": 0.4
     },
     {
       "band": "11-20",
@@ -304,10 +304,10 @@
       "policy": "sharp",
       "planets": 7,
       "runs": 112,
-      "fail": 0.017857142857142856,
-      "threeStar": 0.8928571428571429,
-      "attemptsPerClear": 1.018181818181818,
-      "novas": 1.7946428571428572
+      "fail": 0.05357142857142857,
+      "threeStar": 0.875,
+      "attemptsPerClear": 1.0566037735849056,
+      "novas": 2.125
     },
     {
       "band": "11-20",
@@ -315,9 +315,9 @@
       "policy": "sharp",
       "planets": 2,
       "runs": 32,
-      "fail": 0.15625,
-      "threeStar": 0.6875,
-      "attemptsPerClear": 1.1851851851851851,
+      "fail": 0,
+      "threeStar": 1,
+      "attemptsPerClear": 1,
       "novas": 2
     },
     {
@@ -326,10 +326,10 @@
       "policy": "sharp",
       "planets": 1,
       "runs": 16,
-      "fail": 0.0625,
-      "threeStar": 0.75,
-      "attemptsPerClear": 1.0666666666666667,
-      "novas": 1.8125
+      "fail": 0,
+      "threeStar": 0.9375,
+      "attemptsPerClear": 1,
+      "novas": 2.1875
     },
     {
       "band": "21-30",
@@ -337,10 +337,10 @@
       "policy": "sharp",
       "planets": 7,
       "runs": 112,
-      "fail": 0.08928571428571429,
-      "threeStar": 0.7053571428571429,
-      "attemptsPerClear": 1.0980392156862746,
-      "novas": 2.0089285714285716
+      "fail": 0.008928571428571428,
+      "threeStar": 0.7678571428571429,
+      "attemptsPerClear": 1.009009009009009,
+      "novas": 2.6964285714285716
     },
     {
       "band": "21-30",
@@ -348,10 +348,10 @@
       "policy": "sharp",
       "planets": 2,
       "runs": 32,
-      "fail": 0.09375,
-      "threeStar": 0.75,
-      "attemptsPerClear": 1.103448275862069,
-      "novas": 2.625
+      "fail": 0.25,
+      "threeStar": 0.65625,
+      "attemptsPerClear": 1.3333333333333333,
+      "novas": 2.96875
     },
     {
       "band": "21-30",
@@ -360,9 +360,9 @@
       "planets": 1,
       "runs": 16,
       "fail": 0.0625,
-      "threeStar": 0.375,
+      "threeStar": 0.9375,
       "attemptsPerClear": 1.0666666666666667,
-      "novas": 2.875
+      "novas": 2.375
     },
     {
       "band": "31-45",
@@ -370,10 +370,10 @@
       "policy": "sharp",
       "planets": 11,
       "runs": 176,
-      "fail": 0.05113636363636364,
-      "threeStar": 0.7386363636363636,
-      "attemptsPerClear": 1.0538922155688624,
-      "novas": 2.1761363636363638
+      "fail": 0.022727272727272728,
+      "threeStar": 0.7954545454545454,
+      "attemptsPerClear": 1.0232558139534884,
+      "novas": 2.835227272727273
     },
     {
       "band": "31-45",
@@ -381,10 +381,10 @@
       "policy": "sharp",
       "planets": 3,
       "runs": 48,
-      "fail": 0.041666666666666664,
-      "threeStar": 0.8541666666666666,
-      "attemptsPerClear": 1.0434782608695652,
-      "novas": 2.1041666666666665
+      "fail": 0.125,
+      "threeStar": 0.5625,
+      "attemptsPerClear": 1.1428571428571428,
+      "novas": 2.7083333333333335
     },
     {
       "band": "31-45",
@@ -393,9 +393,9 @@
       "planets": 1,
       "runs": 16,
       "fail": 0,
-      "threeStar": 0.9375,
+      "threeStar": 0.75,
       "attemptsPerClear": 1,
-      "novas": 2.3125
+      "novas": 2.8125
     },
     {
       "band": "46-60",
@@ -403,10 +403,10 @@
       "policy": "sharp",
       "planets": 10,
       "runs": 160,
-      "fail": 0.01875,
-      "threeStar": 0.83125,
-      "attemptsPerClear": 1.019108280254777,
-      "novas": 2.3125
+      "fail": 0.06875,
+      "threeStar": 0.75625,
+      "attemptsPerClear": 1.0738255033557047,
+      "novas": 2.94375
     },
     {
       "band": "46-60",
@@ -414,10 +414,10 @@
       "policy": "sharp",
       "planets": 3,
       "runs": 48,
-      "fail": 0,
-      "threeStar": 0.7083333333333334,
-      "attemptsPerClear": 1,
-      "novas": 2.3125
+      "fail": 0.020833333333333332,
+      "threeStar": 0.6875,
+      "attemptsPerClear": 1.0212765957446808,
+      "novas": 2.7916666666666665
     },
     {
       "band": "46-60",
@@ -425,10 +425,10 @@
       "policy": "sharp",
       "planets": 2,
       "runs": 32,
-      "fail": 0.3125,
-      "threeStar": 0.6875,
-      "attemptsPerClear": 1.4545454545454546,
-      "novas": 2.25
+      "fail": 0.09375,
+      "threeStar": 0.5,
+      "attemptsPerClear": 1.103448275862069,
+      "novas": 2.84375
     }
   ]
 }

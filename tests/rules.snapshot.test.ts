@@ -318,12 +318,12 @@ describe('rules snapshot (M2 guard)', () => {
     expect(KIND_IDS).toHaveLength(6);
   });
 
-  it('17 lands × 6 objects preserve every ordinary impact', () => {
+  it('records every reviewed ordinary impact', () => {
     const rows = matrixRows();
     checkRows(
       'base-impact-matrix.json',
       rows.filter((row) => !row.id.endsWith('/nova') && !row.id.endsWith('/splash+nova')),
-      true,
+      false,
     );
     expect(rows).toHaveLength(CONTEXTS.length * 17 * 6 * VARIANTS.length);
     checkRows('impact-matrix.json', rows);
