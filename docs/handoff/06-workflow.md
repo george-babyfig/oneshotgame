@@ -7,34 +7,61 @@ npm install
 npm run dev            # browser play at http://localhost:5173 (mock purchases); window.__app for debugging
 npm run format         # Prettier (CI runs format:check)
 npm run typecheck
-npm test               # 85 Vitest tests, including i18n coverage for all 5 locales
+npm test               # 257 Vitest tests, including i18n coverage for all 5 locales and the frozen snapshots
 npm run build          # typecheck + production web build to dist/
-npm run sim -- --disableConsoleIntercept   # difficulty bot simulation (tests/difficulty.sim.ts), prints fail rates
 npm run music          # record every music theme to WAV + print loudness (needs npm run dev)
 ```
 
-Before every push, run `format:check`, `typecheck`, `test` and `build`. CI runs the same four steps, plus a macOS Xcode build.
+**Sims** (all run Vitest with `SIM=1`):
+
+```bash
+npm run sim:quick      # difficulty survey, planets 1-60, casual/decent/sharp bots (~11 s); compares with tests/sim/baseline.json
+npm run sim:baseline   # rewrite baseline.json (only when a difficulty change is intended)
+npm run sim:economy    # 90-day careers for 7 player types; writes tests/sim/economy/report.json (git-ignored)
+npm run sim            # every sim, including the level lint (tests/levels.lint.sim.ts)
+```
+
+**Playwright e2e** (`e2e/`, config in `playwright.config.ts`; installed this session with the owner's OK):
+
+```bash
+npm run e2e:install    # once: download Chromium and WebKit
+npm run e2e            # 36 tests: J1 and J3, Chromium 320x568 and 390x844, WebKit 390x844, 6 languages + pseudo-locale
+npm run e2e:quick      # English only, Chromium 390x844
+```
+
+Claude runs Playwright itself: Codex's sandbox can't bind a local port, so the dev server won't start there.
+
+**Frozen snapshots:** if a test says a rules or level snapshot changed and you didn't mean to change the rules, it's a bug. Only for an intended change: `UPDATE_FIXTURES=1 npx vitest run tests/rules.snapshot.test.ts tests/levels.snapshot.test.ts` (see [03-architecture.md](03-architecture.md)).
+
+Before every push, run `format:check`, `typecheck`, `test`, `build`, `e2e` and `sim:quick`. CI runs `verify` (format, typecheck, tests, build, and a check that dev tools never reach the production bundle), `sim-quick`, `e2e` and the macOS `ios-build`; `nightly.yml` runs the full sims.
 
 ## iOS (on a Mac with Xcode)
 
 ```bash
-npm run ios:sync        # build the web app + copy into ios/
-npx cap run ios         # build and launch in a Simulator (pick a device)
-npm run ios:open        # open ios/App/App.xcodeproj in Xcode
+npm run ios:sync                                                   # build the web app + copy into ios/
+npx cap run ios --target D986320D-44EE-4552-8BF7-6BAF254B7D52     # build and launch on the iPhone 17 Pro Simulator
+npm run ios:open                                                   # open ios/App/App.xcodeproj in Xcode
+xcrun simctl io D986320D-44EE-4552-8BF7-6BAF254B7D52 screenshot /tmp/pp.png   # then read the PNG
 ```
 
+**Simulator gotchas (from the third session):**
+
+- **Always pass the UDID.** The Pocket Planet Simulator is **iPhone 17 Pro, UDID `D986320D-44EE-4552-8BF7-6BAF254B7D52`**. The owner's other project often has a second Simulator ("BabyFig-iPhone") booted, so `booted` can hit the wrong one. Never touch the BabyFig Simulator.
+- **Taps into the web view** need a press of about 0.25 s; quick taps are often missed.
+- **For precise checks,** use the browser pane with `npm run dev` (`.claude/launch.json` has the config) and `window.__app` / `window.__scene`. Use the Simulator to confirm the real app runs and looks right.
+
 - **Test purchases:** in Xcode, go to Product → Scheme → Edit Scheme → Run → Options → StoreKit Configuration and choose `PocketPlanet.storekit`.
-- **Prebuilt Simulator app:** every CI run uploads **PocketPlanet-Simulator** under Actions → run → Artifacts. Install it with `xcrun simctl install booted App.app` and launch it with `xcrun simctl launch booted com.pocketplanet.game`.
+- **Prebuilt Simulator app:** every CI run uploads **PocketPlanet-Simulator** under Actions → run → Artifacts. Install it with `xcrun simctl install <udid> App.app` and launch it with `xcrun simctl launch <udid> com.pocketplanet.game`.
 - **Bundle ID:** `com.pocketplanet.game`.
 
 ## Visual QA
 
-The cloud session drove the dev server with Playwright (headless Chromium, iPhone 14 and iPhone SE viewports).
+The committed journeys are in `e2e/` (see above). The cloud session drove the dev server with Playwright (headless Chromium, iPhone 14 and iPhone SE viewports).
 
 - **The pattern:** open `http://127.0.0.1:5173/`, then set up state through `window.__app`, e.g. `p.tutorial = true; p.level = 24; a.showVoyage()`. Click through, take screenshots, and fail on any `pageerror` or console error.
 - **On a Mac,** the local session can do the same, and should also check the real app in the iOS Simulator:
-  - Run `npm run ios:sync`, then `npx cap run ios`.
-  - Take a screenshot with `xcrun simctl io booted screenshot /tmp/pp.png`, then read the PNG to look at it.
+  - Run `npm run ios:sync`, then `npx cap run ios --target <udid>` (see the gotchas above).
+  - Take a screenshot with `xcrun simctl io <udid> screenshot /tmp/pp.png`, then read the PNG to look at it.
   - Debug the web view with Safari → Develop → Simulator.
   - `window.__app` works there too.
 - **Screens to always check:** home (320px and iPhone SE widths), level HUD, and every new sheet.
@@ -53,8 +80,13 @@ The owner wants each milestone built the way a studio would build it, with **Cla
 
 **Check Codex first:**
 
-- Run `codex --version` and `codex exec --help`. Flags change between versions, so trust `--help` over this doc.
-- If Codex is missing, ask the owner. Don't install or sign in to anything on their behalf.
+- **Use the full path.** On the owner's Mac, `/opt/homebrew/bin/codex` is a dead symlink (the ChatGPT app moved it). The working binary is:
+  ```
+  /Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex
+  ```
+  It was version 0.158 and signed in during the third session.
+- Run `<codex> --version` and `<codex> exec --help`. Flags change between versions, so trust `--help` over this doc.
+- If Codex is missing or signed out, ask the owner. Don't install or sign in to anything on their behalf.
 
 **Roles:**
 
@@ -84,20 +116,38 @@ Done when: npm run format && npm run typecheck && npm test pass (translations ma
 Report: what you changed (files + one line each), new strings, anything you were unsure about.
 ```
 
-Typical calls: `codex exec --cd <repo> --sandbox workspace-write "<brief>"` to implement, and `codex exec --cd <repo> --sandbox read-only "<review brief>"` to review. Check `--help` for the exact flags.
+**Calls that worked (third session):** write the brief to a file, then pipe it in and let Codex write its report to a file:
 
-**One milestone, start to finish:**
+```bash
+CODEX=/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex
+# implement one package
+$CODEX exec -C /Users/georgeapostolopoulos/oneshotgame -s workspace-write -c model_reasoning_effort="high" -o report-a.md - < brief-a.md
+# independent review (no writes)
+$CODEX exec -C /Users/georgeapostolopoulos/oneshotgame -s read-only -c model_reasoning_effort="high" -o review.md - < review-brief.md
+```
 
-1. Plan the packages.
-2. Test engineer writes tests while Codex implements the logic, then the UI.
-3. The engineering manager reviews the diff and runs format, typecheck, test and build.
-4. Data analyst runs the sim.
-5. QA analyst plays through the journeys.
-6. Translators fill all 5 locales.
-7. Adversarial review, then verify each finding, then fix.
-8. Commit and push. Watch CI and keep it green.
-9. Update the PR description and ROADMAP-v2 status markers, and republish the playable build if possible.
-10. Send the owner a short plain-language summary with what to try.
+Run packages in the background, in parallel when their files don't overlap. Keep briefs and reports in the scratchpad, not the repo. Codex can't open a local port, so it can't run Playwright or the dev server: Claude does those.
+
+**One milestone, start to finish (the loop that worked for M0–M2):**
+
+1. **Plan:** split the milestone into 2–3 Codex packages with **disjoint file ownership**. Write one shared "common" brief (repo, rules, conventions, checks) plus one brief per package.
+2. **Tests first:** a test engineer sub-agent writes the tests and snapshots from the spec before or while Codex works.
+3. **Build:** run the Codex packages (in parallel when files don't overlap).
+4. **Check:** Claude reviews the diffs, then runs `format`, `typecheck`, `test`, `build`, `e2e` and `sim:quick` (and `sim:economy` when money changes).
+5. **Translate:** translator sub-agents on a cheap model (haiku), one per language, or one for all 5 for a small batch. They write the locale JSON with a small node script, never by hand-editing.
+6. **Review:** 3 adversarial Claude reviewers, each with a lens (correctness; economy and kid safety; UX and i18n), plus Codex in `-s read-only`. Claude verifies every finding before anyone fixes it.
+7. **Fix:** one Codex fix pass for the verified findings; re-run the checks.
+8. **Ship:** commit, push, watch CI with `gh run watch`, keep it green.
+9. **Record:** update the PR #2 description, the milestone's "✅ built" note in ROADMAP-v2 section 8, `BUILT` in `tests/glossary.test.ts`, and the milestone's Linear document.
+10. **Report:** a short plain-language summary to the owner with what to try in the Simulator.
+
+## Linear
+
+- **Project:** "Pocket Planet — Launch Roadmap" in the Linear team **"Pocket Planet"** (the owner created the team): https://linear.app/babyfig/project/pocket-planet-launch-roadmap-76fb6f2c54db
+- **Shape:** 22 milestones, each with one "work items" checklist **document**, plus an "Owner decisions and to-dos" document. There are **no issues**: the workspace hit the free-plan issue limit, and the owner chose checklists in documents. Don't create issues.
+- **Order:** M7.5, M10.5, M11.5 and M17 sit at the end of Linear's milestone list, because the API can't reorder milestones.
+- **Keep it in step:** when a milestone is built, mark its document ✅ (and tick its checklist). When the roadmap changes, change Linear too.
+- **Never touch the Babyfig team** or anything else in the workspace. It belongs to the owner's other project.
 
 ## Translations
 

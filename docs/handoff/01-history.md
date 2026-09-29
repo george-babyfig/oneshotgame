@@ -1,6 +1,6 @@
 # 01: Conversation history
 
-The owner (George, GitHub `george-babyfig`) worked with Claude Code in two cloud sessions: a long first one (27–28 September) and a short second one (28 September evening) that scoped the next big roadmap. Their messages are quoted as sent, typos included; the notes under each say what happened.
+The owner (George, GitHub `george-babyfig`) worked with Claude Code in three sessions: a long first one in the cloud (27–28 September), a short second one in the cloud (28 September evening) that scoped the next big roadmap, and a third one, the first **local** session on the owner's Mac (28–29 September), which built M0–M2 and started M3. Their messages are quoted as sent, typos included; the notes under each say what happened.
 
 ## Day 1 — 27 September 2026
 
@@ -171,6 +171,61 @@ The owner's other Claude Code sessions (the BabyFig / vectorlabs-site ones) are 
 
 This updated handoff (all docs plus a new PROMPT.md) is the result. The next session runs **locally on the Mac**, with Codex as lead developer, and builds ROADMAP-v2 milestone by milestone.
 
+## Day 2–3: the third session (local), 28–29 September 2026
+
+The owner started this session from PROMPT.md. It ran **on the Mac** (`uname -s` printed Darwin), so it could use the iOS Simulator, Xcode and Codex.
+
+### 15. Setup and toolchain
+
+- **Toolchain found:** Xcode 26.4.1, Node 25.9, and `gh` signed in as `george-babyfig`.
+- **Codex:** CLI 0.158 is installed and signed in, but `/opt/homebrew/bin/codex` is a dead symlink (the ChatGPT app moved it). The working binary is `/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex`. Codex's sandbox can't bind a local port, so Claude runs Playwright, not Codex.
+- **Playwright:** the owner approved installing it (`@playwright/test` 1.63 with Chromium and WebKit).
+- **Simulator:** the game runs on an iPhone 17 Pro Simulator. The owner's other project often has a second Simulator ("BabyFig-iPhone") booted, so every command passes the UDID. Details in [06-workflow.md](06-workflow.md).
+
+### 16. M0, M1 and M2 built
+
+- **M0, kid-safe trust update** (`9b78549`): parental gate on every outbound action, no system prompts to the child, plain dates instead of countdowns, visitors without chance, one continue rule, no selling before value, fair competitive modes, churn stops paying, Homeworld clock guards. 122 tests.
+- **M1, measure and guard** (`dfaad28`, `962e526`): one wallet, a private on-device ledger, one tuning file, privacy and terms lints, save goldens and time travel, the sim harness and the 90-day economy sim, Playwright J1 and J3, and CI jobs `sim-quick`, `e2e` and a nightly sim. Planet 24 is no longer a wall.
+- **M2, the round engine and the unlock ladder** (`cb64557`): `round.ts`, `modifiers.ts`, `flight.ts`, `unlocks.ts`, the game scene split into four modules, and the glossary test. Planets 1–120 and every mode are byte-identical to before.
+- Each milestone went through Codex packages, tests, translations, three adversarial Claude reviewers plus a Codex review, fixes, a green CI and an updated PR #2. The loop is in [06-workflow.md](06-workflow.md).
+
+### 17. More razzle dazzle: M6.5 Showtime
+
+> "add to the roadmap that we need way more animations like pop up on screen effects, more razzle dazzle and pizazz, more custom assets, characters, avatars etc etc"
+
+Claude added **M6.5 Showtime** to ROADMAP-v2 (animations, celebrations, living characters, avatars), after M6. It went in with the M0 commit.
+
+### 18. The Homeworld, launchers, obstacles, combos and difficulty
+
+> "I want that homeworld fully and completely fleshed out and made to be in depth on roadmap"
+
+> "different launchers that do different things like better curves, faster speed harder impacts, and then obstacles and things that could like destroy your meteor"
+
+> "difficulty needs to be refined and honed in, and combos and such are paramount"
+
+> "we want the difficulty progression to be natural, we dont want it too hard at the beginning but also not too easy, as both will cause a user to lose interest"
+
+Two lead designers (sub-agents) wrote build-ready design docs (commit `74be89c`):
+
+- **[docs/product/HOMEWORLD.md](../product/HOMEWORLD.md):** the full Homeworld: map and growth, every building, the Launch Bay, friends' daily life, Landmarks, Homeworld Levels 1–10 and its economy.
+- **[docs/product/FLIGHT.md](../product/FLIGHT.md):** launchers as earned sidegrades (Star Sling, Swoop, Sparkler, Zip, Thumper, Pinpoint, Skipper), telegraphed sky obstacles (Drift Rocks, Bubble Moon, Magnet Mist, Rubble Ring, Tug Star), combo chains, and a difficulty program with a floor and a ceiling per chapter.
+- The last quote is now the **headline principle of the difficulty program**: never too hard early, never too easy either.
+- ROADMAP-v2 gained **M7.5 Sky obstacles**, **M10.5 Launchers and the Launch Bay**, **M11.5 Homeworld Life** and **M17 Homeworld Horizons**. M7 gained Combos and M8 the difficulty program. Owner decisions 11–27 were added to section 10.
+
+### 19. Linear
+
+> "Put it all on linear as a new project"
+
+- The owner created the Linear team **"Pocket Planet"**. Claude made the project **"Pocket Planet — Launch Roadmap"**: https://linear.app/babyfig/project/pocket-planet-launch-roadmap-76fb6f2c54db
+- It has 22 milestones and one "work items" checklist document per milestone, plus an "Owner decisions and to-dos" document.
+- **No issues:** the Linear workspace hit the free-plan issue limit, and the owner chose checklists in documents instead.
+- M7.5, M10.5, M11.5 and M17 sit at the end of Linear's milestone list, because the API can't reorder milestones.
+- The **Babyfig** team in the same workspace belongs to another project and must never be touched.
+
+### 20. M3 started
+
+M3 (the first ten minutes) is in progress as three Codex packages: A (ladder and difficulty moves), B (title beat, purpose moment, pop-up governor, away card) and C (practice planets, Coach 2.0, text size, VoiceOver). See [05-status-and-next.md](05-status-and-next.md).
+
 ## Recurring patterns in how the owner works
 
 - The most common instruction is "keep going": continue with the next roadmap round without asking.
@@ -183,3 +238,6 @@ This updated handoff (all docs plus a new PROMPT.md) is the result. The next ses
 - They want depth with a clear purpose: shot synergies, combos, stats, power-ups, hazards that make levels harder, and a Homeworld that matters. "What is the point of the game?" must have a crisp answer.
 - They want more revenue, still within the kid-safe rules.
 - They hand work between sessions often. Keep `docs/handoff/` current whenever a session ends.
+- They want difficulty that feels natural: not too hard at the start, not too easy either. Combos are "paramount".
+- They want lots of visible polish: animations, pop-up effects, characters and avatars (M6.5).
+- They track the plan in Linear. Keep the Linear project in step with the roadmap.

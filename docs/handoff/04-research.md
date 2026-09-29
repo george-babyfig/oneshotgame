@@ -55,6 +55,10 @@ The detailed research tables, with citations, live in [ROADMAP.md](../../ROADMAP
    - **Research:** combos and hazards, what gives a base-builder its purpose, and kid-safe revenue with benchmarks.
    - **Review:** five PM proposals and five adversarial critiques.
    - **Output:** [docs/product/ROADMAP-v2.md](../product/ROADMAP-v2.md), which has the findings, sources and milestone plan.
+8. **Design deep-dives (third session)** at the owner's request: two lead-designer sub-agents built on the scope evidence.
+   - **[HOMEWORLD.md](../product/HOMEWORLD.md):** the Homeworld in depth (buildings, the Launch Bay, friends' daily life, Landmarks, Homeworld Levels 1–10, its economy), with its originality and kid-safety checks.
+   - **[FLIGHT.md](../product/FLIGHT.md):** launchers as earned sidegrades, telegraphed sky obstacles, Combos and the difficulty program.
+   - **Output:** four new milestones in ROADMAP-v2 (M7.5, M10.5, M11.5, M17) and owner decisions 11–27.
 
 ## Principles distilled from all the rounds
 
@@ -67,3 +71,4 @@ The detailed research tables, with citations, live in [ROADMAP.md](../../ROADMAP
 7. **Everything drawn in code**, in one house style, localized into 5 languages from day one.
 8. **Mastery is prestige, never power or pressure** (round 7): generated and provable, never revoked, no timers, streaks or first-try rules.
 9. **Every system must answer "why play?"** (product scoping): each one feeds the core fling loop or visibly grows something the player owns.
+10. **Difficulty feels natural** (third session): never too hard at the start, never too easy either, since both lose players. Each chapter has a floor and a ceiling, checked by the sims (FLIGHT.md, M8).
