@@ -1,64 +1,71 @@
-# 05: Status and next steps (as of 29 September 2026, during the third session)
+# 05: Status and next steps (as of 29 September 2026, end of the third session)
 
 ## Where things stand
 
-- **Branch:** `claude/eager-planck-yfnmzf`, pushed up to `cb64557` (M2). The local session on the owner's Mac owns it. Other work on M3 may be uncommitted in the working tree: run `git status` and read [the M3 section](#m3-in-progress-the-first-ten-minutes) before touching `src/`.
-- **PR:** george-babyfig/oneshotgame#2 is a **draft** with rounds 3–7, the product scope, ROADMAP-v2 and M0–M2. Merge only when the owner asks.
-- **CI:** jobs `verify`, `sim-quick`, `e2e` and `ios-build`, plus a nightly sim run. Green through M1. The run for `cb64557` was still going when this was written; check `gh run list`.
-- **Tests:** **257** Vitest tests and **36** Playwright e2e tests pass. Format and typecheck are clean, and the build works.
+- **Branch:** `claude/eager-planck-yfnmzf`, pushed up to `4d3ae5c` (M5) plus this handoff. The working tree should be clean: run `git status`, and if it isn't, find out why before touching `src/`.
+- **PR:** george-babyfig/oneshotgame#2 is a **draft** with rounds 3–7, the product scope, ROADMAP-v2 and M0–M5. Merge only when the owner asks.
+- **CI:** jobs `verify` (with a `dist/` grep for `Balance Report`, `__i18n`, `__scene` and `__gate`), `sim-quick`, `e2e` and `ios-build`, plus a nightly sim run. Check `gh run list` for the latest run before starting.
+- **Tests:** **435** Vitest tests and **105** Playwright journeys (J1, J2, J3, `prices.spec`, `gate.spec` in Chromium 320 and 390 and WebKit 390) pass. Format and typecheck are clean, and the build works.
 - **Playing it:** the iOS Simulator (iPhone 17 Pro, steps in [06-workflow.md](06-workflow.md)) or `npm run dev` in a browser. The old web build at https://claude.ai/artifact/K5sPveYA8weiBttagqJjsR is still at Version 12 (rounds 1–6).
-- **Linear:** the plan is mirrored in the project **"Pocket Planet — Launch Roadmap"**: https://linear.app/babyfig/project/pocket-planet-launch-roadmap-76fb6f2c54db (details in [06-workflow.md](06-workflow.md)).
+- **Linear:** the project **"Pocket Planet — Launch Roadmap"** shows M0–M5 as built, with decision 1 recorded: https://linear.app/babyfig/project/pocket-planet-launch-roadmap-76fb6f2c54db (details in [06-workflow.md](06-workflow.md)).
+- **Decision 1 is answered** (29 September 2026): "Keep gem packs too". The 4 gem packs and the Piggy Bank stay as fixed-price consumables sold only in Grown-ups. Don't ask it again.
 
 ## Built so far (third session)
 
-| Milestone                                 | Commit               | Short version                                                                                                                                                                                        |
-| ----------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| M0 Kid-safe trust update                  | `9b78549`            | Parental gate on every outbound action, no system prompts to the child, plain dates, visitors without chance, one continue rule, no selling before value, fair competitive modes, churn stops paying |
-| M1 Measure and guard                      | `dfaad28`, `962e526` | One wallet, a private ledger, one tuning file, privacy and terms lints, save goldens, time travel, `sim:quick`, the economy sim, Playwright J1 and J3, CI jobs                                       |
-| M2 The round engine and the unlock ladder | `cb64557`            | `round.ts`, `modifiers.ts`, `flight.ts` (frame-rate independent), `unlocks.ts`, the scene split, the glossary test, frozen snapshots (planets 1–120 byte-identical)                                  |
-| Product docs (not a milestone)            | `74be89c`            | [HOMEWORLD.md](../product/HOMEWORLD.md) and [FLIGHT.md](../product/FLIGHT.md); four new milestones; owner decisions 11–27                                                                            |
+| Milestone                                 | Commit               | Short version                                                                                                                                                                                                             |
+| ----------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M0 Kid-safe trust update                  | `9b78549`            | Parental gate on every outbound action, no system prompts to the child, plain dates, visitors without chance, one continue rule, no selling before value, fair competitive modes, churn stops paying                      |
+| M1 Measure and guard                      | `dfaad28`, `962e526` | One wallet, a private ledger, one tuning file, privacy and terms lints, save goldens, time travel, `sim:quick`, the economy sim, Playwright J1 and J3, CI jobs                                                            |
+| M2 The round engine and the unlock ladder | `cb64557`            | `round.ts`, `modifiers.ts`, `flight.ts` (frame-rate independent), `unlocks.ts`, the scene split, the glossary test, frozen snapshots (planets 1–120 byte-identical)                                                       |
+| M3 The first ten minutes                  | `abac194`            | Title beat, practice planets 1–3 can't fail, purpose moment, pop-up governor, away card, Coach 2.0, ladder moves (Hard 15, Supernova 9, Momentum 17, Buddy 18, Voyage 20, Calendar 21, Festival 34), text size, VoiceOver |
+| M4 One clear Home, Missions and Wishes    | `e923123`            | Five tabs with Back and a swipe, Next Up, Wishes from planet 12, Star Road points capped at 4 a day, Explorer Rank retired (modes 27/30/38/40), Field Guide, Styles after the chapter-1 chest                             |
+| Decision 1 (roadmap)                      | `49c1abe`            | Gem packs and the Piggy Bank stay, sold only in Grown-ups; 12 products at launch (7 looks, 4 gem packs, Piggy Bank)                                                                                                       |
+| M5 Grown-ups and a fair checkout          | `4d3ae5c`            | Gate v2, the Grown-ups area with the shop, the checkout charter (contents, receipt, Ask to Buy, quiet revocation, finish after save, launch reconciliation), a price-free kid side, Keeper Statue in stardust             |
+| Product docs (not a milestone)            | `74be89c`            | [HOMEWORLD.md](../product/HOMEWORLD.md) and [FLIGHT.md](../product/FLIGHT.md); four new milestones; owner decisions 11–27                                                                                                 |
 
 Each milestone's "✅ built" note in [ROADMAP-v2.md](../product/ROADMAP-v2.md) section 8 lists what shipped and the choices made while building.
 
-## M3 in progress: the first ten minutes
+**Measured along the way:** first fling 4.6–4.9 s after launch (M3); planets 1–10, decent bot fail/3★ 6%/61%, casual 11%/37% (M3); Home has 11 tap targets and 1 badge (M4); 103.5 free gems per active day for a Regular player (M4, band ≥ 95); 20 meta nouns by planet 20 (M4, cap 20).
 
-Split into three Codex packages with separate files (ROADMAP-v2 M3 has the full scope and acceptance):
+**Deferred to M12:** the other five looks products (Themes, the Planet Pack, Style Singles) arrive with their art. Starter Crew is currently the Aurora atmosphere, the Explorer suit, a trail and a Passport banner; the hat, launcher and paint are added in M12, free to existing buyers.
 
-| Package | Scope                                                                                                                                                                   |
-| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A       | Ladder and difficulty moves: first Hard planet 15; Momentum from 17 and pauses on a fail; Supernova from planet 9 (solver matches); Festival 34; Voyage 20; Calendar 21 |
-| B       | Title beat, purpose moment on the first win, pop-up governor, "While you were away" card                                                                                |
-| C       | Practice planets 1–3 can't be failed, Coach 2.0, text size setting, VoiceOver live region                                                                               |
+## Next: M6, Read every throw
 
-To finish M3: check each package's result, then run the rest of the per-milestone loop in [06-workflow.md](06-workflow.md) (checks, sims, Playwright, translations, adversarial reviews, fix pass, commit, CI, PR, roadmap note, Linear, report). Moving unlocks changes planet definitions, so the level snapshots will change on purpose: regenerate them with `UPDATE_FIXTURES=1` and say why in the commit. Also add `M3` to `BUILT` in `tests/glossary.test.ts` and make sure `KNOWN_UNTIL_M3` in `tests/unlocks.test.ts` (the crowded planets from M2: 1, 5 and 8) ends up empty.
+Start here. ROADMAP-v2 M6 has the full scope, files, acceptance and test plan. In short:
+
+- **6.1 Queue and landing card:** current plus the next 2 objects; the landing card shows the new land, and a second row only when a creature would wander off or a reaction applies.
+- **6.2 Wander off and come back:** a grey ghost with a thought bubble; "Came back!" when it returns.
+- **6.3 Feedback governor:** one pop-up queue, at most 2 at once, 250 ms apart; the "×N" chain goes.
+- **6.4 Supernova 2.0**, **6.5 object stats in data** (with the Solver 2.0 retune), **6.6 feel** (sound, haptics, trail and impact per object; a short tally), **6.7 boosters re-scoped**, **6.8 colour and motion** (a "Clear" palette, colour-blind test), **6.9 resume a round** (Playwright J7).
+- **Team:** three Codex packages (HUD and preview; Supernova and stats; feel and colour), then the loop in [06-workflow.md](06-workflow.md).
 
 ## Next: the rest of ROADMAP-v2
 
 The plan is **[docs/product/ROADMAP-v2.md](../product/ROADMAP-v2.md)**, with [HOMEWORLD.md](../product/HOMEWORLD.md) and [FLIGHT.md](../product/FLIGHT.md) for the Homeworld, launchers, sky obstacles, Combos and difficulty. **The launch candidate is 17 milestones** (about 44 team-weeks at first estimate). M13–M17 come after launch.
 
-| Milestone | Goal                                                                                           | Size | Status      |
-| --------- | ---------------------------------------------------------------------------------------------- | ---- | ----------- |
-| M0        | Kid-safe trust update                                                                          | S    | ✅ built    |
-| M1        | Measure and guard (no visible change)                                                          | M    | ✅ built    |
-| M2        | The round engine and the unlock ladder (no visible change)                                     | L    | ✅ built    |
-| **M3**    | The first ten minutes                                                                          | M    | In progress |
-| M4        | One clear Home, Missions and Wishes                                                            | M    |             |
-| M5        | Grown-ups and a fair checkout (**ask owner decision 1 first**)                                 | L    |             |
-| M6        | Read every throw: HUD, Supernova 2.0, stats, feel                                              | L    |             |
-| M6.5      | Showtime: animations, celebrations, living characters, avatars (owner's request)               | L    |             |
-| M7        | Fusions, the first Clash and Combos                                                            | L    |             |
-| M7.5      | Sky obstacles and real flight in the sims                                                      | L    |             |
-| M8        | Troubles, traits, the Buddy, the help ladder and the difficulty program; rules freeze          | L    |             |
-| M9        | Remix (REMIX.md)                                                                               | M    |             |
-| M10       | Labs: your shots learn tricks                                                                  | L    |             |
-| M10.5     | Launchers and the Launch Bay                                                                   | L    |             |
-| M11       | Homeworld Level and a fair economy                                                             | M    |             |
-| M11.5     | Homeworld Life: friends' days, lands and Landmarks (needs decision 25)                         | L    |             |
-| M12       | Star Roads, the Styles catalogue and launch prep                                               | L    |             |
-| M13–M17   | After launch: friends and trips, Road 1, content drop, Collector's Edition, Homeworld Horizons | —    |             |
+| Milestone | Goal                                                                                           | Size | Status   |
+| --------- | ---------------------------------------------------------------------------------------------- | ---- | -------- |
+| M0        | Kid-safe trust update                                                                          | S    | ✅ built |
+| M1        | Measure and guard (no visible change)                                                          | M    | ✅ built |
+| M2        | The round engine and the unlock ladder (no visible change)                                     | L    | ✅ built |
+| M3        | The first ten minutes                                                                          | M    | ✅ built |
+| M4        | One clear Home, Missions and Wishes                                                            | M    | ✅ built |
+| M5        | Grown-ups and a fair checkout (decision 1: gem packs stay)                                     | L    | ✅ built |
+| **M6**    | Read every throw: HUD, landing card, Supernova 2.0, stats, feel, colour, resume                | L    | **Next** |
+| M6.5      | Showtime: animations, celebrations, living characters, avatars (owner's request)               | L    |          |
+| M7        | Fusions, the first Clash and Combos                                                            | L    |          |
+| M7.5      | Sky obstacles and real flight in the sims                                                      | L    |          |
+| M8        | Troubles, traits, the Buddy, the help ladder and the difficulty program; rules freeze          | L    |          |
+| M9        | Remix (REMIX.md)                                                                               | M    |          |
+| M10       | Labs: your shots learn tricks                                                                  | L    |          |
+| M10.5     | Launchers and the Launch Bay                                                                   | L    |          |
+| M11       | Homeworld Level and a fair economy                                                             | M    |          |
+| M11.5     | Homeworld Life: friends' days, lands and Landmarks (needs decision 25)                         | L    |          |
+| M12       | Star Roads, the Styles catalogue and launch prep                                               | L    |          |
+| M13–M17   | After launch: friends and trips, Road 1, content drop, Collector's Edition, Homeworld Horizons | —    |          |
 
 - **Difficulty, the headline principle:** in the owner's words, "we dont want it too hard at the beginning but also not too easy, as both will cause a user to lose interest". The difficulty program (FLIGHT.md, M8) sets a floor and a ceiling per chapter; M3's ladder moves are the first step.
-- **Owner decisions** 1–27 are in ROADMAP-v2 section 10. The stated defaults apply unless the owner says otherwise. **Ask decision 1** (retire gem packs and the piggy bank before launch) **before starting M5.**
+- **Owner decisions** 1–27 are in ROADMAP-v2 section 10. Decision 1 is answered (gem packs stay, Grown-ups only). The stated defaults apply to the rest unless the owner says otherwise; M11.5 needs decision 25.
 
 ## Baseline data (from M1)
 
@@ -71,25 +78,32 @@ Targets for later milestones:
 
 ## Known issues and caveats
 
-- **Glossary watch list:** Japanese uses two different words for "galaxy" and for "festival", and Spanish has both "Guardián Cometa" and "Cometa Guardián". Fix these in a translation pass; `tests/glossary.test.ts` prints them.
+- **Planet 15's Hard band is too easy.** The first Hard planet moved to 15 in M3, but the sims show it doesn't yet feel Hard. M8 (Troubles and the difficulty program) tunes it.
+- **Planets 1 and 4 share the name "Dewdrop Haven".** The name generator repeats; fix it when level names are next touched (it changes level snapshots on purpose).
+- **Title screen:** the planet's glow is clipped at the bottom of the canvas.
+- **Ask to Buy limit:** the `@capgo/native-purchases` plugin finishes an Ask to Buy approval before it tells the game. Launch reconciliation (`reconcilePurchases()`) recovers it, unless the save itself is lost.
+- **Gate v2 needs a T0 check:** English and hiragana number words may be readable by children aged 9–11. Test it with real children before launch.
+- **Glossary `BUILT` stops at M4.** `tests/glossary.test.ts` still lists "Piggy Bank" and "gem packs" as words retired in M5, written before decision 1 kept them. Update those entries (they are now Grown-ups-only words, not retired), then add `M5` to `BUILT`.
+- **Glossary watch list:** `tests/glossary.test.ts` prints known translation inconsistencies still to fix. M3 fixed the Japanese galaxy/festival words and some Spanish/Portuguese wording; check the printed list for what's left.
 - **Rate button:** "Rate Pocket Planet" in Settings can't fall back to the App Store page until the app has a store ID.
 - **Voyage map previews all look alike.** They show each stop's starting planet, which is mostly bare rock.
 - **Round 6 translations** (20 strings) were written by Claude without a native-speaker review. German uses "Accessoire" for "Accessory".
 - **The difficulty sims ignore twists, swaps and aiming physics**, so real fail rates are probably higher. M7.5 adds real flight to the sims (the Scene Bot, using the `window.__scene` hooks from M2).
-- **Not yet verified on real hardware:** StoreKit purchases, the game's feel on a device.
+- **Not yet verified on real hardware:** StoreKit purchases (including Ask to Buy and revocation), the game's feel on a device.
 - **Research limits:** the cloud sessions' network blocked many sites, so some findings rest on search snippets. Each research file marks its confidence.
 
 ## Owner decisions and to-dos (things only George can do)
 
-These are unchanged from the last session. They are also in the Linear document "Owner decisions and to-dos".
+These are also in the Linear document "Owner decisions and to-dos".
 
-- **Decisions:** section 10 of [ROADMAP-v2.md](../product/ROADMAP-v2.md). Decision 1 is needed before M5.
+- **Decisions:** section 10 of [ROADMAP-v2.md](../product/ROADMAP-v2.md). Decision 1 is answered.
 - **Repo settings:** make the repo **private** (GitHub → Settings → General → Danger Zone) and switch the **default branch** to `main`.
 - **App Store setup:**
   - an Apple Developer account
   - the bundle ID `com.pocketplanet.game`
   - Game Center IDs from `store/gamecenter.md`
-  - in-app purchases (wait for decision 1)
+  - the **12 in-app purchase products** in App Store Connect when ready (7 looks, 4 gem packs, the Piggy Bank; see ROADMAP-v2 section 6.1 and `ios/App/PocketPlanet.storekit`)
   - the listing text and screenshots in `store/`
-- **Playtest** in the Simulator, and say how the difficulty feels. M3 also asks for the T0 test: can 4 of 5 children aged 6–9 say what the game is for after 10 minutes?
+- **Playtest** in the Simulator, and say how the difficulty feels.
+- **T0 kid playtests:** M3 asks whether 4 of 5 children aged 6–9 can say what the game is for after 10 minutes. Gate v2 also needs a T0 check: can children aged 9–11 read the number words and pass the gate?
 - **Merge PR #2** when happy.

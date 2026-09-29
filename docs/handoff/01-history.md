@@ -1,6 +1,6 @@
 # 01: Conversation history
 
-The owner (George, GitHub `george-babyfig`) worked with Claude Code in three sessions: a long first one in the cloud (27–28 September), a short second one in the cloud (28 September evening) that scoped the next big roadmap, and a third one, the first **local** session on the owner's Mac (28–29 September), which built M0–M2 and started M3. Their messages are quoted as sent, typos included; the notes under each say what happened.
+The owner (George, GitHub `george-babyfig`) worked with Claude Code in three sessions: a long first one in the cloud (27–28 September), a short second one in the cloud (28 September evening) that scoped the next big roadmap, and a third one, the first **local** session on the owner's Mac (28–29 September), which built M0–M5. Their messages are quoted as sent, typos included; the notes under each say what happened.
 
 ## Day 1 — 27 September 2026
 
@@ -222,9 +222,45 @@ Two lead designers (sub-agents) wrote build-ready design docs (commit `74be89c`)
 - M7.5, M10.5, M11.5 and M17 sit at the end of Linear's milestone list, because the API can't reorder milestones.
 - The **Babyfig** team in the same workspace belongs to another project and must never be touched.
 
-### 20. M3 started
+### 20. M3 built: the first ten minutes
 
-M3 (the first ten minutes) is in progress as three Codex packages: A (ladder and difficulty moves), B (title beat, purpose moment, pop-up governor, away card) and C (practice planets, Coach 2.0, text size, VoiceOver). See [05-status-and-next.md](05-status-and-next.md).
+The owner kept the session going with "keep going"-style messages, so Claude carried on without asking.
+
+- M3 ran as three Codex packages: A (ladder and difficulty moves), B (title beat, purpose moment, pop-up governor, away card) and C (practice planets, Coach 2.0, text size, VoiceOver).
+- **M3** (`abac194`): a title beat on first launch; practice planets 1–3 can't be failed; the first-win purpose moment; a pop-up governor; a "While you were away" card; Coach 2.0 intro cards; text size and VoiceOver.
+- **Ladder moves:** first Hard planet 15, Supernova 9, Momentum 17 (first clears only; a fail pauses it), Buddy 18, Voyage 20, Calendar 21, Festival 34. Existing saves keep everything they had unlocked.
+- **Measured:** the first fling comes 4.6–4.9 s after launch.
+- **CI fix** (`19105cf`): the planets 1–120 solver check took about 7 s on GitHub's runners, so the unit test timeout is now 30 s.
+
+### 21. M4 built: one clear Home, Missions and Wishes
+
+- **M4** (`e923123`): five tabs (Play, Missions, Homeworld, Collection, Styles), Back and a left-edge swipe, one Next Up card, Wishes instead of daily quests from planet 12, and the Field Guide.
+- **Explorer Rank retired:** modes open by planet (27, 30, 38, 40). Existing saves keep their rank looks, trophies and unpaid rewards.
+- **Styles** (the old Workshop) opens after the chapter-1 chest.
+- **Measured:** Home has 11 tap targets, a Regular player earns 103.5 free gems per active day, and a child meets 20 meta nouns by planet 20.
+
+### 22. Owner decision 1: keep gem packs
+
+Before M5, Claude asked decision 1 from ROADMAP-v2 section 10: retire the gem packs and the Piggy Bank before launch, or keep them. The owner answered:
+
+> "Keep gem packs too"
+
+- The 4 gem packs and the Piggy Bank stay as fixed-price consumables, sold **only** in the gated Grown-ups area.
+- Section 7.5 of the roadmap now caps what paying can speed up.
+- The launch catalogue is 12 products: 7 looks, 4 gem packs and the Piggy Bank.
+- The roadmap was updated in `49c1abe`, and the decision is recorded in Linear.
+
+### 23. M5 built: Grown-ups and a fair checkout
+
+> "continue"
+
+- **M5** (`4d3ae5c`): Gate v2 (a number in words, a shuffled keypad, a hold, an optional parent PIN), the Grown-ups area with the shop inside it, the checkout charter (contents sheet, receipt, Ask to Buy waiting, quiet revocation, purchases finished only after the grant is saved), and a price-free kid side.
+- **The Keeper Statue** is priced in stardust: gems never buy friendship.
+- **Deferred to M12:** the other five looks products (Themes, Planet Pack, Style Singles) arrive with their art. Starter Crew is currently the Aurora atmosphere, the Explorer suit, a trail and a Passport banner; the hat, launcher and paint come in M12, free to existing buyers.
+- **Tests:** 435 unit tests and 105 Playwright journeys.
+- **Linear:** M0–M5 are marked built.
+
+Next is M6, "Read every throw". See [05-status-and-next.md](05-status-and-next.md).
 
 ## Recurring patterns in how the owner works
 
@@ -241,3 +277,4 @@ M3 (the first ten minutes) is in progress as three Codex packages: A (ladder and
 - They want difficulty that feels natural: not too hard at the start, not too easy either. Combos are "paramount".
 - They want lots of visible polish: animations, pop-up effects, characters and avatars (M6.5).
 - They track the plan in Linear. Keep the Linear project in step with the roadmap.
+- When a decision is theirs, they answer it briefly (decision 1: "Keep gem packs too"), then expect the build to continue.

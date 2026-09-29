@@ -7,7 +7,7 @@ npm install
 npm run dev            # browser play at http://localhost:5173 (mock purchases); window.__app for debugging
 npm run format         # Prettier (CI runs format:check)
 npm run typecheck
-npm test               # 257 Vitest tests, including i18n coverage for all 5 locales and the frozen snapshots
+npm test               # 435 Vitest tests, including i18n coverage for all 5 locales and the frozen snapshots
 npm run build          # typecheck + production web build to dist/
 npm run music          # record every music theme to WAV + print loudness (needs npm run dev)
 ```
@@ -25,15 +25,17 @@ npm run sim            # every sim, including the level lint (tests/levels.lint.
 
 ```bash
 npm run e2e:install    # once: download Chromium and WebKit
-npm run e2e            # 36 tests: J1 and J3, Chromium 320x568 and 390x844, WebKit 390x844, 6 languages + pseudo-locale
+npm run e2e            # 105 journeys: J1, J2, J3, prices.spec, gate.spec; Chromium 320x568 and 390x844, WebKit 390x844; 6 languages + pseudo-locale
 npm run e2e:quick      # English only, Chromium 390x844
 ```
 
-Claude runs Playwright itself: Codex's sandbox can't bind a local port, so the dev server won't start there.
+Claude runs Playwright itself: Codex's sandbox can't bind a local port or launch Chromium, so neither the dev server nor the browser starts there.
+
+In dev, `window.__gate.answer()` returns the parental gate's answer so journeys can pass Gate v2; `e2e/helpers.ts` uses it.
 
 **Frozen snapshots:** if a test says a rules or level snapshot changed and you didn't mean to change the rules, it's a bug. Only for an intended change: `UPDATE_FIXTURES=1 npx vitest run tests/rules.snapshot.test.ts tests/levels.snapshot.test.ts` (see [03-architecture.md](03-architecture.md)).
 
-Before every push, run `format:check`, `typecheck`, `test`, `build`, `e2e` and `sim:quick`. CI runs `verify` (format, typecheck, tests, build, and a check that dev tools never reach the production bundle), `sim-quick`, `e2e` and the macOS `ios-build`; `nightly.yml` runs the full sims.
+Before every push, run `format:check`, `typecheck`, `test`, `build`, `e2e` and `sim:quick`. CI runs `verify` (format, typecheck, tests, build, and a grep that fails if `Balance Report`, `__i18n`, `__scene` or `__gate` appear in `dist/`), `sim-quick`, `e2e` and the macOS `ios-build`; `nightly.yml` runs the full sims.
 
 ## iOS (on a Mac with Xcode)
 
@@ -128,18 +130,19 @@ $CODEX exec -C /Users/georgeapostolopoulos/oneshotgame -s read-only -c model_rea
 
 Run packages in the background, in parallel when their files don't overlap. Keep briefs and reports in the scratchpad, not the repo. Codex can't open a local port, so it can't run Playwright or the dev server: Claude does those.
 
-**One milestone, start to finish (the loop that worked for M0–M2):**
+**One milestone, start to finish (the loop that worked for M0–M5):**
 
 1. **Plan:** split the milestone into 2–3 Codex packages with **disjoint file ownership**. Write one shared "common" brief (repo, rules, conventions, checks) plus one brief per package.
 2. **Tests first:** a test engineer sub-agent writes the tests and snapshots from the spec before or while Codex works.
 3. **Build:** run the Codex packages (in parallel when files don't overlap).
-4. **Check:** Claude reviews the diffs, then runs `format`, `typecheck`, `test`, `build`, `e2e` and `sim:quick` (and `sim:economy` when money changes).
-5. **Translate:** translator sub-agents on a cheap model (haiku), one per language, or one for all 5 for a small batch. They write the locale JSON with a small node script, never by hand-editing.
-6. **Review:** 3 adversarial Claude reviewers, each with a lens (correctness; economy and kid safety; UX and i18n), plus Codex in `-s read-only`. Claude verifies every finding before anyone fixes it.
-7. **Fix:** one Codex fix pass for the verified findings; re-run the checks.
-8. **Ship:** commit, push, watch CI with `gh run watch`, keep it green.
-9. **Record:** update the PR #2 description, the milestone's "✅ built" note in ROADMAP-v2 section 8, `BUILT` in `tests/glossary.test.ts`, and the milestone's Linear document.
-10. **Report:** a short plain-language summary to the owner with what to try in the Simulator.
+4. **Integrate:** each Codex package may only edit its own files, so after parallel packages there is always an integration pass (by Claude or one more Codex brief) to wire them together: imports in `app.ts`, new `EarnSource` entries in `wallet.ts`, `unlocks.ts` rows, tests that span packages.
+5. **Check:** Claude reviews the diffs, then runs `format`, `typecheck`, `test`, `build`, `e2e` and `sim:quick` (and `sim:economy` when money changes).
+6. **Translate:** translator sub-agents on a cheap model (haiku), one per language, or one for all 5 for a small batch. They write the locale JSON with a small node script, never by hand-editing. See the translator rules under Translations below.
+7. **Review:** 3 adversarial Claude reviewers, each with a lens (correctness; economy and kid safety; UX and i18n), plus Codex in `-s read-only`. Claude verifies every finding before anyone fixes it.
+8. **Fix:** one Codex fix pass for the verified findings; re-run the checks.
+9. **Ship:** commit, push, watch CI with `gh run watch`, keep it green.
+10. **Record:** update the PR #2 description, the milestone's "✅ built" note in ROADMAP-v2 section 8, `BUILT` in `tests/glossary.test.ts` (it lists M0–M4 now; see [05-status-and-next.md](05-status-and-next.md) for M5), and the milestone's Linear document.
+11. **Report:** a short plain-language summary to the owner with what to try in the Simulator.
 
 ## Linear
 
@@ -147,6 +150,7 @@ Run packages in the background, in parallel when their files don't overlap. Keep
 - **Shape:** 22 milestones, each with one "work items" checklist **document**, plus an "Owner decisions and to-dos" document. There are **no issues**: the workspace hit the free-plan issue limit, and the owner chose checklists in documents. Don't create issues.
 - **Order:** M7.5, M10.5, M11.5 and M17 sit at the end of Linear's milestone list, because the API can't reorder milestones.
 - **Keep it in step:** when a milestone is built, mark its document ✅ (and tick its checklist). When the roadmap changes, change Linear too.
+- **State now:** M0–M5 are marked built, and owner decision 1 (keep gem packs, Grown-ups only) is recorded in the "Owner decisions and to-dos" document.
 - **Never touch the Babyfig team** or anything else in the workspace. It belongs to the owner's other project.
 
 ## Translations
@@ -159,7 +163,22 @@ For every new English string:
    - **Tone:** warm and simple, for kids 6+.
    - **Informal forms:** German uses "du".
    - **Japanese:** mostly kana, with simple kanji.
-4. **Large batches:** the cloud session ran parallel sub-agents, one per language pair, each writing via a small node script.
+4. **Large batches:** run parallel sub-agents, one per language, each writing via a small node script.
+
+**Translator rules (learned the hard way in M5).** Tell every translator sub-agent, in so many words:
+
+- **Never run git.** Never revert, restore, checkout or reset files.
+- **Only add keys.** Don't delete or rewrite existing translations.
+- **Only edit your own language file** (`src/locales/<lang>.json`).
+
+In M5 one translator ran a revert and wiped three languages' work. After translators finish, **recount the keys in every locale** against `src/locales/_keys.json` before moving on.
+
+**The glossary test will flag translator slips.** `tests/glossary.test.ts` checks that game nouns are translated the same way everywhere and that no never-introduced word appears. Expect it to fail after a translation batch and fix what it names. Examples:
+
+- Japanese must use 星 (star), 銀河 (galaxy), おまつり (festival) and さばく (desert).
+- "Orbit" is a never-introduced word: don't use it in any language.
+
+Give translators the glossary's terms for their language up front.
 
 ## Git and PR rules
 
@@ -179,3 +198,4 @@ For every new English string:
 - **Studio quality:** custom art in code, depth, customization, polish.
 - **Honesty:** be upfront about what couldn't be done (e.g. repo visibility, or the Simulator from the cloud) and about anything unverified.
 - **Studio process:** scope like a senior PM, then build like a dev team with adversarial reviews (see above). Use Codex for the bulk of the implementation.
+- **Decisions:** ask the owner only when a decision in ROADMAP-v2 section 10 is genuinely theirs and blocks the next milestone. They answer briefly (decision 1: "Keep gem packs too"), then say "continue".

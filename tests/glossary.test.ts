@@ -40,7 +40,7 @@ const MILESTONES = [
 type Milestone = (typeof MILESTONES)[number];
 
 /** Milestones that are built. Later milestones append themselves here when they ship. */
-export const BUILT: Milestone[] = ['M0', 'M1', 'M2', 'M3', 'M4'];
+export const BUILT: Milestone[] = ['M0', 'M1', 'M2', 'M3', 'M4', 'M5'];
 
 const built = (m: Milestone) => BUILT.includes(m);
 
@@ -570,20 +570,8 @@ export const RETIRED: Retired[] = [
     tr: trs({ de: 'ANGEBOT' }),
     note: 'M4.4: badges only for things you can claim.',
   },
-  // M5: Grown-ups and a fair checkout.
-  {
-    word: 'Shop',
-    retiredIn: 'M5',
-    match: cs('Shop'),
-    tr: trs({ es: 'Tienda', fr: 'Boutique', de: 'Shop', pt: 'Loja', ja: 'ショップ' }),
-    note: 'The kid-facing tab; the shop lives inside Grown-ups.',
-  },
-  {
-    word: 'Piggy Bank',
-    retiredIn: 'M5',
-    tr: trs({ es: 'Alcancía', fr: 'Tirelire', de: 'Sparschwein', pt: 'Cofrinho', ja: 'ちょきんばこ' }),
-  },
-  { word: 'gem packs', retiredIn: 'M5', match: /gem packs?|pack of gems/iu },
+  // M5: Grown-ups and a fair checkout. "Shop", "Piggy Bank" and gem packs are NOT retired:
+  // owner decision 1 (29 Sept 2026) kept them, sold only inside the gated Grown-ups area.
   {
     word: 'Starter Pack',
     retiredIn: 'M5',
