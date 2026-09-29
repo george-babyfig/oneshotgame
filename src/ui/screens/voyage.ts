@@ -17,7 +17,8 @@ import {
   voyageUnlocked,
 } from '../../meta/voyage';
 import { rewardText } from '../../meta/progression';
-import { track } from '../../meta/economy';
+import { recordWishRound } from '../../meta/wishes';
+import { today } from '../../meta/profile';
 import { renderPlanet } from '../art/planet';
 import { drawCreature } from '../art/critters';
 import { SPECIES_BY_ID } from '../../core/world';
@@ -228,7 +229,7 @@ function ended(app: App, i: number, week: string, r: LevelResult) {
     return;
   }
   const res = clearStop(p, i, r.stars);
-  track(p, 'voyage');
+  recordWishRound(p, 'voyage', r.planet, today(), r.level.start);
   app.save();
   sfx.win();
   haptic.success();

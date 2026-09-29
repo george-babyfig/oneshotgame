@@ -55,7 +55,7 @@ const FEATS: Feat[] = [
   },
   { id: 'perfect', name: 'Perfectionist', hint: 'Earn 3 stars on {n} planets', n: 30, earned: (p) => p.stats.threeStars >= 30 },
   { id: 'dye', name: 'Colour Artist', hint: 'Unlock {n} suit dyes', n: 4, earned: (p) => p.dyes.length >= 4 },
-  { id: 'rank', name: 'Seasoned Explorer', hint: 'Reach Explorer Rank {n}', n: 10, earned: (p) => p.rank >= 10 },
+  { id: 'rank', name: 'Seasoned Explorer', hint: 'Open chapter {n} chest', n: 10, earned: (p) => p.rank >= 10 || p.chapters.includes(10) },
 ];
 
 export const STICKERS: Sticker[] = [

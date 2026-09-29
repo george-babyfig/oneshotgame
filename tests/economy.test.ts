@@ -3,17 +3,7 @@ import { defaultProfile, migrate, totalStars } from '../src/meta/profile';
 import { applyLevelWin, collectDust, grantProduct, pendingDust, planetRate } from '../src/meta/economy';
 import { CALENDAR_DAYS, stamp } from '../src/meta/calendar';
 import { owns } from '../src/meta/cosmetics';
-import {
-  chestsReady,
-  claimQuest,
-  claimQuestBonus,
-  claimRoad,
-  ensureQuests,
-  openChest,
-  questEvent,
-  roadReady,
-  STAR_ROAD,
-} from '../src/meta/progression';
+import { chestsReady, claimRoad, openChest, roadReady, STAR_ROAD } from '../src/meta/progression';
 import { makeLevel } from '../src/core/levels';
 import { clonePlanet } from '../src/core/world';
 
@@ -85,16 +75,18 @@ describe('economy', () => {
 describe('progression', () => {
   it('star road pays the free lane, and the pass lane retroactively', () => {
     const p = defaultProfile(0);
-    expect(roadReady(p, 4)).toEqual([]);
-    expect(roadReady(p, 12)).toEqual([0, 1]);
-    const got = claimRoad(p, 0, 12);
+    p.roadPoints = 4;
+    expect(roadReady(p)).toEqual([]);
+    p.roadPoints = 12;
+    expect(roadReady(p)).toEqual([0, 1]);
+    const got = claimRoad(p, 0);
     expect(got).toEqual([STAR_ROAD[0].reward]);
-    expect(roadReady(p, 12)).toEqual([1]);
+    expect(roadReady(p)).toEqual([1]);
     p.pass = true;
-    expect(roadReady(p, 12)).toEqual([0, 1]);
-    claimRoad(p, 0, 12);
+    expect(roadReady(p)).toEqual([0, 1]);
+    claimRoad(p, 0);
     expect(p.skins).toContain('cosmic');
-    expect(claimRoad(p, 5, 12)).toEqual([]);
+    expect(claimRoad(p, 5)).toEqual([]);
   });
 
   it('chapter chest opens once when the chapter is finished', () => {
@@ -104,21 +96,6 @@ describe('progression', () => {
     expect(openChest(p, 1)).not.toBeNull();
     expect(openChest(p, 1)).toBeNull();
     expect(chestsReady(p)).toEqual([]);
-  });
-
-  it('quests progress, claim and pay a bonus', () => {
-    const p = defaultProfile(0);
-    ensureQuests(p, '2026-03-03');
-    expect(p.quests.list).toHaveLength(3);
-    const same = JSON.stringify(p.quests.list);
-    ensureQuests(p, '2026-03-03');
-    expect(JSON.stringify(p.quests.list)).toBe(same);
-    for (const ev of ['throw', 'win', 'star', 'creature', 'three', 'booster', 'collect', 'land'] as const) questEvent(p, ev, 100);
-    const g = p.gems;
-    for (const q of p.quests.list) expect(claimQuest(p, q.id)).toBeGreaterThan(0);
-    expect(p.gems).toBeGreaterThan(g);
-    expect(claimQuestBonus(p)).not.toBeNull();
-    expect(claimQuestBonus(p)).toBeNull();
   });
 
   it('migrates v1 saves', () => {

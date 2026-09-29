@@ -1,8 +1,7 @@
-// Star Road: rewards unlocked by total stars, with a Cosmic Pass lane.
+// Star Road: rewards unlocked by capped Road points, with a Cosmic Pass lane.
 import { h, btn, modal } from '../dom';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
-import { totalStars } from '../../meta/profile';
 import { STAR_ROAD, PASS_GEMS, claimRoad, rewardText, type Reward } from '../../meta/progression';
 import type { App } from '../app';
 import { t } from '../../i18n';
@@ -22,7 +21,7 @@ function cell(r: Reward, state: 'claimed' | 'ready' | 'locked', premium: boolean
 
 export function showRoad(app: App) {
   const p = app.p;
-  const stars = totalStars(p);
+  const stars = p.roadPoints;
   const look = currentLook(p);
   const nextTier = STAR_ROAD.find((tier) => tier.stars > stars);
   const rows = STAR_ROAD.map((tier, i) => {
@@ -39,19 +38,19 @@ export function showRoad(app: App) {
         { class: 'rmid' },
         canClaim
           ? btn(t('Claim'), 'primary small', () => {
-              const got = claimRoad(p, i, stars);
+              const got = claimRoad(p, i);
               if (!got.length) return;
               sfx.chest();
               haptic.success();
               app.save();
               showRoad(app);
               const m = modal([
-                h('div', { class: 'm-title' }, t('{n}★ reward', { n: tier.stars })),
+                h('div', { class: 'm-title' }, t('{n} Road points reward', { n: tier.stars })),
                 h('div', { class: 'reward-list' }, ...got.flatMap(rewardText).map((x) => h('span', null, x))),
                 btn(t('Nice!'), 'primary wide', () => m.close()),
               ]);
             })
-          : h('b', null, `${tier.stars}★`),
+          : h('b', null, `🛣️${tier.stars}`),
       ),
       cell(tier.pass, prem, true, look),
     );
@@ -86,7 +85,9 @@ export function showRoad(app: App) {
         h(
           'span',
           null,
-          nextTier ? t('{n}★ · next reward at {next}★', { n: stars, next: nextTier.stars }) : t('{n}★ · road complete!', { n: stars }),
+          nextTier
+            ? t('{n} Road points · next reward at {next}', { n: stars, next: nextTier.stars })
+            : t('{n} Road points · road complete!', { n: stars }),
         ),
       ),
       h(
@@ -95,7 +96,7 @@ export function showRoad(app: App) {
         h('div', { class: 'rhead' }, h('span', null, t('Free')), h('span', null, ''), h('span', { class: 'gold' }, t('Cosmic Pass'))),
         ...rows,
         pitch,
-        h('p', { class: 'muted' }, t('Earn stars by finishing planets. Replay old planets for 3★ to climb faster.')),
+        h('p', { class: 'muted' }, t('Earn Road points from new stars and Wishes. Up to four a day.')),
       ),
     ),
     'road',

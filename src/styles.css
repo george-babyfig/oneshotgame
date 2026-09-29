@@ -877,6 +877,10 @@ button {
   text-align: left;
   font-size: max(12px, calc(15px * var(--text-scale)));
 }
+.howto p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 
 /* pages */
 .page-title {
@@ -1019,7 +1023,7 @@ button {
   background: linear-gradient(135deg, #7b2fbf, #2a4fd6);
   box-shadow: inset 0 0 0 2px var(--sun);
 }
-.ribbon {
+.offer .ribbon {
   position: absolute;
   top: 12px;
   right: -30px;
@@ -1201,30 +1205,6 @@ button {
   50% {
     transform: scale(1.15);
   }
-}
-.side {
-  position: absolute;
-  top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.side-l {
-  left: 10px;
-}
-.side-r {
-  right: 10px;
-}
-.side-btn {
-  width: 62px;
-  padding: 7px 2px;
-  background: rgba(22, 20, 58, 0.78);
-}
-.side-btn .ni {
-  font-size: max(12px, calc(20px * var(--text-scale)));
-}
-.side-btn .nl {
-  font-size: max(12px, calc(10px * var(--text-scale)));
 }
 .btn.dust-btn.full {
   animation: glowPulse 1.4s ease-in-out infinite;
@@ -1567,6 +1547,8 @@ button.lb {
 }
 .q-body {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -2284,8 +2266,10 @@ button.lb {
   right: 0;
   margin: 0 auto;
   width: max-content;
+  max-width: calc(100% - 12px);
   bottom: 10px;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
   font-weight: 700;
   font-size: max(12px, calc(13px * var(--text-scale)));
   padding: 8px 14px;
@@ -2295,22 +2279,6 @@ button.lb {
     inset 0 0 0 2px var(--life),
     0 0 16px rgba(94, 242, 176, 0.4);
   animation: breathe 1.6s ease-in-out infinite;
-}
-@media (max-height: 700px) {
-  .side-btn {
-    width: 54px;
-    padding: 5px 2px;
-  }
-  .side-btn .ni {
-    font-size: max(12px, calc(17px * var(--text-scale)));
-  }
-  .side-btn .nl {
-    font-size: max(12px, calc(9px * var(--text-scale)));
-  }
-  .side {
-    gap: 6px;
-    top: 8px;
-  }
 }
 .hud.fade-out {
   opacity: 0;
@@ -2386,13 +2354,16 @@ button.lb {
 }
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 4px;
   border-radius: 16px;
   background: var(--panel);
 }
 .tab {
-  flex: 1;
+  flex: 1 1 30%;
+  min-width: 0;
+  overflow-wrap: anywhere;
   padding: 9px 4px;
   border-radius: 12px;
   font-weight: 700;
@@ -2406,10 +2377,12 @@ button.lb {
 }
 .ws-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 .ws-item {
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3126,7 +3099,7 @@ button.lb {
 /* ---------------------------------------------------------------- star calendar */
 .calendar {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px;
 }
 .cal {
@@ -3152,7 +3125,10 @@ button.lb {
 .cal .ci {
   font-size: max(12px, calc(10px * var(--text-scale)));
   font-weight: 700;
-  white-space: nowrap;
+  /* narrow phones: let "✨ 1000" wrap instead of spilling out of its day */
+  text-align: center;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 .cal.big {
   background: linear-gradient(160deg, rgba(255, 210, 74, 0.25), var(--panel-2) 70%);
@@ -3279,40 +3255,7 @@ button.lb {
 .nick small {
   color: var(--muted);
 }
-.ribbon {
-  margin-left: 6px;
-  padding: 1px 8px;
-  border-radius: 999px;
-  font-size: max(12px, calc(11px * var(--text-scale)));
-  font-weight: 700;
-  color: #5a1030;
-  background: linear-gradient(90deg, #ffb3cf, #ff8fc8);
-}
-.nick-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  max-height: 40vh;
-  overflow-y: auto;
-}
-.nick-grid .btn {
-  font-size: max(12px, calc(13px * var(--text-scale)));
-  padding: 8px 2px;
-}
-.nick-grid .btn.on {
-  box-shadow: inset 0 0 0 2px var(--life);
-}
-.nick {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 2px;
-  text-align: left;
-}
-.nick small {
-  color: var(--muted);
-}
-.ribbon {
+.nick .ribbon {
   margin-left: 6px;
   padding: 1px 8px;
   border-radius: 999px;
@@ -3838,10 +3781,10 @@ button.lb {
   font-size: max(12px, calc(10px * var(--text-scale)));
   line-height: 1.1;
   text-align: center;
-  overflow: hidden;
+  overflow: visible;
   max-width: 100%;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 .stk.locked small {
   color: var(--muted);
@@ -4084,4 +4027,216 @@ button.lb {
 .reduce-motion .purpose-planet,
 .reduce-motion .purpose-dust {
   animation: none;
+}
+
+/* M4 main tabs stay reachable while long translated content scrolls. */
+.main-tabs {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 3px;
+  padding: 5px 2px calc(var(--sb) + 2px);
+  margin: auto -10px calc(-1 * (var(--sb) + 10px));
+  background: rgba(15, 13, 43, 0.98);
+  border-top: 1px solid var(--line);
+}
+.main-tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 54px;
+  gap: 2px;
+  padding: 3px 1px;
+  border-radius: 10px;
+  color: var(--muted);
+}
+.main-tab.on {
+  color: var(--life);
+  background: rgba(94, 242, 176, 0.1);
+}
+.main-tab.locked:not(.on) {
+  opacity: 0.65;
+}
+.main-tab-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.main-tab-label {
+  width: 100%;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  text-align: center;
+  font-size: max(10px, calc(10px * var(--text-scale)));
+  line-height: 1.05;
+}
+.main-tab[data-tab='homeworld'] .main-tab-label {
+  font-size: clamp(8px, 2.5vw, 10px);
+}
+.main-tab .nb {
+  top: -3px;
+  right: 2px;
+}
+.screen.home {
+  overflow: hidden;
+}
+.home-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 2px 1px 12px;
+}
+.screen.home .galaxy-wrap {
+  flex: 1 0 145px;
+  min-height: 145px;
+}
+.home-body .title span {
+  font-size: clamp(calc(32px * var(--text-scale)), calc(11vw * var(--text-scale)), calc(48px * var(--text-scale)));
+}
+.next-up-card .stack {
+  gap: 2px;
+  overflow-wrap: anywhere;
+}
+.next-up-card small {
+  line-height: 1.15;
+}
+.tab-page,
+.guide-page {
+  min-height: 0;
+}
+.tab-page .scroll,
+.guide-page .scroll {
+  min-height: 0;
+}
+.tab-page .btn,
+.guide-page .btn {
+  overflow-wrap: anywhere;
+}
+.locked-note {
+  text-align: center;
+  color: var(--muted);
+  margin: auto;
+}
+.mission-entry {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.guide-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+.guide-tabs .btn {
+  font-size: max(11px, calc(12px * var(--text-scale)));
+  padding: 9px 2px;
+}
+.guide-tabs .on {
+  box-shadow: inset 0 0 0 2px var(--life);
+}
+.guide-objects {
+  display: grid;
+  gap: 9px;
+}
+.guide-object {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  border-radius: 16px;
+  background: var(--panel);
+  padding: 12px;
+}
+.guide-object > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.guide-object p {
+  margin: 3px 0;
+  overflow-wrap: anywhere;
+}
+.guide-object small {
+  color: var(--muted);
+}
+.level-info {
+  position: absolute;
+  z-index: 15;
+  left: max(8px, env(safe-area-inset-left, 0px));
+  right: max(8px, env(safe-area-inset-right, 0px));
+  bottom: calc(var(--sb) + 10px);
+  max-height: min(54vh, 360px);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(25, 21, 68, 0.96);
+  box-shadow:
+    0 0 0 2px var(--line),
+    0 12px 35px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+.level-info .m-title {
+  font-size: max(16px, calc(20px * var(--text-scale)));
+}
+.level-info .targets,
+.level-info .boosters {
+  flex-shrink: 0;
+}
+.level-info .btn {
+  flex-shrink: 0;
+}
+@media (max-width: 360px) {
+  .screen {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  .main-tabs {
+    margin-left: -4px;
+    margin-right: -4px;
+  }
+  .topbar {
+    gap: 4px;
+  }
+  .topbar .pill {
+    font-size: max(11px, calc(12px * var(--text-scale)));
+    padding: 7px 6px;
+  }
+  .title span {
+    letter-spacing: -1.5px;
+  }
+}
+@media (max-height: 700px) {
+  .homeworld .hw-canvas {
+    min-height: 140px;
+  }
+  .homeworld .hw-panel {
+    min-height: 0;
+  }
+  .workshop .ws-stage {
+    height: 130px;
+  }
+}
+@media (max-width: 360px) {
+  .workshop .tabs {
+    flex-wrap: wrap;
+  }
+  .workshop .tab {
+    flex: 1 1 30%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .main-tab-label {
+    font-size: max(9px, calc(9px * var(--text-scale)));
+  }
 }

@@ -54,4 +54,6 @@ Open your app, then _Services → Game Center_. Create these leaderboards and ac
 | `com.pocketplanet.game.ach.stickers_30`    | Sticker Star     | 25     |
 | `com.pocketplanet.game.ach.buddy_1`        | Best Buddies     | 10     |
 
+The existing `rank_5` and `rank_8` IDs stay stable. Sky Sculptor is earned by opening chapter 4’s chest; Cosmic Architect by opening chapter 7’s chest. Update their App Store Connect descriptions to match.
+
 Achievement descriptions and images are entered in App Store Connect. The game reports each achievement once, when it is earned.

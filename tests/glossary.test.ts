@@ -40,7 +40,7 @@ const MILESTONES = [
 type Milestone = (typeof MILESTONES)[number];
 
 /** Milestones that are built. Later milestones append themselves here when they ship. */
-export const BUILT: Milestone[] = ['M0', 'M1', 'M2'];
+export const BUILT: Milestone[] = ['M0', 'M1', 'M2', 'M3', 'M4'];
 
 const built = (m: Milestone) => BUILT.includes(m);
 
@@ -261,7 +261,7 @@ const KEPT_META: Noun[] = [
     strict: true,
     tr: { es: ['Decoración'], fr: ['Décoration'], de: ['Deko'], pt: ['Decoração'], ja: ja('かざり') },
   },
-  { en: 'paint', area: 'meta', since: 'today', strict: true, match: /^\W*Paint\W*$/u },
+  // Homeworld paint and suit dyes are one colour concept in Styles.
   { en: 'photo mode', area: 'meta', since: 'today' },
   {
     en: 'postcards',
@@ -368,6 +368,7 @@ const KEPT_META: Noun[] = [
     area: 'meta',
     since: 'today',
     strict: true,
+    tr: { es: ['Viaje'], fr: ['Voyage'], de: ['Reise'], pt: ['Viagem'], ja: ja('ボヤージュ') },
     match: /(?<![\p{L}\p{N}]|Weekly )Voyage(?![\p{L}\p{N}])/u,
     note: '4h keeps "Weekly Voyage"; the game also says "Voyage" alone.',
   },
@@ -751,9 +752,7 @@ export const NEVER: (Banned & { returnsIn?: Milestone })[] = [
 ];
 
 /** Known name clashes today, each with the milestone that settles it. A clash here fails once that milestone is built. */
-const KNOWN_CLASHES: { lang: 'en' | Lang; name: string; fixBy: Milestone; note: string }[] = [
-  { lang: 'de', name: 'farbe', fixBy: 'M4', note: 'paint and dyes are both "Farbe" (Styles owns looks from M4).' },
-];
+const KNOWN_CLASHES: { lang: 'en' | Lang; name: string; fixBy: Milestone; note: string }[] = [];
 
 // ---- Player-facing strings ----
 

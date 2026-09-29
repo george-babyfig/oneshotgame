@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { defaultProfile } from '../src/meta/profile';
 import { momentumLoss, momentumWin, MOMENTUM_UNLOCK } from '../src/meta/momentum';
 import { addVisitors, openVisitor, rollVisitors } from '../src/meta/visitors';
-import { rankGoals, rankProgress, rankReady } from '../src/meta/rank';
+import { rankReady } from '../src/meta/rank';
+import { chapterReward } from '../src/meta/progression';
+import { ACHIEVEMENTS } from '../src/meta/achievements';
 import { HABITATS, habitatsReady } from '../src/meta/habitats';
 import {
   challengeLevel,
@@ -53,15 +55,20 @@ describe('visitors', () => {
 });
 
 describe('rank & habitats', () => {
-  it('rank goals are tracked from stats', () => {
+  it('retired ranks never pay more rewards', () => {
     const p = defaultProfile(0);
+    p.stats.wins = 100;
     expect(rankReady(p)).toBe(false);
-    p.stats.wins = 2;
-    p.seen = ['bunny', 'deer'];
-    p.stats.throws = 20;
-    expect(rankReady(p)).toBe(true);
-    expect(rankProgress(p).every((x) => x.done)).toBe(true);
-    for (let r = 1; r < 30; r++) expect(rankGoals(r)).toHaveLength(3);
+    expect(chapterReward(1).gems).toBe(60);
+    expect(chapterReward(7).gems).toBe(120);
+    const rankFive = ACHIEVEMENTS.find((a) => a.id.endsWith('rank_5'))!;
+    const rankEight = ACHIEVEMENTS.find((a) => a.id.endsWith('rank_8'))!;
+    p.rank = 20;
+    expect(rankFive.done(p)).toBe(true);
+    expect(rankEight.done(p)).toBe(true);
+    p.chapters = [4, 7];
+    expect(rankFive.done(p)).toBe(true);
+    expect(rankEight.done(p)).toBe(true);
   });
 
   it('habitat sets cover every creature exactly once', () => {

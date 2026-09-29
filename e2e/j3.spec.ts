@@ -2,7 +2,7 @@
 // a pass grants exactly once, and a replayed transaction is ignored.
 // Dev builds use the mock store in src/meta/iap.ts, which grants after ~300 ms.
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
-import { OPEN_MODAL, expectNoErrors, freshInstall, settle, snap, tap, waitScreen, watchErrors, type Guard } from './helpers';
+import { OPEN_MODAL, expectNoErrors, freshInstall, settle, snap, tabSel, tap, waitScreen, watchErrors, type Guard } from './helpers';
 
 test.use({ locale: 'en-US' });
 
@@ -54,7 +54,10 @@ async function openShop(page: Page, guard: Guard, info?: TestInfo) {
     await intros.locator('button').last().click();
     await settle(page);
   }
-  await tap(page, '.nav .nav-btn:last-child'); // Shop
+  // M4: the Shop moved off the Home nav; a player reaches it from the Styles tab
+  await tap(page, tabSel('styles'));
+  await waitScreen(page, 'styles');
+  await page.locator('.host').getByRole('button', { name: 'Shop', exact: true }).click();
   await waitScreen(page, 'shop');
   await settle(page);
   expect(guard.errors).toEqual([]);

@@ -31,6 +31,8 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
     serviceWorkers: 'block',
+    // fail a stuck tap in seconds, not at the test timeout
+    actionTimeout: 15_000,
   },
   projects: [
     {

@@ -13,7 +13,7 @@ import { dyeColors } from './dyes';
 export type Slot = 'suit' | 'hat' | 'launcher' | 'trail' | 'emote';
 export const SLOTS: Slot[] = ['suit', 'hat', 'launcher', 'trail', 'emote'];
 
-export type Source = 'free' | 'gems' | 'road' | 'pass' | 'rank' | 'habitat' | 'starter' | 'event' | 'calendar' | 'constellation';
+export type Source = 'free' | 'gems' | 'road' | 'pass' | 'chapter' | 'habitat' | 'starter' | 'event' | 'calendar' | 'constellation';
 /** Presentation tier only (frame colour); it never affects odds because nothing is random. */
 export type Tier = 'basic' | 'fancy' | 'epic';
 
@@ -24,7 +24,7 @@ export interface Cosmetic {
   source: Source;
   tier: Tier;
   gems?: number;
-  /** Rank number (source 'rank') or habitat id (source 'habitat'). */
+  /** Chapter number or habitat id. */
   unlock?: number | string;
   /** Palette: suits [body, trim, visor]; launchers/trails their main colours. */
   colors: string[];
@@ -64,8 +64,8 @@ export function owns(p: Profile, id: string): boolean {
       return p.daily.streak >= (x.unlock as number);
     case 'constellation':
       return p.constellations.includes(x.unlock as string);
-    case 'rank':
-      return p.rank >= (x.unlock as number);
+    case 'chapter':
+      return p.chapters.includes(x.unlock as number) || p.rank > (x.unlock as number);
     case 'habitat':
       return p.habitats.includes(x.unlock as string);
     case 'road':
@@ -125,8 +125,8 @@ export function sourceText(x: Cosmetic): string {
       return `💎${x.gems}`;
     case 'starter':
       return t('Starter Pack');
-    case 'rank':
-      return t('Explorer Rank {n}', { n: x.unlock as number });
+    case 'chapter':
+      return t('Chapter {n} chest', { n: x.unlock as number });
     case 'habitat': {
       const hb = HABITATS.find((x2) => x2.id === x.unlock);
       return hb ? t('{name} set', { name: t(hb.name) }) : t('Habitat set');
@@ -139,7 +139,7 @@ export function sourceText(x: Cosmetic): string {
       return t('Constellation');
     case 'road': {
       const r = roadTierOf(x.id);
-      return r ? t('Star Road {n}★', { n: STAR_ROAD[r.i].stars }) : t('Star Road');
+      return r ? t('Star Road {n} points', { n: STAR_ROAD[r.i].stars }) : t('Star Road');
     }
     case 'pass':
       return t('Cosmic Pass');

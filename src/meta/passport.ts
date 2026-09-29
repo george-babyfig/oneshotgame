@@ -114,7 +114,13 @@ export const BANNERS: BannerDef[] = [
   { id: 2, name: 'Sunset', colors: ['#ff8a5a', '#7a2a6e'], unlocked: () => true, how: '' },
   { id: 3, name: 'Meadow', colors: ['#5ecf6a', '#1f5a4a'], unlocked: (p) => p.stats.wins >= 10, how: 'Finish 10 planets' },
   { id: 4, name: 'Ember', colors: ['#ff6a3d', '#4a1030'], unlocked: (p) => p.stats.hardWins >= 5, how: 'Beat 5 Hard planets' },
-  { id: 5, name: 'Nebula', colors: ['#b86bff', '#2a1060'], unlocked: (p) => p.rank >= 4, how: 'Reach Explorer Rank 4' },
+  {
+    id: 5,
+    name: 'Nebula',
+    colors: ['#b86bff', '#2a1060'],
+    unlocked: (p) => p.rank >= 4 || p.chapters.includes(4),
+    how: 'Open chapter 4 chest',
+  },
   { id: 6, name: 'Aurora', colors: ['#6ef2c0', '#6a4dff'], unlocked: (p) => p.starter, how: 'Starter Pack' },
   { id: 7, name: 'Gilded', colors: ['#ffd24a', '#8a4a10'], unlocked: (p) => p.pass, how: 'Cosmic Pass' },
 ];

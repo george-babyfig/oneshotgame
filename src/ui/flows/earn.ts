@@ -10,7 +10,7 @@ export function waysToEarnGems() {
       { class: 'offer-list' },
       h('li', null, t('Meet new creatures.')),
       h('li', null, t('Visit the Star Calendar.')),
-      h('li', null, t('Finish daily quests.')),
+      h('li', null, t('Help your friends with Wishes.')),
       h('li', null, t('Explore the Weekly Voyage.')),
       h('li', null, t('Join festivals.')),
       h('li', null, t('Open chapter chests.')),

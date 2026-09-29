@@ -8,6 +8,7 @@ import type { Profile } from './profile';
 import { applyReward, type Reward } from './progression';
 import { isoWeek, weekAtMostOneAhead } from './events';
 import { unlocked } from './unlocks';
+import { addRoadPoints } from './roadpoints';
 
 export const VOYAGE_LEN = 7;
 export { VOYAGE_UNLOCK_LEVEL } from './unlocks';
@@ -70,10 +71,11 @@ export function voyageUnlocked(p: Profile, i: number) {
  * Record a finished stop. The first clear pays the stop reward and opens the
  * next one; replays only keep the best stars.
  */
-export function clearStop(p: Profile, i: number, stars: number): { reward: Reward | null; done: boolean } {
+export function clearStop(p: Profile, i: number, stars: number, day?: string): { reward: Reward | null; done: boolean } {
   const v = p.voyage;
   if (stars < 1 || i < 0 || i >= VOYAGE_LEN || i > v.cleared) return { reward: null, done: false };
   const s = [...v.stars];
+  addRoadPoints(p, Math.max(0, stars - (s[i] ?? 0)), day);
   s[i] = Math.max(s[i] ?? 0, stars);
   v.stars = s;
   if (i < v.cleared) return { reward: null, done: false };

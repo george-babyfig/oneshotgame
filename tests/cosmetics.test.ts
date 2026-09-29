@@ -38,7 +38,7 @@ describe('cosmetics', () => {
   it('derives ownership from progress (retroactive, no migration)', () => {
     const p = defaultProfile();
     expect(owns(p, 'suit_grape')).toBe(false);
-    p.rank = 3;
+    p.chapters = [2];
     expect(owns(p, 'suit_grape')).toBe(true);
     expect(owns(p, 'suit_moss')).toBe(false);
     p.habitats = ['greenwoods'];

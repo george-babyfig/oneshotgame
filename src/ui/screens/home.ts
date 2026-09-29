@@ -1,91 +1,44 @@
-// Home: your galaxy, the stardust vault, the big Play button and navigation.
+// Play: one clear next step beside the galaxy.
 import { h, btn, fmt, toast } from '../dom';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
 import { levelMeta, TWISTS } from '../../core/levels';
-import { SPECIES } from '../../core/world';
-import { totalStars } from '../../meta/profile';
 import { collectDust, galaxyRate, pendingDust, planetRate, vaultHours } from '../../meta/economy';
-import { chapterOf, chestsReady, questsClaimable, roadReady } from '../../meta/progression';
+import { chapterOf } from '../../meta/progression';
 import { drawGalaxy } from './galaxy';
-import { ensureEvent, eventReady } from '../../meta/events';
-import { rankReady } from '../../meta/rank';
-import { modesBadge } from '../flows/modes';
 import type { App } from '../app';
-import { icon as iconEl } from '../icons';
 import { t, tp } from '../../i18n';
-import { editPassport } from './passport';
-import { checkMail, unread } from '../../meta/inbox';
-import { SEASON_EMOJI, SEASON_NAMES, seasonOf, skyEventOn } from '../../meta/seasons';
-import { homeBadge } from '../../meta/homeworld';
-import { FESTIVAL_TIERS, ensureFestival, festivalActive, festivalReady } from '../../meta/festivals';
-import { VOYAGE_LEN, ensureVoyage } from '../../meta/voyage';
 import { unlocked } from '../../meta/unlocks';
-import { canStamp } from '../../meta/calendar';
-import { today } from '../../meta/profile';
-
-export function navBtn(icon: string, label: string, badge: string | number, fn: () => void, cls = '') {
-  return h(
-    'button',
-    { class: `nav-btn ${cls}`, onclick: () => (sfx.click(), haptic.light(), fn()) },
-    h('span', { class: 'ni' }, iconEl(icon)),
-    h('span', { class: 'nl' }, label),
-    badge ? h('span', { class: `nb${typeof badge === 'number' ? ' dot' : ''}` }, String(badge)) : null,
-  );
-}
-
-/** This month's festival: tap for its tiers. */
-function festivalChip(app: App) {
-  const p = app.p;
-  if (!festivalActive(p)) return null;
-  const f = ensureFestival(p);
-  const max = FESTIVAL_TIERS[FESTIVAL_TIERS.length - 1].spot;
-  const ready = festivalReady(p).length;
-  return h(
-    'button',
-    { class: `fest-chip${ready ? ' ready' : ''}`, style: `--c:${f.color}`, onclick: () => (sfx.click(), app.festival()) },
-    `${f.emoji} ${t(f.name)} · ${Math.min(p.festival.spotted, max)}/${max}`,
-    ready ? h('span', { class: 'nb dot' }, String(ready)) : null,
-  );
-}
-
-/** Dot when the next stop is open and not yet cleared this week. */
-function voyageBadge(p: App['p']) {
-  const v = ensureVoyage(p);
-  return v.cleared < VOYAGE_LEN ? 1 : 0;
-}
-
-/** Today's season, and a banner on real meteor-shower days. */
-function seasonChip(hemi: 'north' | 'south') {
-  const now = new Date();
-  const s = seasonOf(now, hemi);
-  const sky = skyEventOn(now);
-  return h(
-    'div',
-    { class: `season-chip${sky ? ' sky' : ''}` },
-    sky ? t('☄️ {name} tonight — Supernovas charge 2× faster!', { name: t(sky.name) }) : `${SEASON_EMOJI[s]} ${t(SEASON_NAMES[s])}`,
-  );
-}
+import { nextUp } from '../../meta/nextup';
 
 export function showHome(app: App) {
   const p = app.p;
-  if (checkMail(p)) app.save();
+  const now = Date.now();
   const next = levelMeta(p.level);
   const ch = chapterOf(p.level);
-  const pending = pendingDust(p);
+  const pending = pendingDust(p, now);
   const rate = galaxyRate(p);
-  const full = pending >= Math.floor(rate * vaultHours(p));
-  const canvas = h('canvas', { class: 'galaxy' });
-  const stars = totalStars(p);
-  const questBadge = questsClaimable(p);
-  const roadBadge = roadReady(p, stars).length + chestsReady(p).length;
-
+  const full = rate > 0 && pending >= Math.floor(rate * vaultHours(p));
+  const canvas = h('canvas', { class: 'galaxy', 'aria-label': t('Galaxy') });
+  const picked = nextUp(p, now);
   const collect = btn(
     h(
       'span',
       { class: 'stack' },
-      h('b', null, t('Collect ✨ {n}', { n: fmt(pending) })),
-      h('small', null, full ? t('Vault full! Upgrade it to store more') : t('{n} stardust / hour', { n: fmt(rate) })),
+      h('b', null, pending ? t('Collect all ✨ {n}', { n: fmt(pending) }) : t('Collect all')),
+      h(
+        'small',
+        null,
+        pending
+          ? full
+            ? t('Vault full! Upgrade it to store more')
+            : t('{n} stardust / hour', { n: fmt(rate) })
+          : t('Ready at {time}', {
+              time: new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(
+                new Date(p.lastCollect + (rate ? 3600000 / rate : 3600000)),
+              ),
+            }),
+      ),
     ),
     `dust-btn${full ? ' full' : ''}`,
     () => {
@@ -96,77 +49,70 @@ export function showHome(app: App) {
         toast(t('+{n} stardust', { n: fmt(d) }), 'good');
         app.save();
       }
-      showHome(app);
+      app.showHome(true);
     },
   );
   collect.disabled = pending <= 0;
-
+  const nextAction = () => {
+    if (picked.action === 'missions') app.selectTab('missions');
+    else if (picked.action === 'homeworld') app.selectTab('homeworld');
+    else if (picked.action === 'collection') app.selectTab('collection');
+    else if (picked.action === 'starmap') app.showStarMap();
+    else if (picked.action === 'lifebook') app.showLifebook();
+    else if (picked.action === 'passport') app.showPassport();
+    else if (picked.action === 'styles') app.selectTab('styles');
+    else if (picked.action === 'inbox') {
+      app.selectTab('missions');
+      app.inbox();
+    } else if (picked.action === 'calendar') {
+      app.selectTab('missions');
+      app.daily();
+    } else if (picked.action === 'album') app.showAlbum();
+    else if (picked.action === 'sky') app.showSky();
+    else if (picked.action === 'road') app.showRoad();
+    else if (picked.action === 'voyage') app.showVoyage();
+    else if (picked.action === 'event') app.events();
+    else if (picked.action === 'festival') app.festival();
+    else if (picked.action === 'modes') app.modes();
+    else if (picked.action === 'upgrades') app.showUpgrades();
+    else if (p.level <= 3) app.startLevel(p.level);
+    else app.preLevel(p.level);
+  };
+  const modesOpen = (['daily', 'rush', 'zen', 'challenge'] as const).some((id) => unlocked(p, id));
   const el = h(
     'div',
     { class: 'screen home' },
-    app.topBar(),
-    h('div', { class: 'title' }, h('span', null, t('Pocket')), h('span', null, t('Planet'))),
+    app.topBar(false, true),
     h(
       'div',
-      { class: 'chip-row' },
-      seasonChip(p.settings.hemi),
-      festivalChip(app),
-      unlocked(p, 'star_calendar')
-        ? btn(t('Star Calendar'), `calendar-chip${canStamp(p, today()) ? ' ready' : ''}`, () => app.daily())
-        : null,
-    ),
-    h(
-      'div',
-      { class: 'galaxy-wrap' },
-      canvas,
-      p.galaxy.length ? null : h('div', { class: 'galaxy-empty' }, t('Your galaxy is empty.\nFinish planets to fill it!')),
-      p.visitors.length
-        ? h(
-            'button',
-            { class: 'visit-chip', onclick: () => (sfx.click(), app.visitors()) },
-            tp(p.visitors.length, '🛸 {n} visitor left gifts!', '🛸 {n} visitors left gifts!'),
-          )
-        : null,
+      { class: 'home-body' },
+      h('div', { class: 'title' }, h('span', null, t('Pocket')), h('span', null, t('Planet'))),
       h(
         'div',
-        { class: 'side side-l' },
-        unlocked(p, 'quests') ? navBtn('scroll', t('Quests'), questBadge, () => app.quests(), 'side-btn') : null,
-        unlocked(p, 'star_road') ? navBtn('road', t('Star Road'), roadBadge, () => app.showRoad(), 'side-btn') : null,
-        navBtn('medal', t('Rank {n}', { n: p.rank }), rankReady(p) ? 1 : 0, () => app.rank(), 'side-btn'),
-        unlocked(p, 'inbox') ? navBtn('mail', t('Inbox'), unread(p), () => app.inbox(), 'side-btn') : null,
-      ),
-      h(
-        'div',
-        { class: 'side side-r' },
-        unlocked(p, 'homeworld') ? navBtn('world', t('Homeworld'), homeBadge(p), () => app.showHomeworld(), 'side-btn world-btn') : null,
-        navBtn('pad', t('Modes'), modesBadge(app), () => app.modes(), 'side-btn'),
-        unlocked(p, 'voyage') ? navBtn('rocket', t('Voyage'), voyageBadge(p), () => app.showVoyage(), 'side-btn voyage-btn') : null,
-        unlocked(p, 'weekly_event')
-          ? navBtn(ensureEvent(p).emoji, t('Event'), eventReady(p).length, () => app.events(), 'side-btn event-btn')
+        { class: 'galaxy-wrap' },
+        canvas,
+        p.galaxy.length ? null : h('div', { class: 'galaxy-empty' }, t('Your galaxy is empty.\nFinish planets to fill it!')),
+        p.visitors.length
+          ? btn(tp(p.visitors.length, '🛸 {n} visitor left gifts!', '🛸 {n} visitors left gifts!'), 'visit-chip', () => app.visitors())
           : null,
       ),
-    ),
-    p.galaxy.length ? h('div', { class: 'collect-row' }, collect) : null,
-    !p.passport.set && p.level >= 6 ? btn(t('Name your planet passport'), 'ghost wide passport-next', () => editPassport(app, true)) : null,
-    btn(
-      h(
-        'span',
-        { class: 'stack' },
-        h('b', null, t('▶ PLAY  Planet {n}', { n: p.level })),
-        h('small', null, `${t(ch.name)} · ${next.twist !== 'none' ? t(TWISTS[next.twist].name) : next.name}`),
+      p.galaxy.length ? h('div', { class: 'collect-row' }, collect) : null,
+      btn(
+        h('span', { class: 'stack' }, h('b', null, t('Next Up')), h('small', null, picked.title), h('small', null, picked.subtitle)),
+        'ghost wide next-up-card',
+        nextAction,
       ),
-      'primary big wide play',
-      () => (p.level <= 3 ? app.startLevel(p.level) : app.preLevel(p.level)),
-    ),
-    h(
-      'div',
-      { class: 'nav' },
-      navBtn('map', t('Star Map'), `${stars}★`, () => app.showStarMap()),
-      unlocked(p, 'lifebook') ? navBtn('book', t('Lifebook'), `${p.seen.length}/${SPECIES.length}`, () => app.showLifebook()) : null,
-      unlocked(p, 'upgrades') ? navBtn('up', t('Upgrades'), '', () => app.showUpgrades()) : null,
-      p.meta.sessions > 1 && p.level > 6
-        ? navBtn('bag', t('Shop'), p.starter || p.chapters.length < 1 ? '' : t('OFFER'), () => app.showShop())
-        : null,
+      btn(
+        h(
+          'span',
+          { class: 'stack' },
+          h('b', null, t('▶ PLAY  Planet {n}', { n: p.level })),
+          h('small', null, `${t(ch.name)} · ${next.twist !== 'none' ? t(TWISTS[next.twist].name) : next.name}`),
+        ),
+        'primary big wide play',
+        () => (p.level <= 3 ? app.startLevel(p.level) : app.preLevel(p.level)),
+      ),
+      modesOpen ? btn(t('More ways to play'), 'ghost wide more-play', () => app.modes()) : null,
     ),
   );
   const view = drawGalaxy(canvas, p.galaxy, {
@@ -174,6 +120,7 @@ export function showHome(app: App) {
     onTap: (g) => {
       sfx.click();
       toast(`${g.name} · ${'★'.repeat(g.stars)} · ✨${planetRate(g)}/h`);
+      app.showStarMap();
     },
   });
   app.mount(el, 'home', view.stop);

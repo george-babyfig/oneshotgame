@@ -13,7 +13,7 @@ import { t } from '../../i18n';
 export function dailyGiftFlow(app: App, then?: () => void) {
   const day = today();
   const p = app.p;
-  if (app.screen !== 'home') return then?.();
+  if (app.screen !== 'home' && app.screen !== 'missions') return then?.();
   const n = stamps(p);
   const cycle = Math.floor(n / CALENDAR_DAYS);
   const todayIdx = calendarIndex(n);

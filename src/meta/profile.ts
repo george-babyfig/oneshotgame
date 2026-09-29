@@ -68,6 +68,9 @@ export interface Profile {
   /** Highest unlocked level (the next one to beat). */
   level: number;
   stars: Record<number, number>;
+  /** Star Road progress, separate from campaign stars. */
+  roadPoints: number;
+  roadDay: { day: string; earned: number };
   /** Lifebook: every creature ever discovered. */
   seen: string[];
   galaxy: GalaxyPlanet[];
@@ -104,6 +107,8 @@ export interface Profile {
   mementos: string[];
   /** Explorer Rank (1-based) and habitat sets already rewarded. */
   rank: number;
+  /** Highest retired rank payout already accounted for by chapter chests. */
+  m4RankPaidThrough: number;
   habitats: string[];
   /** Personal best per mode and challenge history. */
   challengeLog: { code: string; score: number; stars: number; vs: number }[];
@@ -175,6 +180,8 @@ export function defaultProfile(now = Date.now()): Profile {
     dust: 0,
     level: 1,
     stars: {},
+    roadPoints: 0,
+    roadDay: { day: '', earned: 0 },
     seen: [],
     galaxy: [],
     lastCollect: now,
@@ -226,6 +233,7 @@ export function defaultProfile(now = Date.now()): Profile {
     visitors: [],
     mementos: [],
     rank: 1,
+    m4RankPaidThrough: 0,
     habitats: [],
     challengeLog: [],
     zen: null,
@@ -283,6 +291,10 @@ function merge<T>(base: T, saved: unknown): T {
 /** Upgrade older save formats in place. */
 export function migrate(raw: Record<string, unknown>): Profile {
   const p = merge(defaultProfile(), raw);
+  if (!Object.hasOwn(raw, 'm4RankPaidThrough')) p.m4RankPaidThrough = Math.min(7, Math.max(0, p.rank - 1));
+  if (!Object.hasOwn(raw, 'roadPoints'))
+    p.roadPoints = Object.entries(p.stars).reduce((sum, [n, stars]) => sum + (+n > 0 ? stars : 0), 0) + (p.stars[0] ?? 0);
+  delete p.stars[0];
   if (raw.m3Migrated !== true) {
     const oldLevels: Record<string, number> = {
       swap: 1,
@@ -379,5 +391,5 @@ export function dayGap(a: string, b: string) {
 }
 
 export function totalStars(p: Profile) {
-  return Object.values(p.stars).reduce((a, b) => a + b, 0);
+  return Object.entries(p.stars).reduce((a, [n, b]) => a + (+n > 0 ? b : 0), 0);
 }

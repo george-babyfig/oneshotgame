@@ -8,6 +8,7 @@ export type EarnSource =
   | 'level_win'
   | 'first_clear'
   | 'quest'
+  | 'wish'
   | 'calendar'
   | 'visitor'
   | 'vault'

@@ -63,7 +63,7 @@ export function passportCard(app: App, compact = false) {
       : h(
           'div',
           { class: 'pp-strip' },
-          h('span', null, h('b', null, String(p.rank)), h('small', null, t('Rank'))),
+          h('span', null, h('b', null, String(p.chapters.length)), h('small', null, t('Chapters'))),
           h('span', null, h('b', null, `${totalStars(p)}★`), h('small', null, t('Stars'))),
           h('span', null, h('b', null, `${p.seen.length}/${SPECIES.length}`), h('small', null, t('Lifebook'))),
         ),
@@ -127,7 +127,7 @@ export function showPassport(app: App) {
           'div',
           { class: 'row' },
           btn(t('✏️ Edit'), 'ghost', () => editPassport(app)),
-          btn(t('🧑‍🚀 Workshop'), 'ghost', () => app.showWorkshop()),
+          btn(t('🧑‍🚀 Styles'), 'ghost', () => app.showStyles()),
           btn(t('📤 Share'), 'primary', () => sharePassport(app)),
         ),
         h('div', { class: 'sec-title' }, t('Stats')),
@@ -273,7 +273,7 @@ function renderPassportImage(app: App): HTMLCanvasElement {
   g.font = font(500, 46);
   g.fillText(`${title ? t(title.text) : rankTitle(p.rank)} · ${explorerId(p)}`, W / 2, 840);
   const cells = [
-    [String(p.rank), t('Rank')],
+    [String(p.chapters.length), t('Chapters')],
     [`${totalStars(p)}★`, t('Stars')],
     [`${p.seen.length}/${SPECIES.length}`, t('Lifebook')],
   ];

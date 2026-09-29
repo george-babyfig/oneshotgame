@@ -15,7 +15,7 @@ import { BOOSTERS, SKINS, UPGRADES, type UpgradeId } from '../../../src/meta/con
 import { COSMETICS, buyCosmetic, owns } from '../../../src/meta/cosmetics';
 import { dropsFor, addDrops } from '../../../src/meta/constellations';
 import { stamp } from '../../../src/meta/calendar';
-import { applyLevelWin, collectDust, discoverSpecies, grantProduct, track } from '../../../src/meta/economy';
+import { applyLevelWin, collectDust, discoverSpecies, grantProduct } from '../../../src/meta/economy';
 import { addTokens, claimEventTier, ensureEvent, eventActive, eventReady, isoWeek, tokensForLand } from '../../../src/meta/events';
 import { claimFestival, ensureFestival, festivalActive, festivalReady, spotFestival } from '../../../src/meta/festivals';
 import { habitatsReady, claimHabitat } from '../../../src/meta/habitats';
@@ -39,18 +39,10 @@ import { LAB_MAX, labLevel, upgradeLab } from '../../../src/meta/lab';
 import { clearLedger, ledger, ledgerSummary, serializedSize } from '../../../src/meta/ledger';
 import { dailyLevel, recordDaily } from '../../../src/meta/modes';
 import { momentumWin, momentumLoss } from '../../../src/meta/momentum';
-import { defaultProfile, totalStars, type Profile } from '../../../src/meta/profile';
-import {
-  applyReward,
-  claimQuest,
-  claimQuestBonus,
-  claimRoad,
-  chestsReady,
-  ensureQuests,
-  openChest,
-  roadReady,
-} from '../../../src/meta/progression';
-import { rankReady, rankReward } from '../../../src/meta/rank';
+import { defaultProfile, today, type Profile } from '../../../src/meta/profile';
+import { applyReward, claimRoad, chestsReady, openChest, roadReady } from '../../../src/meta/progression';
+import { claimWish, ensureWishes, recordWishRound, swapWish } from '../../../src/meta/wishes';
+import { unlocked } from '../../../src/meta/unlocks';
 import { ALBUM_PAGES, claimMilestones, claimPage, pageDone } from '../../../src/meta/stickers';
 import { BOSS_REWARD, RESIDENT_ACCS } from '../../../src/meta/tuning';
 import { addVisitors, openVisitor } from '../../../src/meta/visitors';
@@ -149,18 +141,13 @@ function round(
 
 function claimReady(p: Profile, date: Date) {
   for (const chapter of chestsReady(p)) openChest(p, chapter);
-  for (const tier of roadReady(p, totalStars(p))) claimRoad(p, tier, totalStars(p));
-  for (const q of p.quests.list) claimQuest(p, q.id);
-  claimQuestBonus(p);
+  for (const tier of roadReady(p)) claimRoad(p, tier);
+  for (const q of p.quests.list) claimWish(p, q.id, today(date));
   if (festivalActive(p)) for (const tier of festivalReady(p, date)) claimFestival(p, tier, date);
   if (eventActive(p)) for (const tier of eventReady(p)) claimEventTier(p, tier);
   for (const habitat of habitatsReady(p)) claimHabitat(p, habitat.id);
   claimMilestones(p);
   for (const page of ALBUM_PAGES) if (pageDone(p, page.id)) claimPage(p, page.id);
-  while (rankReady(p)) {
-    p.rank++;
-    applyReward(p, rankReward(p.rank), 'rank');
-  }
 }
 
 function buyLooks(p: Profile) {
@@ -229,7 +216,10 @@ function visit(
   collectDust(p, now);
   collectAll(p, now);
   stamp(p, dayKey);
-  ensureQuests(p, dayKey);
+  const wishes = ensureWishes(p, dayKey);
+  // A child can swap a card that has stayed out of reach across several visits.
+  const stuck = wishes.find((q) => !q.claimed && q.progress === 0 && Date.parse(dayKey) - Date.parse(q.born) >= 3 * DAY);
+  if (stuck) swapWish(p, stuck.id, dayKey);
   if (festivalActive(p)) ensureFestival(p, date);
   if (eventActive(p)) ensureEvent(p, isoWeek(date));
   if (voyageActive(p)) ensureVoyage(p, isoWeek(date));
@@ -246,7 +236,6 @@ function visit(
       if (p.boosters.shower) {
         p.boosters.shower--;
         shower = true;
-        track(p, 'booster');
         ledger.count('boosters_used');
       }
     }
@@ -255,8 +244,6 @@ function visit(
     ledger.count('round_started');
     p.stats.plays++;
     p.stats.throws += throws;
-    track(p, 'throw', throws);
-    track(p, 'land', result.regions.length);
     if (eventActive(p)) addTokens(p, tokensForLand(ensureEvent(p, isoWeek(date)), result.regions, result.arrivals.length));
     if (!result.stars) {
       ledger.count('round_failed');
@@ -274,15 +261,15 @@ function visit(
       name: level.name,
       hue: level.hue,
       difficulty: level.difficulty,
+      day: dayKey,
     });
+    recordWishRound(p, 'campaign', result.planet, dayKey, level.start);
     addDrops(p, dropsFor(result.planet, result.stars), out.firstClear ? 'material_drop_first_clear' : 'material_drop_replay');
     for (const species of result.arrivals) {
       discoverSpecies(p, species);
       if (festivalActive(p)) {
         spotFestival(p, date);
-        track(p, 'spot');
       }
-      track(p, 'creature');
     }
     if (eventActive(p)) {
       const event = ensureEvent(p, isoWeek(date));
@@ -295,12 +282,13 @@ function visit(
     if (homeUnlocked(p)) speedUpBuilds(p.home, undefined, now);
     claimReady(p, date);
   }
-  if (visitNo === 0 && p.rank >= 2) {
+  if (visitNo === 0 && unlocked(p, 'daily')) {
     const daily = dailyLevel(dayKey);
     const result = round(daily, `daily-${type}-${day}`, 1);
     ledger.count('round_started');
     ledger.count('round_won');
     recordDaily(p, dayKey, result.score, starsFor(result.score, daily.stars));
+    recordWishRound(p, 'daily', result.planet, dayKey, daily.start);
   }
   if (voyageActive(p) && budget > 0 && p.voyage.cleared < VOYAGE_LEN) {
     const stop = p.voyage.cleared;
@@ -310,8 +298,8 @@ function visit(
     const result = round(level, `voyage-${type}-${day}-${stop}`, 1);
     ledger.count('round_started');
     if (result.stars) {
-      clearStop(p, stop, result.stars);
-      track(p, 'voyage');
+      clearStop(p, stop, result.stars, dayKey);
+      recordWishRound(p, 'voyage', result.planet, dayKey, level.start);
       ledger.count('round_won');
     } else ledger.count('round_failed');
   }

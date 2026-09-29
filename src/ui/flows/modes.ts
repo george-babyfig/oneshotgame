@@ -25,7 +25,8 @@ import {
   rushSeed,
   zenLevel,
 } from '../../meta/modes';
-import { RANK_UNLOCKS, unlocked } from '../../meta/rank';
+import { unlocked } from '../../meta/unlocks';
+import { recordWishRound } from '../../meta/wishes';
 import { shareText } from '../share';
 import { NO_BOOSTERS, type App } from '../app';
 import { t } from '../../i18n';
@@ -33,11 +34,11 @@ import { gcScore } from '../gamecenter';
 
 type Mode = 'daily' | 'rush' | 'zen' | 'challenge';
 
-const INFO: Record<Mode, { emoji: string; name: string; desc: string; rank: number }> = {
-  daily: { emoji: '📅', name: 'Daily Planet', desc: 'Everyone gets the same planet today. Share your result!', rank: 2 },
-  rush: { emoji: '☄️', name: 'Meteor Rush', desc: '{n} seconds, unlimited throws. How much life can you grow?', rank: 3 },
-  zen: { emoji: '🧘', name: 'Zen Garden', desc: 'No targets, no clock. A world of your own that stays between visits.', rank: 4 },
-  challenge: { emoji: '🤝', name: 'Challenge a Friend', desc: 'Send a code, play the same planet, compare scores.', rank: 5 },
+const INFO: Record<Mode, { emoji: string; name: string; desc: string; planet: number }> = {
+  daily: { emoji: '📅', name: 'Daily Planet', desc: 'Everyone gets the same planet today. Share your result!', planet: 27 },
+  rush: { emoji: '☄️', name: 'Meteor Rush', desc: '{n} seconds, unlimited throws. How much life can you grow?', planet: 38 },
+  zen: { emoji: '🧘', name: 'Zen Garden', desc: 'No targets, no clock. A world of your own that stays between visits.', planet: 30 },
+  challenge: { emoji: '🤝', name: 'Challenge a Friend', desc: 'Send a code, play the same planet, compare scores.', planet: 40 },
 };
 
 export function modesBadge(app: App) {
@@ -66,7 +67,7 @@ export function modesFlow(app: App) {
         class: `mode${open ? '' : ' locked'}`,
         onclick: () => {
           sfx.click();
-          if (!open) return toast(t('Reach Explorer Rank {n} to unlock {mode}', { n: i.rank, mode: t(RANK_UNLOCKS[i.rank]) }));
+          if (!open) return toast(t('Opens at planet {n}', { n: i.planet }));
           m.close();
           startMode(app, mode);
         },
@@ -76,7 +77,7 @@ export function modesFlow(app: App) {
         'div',
         { class: 'mode-body' },
         h('b', null, t(i.name)),
-        h('small', null, open ? t(i.desc, { n: RUSH_SECONDS }) : t('Unlocks at Explorer Rank {n}', { n: i.rank })),
+        h('small', null, open ? t(i.desc, { n: RUSH_SECONDS }) : t('Opens at planet {n}', { n: i.planet })),
         open ? h('span', null, sub[mode]) : null,
       ),
     );
@@ -129,6 +130,7 @@ function modeEnded(app: App, mode: Mode, r: LevelResult, vs?: { code: string; se
     return play(app, zenLevel(p.zen), mode);
   }
   const stars = starsFor(r.score, r.level.stars);
+  if (mode === 'daily' || mode === 'zen') recordWishRound(p, mode, r.planet, today(), r.level.start);
   const again = () => (m.close(), startMode(app, mode === 'challenge' ? 'challenge' : mode));
   let body: (HTMLElement | null)[] = [];
   if (mode === 'daily') {

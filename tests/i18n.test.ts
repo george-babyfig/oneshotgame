@@ -27,6 +27,9 @@ import { DYES } from '../src/meta/dyes';
 import { LORE } from '../src/meta/lore';
 import { OBJECT_TITLES } from '../src/meta/records';
 import { SEASON_NAMES, SKY_EVENTS } from '../src/meta/seasons';
+import { WISH_TEMPLATES } from '../src/meta/wishes';
+import { NEW_FEATURE } from '../src/meta/nextup';
+import { FACTS } from '../src/ui/screens/fieldguide';
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
@@ -91,6 +94,9 @@ export function allKeys(): string[] {
   SCRAP_BGS.forEach((b) => add(b.name));
   PORTS.forEach(add);
   VOYAGE_NAMES.forEach(add);
+  WISH_TEMPLATES.forEach((wish) => add(wish.text));
+  Object.values(NEW_FEATURE).forEach(add);
+  Object.values(FACTS).forEach((fact) => (add(fact.element), add(fact.job)));
   // mode names/descriptions live in a UI module (src/ui/flows/modes.ts)
   [
     'Daily Planet',

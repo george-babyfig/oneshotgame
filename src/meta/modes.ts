@@ -6,6 +6,7 @@ import { greedyScore, makeLevel, rngFrom, type LevelDef } from '../core/levels';
 import { BIOMES, clonePlanet, lifeScore, settle, type Planet } from '../core/world';
 import { dayGap, type Profile } from './profile';
 import { t } from '../i18n';
+import { addRoadPoints } from './roadpoints';
 
 export const DAILY_EPOCH = '2026-01-01';
 export const RUSH_SECONDS = 60;
@@ -112,8 +113,10 @@ export function rushReward(score: number) {
 export function recordDaily(p: Profile, day: string, score: number, stars: number): number {
   const first = p.dailyPlanet.day !== day || !p.dailyPlanet.rewarded;
   if (p.dailyPlanet.day !== day) p.dailyPlanet = { day, best: 0, stars: 0, rewarded: false };
+  const newStars = Math.max(0, stars - p.dailyPlanet.stars);
   p.dailyPlanet.best = Math.max(p.dailyPlanet.best, score);
   p.dailyPlanet.stars = Math.max(p.dailyPlanet.stars, stars);
+  addRoadPoints(p, newStars, day);
   if (!first) return 0;
   p.dailyPlanet.rewarded = true;
   p.stats.dailies++;

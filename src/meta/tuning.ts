@@ -486,8 +486,8 @@ export const COSMETICS: Cosmetic[] = [
     id: 'suit_grape',
     slot: 'suit',
     name: 'Nebula Navigator',
-    source: 'rank',
-    unlock: 3,
+    source: 'chapter',
+    unlock: 2,
     tier: 'fancy',
     colors: ['#9a6bff', '#ffd0ff', '#1a1040'],
   }),
@@ -559,7 +559,7 @@ export const COSMETICS: Cosmetic[] = [
     tier: 'fancy',
     colors: ['#ff8fc8', '#ffe066'],
   }),
-  c({ id: 'hat_wizard', slot: 'hat', name: 'Star Wizard', source: 'rank', unlock: 5, tier: 'fancy', colors: ['#4a3aa8', '#ffd24a'] }),
+  c({ id: 'hat_wizard', slot: 'hat', name: 'Star Wizard', source: 'chapter', unlock: 4, tier: 'fancy', colors: ['#4a3aa8', '#ffd24a'] }),
   c({ id: 'hat_beanie', slot: 'hat', name: 'Cozy Beanie', source: 'calendar', unlock: 14, tier: 'fancy', colors: ['#ff6a7a', '#ffffff'] }),
   c({
     id: 'hat_snow',
@@ -583,7 +583,7 @@ export const COSMETICS: Cosmetic[] = [
   c({ id: 'hat_halo', slot: 'hat', name: 'Halo Ring', source: 'pass', tier: 'epic', colors: ['#ffe58a'], set: 'captain' }),
   // launchers
   c({ id: 'l_pad', slot: 'launcher', name: 'Launch Pad', source: 'free', tier: 'basic', colors: ['#c9c2ff'] }),
-  c({ id: 'l_twig', slot: 'launcher', name: 'Twig Sling', source: 'rank', unlock: 2, tier: 'basic', colors: ['#a0743a', '#e0b050'] }),
+  c({ id: 'l_twig', slot: 'launcher', name: 'Twig Sling', source: 'chapter', unlock: 1, tier: 'basic', colors: ['#a0743a', '#e0b050'] }),
   c({ id: 'l_petal', slot: 'launcher', name: 'Petal Sling', source: 'gems', gems: 200, tier: 'fancy', colors: ['#ff8fc8', '#5ecf5a'] }),
   c({ id: 'l_cannon', slot: 'launcher', name: 'Comet Cannon', source: 'gems', gems: 250, tier: 'fancy', colors: ['#6e8cff', '#ffd24a'] }),
   c({
@@ -609,7 +609,7 @@ export const COSMETICS: Cosmetic[] = [
   c({ id: 'tr_dots', slot: 'trail', name: 'Stardust', source: 'free', tier: 'basic', colors: [] }),
   c({ id: 'tr_sparkle', slot: 'trail', name: 'Twinkle', source: 'gems', gems: 120, tier: 'fancy', colors: ['#fff6b0'] }),
   c({ id: 'tr_hearts', slot: 'trail', name: 'Hearts', source: 'gems', gems: 120, tier: 'fancy', colors: ['#ff6a9a'] }),
-  c({ id: 'tr_bubbles', slot: 'trail', name: 'Bubbles', source: 'rank', unlock: 4, tier: 'fancy', colors: ['#9fe6ff'] }),
+  c({ id: 'tr_bubbles', slot: 'trail', name: 'Bubbles', source: 'chapter', unlock: 3, tier: 'fancy', colors: ['#9fe6ff'] }),
   c({ id: 'tr_embers', slot: 'trail', name: 'Embers', source: 'habitat', unlock: 'sun', tier: 'fancy', colors: ['#ff8a3d', '#ffd24a'] }),
   c({
     id: 'tr_aurora',
@@ -640,7 +640,7 @@ export const COSMETICS: Cosmetic[] = [
   // emotes (played when you finish a planet)
   c({ id: 'em_cheer', slot: 'emote', name: 'Hooray', source: 'free', tier: 'basic', colors: [] }),
   c({ id: 'em_wave', slot: 'emote', name: 'Big Wave', source: 'free', tier: 'basic', colors: [] }),
-  c({ id: 'em_jump', slot: 'emote', name: 'Moon Jump', source: 'rank', unlock: 6, tier: 'fancy', colors: [] }),
+  c({ id: 'em_jump', slot: 'emote', name: 'Moon Jump', source: 'chapter', unlock: 5, tier: 'fancy', colors: [] }),
   c({ id: 'em_spin', slot: 'emote', name: 'Twirl', source: 'gems', gems: 100, tier: 'fancy', colors: [] }),
   c({ id: 'em_dance', slot: 'emote', name: 'Wiggle Dance', source: 'habitat', unlock: 'frost', tier: 'fancy', colors: [] }),
   c({ id: 'em_flag', slot: 'emote', name: 'Plant the Flag', source: 'gems', gems: 150, tier: 'fancy', colors: [] }),
@@ -740,7 +740,9 @@ export const BASE_CAP_HOURS = 6;
 
 // Formula inputs keep their previous values; changes here are balance changes.
 export const CHAPTER_REWARD = { baseGems: 25, gemsPerChapter: 5, dustPerChapter: 200 };
-export const RANK_REWARD = { baseGems: 20, gemsPerRank: 5, dustPerRank: 150 };
+// Seven retired rank payouts are spread over the first seven chapter chests.
+export const CHAPTER_RANK_REWARD = { gems: [0, 30, 35, 40, 45, 50, 55, 60], dust: [0, 300, 450, 600, 750, 900, 1050, 1200] };
+export const WISH_REWARD = { gems: 12, dust: 50, roadPoints: 1, allThreeGems: 15 };
 export const CALENDAR_REPEAT_ITEM_GEMS = 40;
 export const FINISH_DUST_PER_THROW = 15;
 export const VISITOR_DUST = { common: 20, uncommon: 30, rare: 50, legendary: 80 };

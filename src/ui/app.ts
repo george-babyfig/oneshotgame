@@ -16,8 +16,9 @@ import { loadProfile, saveProfile, today, type Profile } from '../meta/profile';
 import { createIap } from '../meta/iap';
 import { PRODUCT_BY_ID, PRODUCT_BY_KEY, SKINS, type BoosterId } from '../meta/config';
 import { clearFails, continueAllowed, countsAsFail, recordFail } from '../meta/continues';
-import { discoverSpecies, grantProduct, spendGems, track } from '../meta/economy';
-import { chapterOf, ensureQuests } from '../meta/progression';
+import { discoverSpecies, grantProduct, spendGems } from '../meta/economy';
+import { chapterOf } from '../meta/progression';
+import { ensureWishes } from '../meta/wishes';
 import { MOMENTUM_PERKS, momentumActive, momentumLoss, momentumWin } from '../meta/momentum';
 import { addVisitors } from '../meta/visitors';
 import { rankFlow } from './flows/rank';
@@ -41,13 +42,16 @@ import { preLevel } from './flows/prelevel';
 import { levelResults } from './flows/results';
 import { settingsFlow, setTextSize } from './flows/settings';
 import { questsFlow } from './flows/quests';
-import { setLang, t, type Lang } from '../i18n';
+import { getLang, setLang, t, type Lang } from '../i18n';
 import { COACH, pendingIntroAfterWin } from '../meta/coach';
 import { addIntroLetter } from '../meta/inbox';
 import { gcSignIn, gcSync } from './gamecenter';
 import { fixClock } from '../meta/economy';
 import { currentLook, masteryLevel, MASTERY_STEPS } from '../meta/cosmetics';
-import { showWorkshop } from './screens/workshop';
+import { showStyles } from './screens/styles';
+import { showMissions } from './screens/missions';
+import { showCollection } from './screens/collection';
+import { showFieldGuide } from './screens/fieldguide';
 import { showPassport } from './screens/passport';
 import { showPass } from './screens/pass';
 import { showHomeworld } from './screens/homeworld';
@@ -66,6 +70,10 @@ import { sight } from '../meta/lore';
 import { seasonOf, skyEventOn } from '../meta/seasons';
 import { keeperHead } from './art/keeper';
 import { debutsAt, unlocked } from '../meta/unlocks';
+import { roadReady, chestsReady } from '../meta/progression';
+import { letterOf } from '../meta/inbox';
+import { homeBadge } from '../meta/homeworld';
+import { wishClaimable } from '../meta/wishes';
 
 export type ScreenName =
   | 'home'
@@ -76,6 +84,10 @@ export type ScreenName =
   | 'road'
   | 'level'
   | 'workshop'
+  | 'styles'
+  | 'missions'
+  | 'collection'
+  | 'fieldguide'
   | 'pass'
   | 'passport'
   | 'homeworld'
@@ -85,6 +97,24 @@ export type ScreenName =
   | 'title';
 export type Boosters = Record<BoosterId, boolean>;
 export const NO_BOOSTERS: Boosters = { shower: false, spark: false, scope: false };
+export type MainTab = 'home' | 'missions' | 'homeworld' | 'collection' | 'styles';
+const MAIN_TABS: MainTab[] = ['home', 'missions', 'homeworld', 'collection', 'styles'];
+
+export class ScreenHistory {
+  private entries: ScreenName[] = [];
+  visit(from: ScreenName, to: ScreenName) {
+    if (from !== to && from !== 'level' && from !== 'title' && to !== 'level' && to !== 'title') this.entries.push(from);
+  }
+  reset() {
+    this.entries = [];
+  }
+  pop() {
+    return this.entries.pop();
+  }
+  get length() {
+    return this.entries.length;
+  }
+}
 
 export class App {
   root: HTMLElement;
@@ -103,6 +133,8 @@ export class App {
   private homeSeenThisOpen = false;
   private popupShownThisOpen = false;
   private roundFirstCampaignClear = false;
+  private screenStack = new ScreenHistory();
+  private returning = false;
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -112,12 +144,23 @@ export class App {
     this.host = h('div', { class: 'host' });
     this.root.append(this.host);
     mountOverlays(this.root);
+    let swipeX = -1;
+    let swipeY = 0;
+    this.root.addEventListener('pointerdown', (event) => {
+      swipeX = event.clientX < 20 && this.screen !== 'level' ? event.clientX : -1;
+      swipeY = event.clientY;
+    });
+    this.root.addEventListener('pointerup', (event) => {
+      if (swipeX >= 0 && event.clientX - swipeX > 70 && Math.abs(event.clientY - swipeY) < 80) this.back();
+      swipeX = -1;
+    });
+    this.root.addEventListener('pointercancel', () => (swipeX = -1));
     this.p = await loadProfile();
     await loadLedger();
     ledger.count('app_open');
     this.p.meta.sessions++;
     this.applySettings();
-    ensureQuests(this.p, today());
+    ensureWishes(this.p, today());
     fixClock(this.p);
     addVisitors(this.p, Date.now());
     tickHome(this.p);
@@ -139,7 +182,7 @@ export class App {
       });
       CapApp.addListener('resume', () => {
         pauseAudio(false);
-        ensureQuests(this.p, today());
+        ensureWishes(this.p, today());
         fixClock(this.p);
         if (addVisitors(this.p, Date.now())) this.save();
         tickHome(this.p);
@@ -196,6 +239,13 @@ export class App {
   }
 
   mount(el: HTMLElement, name: ScreenName, teardown: (() => void) | null = null) {
+    if (!this.refreshing && !this.returning) this.screenStack.visit(this.screen, name);
+    if (MAIN_TABS.includes(name as MainTab) && this.screenStack.length) {
+      const first = el.querySelector('.topbar .icon');
+      first?.replaceWith(
+        h('button', { class: 'icon', 'aria-label': t('Back'), onclick: () => (sfx.click(), this.back()) }, icon('back', 24)),
+      );
+    }
     this.teardown?.();
     this.teardown = teardown;
     this.scene?.destroy();
@@ -205,6 +255,7 @@ export class App {
     const same = name === this.screen && name !== 'level';
     const scrollTop = same ? (this.host.querySelector('.scroll')?.scrollTop ?? 0) : 0;
     if (!same) el.classList.add('enter');
+    if (MAIN_TABS.includes(name as MainTab)) el.append(this.tabBar(name as MainTab));
     this.host.replaceChildren(el);
     if (scrollTop) {
       const sc = el.querySelector('.scroll');
@@ -221,12 +272,16 @@ export class App {
   refresh() {
     const map: Partial<Record<ScreenName, () => void>> = {
       home: () => this.showHome(),
+      missions: () => this.showMissions(),
+      collection: () => this.showCollection(),
+      styles: () => this.showStyles(),
+      fieldguide: () => this.showFieldGuide(),
       lifebook: () => this.showLifebook(),
       shop: () => this.showShop(),
       upgrades: () => this.showUpgrades(),
       map: () => this.showStarMap(),
       road: () => this.showRoad(),
-      workshop: () => this.showWorkshop(),
+      workshop: () => this.showStyles(),
       passport: () => this.showPassport(),
       pass: () => this.showPass(),
       homeworld: () => this.showHomeworld(),
@@ -243,7 +298,132 @@ export class App {
   }
 
   // ------------------------------------------------------------------ navigation
+  private tabBar(active: MainTab) {
+    const p = this.p;
+    const mailGifts = p.mail.filter((mail) => !mail.claimed && !!letterOf(mail)?.gift).length;
+    const missionReady = unlocked(p, 'quests') ? wishClaimable(p) + roadReady(p).length + chestsReady(p).length + mailGifts : 0;
+    const tabs: { id: MainTab; label: string; symbol: string; badge: number; reason?: string }[] = [
+      { id: 'home', label: t('Play'), symbol: 'planet', badge: 0 },
+      {
+        id: 'missions',
+        label: t('Missions'),
+        symbol: 'scroll',
+        badge: missionReady,
+        reason: unlocked(p, 'quests') ? undefined : t('Opens at planet {n}', { n: 12 }),
+      },
+      {
+        id: 'homeworld',
+        label: getLang() === 'ja' ? t('Home') : t('Homeworld'),
+        symbol: 'world',
+        badge: homeBadge(p),
+        reason: unlocked(p, 'homeworld') ? undefined : t('Opens at planet {n}', { n: 5 }),
+      },
+      { id: 'collection', label: t('Collection'), symbol: 'book', badge: 0 },
+      { id: 'styles', label: t('Styles'), symbol: 'paint', badge: 0, reason: p.chapters.length ? undefined : t('Opens after chapter 1') },
+    ];
+    // Keep one numeric badge style and limit simultaneous badges.
+    let shown = 0;
+    return h(
+      'nav',
+      { class: 'main-tabs', 'aria-label': t('Tabs') },
+      ...tabs.map((tab) => {
+        const count = tab.badge && shown < 3 ? tab.badge : 0;
+        if (count) shown++;
+        const button = h(
+          'button',
+          {
+            class: `main-tab${active === tab.id ? ' on' : ''}${tab.reason ? ' locked' : ''}`,
+            'data-tab': tab.id,
+            type: 'button',
+            'aria-label': tab.reason ? `${tab.label} · ${tab.reason}` : tab.label,
+            'aria-current': active === tab.id ? 'page' : undefined,
+          },
+          h('span', { class: 'main-tab-icon', 'aria-hidden': 'true' }, icon(tab.symbol, 24)),
+          h('span', { class: 'main-tab-label' }, tab.label),
+          count ? h('span', { class: 'nb' }, String(count)) : null,
+        );
+        button.addEventListener('click', () => this.selectTab(tab.id));
+        return button;
+      }),
+    );
+  }
+  selectTab(tab: MainTab) {
+    this.screenStack.reset();
+    const wasReturning = this.returning;
+    this.returning = true;
+    try {
+      if (tab === 'home') this.showHome(true);
+      else if (tab === 'missions') this.showMissions();
+      else if (tab === 'homeworld') this.showHomeworld();
+      else if (tab === 'collection') this.showCollection();
+      else this.showStyles();
+    } finally {
+      this.returning = wasReturning;
+    }
+  }
+  back() {
+    const previous = this.screenStack.pop();
+    if (!previous) return;
+    this.returning = true;
+    try {
+      this.renderScreen(previous);
+    } finally {
+      this.returning = false;
+    }
+  }
+  canGoBack() {
+    return this.screenStack.length > 0;
+  }
+  private renderScreen(name: ScreenName) {
+    const render: Partial<Record<ScreenName, () => void>> = {
+      home: () => this.showHome(true),
+      missions: () => this.showMissions(),
+      homeworld: () => this.showHomeworld(),
+      collection: () => this.showCollection(),
+      styles: () => this.showStyles(),
+      fieldguide: () => this.showFieldGuide(),
+      lifebook: () => this.showLifebook(),
+      album: () => this.showAlbum(),
+      sky: () => this.showSky(),
+      shop: () => this.showShop(),
+      upgrades: () => this.showUpgrades(),
+      map: () => this.showStarMap(),
+      road: () => this.showRoad(),
+      workshop: () => this.showStyles(),
+      passport: () => this.showPassport(),
+      pass: () => this.showPass(),
+      voyage: () => this.showVoyage(),
+    };
+    render[name]?.();
+  }
+  showMissions() {
+    showMissions(this);
+  }
+  showCollection() {
+    showCollection(this);
+  }
+  showStyles() {
+    if (!this.p.chapters.length) {
+      this.mount(
+        h(
+          'div',
+          { class: 'screen page tab-page' },
+          this.topBar(),
+          h('div', { class: 'page-title' }, t('Styles')),
+          h('p', { class: 'locked-note' }, t('Opens after chapter 1')),
+        ),
+        'styles',
+      );
+      return;
+    }
+    ledger.discover('workshop', this.p.level);
+    showStyles(this);
+  }
+  showFieldGuide() {
+    showFieldGuide(this);
+  }
   showHome(quiet = false) {
+    if (!this.returning && !this.refreshing) this.screenStack.reset();
     showHome(this);
     if (quiet) return;
     this.homeSeenThisOpen = true;
@@ -256,10 +436,10 @@ export class App {
       addIntroLetter(this.p, intro.id);
       this.save();
       const target: Record<string, string> = {
-        homeworld: '.world-btn',
-        festival: '.fest-chip',
-        star_calendar: '.calendar-chip',
-        voyage: '.voyage-btn',
+        homeworld: '[data-tab="homeworld"]',
+        festival: '[data-tab="missions"]',
+        star_calendar: '[data-tab="missions"]',
+        voyage: '[data-tab="missions"]',
       };
       const focus = target[intro.id] ? this.host.querySelector<HTMLElement>(target[intro.id]) : null;
       const card = modal(
@@ -270,7 +450,8 @@ export class App {
           focus
             ? btn(t('Show me'), 'primary wide', () => {
                 card.close();
-                if (intro.id === 'homeworld') return this.showHomeworld();
+                if (intro.id === 'homeworld') return this.selectTab('homeworld');
+                if (intro.id === 'festival' || intro.id === 'star_calendar' || intro.id === 'voyage') return this.selectTab('missions');
                 focus.scrollIntoView({ block: 'nearest' });
                 focus.classList.add('coach-focus');
                 window.setTimeout(() => focus.classList.remove('coach-focus'), 3000);
@@ -309,8 +490,7 @@ export class App {
     showRoad(this);
   }
   showWorkshop() {
-    ledger.discover('workshop', this.p.level);
-    showWorkshop(this);
+    this.showStyles();
   }
   showPassport() {
     ledger.discover('passport', this.p.level);
@@ -340,6 +520,19 @@ export class App {
     inboxFlow(this);
   }
   showHomeworld() {
+    if (!unlocked(this.p, 'homeworld')) {
+      this.mount(
+        h(
+          'div',
+          { class: 'screen page tab-page' },
+          this.topBar(),
+          h('div', { class: 'page-title' }, t('Homeworld')),
+          h('p', { class: 'locked-note' }, t('Opens at planet {n}', { n: 5 })),
+        ),
+        'homeworld',
+      );
+      return;
+    }
     ledger.discover('homeworld', this.p.level);
     if (this.screen !== 'homeworld') ledger.homeworldOpen();
     showHomeworld(this);
@@ -379,19 +572,18 @@ export class App {
     return true;
   }
   preLevel(n: number) {
-    if (this.p.meta.sessions === 1) this.startLevel(n);
-    else preLevel(this, n);
+    preLevel(this, n);
   }
 
   /** Shared top bar with currencies. */
-  topBar(back = false): HTMLElement {
+  topBar(back = false, compact = false): HTMLElement {
     return h(
       'div',
       { class: 'topbar' },
       back
-        ? h('button', { class: 'icon', 'aria-label': t('Back'), onclick: () => (sfx.click(), this.showHome()) }, icon('back', 24))
+        ? h('button', { class: 'icon', 'aria-label': t('Back'), onclick: () => (sfx.click(), this.back()) }, icon('back', 24))
         : h('button', { class: 'icon', 'aria-label': t('Settings'), onclick: () => this.settings() }, icon('gear', 26)),
-      back || !unlocked(this.p, 'passport')
+      compact || back || !unlocked(this.p, 'passport')
         ? null
         : h(
             'button',
@@ -404,8 +596,10 @@ export class App {
           ),
 
       h('div', { class: 'grow' }),
-      h('button', { class: 'pill dust', 'aria-label': t('Stardust'), onclick: () => this.showUpgrades() }, `✨ ${fmt(this.p.dust)}`),
-      this.p.chapters.length && this.p.meta.sessions > 1
+      compact
+        ? h('span', { class: 'pill dust', 'aria-label': t('Stardust') }, `✨ ${fmt(this.p.dust)}`)
+        : h('button', { class: 'pill dust', 'aria-label': t('Stardust'), onclick: () => this.showUpgrades() }, `✨ ${fmt(this.p.dust)}`),
+      !compact && this.p.chapters.length && this.p.meta.sessions > 1
         ? h(
             'button',
             { class: 'pill gems', 'aria-label': t('Gems'), onclick: () => this.showShop() },
@@ -457,9 +651,7 @@ export class App {
         sight(this.p, id);
         if (!extra.endless && festivalActive(this.p)) {
           spotFestival(this.p);
-          track(this.p, 'spot');
         }
-        if (!extra.endless) track(this.p, 'creature');
       },
       onThrow: (kind) => {
         this.p.stats.throws++;
@@ -467,9 +659,7 @@ export class App {
         if (star) toast(t('{name} record: {stars}', { name: t(KINDS[kind].name), stars: '★'.repeat(star) }), 'good');
         const l = currentLook(this.p).launcher;
         this.p.mastery[l] = (this.p.mastery[l] ?? 0) + 1;
-        track(this.p, 'throw');
       },
-      onTransform: extra.endless || extra.competitive ? undefined : (n) => track(this.p, 'land', n),
       eventEmoji: !extra.endless && !extra.competitive && eventActive(this.p) ? ensureEvent(this.p).emoji : undefined,
       onLand:
         extra.endless || extra.competitive
@@ -501,7 +691,6 @@ export class App {
     this.roundFirstCampaignClear = !o.warmup && n === this.p.level && !this.p.stars[n];
     const boosters = o.boosters ?? NO_BOOSTERS;
     if (Object.values(boosters).some(Boolean)) {
-      track(this.p, 'booster');
       ledger.count('boosters_used', Object.values(boosters).filter(Boolean).length);
     }
     this.p.stats.plays++;

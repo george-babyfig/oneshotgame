@@ -61,7 +61,11 @@ export function showStarMap(app: App) {
         })
       : p.chapters.includes(n)
         ? h('div', { class: 'chest-done' }, t('✓ Chest opened'))
-        : h('div', { class: 'chest-preview' }, t('🎁 Finish the chapter: {reward}', { reward: rewardText(chapterReward(n)).join('  ') }));
+        : h(
+            'div',
+            { class: 'chest-preview' },
+            t('🎁 Finish the chapter: {reward}', { reward: rewardText(chapterReward(n, p)).join('  ') }),
+          );
     chapters.push(
       h(
         'div',

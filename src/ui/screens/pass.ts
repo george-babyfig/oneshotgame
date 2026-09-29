@@ -1,7 +1,6 @@
 // Cosmic Pass: hero art, what's included, and what's already waiting for you.
 import { h, btn } from '../dom';
 import { sfx } from '../audio';
-import { totalStars } from '../../meta/profile';
 import { STAR_ROAD, PASS_GEMS } from '../../meta/progression';
 import { COSMETICS, DEFAULT_LOOK, type Look } from '../../meta/cosmetics';
 import { drawKeeper, drawLauncher, drawTrail, itemCanvas } from '../art/keeper';
@@ -88,7 +87,7 @@ export function passWaiting(stars: number) {
 
 export function showPass(app: App) {
   const p = app.p;
-  const stars = totalStars(p);
+  const stars = p.roadPoints;
   const canvas = h('canvas', { class: 'pass-hero' }) as HTMLCanvasElement;
   const waiting = passWaiting(stars);
   const set = COSMETICS.filter((x) => x.source === 'pass');

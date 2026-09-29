@@ -529,7 +529,7 @@ export function showHomeworld(app: App) {
     lastSig = signature();
     // keep the top bar's stardust/gems in step with what the panel just did
     const bar = canvas.parentElement?.querySelector('.topbar');
-    if (bar) bar.replaceWith(app.topBar(true));
+    if (bar) bar.replaceWith(app.topBar(app.canGoBack()));
     ringLbl.textContent = ` ${t('Ring {n}', { n: home.ring })}`;
     const kids: (HTMLElement | null)[] = [];
     const i = selected;
@@ -755,14 +755,7 @@ export function showHomeworld(app: App) {
   raf = requestAnimationFrame(frame);
 
   app.mount(
-    h(
-      'div',
-      { class: 'screen page homeworld' },
-      app.topBar(true),
-      h('div', { class: 'page-title' }, t('Homeworld'), ringLbl),
-      canvas,
-      panel,
-    ),
+    h('div', { class: 'screen page homeworld' }, app.topBar(), h('div', { class: 'page-title' }, t('Homeworld'), ringLbl), canvas, panel),
     'homeworld',
     () => {
       cancelAnimationFrame(raf);

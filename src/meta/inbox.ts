@@ -82,7 +82,7 @@ const RULES: Rule[] = [
       from: '{c}',
       face: '{c}',
       title: 'Thank you for my new home',
-      body: 'The den is cosy and the view is wonderful. I will ask for small favours sometimes. Is that okay? I think it is.',
+      body: 'The den is cosy and the view is wonderful. I have a Wish we can make together.',
     }),
   },
   {
@@ -130,7 +130,7 @@ const RULES: Rule[] = [
     letter: () => ({
       from: MC,
       title: 'Welcome aboard, Captain',
-      body: 'Your Star Captain uniform is waiting in the Workshop, and the golden lane of the Star Road is open. Thank you for supporting Pocket Planet!',
+      body: 'Your Star Captain uniform is waiting in Styles, and the golden lane of the Star Road is open. Thank you for supporting Pocket Planet!',
     }),
   },
   {
@@ -162,7 +162,7 @@ const RULES: Rule[] = [
       from: '{c}',
       face: '{c}',
       title: 'Can I come along?',
-      body: 'I have seen you on so many planets. Could I be your buddy? Pick me in the Workshop and I will cheer for every throw.',
+      body: 'I have seen you on so many planets. Could I be your buddy? Pick me in Styles and I will cheer for every throw.',
     }),
   },
   {
@@ -171,7 +171,7 @@ const RULES: Rule[] = [
     letter: () => ({
       from: MC,
       title: 'Twenty-eight stamps!',
-      body: 'A whole Star Calendar. Your Starlight suit is in the Workshop — it glows best at night.',
+      body: 'A whole Star Calendar. Your Starlight suit is in Styles — it glows best at night.',
     }),
   },
 ];

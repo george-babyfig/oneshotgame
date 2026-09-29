@@ -1,4 +1,4 @@
-// Workshop: dress your Keeper and pick its launcher and trail. Tap any item to
+// Styles: dress your Keeper and pick its launcher and trail. Tap any item to
 // try it on in the live preview before buying or equipping it.
 import { h, btn, fmt, toast } from '../dom';
 import { sfx } from '../audio';
@@ -118,14 +118,14 @@ function buddyPanel(app: App) {
     sfx.click();
     haptic.light();
     app.save();
-    showWorkshop(app, 'buddy');
+    showStyles(app, 'buddy');
   };
   const wear = (acc: string | null) => {
     if (!setBuddyAcc(p, acc)) return;
     sfx.click();
     haptic.light();
     app.save();
-    showWorkshop(app, 'buddy');
+    showStyles(app, 'buddy');
   };
   const cur = p.buddy.species;
   return h(
@@ -195,7 +195,7 @@ function dyePanel(app: App) {
         'button',
         {
           class: `dye none${p.dye[channel] ? '' : ' on'}`,
-          onclick: () => (applyDye(p, channel, null), app.save(), sfx.click(), showWorkshop(app, 'dye')),
+          onclick: () => (applyDye(p, channel, null), app.save(), sfx.click(), showStyles(app, 'dye')),
         },
         h('i', null, '∅'),
         h('small', null, t('Suit colour')),
@@ -216,7 +216,7 @@ function dyePanel(app: App) {
               } else sfx.click();
               applyDye(p, channel, d.id);
               app.save();
-              showWorkshop(app, 'dye');
+              showStyles(app, 'dye');
             },
           },
           h('i', { style: `background:${d.color === 'aurora' ? 'conic-gradient(#ff8fc8,#6ec8ff,#b8ff6e,#ffd24a,#ff8fc8)' : d.color}` }),
@@ -263,7 +263,7 @@ function presetRow(app: App, slot: Tab) {
               sfx.click();
               haptic.light();
               app.save();
-              showWorkshop(app, slot);
+              showStyles(app, slot);
             },
           },
           saved ? keeperHead({ ...DEFAULT_LOOK, ...saved } as Look, 34) : String(i + 1),
@@ -278,7 +278,7 @@ function presetRow(app: App, slot: Tab) {
               sfx.coin();
               toast(t('Outfit {n} saved', { n: i + 1 }), 'good');
               app.save();
-              showWorkshop(app, slot);
+              showStyles(app, slot);
             },
           },
           '💾',
@@ -288,7 +288,7 @@ function presetRow(app: App, slot: Tab) {
   );
 }
 
-export function showWorkshop(app: App, slot: Tab = lastSlot, tryOn?: string) {
+export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
   lastSlot = slot;
   const p = app.p;
   const worn = currentLook(p);
@@ -307,7 +307,7 @@ export function showWorkshop(app: App, slot: Tab = lastSlot, tryOn?: string) {
       sfx.click();
       haptic.light();
       app.save();
-      showWorkshop(app, slot);
+      showStyles(app, slot);
     });
   else if (item.source === 'gems')
     action = btn(`${t('Buy')} 💎${item.gems}`, 'gem', () => {
@@ -318,7 +318,7 @@ export function showWorkshop(app: App, slot: Tab = lastSlot, tryOn?: string) {
       haptic.success();
       toast(t('{name} is yours!', { name: t(item.name) }), 'good');
       app.save();
-      showWorkshop(app, slot);
+      showStyles(app, slot);
     });
   else if (item.source === 'pass' || item.source === 'road' || item.source === 'starter')
     action = btn(`🔒 ${sourceText(item)}`, 'ghost', () => (item.source === 'starter' ? app.showShop() : app.showPass()));
@@ -352,7 +352,7 @@ export function showWorkshop(app: App, slot: Tab = lastSlot, tryOn?: string) {
     ...[...SLOTS, 'dye' as const, 'buddy' as const].map((s) =>
       h(
         'button',
-        { class: `tab${s === slot ? ' on' : ''}`, onclick: () => (sfx.click(), showWorkshop(app, s)) },
+        { class: `tab${s === slot ? ' on' : ''}`, onclick: () => (sfx.click(), showStyles(app, s)) },
         s === 'dye' ? t('Dye') : s === 'buddy' ? t('Buddy') : t(SLOT_NAMES[s]),
       ),
     ),
@@ -372,7 +372,7 @@ export function showWorkshop(app: App, slot: Tab = lastSlot, tryOn?: string) {
                 'button',
                 {
                   class: `ws-item t-${x.tier}${have ? '' : ' locked'}${on ? ' on' : ''}${x.id === sel ? ' sel' : ''}`,
-                  onclick: () => (sfx.click(), haptic.light(), showWorkshop(app, slot, x.id)),
+                  onclick: () => (sfx.click(), haptic.light(), showStyles(app, slot, x.id)),
                 },
                 itemCanvas(x.id, worn, 64),
                 h('b', null, t(x.name)),
@@ -392,8 +392,8 @@ export function showWorkshop(app: App, slot: Tab = lastSlot, tryOn?: string) {
     h(
       'div',
       { class: 'screen page workshop' },
-      app.topBar(true),
-      h('div', { class: 'page-title' }, t('Workshop'), h('small', { class: 'muted' }, ` ${ownedCount(p)}/${COSMETICS.length}`)),
+      app.topBar(),
+      h('div', { class: 'page-title' }, t('Styles'), h('small', { class: 'muted' }, ` ${ownedCount(p)}/${COSMETICS.length}`)),
       h(
         'div',
         { class: 'ws-top' },
@@ -416,10 +416,10 @@ export function showWorkshop(app: App, slot: Tab = lastSlot, tryOn?: string) {
         tabs,
         mastery,
         grid,
-        h('p', { class: 'muted' }, t('Every item is earned or bought directly — no random boxes, ever.')),
+        btn(t('Shop'), 'ghost wide', () => app.showShop()),
       ),
     ),
-    'workshop',
+    'styles',
     stop,
   );
 }

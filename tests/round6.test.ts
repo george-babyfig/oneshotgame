@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { defaultProfile } from '../src/meta/profile';
 import { BUDDY_AT, buddyAccs, buddyEligible, currentBuddy, setBuddy, setBuddyAcc } from '../src/meta/buddy';
-import { QUESTS, ensureQuests, questEvent } from '../src/meta/progression';
+import { ensureWishes } from '../src/meta/wishes';
 import { FESTIVAL_UNLOCK_LEVEL } from '../src/meta/festivals';
-import { VOYAGE_UNLOCK_LEVEL } from '../src/meta/voyage';
 import { checkMail } from '../src/meta/inbox';
 import { pendingAchievements } from '../src/meta/achievements';
 
@@ -31,25 +30,15 @@ describe('buddy', () => {
 });
 
 describe('round 6 tie-ins', () => {
-  it('only offers voyage and festival quests once those features unlock', () => {
-    const need = (id: string) => QUESTS.find((q) => q.id === id)!.need!;
-    const p = defaultProfile();
-    p.level = FESTIVAL_UNLOCK_LEVEL - 1;
-    expect(need('spot6')(p)).toBe(false);
-    p.level = FESTIVAL_UNLOCK_LEVEL;
-    expect(need('spot6')(p)).toBe(true);
-    p.level = VOYAGE_UNLOCK_LEVEL;
-    expect(need('voyage1')(p)).toBe(true);
-    p.level = VOYAGE_UNLOCK_LEVEL - 1;
-    expect(need('voyage1')(p)).toBe(false);
-    // a new player never gets a quest they cannot do
+  it('offers reachable Wishes instead of retired quests', () => {
     for (let d = 1; d <= 28; d++) {
       const q = defaultProfile();
-      ensureQuests(q, `2026-02-${String(d).padStart(2, '0')}`);
+      q.level = 12;
+      q.seen.push('bunny');
+      ensureWishes(q, `2026-02-${String(d).padStart(2, '0')}`);
       expect(q.quests.list.some((x) => x.id === 'voyage1' || x.id === 'spot6')).toBe(false);
+      expect(q.quests.list).toHaveLength(3);
     }
-    p.quests = { day: 'x', list: [{ id: 'voyage1', progress: 0, claimed: false }], bonusClaimed: false };
-    expect(questEvent(p, 'voyage')).toEqual(['voyage1']);
   });
 
   it('sends festival, voyage and buddy letters once', () => {

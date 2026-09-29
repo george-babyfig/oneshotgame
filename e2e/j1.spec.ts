@@ -18,28 +18,13 @@ import {
   usePseudo,
   waitScreen,
   watchErrors,
+  tabSel,
   type Guard,
-  type KnownIssue,
   type LocaleId,
 } from './helpers';
 
-/** Today's Home clips its side buttons at 320×568; M4 ("One clear Home") fixes it. */
-export const KNOWN_HOME_320: KnownIssue[] = [
-  {
-    screen: /^home/,
-    kind: 'clipped',
-    match: /side-btn|nav-btn/,
-    maxWidth: 320,
-    note: 'Home side buttons clipped at 320×568 (known, fixed in M4)',
-  },
-  {
-    screen: /^home/,
-    kind: 'offscreen',
-    match: /side-btn|nav-btn/,
-    maxWidth: 320,
-    note: 'Home side buttons clipped at 320×568 (known, fixed in M4)',
-  },
-];
+// M4 ("One clear Home") replaced the side rails with five bottom tabs: Home must now pass at 320×568
+// with no expected failures (the M3 KNOWN_HOME_320 list is gone).
 
 /** M3 acceptance: install to first fling in 15 s or less; the title beat lasts 5 s or less. */
 const FIRST_FLING_MS = 15_000;
@@ -66,11 +51,11 @@ async function expectKidSafe(page: Page, loc: LocaleId, where: string) {
   await expect.soft(page.locator('.gate-q'), `${where}: no parental gate`).toHaveCount(0);
   await expect.soft(page.locator('.offer, .buy-real, .pack'), `${where}: no offers or packs`).toHaveCount(0);
   await expect.soft(page.locator('.pill.gems .plus'), `${where}: the gem pill does not link to the Shop`).toHaveCount(0);
-  const nav = await page.locator('.nav .nav-btn').allInnerTexts();
+  const nav = await page.locator('.main-tabs .main-tab').allInnerTexts();
   expect
     .soft(
       nav.filter((s) => s.includes(tr(loc, 'Shop'))),
-      `${where}: no Shop in the nav`,
+      `${where}: no Shop in the tabs`,
     )
     .toEqual([]);
 }
@@ -85,13 +70,7 @@ async function closeSheets(page: Page, info: TestInfo, guard: Guard, where: stri
     await settle(page);
     const top = page.locator(OPEN_MODAL).last();
     if (!(await top.count())) break;
-    const title = (
-      (await top
-        .locator('.m-title, .end-title')
-        .first()
-        .innerText()
-        .catch(() => '')) || '(untitled)'
-    ).trim();
+    const title = await top.evaluate((el) => (el.querySelector('.m-title, .end-title')?.textContent ?? '').trim() || '(untitled)');
     info.annotations.push({ type: 'interstitial', description: `${where}: ${title}` });
     closed.push(title);
     await snap(page, info, guard, `${where}-sheet${i + 1}`);
@@ -141,20 +120,48 @@ async function playPlanet(page: Page, info: TestInfo, guard: Guard, loc: LocaleI
   await expectKidSafe(page, loc, `results ${n}`);
   await expect(results.getByRole('button', { name: tr(loc, 'Galaxy'), exact: true })).toBeVisible();
   await results.getByRole('button', { name: tr(loc, 'Next ▶'), exact: true }).click();
-  if (n === 2 || n === 5) await waitScreen(page, 'home');
-  else await waitPlanet(page, n + 1);
+  await afterNext(page, info, guard, n);
   expect(await level(page)).toBe(n + 1);
   return intros;
+}
+
+/**
+ * M3: in session 1, Next leads Home after planets 2 and 5 (the first Home view; the Homeworld beat) and
+ * straight into the next planet otherwise. If Next skips Home, that is recorded as a failure and the
+ * journey goes Home the way a player would (the results' Galaxy button does the same) so the rest still runs.
+ */
+async function afterNext(page: Page, info: TestInfo, guard: Guard, n: number) {
+  await page.waitForFunction((k) => {
+    const a = (window as any).__app;
+    return a.screen === 'home' || a.scene?.L?.n === k;
+  }, n + 1);
+  if (n !== 2 && n !== 5) {
+    await waitPlanet(page, n + 1);
+    if (await page.locator('.level-info').count())
+      info.annotations.push({ type: 'level-info', description: `planet ${n + 1}: the planet details overlay shows in session 1` });
+    return;
+  }
+  const where = await page.evaluate(() => (window as any).__app.screen as string);
+  expect.soft(where, `M3: Next after planet ${n} leads Home in session 1 (went to planet ${n + 1} instead)`).toBe('home');
+  if (where === 'home') return;
+  info.annotations.push({ type: 'regression', description: `Next after planet ${n} opened planet ${n + 1} instead of Home` });
+  await snap(page, info, guard, `next-after-${n}-skips-home`);
+  await page.evaluate(() => (window as any).__app.showHome());
+  await waitScreen(page, 'home');
 }
 
 async function atHome(page: Page, info: TestInfo, guard: Guard, loc: LocaleId, suffix = '') {
   await waitScreen(page, 'home');
   const n = await level(page);
   const sheets = await closeSheets(page, info, guard, `home-${n}${suffix}`);
-  await snap(page, info, guard, `home-${n}${suffix}`, { known: KNOWN_HOME_320 });
+  await snap(page, info, guard, `home-${n}${suffix}`);
   await expectKidSafe(page, loc, `home before planet ${n}`);
-  // Homeworld unlocks when planet 5 is reached (HOME_UNLOCK_LEVEL)
-  await expect(page.locator('.world-btn')).toHaveCount(n >= 5 ? 1 : 0);
+  // Homeworld unlocks when planet 5 is reached (HOME_UNLOCK_LEVEL): its tab is locked before then (M4)
+  await expect(page.locator(tabSel('homeworld'))).toHaveCount(1);
+  expect(
+    await page.locator(tabSel('homeworld')).evaluate((b) => b.classList.contains('locked')),
+    `Homeworld tab locked before planet 5 (planet ${n})`,
+  ).toBe(n < 5);
   // the Star Calendar is a Home chip from planet 21, Voyage from 20, Festival from 34
   await expect(page.locator('.calendar-chip, .voyage-btn, .fest-chip')).toHaveCount(0);
   return sheets;
@@ -234,7 +241,7 @@ for (const loc of localesToRun()) {
       const card = page.locator(OPEN_MODAL).last();
       await expect(card).toBeVisible();
       await expect(card.locator('.m-title')).toHaveText(tr(loc, 'Your Homeworld is ready'));
-      await snap(page, info, guard, 'home-6-homeworld-intro', { known: KNOWN_HOME_320 });
+      await snap(page, info, guard, 'home-6-homeworld-intro');
       await expectKidSafe(page, loc, 'Homeworld intro');
       intros.push(await card.locator('.m-title').innerText());
       await card.getByRole('button', { name: tr(loc, 'Show me'), exact: true }).click();
@@ -244,7 +251,8 @@ for (const loc of localesToRun()) {
       intros.push(...(await closeSheets(page, info, guard, 'homeworld')));
       await snap(page, info, guard, 'homeworld');
       await expectKidSafe(page, loc, 'homeworld');
-      await tap(page, '.topbar button.icon');
+      // "Show me" opened the Homeworld tab; the Play tab leads Home (M4)
+      await tap(page, tabSel('home'));
       intros.push(...(await atHome(page, info, guard, loc, '-back')));
 
       // at most one interrupting Home pop-up in this app open (the governor)
@@ -336,7 +344,7 @@ test.describe('J1 M3 acceptance [en]', () => {
       await expect(results.locator('.end-stars .on')).toHaveCount(1);
       await results.getByRole('button', { name: 'Next ▶', exact: true }).click();
       if (n === 2) {
-        await waitScreen(page, 'home');
+        await afterNext(page, info, guard, 2);
         await closeSheets(page, info, guard, 'home-3');
         await play(page, 3);
       }
@@ -404,8 +412,8 @@ test.describe('J1 M3 acceptance [en]', () => {
     // Home: PLAY and every bottom-nav button can be reached (scrolling allowed) and take the tap
     await waitScreen(page, 'home');
     await settle(page);
-    await snap(page, info, guard, 'home-xl', { known: KNOWN_HOME_320 });
-    const targets = [page.locator('.btn.play'), ...(await page.locator('.nav .nav-btn').all())];
+    await snap(page, info, guard, 'home-xl');
+    const targets = [page.locator('.btn.play'), ...(await page.locator('.main-tabs .main-tab').all())];
     expect(targets.length).toBeGreaterThan(1);
     for (const target of targets) {
       const name = (await target.innerText()).replace(/\s+/g, ' ').trim();
@@ -443,7 +451,7 @@ async function reachPlanet6Home(page: Page) {
   await settle(page);
 }
 
-// Keep the known side-rail issue separate so unrelated layout checks still fail.
+// M4: the side rails are gone; Home must have nothing clipped or off screen at every size, 320×568 included.
 test.describe('J1 Home layout at the narrowest width', () => {
   test.use({ locale: 'en-US' });
   test('Home after planet 5: nothing clipped or off screen', async ({ page }, info) => {
@@ -456,16 +464,6 @@ test.describe('J1 Home layout at the narrowest width', () => {
     await page.screenshot({ path: file });
     await info.attach('home-after-planet-5', { path: file, contentType: 'image/png' });
     expectNoErrors(guard);
-    const known =
-      (page.viewportSize()?.width ?? 999) <= 320
-        ? bad.filter((v) => ['clipped', 'offscreen'].includes(v.kind) && /side-btn|nav-btn/.test(v.what))
-        : [];
-    if (known.length) info.annotations.push({ type: 'known-issue', description: 'Home side rail clips at 320×568 (ROADMAP-v2 M4)' });
-    expect
-      .soft(
-        bad.filter((v) => !known.includes(v)),
-        'Home layout outside the known side-rail issue',
-      )
-      .toEqual([]);
+    expect.soft(bad, 'Home layout (no expected failures since M4)').toEqual([]);
   });
 });

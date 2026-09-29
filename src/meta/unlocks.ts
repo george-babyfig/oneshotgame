@@ -10,6 +10,7 @@ export const EVENT_UNLOCK_LEVEL = 20;
 export const FESTIVAL_UNLOCK_LEVEL = 34;
 export const VOYAGE_UNLOCK_LEVEL = 20;
 export const BUDDY_AT = LORE_AT;
+const LEGACY_QUEST_IDS = new Set(['throw25', 'win3', 'star6', 'creature8', 'three1', 'booster1', 'collect2', 'land20', 'spot6', 'voyage1']);
 
 export type UnlockId =
   | Kind
@@ -46,14 +47,13 @@ export type UnlockId =
 
 export interface Unlock {
   id: UnlockId;
-  /** Campaign p.level; 0 means an achievement or Explorer Rank gate. */
+  /** Campaign p.level; 0 means an achievement gate. */
   planet: number;
   placement: 'round' | 'home' | 'homeworld' | 'missions' | 'modes' | 'collection';
   intro?: { title: string; body: string };
   letter?: string;
   /** A newly visible entry point, even when there is no card. */
   button?: boolean;
-  rank?: number;
 }
 
 const objectRows: Unlock[] = (Object.values(KINDS) as (typeof KINDS)[Kind][]).map((kind) => ({
@@ -124,10 +124,10 @@ export const UNLOCKS: readonly Unlock[] = [
     },
   },
   { id: 'momentum', planet: MOMENTUM_UNLOCK, placement: 'round' },
-  { id: 'daily', planet: 0, placement: 'modes', rank: 2 },
-  { id: 'rush', planet: 0, placement: 'modes', rank: 3 },
-  { id: 'zen', planet: 0, placement: 'modes', rank: 4 },
-  { id: 'challenge', planet: 0, placement: 'modes', rank: 5 },
+  { id: 'daily', planet: 27, placement: 'modes' },
+  { id: 'zen', planet: 30, placement: 'modes' },
+  { id: 'rush', planet: 38, placement: 'modes' },
+  { id: 'challenge', planet: 40, placement: 'modes' },
   { id: 'passport', planet: 16, placement: 'home', button: true },
   { id: 'passport_setup', planet: 0, placement: 'home' },
   { id: 'workshop', planet: 18, placement: 'collection', button: true },
@@ -139,9 +139,18 @@ export const UNLOCKS: readonly Unlock[] = [
 export function unlocked(p: Profile, id: UnlockId): boolean {
   const row = UNLOCKS.find((entry) => entry.id === id);
   if (!row) return false;
+  if (id === 'workshop') return p.chapters.length >= 1;
   if (p.legacyUnlocks.includes(id)) return true;
+  // Existing saves keep modes earned through the retired rank ladder.
+  const oldModeRank: Partial<Record<UnlockId, number>> = { daily: 2, rush: 3, zen: 4, challenge: 5 };
+  if (oldModeRank[id] && p.rank >= oldModeRank[id]!) return true;
   if (id === 'star_road' && (p.pass || p.road.length > 0 || p.roadPass.length > 0)) return true;
-  if (id === 'quests' && (p.quests.list.some((q) => q.progress > 0 || q.claimed) || p.quests.bonusClaimed)) return true;
+  if (
+    id === 'quests' &&
+    (p.quests.list.some((q) => LEGACY_QUEST_IDS.has(q.id) && (q.progress > 0 || q.claimed)) ||
+      (p.quests.bonusClaimed && p.quests.list.length === 3 && p.quests.list.every((q) => LEGACY_QUEST_IDS.has(q.id))))
+  )
+    return true;
   if (id === 'quest_spot' && (p.festival.spotted > 0 || p.quests.list.some((q) => q.id.startsWith('spot') && q.progress > 0))) return true;
   if (id === 'quest_voyage' && (p.voyage.cleared > 0 || p.voyageDone > 0)) return true;
   if (id === 'voyage' && (p.voyage.cleared > 0 || p.voyageDone > 0)) return true;
@@ -153,14 +162,12 @@ export function unlocked(p: Profile, id: UnlockId): boolean {
   if (id === 'star_atlas' && (p.bundles.length > 0 || p.constellations.length > 0)) return true;
   if (id === 'sticker_album' && (p.album.fest.length > 0 || p.album.pagesClaimed.length > 0)) return true;
   if (id === 'passport' && p.passport.set) return true;
-  if (id === 'workshop' && (p.wardrobe.length > 0 || p.presets.some(Boolean))) return true;
   if (id === 'object_lab' && Object.values(p.lab).some((level) => level > 1)) return true;
   if (id === 'upgrades' && Object.values(p.upgrades).some((level) => level > 0)) return true;
   if (id === 'buddy' && p.buddy.species) return true;
   if (id === 'buddy') return p.level >= 18 && Object.values(p.sightings).some((count) => count >= BUDDY_AT);
   if (id === 'passport_setup') return p.stats.wins >= 1;
   if (id === 'star_calendar') return p.level >= row.planet;
-  if (row.rank !== undefined) return p.rank >= row.rank;
   return p.level >= row.planet;
 }
 

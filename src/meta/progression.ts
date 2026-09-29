@@ -1,12 +1,9 @@
-import { CHAPTER_REWARD } from './tuning';
-import { QUEST_BONUS } from './tuning';
-import { QUESTS } from './tuning';
+import { CHAPTER_REWARD, CHAPTER_RANK_REWARD } from './tuning';
 import { STAR_ROAD } from './tuning';
 import { earn, type EarnSource } from './wallet';
-// Chapters, the Star Road reward track, and daily quests.
-import { rngFrom } from '../core/levels';
+// Chapters and the Star Road reward track. Legacy quests are kept for save migration.
 import type { BoosterId } from './config';
-import type { Profile, QuestState } from './profile';
+import type { Profile } from './profile';
 import { t } from '../i18n';
 import { COSMETIC_BY_ID } from './cosmetics';
 
@@ -53,18 +50,25 @@ export interface Reward {
   item?: string;
 }
 
-export function chapterReward(n: number): Reward {
+export function chapterReward(n: number, p?: Profile): Reward {
+  let rankGems = 0;
+  let rankDust = 0;
+  for (let rank = (p?.m4RankPaidThrough ?? n - 1) + 1; rank <= Math.min(n, 7); rank++) {
+    rankGems += CHAPTER_RANK_REWARD.gems[rank] ?? 0;
+    rankDust += CHAPTER_RANK_REWARD.dust[rank] ?? 0;
+  }
   return {
-    gems: CHAPTER_REWARD.baseGems + n * CHAPTER_REWARD.gemsPerChapter,
-    dust: CHAPTER_REWARD.dustPerChapter * n,
+    gems: CHAPTER_REWARD.baseGems + n * CHAPTER_REWARD.gemsPerChapter + rankGems,
+    dust: CHAPTER_REWARD.dustPerChapter * n + rankDust,
     boosters: { shower: 1, spark: 1, scope: 1 },
   };
 }
 
 export function openChest(p: Profile, n: number): Reward | null {
   if (!chestsReady(p).includes(n)) return null;
+  const r = chapterReward(n, p);
   p.chapters.push(n);
-  const r = chapterReward(n);
+  p.m4RankPaidThrough = Math.max(p.m4RankPaidThrough, Math.min(n, 7));
   applyReward(p, r, 'chest');
   return r;
 }
@@ -91,10 +95,10 @@ export interface RoadTier {
 
 export { STAR_ROAD } from './tuning';
 
-export function roadReady(p: Profile, stars: number): number[] {
+export function roadReady(p: Profile): number[] {
   const out: number[] = [];
   STAR_ROAD.forEach((t, i) => {
-    if (stars < t.stars) return;
+    if (p.roadPoints < t.stars) return;
     if (!p.road.includes(i)) out.push(i);
     else if (p.pass && !p.roadPass.includes(i)) out.push(i);
   });
@@ -102,10 +106,10 @@ export function roadReady(p: Profile, stars: number): number[] {
 }
 
 /** Claim everything unlocked on tier i (free lane, plus pass lane if owned). */
-export function claimRoad(p: Profile, i: number, stars: number): Reward[] {
+export function claimRoad(p: Profile, i: number): Reward[] {
   const t = STAR_ROAD[i];
   const got: Reward[] = [];
-  if (!t || stars < t.stars) return got;
+  if (!t || p.roadPoints < t.stars) return got;
   if (!p.road.includes(i)) {
     p.road.push(i);
     applyReward(p, t.reward, 'star_road');
@@ -122,7 +126,7 @@ export function claimRoad(p: Profile, i: number, stars: number): Reward[] {
 /** Total gem value of the pass lane (used for the sales pitch). */
 export const PASS_GEMS = STAR_ROAD.reduce((a, t) => a + (t.pass.gems ?? 0), 0);
 
-// ------------------------------------------------------------------ quests
+// Legacy quest shape supports save migration in wishes.ts.
 export type QuestEvent = 'throw' | 'win' | 'star' | 'creature' | 'three' | 'booster' | 'collect' | 'land' | 'voyage' | 'spot';
 
 export interface QuestDef {
@@ -134,58 +138,6 @@ export interface QuestDef {
   emoji: string;
   /** Only offered once the feature it needs is unlocked. */
   need?: (p: Profile) => boolean;
-}
-
-export { QUESTS } from './tuning';
-
-export const QUEST_BY_ID: Record<string, QuestDef> = Object.fromEntries(QUESTS.map((q) => [q.id, q]));
-export { QUEST_BONUS } from './tuning';
-
-/** Make sure today's three quests exist. */
-export function ensureQuests(p: Profile, day: string) {
-  if (p.quests.day === day && p.quests.list.length) return;
-  const rnd = rngFrom(`Q-${day}`);
-  const pool = QUESTS.filter((q) => !q.need || q.need(p));
-  const list: QuestState[] = [];
-  while (list.length < 3 && pool.length) {
-    const q = pool.splice(Math.floor(rnd() * pool.length), 1)[0];
-    list.push({ id: q.id, progress: 0, claimed: false });
-  }
-  p.quests = { day, list, bonusClaimed: false };
-}
-
-/** Advance quests; returns ids that just became complete. */
-export function questEvent(p: Profile, ev: QuestEvent, amount = 1): string[] {
-  const done: string[] = [];
-  for (const q of p.quests.list) {
-    const def = QUEST_BY_ID[q.id];
-    if (!def || def.event !== ev || q.progress >= def.goal) continue;
-    q.progress = Math.min(def.goal, q.progress + amount);
-    if (q.progress >= def.goal) done.push(q.id);
-  }
-  return done;
-}
-
-export function claimQuest(p: Profile, id: string): number {
-  const q = p.quests.list.find((x) => x.id === id);
-  const def = QUEST_BY_ID[id];
-  if (!q || !def || q.claimed || q.progress < def.goal) return 0;
-  q.claimed = true;
-  earn(p, 'gems', def.gems, 'quest');
-  return def.gems;
-}
-
-export function claimQuestBonus(p: Profile): Reward | null {
-  if (p.quests.bonusClaimed || !p.quests.list.length || !p.quests.list.every((q) => q.claimed)) return null;
-  p.quests.bonusClaimed = true;
-  applyReward(p, QUEST_BONUS, 'quest');
-  return QUEST_BONUS;
-}
-
-export function questsClaimable(p: Profile): number {
-  let n = p.quests.list.filter((q) => !q.claimed && q.progress >= (QUEST_BY_ID[q.id]?.goal ?? Infinity)).length;
-  if (!p.quests.bonusClaimed && p.quests.list.length && p.quests.list.every((q) => q.claimed)) n++;
-  return n;
 }
 
 // ------------------------------------------------------------------ rewards

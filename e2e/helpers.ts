@@ -339,7 +339,10 @@ function collectViolations(): Violation[] {
           detail: `box ${Math.round(r.left)},${Math.round(r.top)} → ${Math.round(r.right)},${Math.round(r.bottom)} in ${vw}×${vh}`,
         });
       // 1b. clipped by an ancestor that hides overflow (and is not a scroller)
+      // Content inside a scroller is reached by scrolling: stop at the scroller itself (its own hidden
+      // axis still counts), so a PLAY button scrolled below the fold is not "clipped" by the screen.
       for (let a = el.parentElement; a && a !== root.parentElement; a = a.parentElement) {
+        if (sp && a === sp.parentElement) break;
         const cs = getComputedStyle(a);
         const hidesX = cs.overflowX === 'hidden' || cs.overflowX === 'clip';
         const hidesY = cs.overflowY === 'hidden' || cs.overflowY === 'clip';
@@ -433,4 +436,117 @@ export async function snap(page: Page, info: TestInfo, guard: Guard, screen: str
 /** Visible text of the whole page (screen + sheets + toasts). */
 export function pageText(page: Page) {
   return page.evaluate(() => document.body.innerText);
+}
+
+// ------------------------------------------------------------------ M4 navigation
+
+/** The five bottom tabs (M4 4.1); `data-tab` ids. */
+export const TABS = ['home', 'missions', 'homeworld', 'collection', 'styles'] as const;
+export type TabId = (typeof TABS)[number];
+export const tabSel = (id: TabId) => `.main-tabs .main-tab[data-tab="${id}"]`;
+
+export interface MidGameOpts {
+  /** Campaign level (p.level). Default 45: every mode, Voyage, Festival, Calendar and the Star Atlas are open. */
+  level?: number;
+  /** Leave things to claim: chapter chests unopened, every Wish done, a visitor gift, a mail gift. */
+  claimables?: boolean;
+}
+
+/**
+ * A mid-game player (after `freshInstall`): planets 1-5 won for real (so the galaxy has planets),
+ * then the profile moved to `level`, a returning session, the Passport named. Lands on Play, quietly.
+ */
+export async function midGame(page: Page, opts: MidGameOpts = {}) {
+  await page.evaluate(
+    async ({ level, claimables }) => {
+      const a = (window as any).__app;
+      a.p.settings.reduceMotion = true;
+      for (let n = 1; n <= 5; n++) {
+        a.startLevel(n, { tutorial: n === 1 });
+        a.scene.finish(3);
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      a.p.settings.reduceMotion = false;
+      const p = a.p;
+      p.tutorial = true;
+      p.level = level;
+      p.passport.set = true;
+      p.meta.sessions = 3;
+      p.dust = 5000;
+      p.gems = 200;
+      const cleared = Math.floor((level - 1) / 10);
+      p.chapters = claimables ? [] : Array.from({ length: cleared }, (_, i) => i + 1);
+      // creatures met along the way (Wishes are voiced by creatures you have seen)
+      for (const id of ['otter', 'turtle', 'bear', 'butterfly', 'whale']) if (!p.seen.includes(id)) p.seen.push(id);
+      p.quests = { day: '', list: [], bonusClaimed: false };
+      a.showMissions(); // deals today's three Wishes
+      if (claimables) {
+        for (const card of p.quests.list) card.progress = card.goal;
+        p.visitors.push({ species: 'otter', dust: 10, gems: 0, memento: null });
+      }
+      a.save();
+      a.selectTab('home');
+    },
+    { level: opts.level ?? 45, claimables: !!opts.claimables },
+  );
+  await waitScreen(page, 'home');
+  await settle(page);
+}
+
+export const screenName = (page: Page) => page.evaluate(() => (window as any).__app.screen as string);
+
+/**
+ * Close whatever sheets sit on top like a player backing out: a tap outside the sheet, or (for a sheet
+ * that must be answered) its last button. Never taps a destructive button.
+ */
+export async function dismissSheets(page: Page, max = 4) {
+  const titles: string[] = [];
+  const open = page.locator(OPEN_MODAL);
+  for (let i = 0; i < max; i++) {
+    await settle(page);
+    const count = await open.count();
+    if (!count) break;
+    const top = open.last();
+    titles.push(
+      await top.evaluate((el) => (el.querySelector('.m-title, .end-title, b')?.textContent ?? '').trim().slice(0, 60) || '(untitled)'),
+    );
+    await page.mouse.click(3, 3); // a tap outside the sheet
+    await settle(page);
+    if ((await open.count()) < count) continue;
+    const last = top.locator('button:not(.danger)').last();
+    if (await last.count()) await last.click();
+  }
+  await settle(page);
+  return titles;
+}
+
+/** A finger swipe from the left edge of the screen (M4 4.2), at a height clear of the tab bar. */
+export async function swipeFromLeftEdge(page: Page) {
+  const vh = page.viewportSize()?.height ?? 568;
+  const y = Math.round(vh * 0.42);
+  await page.mouse.move(4, y);
+  await page.mouse.down();
+  for (let x = 20; x <= 180; x += 20) await page.mouse.move(x, y + 2);
+  await page.mouse.up();
+}
+
+/** Visible tap targets and numeric badges on the current screen (not counting sheets). */
+export function countTargets(page: Page) {
+  return page.evaluate(() => {
+    const shown = (el: Element) => {
+      const anyEl = el as any;
+      if (typeof anyEl.checkVisibility === 'function' && !anyEl.checkVisibility({ opacityProperty: true, visibilityProperty: true }))
+        return false;
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    };
+    const host = document.querySelector('.host')!;
+    const label = (el: Element) =>
+      `${el.className} "${((el as HTMLElement).innerText || el.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim().slice(0, 40)}"`;
+    const targets = [...host.querySelectorAll('button, a[href], [role=button]')].filter(shown).map(label);
+    const badges = [...host.querySelectorAll('.nb, .badge')]
+      .filter(shown)
+      .map((b) => ({ where: label(b.parentElement!), text: (b.textContent ?? '').trim() }));
+    return { targets, badges, numericBadges: badges.filter((b) => /\d/.test(b.text)) };
+  });
 }

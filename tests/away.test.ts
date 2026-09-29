@@ -21,7 +21,7 @@ describe('away collection', () => {
     expect(awayCollectables(p, 20 * 60_000, now).show).toBe(false);
   });
 
-  it('collects vault, producers and visitors together, with one collect quest event', () => {
+  it('collects vault, producers and visitors together', () => {
     const now = 10 * HOUR;
     const p = defaultProfile(now);
     p.tutorial = true;
@@ -30,7 +30,6 @@ describe('away collection', () => {
     p.galaxy.push({ n: 1, name: 'Test', hue: 0, stars: 1, species: [], life: 10, colors: [] });
     p.home.plots[0] = { type: 'mill', lv: 1, since: now - 2 * HOUR };
     p.visitors.push({ species: 'moss_deer', dust: 30, gems: 0, memento: null });
-    p.quests.list = [{ id: 'collect2', progress: 0, claimed: false }];
     const before = awayCollectables(p, 5 * HOUR, now);
     expect(before.vault).toBeGreaterThan(0);
     expect(before.home.dust).toBeGreaterThan(0);
@@ -39,7 +38,6 @@ describe('away collection', () => {
     expect(collected.home.dust).toBe(before.home.dust);
     expect(collected.visitors).toBe(30);
     expect(p.visitors).toHaveLength(0);
-    expect(p.quests.list[0].progress).toBe(1);
     expect(awayCollectables(p, 0, now).show).toBe(false);
   });
 

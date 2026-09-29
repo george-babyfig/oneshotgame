@@ -3,12 +3,13 @@ import { BOSS_REWARD } from '../../meta/tuning';
 import { h, btn, fmt, modal } from '../dom';
 import { sfx } from '../audio';
 import { planetRate, applyLevelWin } from '../../meta/economy';
-import { applyReward, chestsReady, questsClaimable, roadReady } from '../../meta/progression';
+import { applyReward, chestsReady, roadReady } from '../../meta/progression';
+import { recordWishRound, wishClaimable } from '../../meta/wishes';
+import { today } from '../../meta/profile';
 
 /** First-time reward for defeating a planet's Comet Guardian. */
 export { BOSS_REWARD } from '../../meta/tuning';
 
-import { totalStars } from '../../meta/profile';
 import { FINISH_DUST_PER_THROW, type LevelResult } from '../game';
 import type { App } from '../app';
 import { sharePostcard } from '../postcard';
@@ -33,18 +34,17 @@ export function levelResults(app: App, r: LevelResult) {
     difficulty: r.level.difficulty,
     bonusDust: r.leftover * FINISH_DUST_PER_THROW,
   });
+  recordWishRound(p, 'campaign', r.planet, today(), r.level.start);
   if (out.newStars && eventActive(p) && ensureEvent(p).stars) addTokens(p, out.newStars * 4);
-  const wasTutorial = !p.tutorial;
   p.tutorial = true;
   app.saveNow();
   app.syncGameCenter();
   const extras: HTMLElement[] = [];
   if (chestsReady(p).length) extras.push(h('div', { class: 'nudge' }, t('🎁 Chapter chest ready on the Star Map!')));
-  if (unlocked(p, 'star_road') && roadReady(p, totalStars(p)).length)
-    extras.push(h('div', { class: 'nudge' }, t('🛣️ New Star Road reward!')));
+  if (unlocked(p, 'star_road') && roadReady(p).length) extras.push(h('div', { class: 'nudge' }, t('🛣️ New Star Road reward!')));
   if (eventActive(p) && eventReady(p).length)
     extras.push(h('div', { class: 'nudge' }, t('{emoji} Event reward ready!', { emoji: ensureEvent(p).emoji })));
-  if (unlocked(p, 'quests') && questsClaimable(p)) extras.push(h('div', { class: 'nudge' }, t('📜 A quest is complete!')));
+  if (unlocked(p, 'quests') && wishClaimable(p)) extras.push(h('div', { class: 'nudge' }, t('A Wish is ready to claim!')));
   // materials for the constellations (from the lands on this planet)
   const drops = dropsFor(r.planet, r.stars);
   if (Object.keys(drops).length) {
@@ -136,8 +136,8 @@ export function levelResults(app: App, r: LevelResult) {
         btn(t('Galaxy'), 'ghost', home),
         btn(t('Next ▶'), 'primary', () => {
           m.close();
-          if ((n === 2 || n === 5) && out.unlockedLevel) app.showHome();
-          else if (wasTutorial || (n <= 3 && out.unlockedLevel)) app.startLevel(p.level);
+          if (out.firstClear && (n === 2 || n === 5)) app.showHome();
+          else if (out.firstClear && n <= 3) app.startLevel(p.level);
           else app.preLevel(p.level);
         }),
       ),

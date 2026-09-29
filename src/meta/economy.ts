@@ -6,12 +6,11 @@ import { BIOMES, SPECIES_BY_ID, type Planet } from '../core/world';
 import { DIFFICULTY_DUST, type Difficulty } from '../core/levels';
 import { PIGGY_MAX, PIGGY_PER_WIN, PRODUCT_BY_ID, VAULT_HOURS, GEMS_PER_NEW_SPECIES } from './config';
 import { type GalaxyPlanet, type Profile } from './profile';
-import { questEvent, type QuestEvent } from './progression';
 import { collectAll, pendingHomeProduction } from './homeworld';
 import { openVisitor } from './visitors';
 import { WELCOME_BACK_GEMS } from './tuning';
 import { t } from '../i18n';
-import { unlocked } from './unlocks';
+import { addRoadPoints } from './roadpoints';
 
 /** Stardust per hour produced by one galaxy planet. */
 export function planetRate(g: Pick<GalaxyPlanet, 'stars' | 'species'>) {
@@ -46,7 +45,6 @@ export function collectDust(p: Profile, now = Date.now(), multiplier = 1) {
   if (d <= 0) return 0;
   earn(p, 'dust', d, 'vault');
   p.lastCollect = now;
-  track(p, 'collect');
   return d;
 }
 
@@ -66,7 +64,7 @@ export function awayCollectables(p: Profile, awayMs: number, now = Date.now()) {
   };
 }
 
-/** The card gives each engine one collection, and one quest tick for the tap. */
+/** Collect all earnings accumulated while away. */
 export function collectAway(p: Profile, awayMs: number, now = Date.now()) {
   const vault = collectDust(p, now);
   const home = collectAll(p, now);
@@ -78,7 +76,6 @@ export function collectAway(p: Profile, awayMs: number, now = Date.now()) {
     visitors += gift.dust;
     visitorCount++;
   }
-  if (!vault && (home.dust || home.gems || Object.keys(home.boosters).length || visitorCount)) track(p, 'collect');
   const welcomeGems = awayMs >= 3 * 86400000 ? WELCOME_BACK_GEMS : 0;
   if (welcomeGems) earn(p, 'gems', welcomeGems, 'welcome_back');
   return { vault, home, visitors, visitorCount, welcomeGems };
@@ -130,6 +127,7 @@ export interface WinInput {
   difficulty?: Difficulty;
   /** Meteor-finale stardust for unused throws. */
   bonusDust?: number;
+  day?: string;
 }
 
 /** Record a won campaign level. */
@@ -145,6 +143,7 @@ export function applyLevelWin(p: Profile, w: WinInput): LevelOutcome {
   const gems =
     (stars === 3 && prev < 3 ? WIN_REWARD.threeStarGems : 0) + (firstClear && difficulty === 'super' ? WIN_REWARD.superFirstClearGems : 0);
   p.stars[n] = Math.max(prev, stars);
+  addRoadPoints(p, newStars, w.day);
   earn(p, 'dust', dust, firstClear ? 'first_clear' : 'level_win');
   earn(p, 'gems', gems, firstClear ? 'first_clear' : 'level_win');
   p.piggy = Math.min(PIGGY_MAX, p.piggy + PIGGY_PER_WIN);
@@ -171,9 +170,6 @@ export function applyLevelWin(p: Profile, w: WinInput): LevelOutcome {
   }
   const unlockedLevel = n === p.level;
   if (unlockedLevel) p.level++;
-  track(p, 'win');
-  if (newStars) track(p, 'star', newStars);
-  if (stars === 3) track(p, 'three');
   return { dust, gems, firstClear, newStars, entry, unlockedLevel };
 }
 
@@ -218,9 +214,4 @@ export function spendGems(p: Profile, n: number, sink: SpendSink = 'generic_spen
 
 export function spendDust(p: Profile, n: number, sink: SpendSink = 'generic_spend') {
   return spend(p, 'dust', n, sink);
-}
-
-/** Quest tracking helper (keeps call sites short). */
-export function track(p: Profile, ev: QuestEvent, amount = 1) {
-  return unlocked(p, 'quests') ? questEvent(p, ev, amount) : [];
 }

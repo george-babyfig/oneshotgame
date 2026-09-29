@@ -1,4 +1,4 @@
-import { clearLedger, ledger, ledgerSummary } from '../../meta/ledger';
+import { clearLedger, ledgerSummary } from '../../meta/ledger';
 // Settings, language, how-to-play, credits and reset.
 import { h, btn, modal, confirmBox, toast } from '../dom';
 import { Capacitor } from '@capacitor/core';
@@ -12,7 +12,7 @@ import { scheduleReminders } from '../platform';
 import { LANGS, detectLang, t } from '../../i18n';
 import { gcAvailable, gcDashboard, gcIsSignedIn, gcSignIn } from '../gamecenter';
 import { parentalGate } from './gate';
-import { ensureQuests } from '../../meta/progression';
+import { ensureWishes } from '../../meta/wishes';
 import { today } from '../../meta/profile';
 
 type Toggle = 'sound' | 'music' | 'haptics' | 'reduceMotion' | 'notifications';
@@ -175,7 +175,8 @@ export function settingsFlow(app: App) {
     h('label', { class: 'toggle lang' }, t('Language'), lang),
     h('label', { class: 'toggle lang' }, t('Text size'), size),
     h('label', { class: 'toggle lang' }, t('Seasons'), hemi),
-    btn(t('How to play'), 'ghost wide', () => (m.close(), howTo())),
+    btn(t('Field Guide'), 'ghost wide', () => (m.close(), app.showFieldGuide())),
+    btn(t('Shop'), 'ghost wide', () => (m.close(), app.showShop())),
     btn(t('Restore purchases'), 'ghost wide', async () => {
       if (await parentalGate('buy')) await app.restore();
     }),
@@ -197,28 +198,12 @@ export function settingsFlow(app: App) {
       const keep = { processedTx: app.p.processedTx, starter: app.p.starter, pass: app.p.pass, settings: app.p.settings };
       app.p = { ...defaultProfile(), ...keep };
       if (keep.starter) app.p.skins.push('aurora');
-      ensureQuests(app.p, today());
+      ensureWishes(app.p, today());
       await saveProfile(app.p);
       await clearLedger();
       app.startLevel(1, { tutorial: true });
     }),
     version,
-  ]);
-}
-
-export function howTo() {
-  ledger.count('help_used');
-  modal([
-    h('div', { class: 'm-title' }, t('How to play')),
-    h(
-      'div',
-      { class: 'howto' },
-      h('p', null, t('👆 Pull back anywhere and let go to fling. Gravity bends your shot — watch the dotted line.')),
-      h('p', null, t('🪨 Rock raises land · ☄️ Ice makes oceans · 🌱 Seeds grow life · 🔥 Magma heats & builds volcanoes')),
-      h('p', null, t('🦌 Creatures appear when the right lands meet — a Forest next to an Ocean brings Otters!')),
-      h('p', null, t('★ Reach the life target before your throws run out. Tap the small bubble to swap objects.')),
-      h('p', null, t('✨ Finished planets orbit your galaxy and make stardust, even while you are away.')),
-    ),
   ]);
 }
 

@@ -700,13 +700,10 @@ export function homeBadge(p: Profile, now = Date.now()) {
   n += h.residents.some((r) => {
     if (h.expedition?.species === r.species) return false;
     const req = requestOf(r, now, h.ring);
-    return (
-      req && (req.kind === 'pat' || (req.kind === 'treat' && p.dust >= (req.dust ?? 0)) || (req.kind === 'decor' && countOf(h, req.decor!)))
-    );
+    return req && (req.kind === 'pat' || (req.kind === 'decor' && countOf(h, req.decor!)));
   })
     ? 1
     : 0;
-  n += h.debris.length ? 1 : 0;
   return n;
 }
 

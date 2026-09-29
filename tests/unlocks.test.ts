@@ -75,12 +75,13 @@ describe('unlock ladder', () => {
         expect(unlocked(p, 'quest_spot')).toBe(level >= FESTIVAL_UNLOCK_LEVEL);
         expect(unlocked(p, 'quest_voyage')).toBe(level >= VOYAGE_UNLOCK_LEVEL);
         for (const kind of Object.keys(KINDS) as Kind[]) expect(unlocked(p, kind)).toBe(level >= KINDS[kind].unlock);
-        for (const [mode, need] of Object.entries({ daily: 2, rush: 3, zen: 4, challenge: 5 }) as [
+        for (const [mode, need] of Object.entries({ daily: 27, rush: 38, zen: 30, challenge: 40 }) as [
           'daily' | 'rush' | 'zen' | 'challenge',
           number,
         ][]) {
-          expect(unlocked(p, mode)).toBe(rank >= need);
-          expect(rankUnlocked(p, mode)).toBe(rank >= need);
+          const oldRank = { daily: 2, rush: 3, zen: 4, challenge: 5 }[mode];
+          expect(unlocked(p, mode)).toBe(level >= need || rank >= oldRank);
+          expect(rankUnlocked(p, mode)).toBe(level >= need || rank >= oldRank);
         }
         expect(unlocked(p, 'star_calendar')).toBe(level >= 21);
         expect(unlocked(p, 'passport_setup')).toBe(p.stats.wins >= 1);
