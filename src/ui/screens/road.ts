@@ -2,7 +2,7 @@
 import { h, btn, modal } from '../dom';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
-import { STAR_ROAD, PASS_GEMS, claimRoad, rewardText, type Reward } from '../../meta/progression';
+import { STAR_ROAD, claimRoad, rewardText, type Reward } from '../../meta/progression';
 import type { App } from '../app';
 import { t } from '../../i18n';
 import { currentLook, type Look } from '../../meta/cosmetics';
@@ -31,7 +31,7 @@ export function showRoad(app: App) {
     const canClaim = free === 'ready' || prem === 'ready';
     return h(
       'div',
-      { class: `rrow${reached ? ' reached' : ''}` },
+      { class: `rrow${reached ? ' reached' : ''}${p.settings.hidePaidLooks ? ' no-paid' : ''}` },
       cell(tier.reward, free, false, look),
       h(
         'div',
@@ -44,33 +44,19 @@ export function showRoad(app: App) {
               haptic.success();
               app.save();
               showRoad(app);
+              const visibleGot = p.settings.hidePaidLooks ? got.filter((reward) => reward !== tier.pass) : got;
+              if (!visibleGot.length) return;
               const m = modal([
                 h('div', { class: 'm-title' }, t('{n} Road points reward', { n: tier.stars })),
-                h('div', { class: 'reward-list' }, ...got.flatMap(rewardText).map((x) => h('span', null, x))),
+                h('div', { class: 'reward-list' }, ...visibleGot.flatMap(rewardText).map((x) => h('span', null, x))),
                 btn(t('Nice!'), 'primary wide', () => m.close()),
               ]);
             })
           : h('b', null, `🛣️${tier.stars}`),
       ),
-      cell(tier.pass, prem, true, look),
+      p.settings.hidePaidLooks ? null : cell(tier.pass, prem, true, look),
     );
   });
-  const pitch = p.pass
-    ? h('div', { class: 'pass-owned' }, t('🌌 Cosmic Pass active — you get both lanes!'))
-    : h(
-        'button',
-        { class: 'offer pass pass-cta', onclick: () => (sfx.click(), app.showPass()) },
-        h('div', { class: 'offer-t' }, t('🌌 Cosmic Pass')),
-        h(
-          'p',
-          null,
-          t(
-            'Unlock the golden lane forever: {n} gems, the Cosmic atmosphere, stardust and boosters. Tiers you already reached pay out instantly.',
-            { n: PASS_GEMS.toLocaleString('en-US') },
-          ),
-        ),
-        h('span', { class: 'btn buy-real wide' }, t('See the Cosmic Pass ›')),
-      );
   const pct = nextTier ? Math.min(100, (stars / nextTier.stars) * 100) : 100;
   app.mount(
     h(
@@ -93,9 +79,14 @@ export function showRoad(app: App) {
       h(
         'div',
         { class: 'scroll' },
-        h('div', { class: 'rhead' }, h('span', null, t('Free')), h('span', null, ''), h('span', { class: 'gold' }, t('Cosmic Pass'))),
+        h(
+          'div',
+          { class: `rhead${p.settings.hidePaidLooks ? ' no-paid' : ''}` },
+          h('span', null, t('Free')),
+          h('span', null, ''),
+          p.settings.hidePaidLooks ? null : h('span', { class: 'gold' }, t('Golden lane')),
+        ),
         ...rows,
-        pitch,
         h('p', { class: 'muted' }, t('Earn Road points from new stars and Wishes. Up to four a day.')),
       ),
     ),

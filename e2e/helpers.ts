@@ -550,3 +550,86 @@ export function countTargets(page: Page) {
     return { targets, badges, numericBadges: badges.filter((b) => /\d/.test(b.text)) };
   });
 }
+
+// ------------------------------------------------------------------ M5 Grown-ups and Gate v2
+
+export const GATE = `${OPEN_MODAL}.gate-v2`;
+
+/** Gate v2 is open: its challenge digits (the DEV hook `window.__gate.answer()`). */
+export async function gateAnswer(page: Page): Promise<string> {
+  await expect(page.locator(GATE)).toBeVisible();
+  const answer = await page.evaluate(() => (window as any).__gate?.answer() as string | null);
+  expect(answer, 'window.__gate.answer() gives the challenge digits').toMatch(/^\d{3}$/);
+  return answer!;
+}
+
+/** Tap digits on the shuffled keypad (keys are labelled by their digit). */
+export async function typeGate(page: Page, digits: string) {
+  const gate = page.locator(GATE);
+  for (const d of digits) await gate.locator(`.gate-v2-keypad button[aria-label="${d}"]`).click();
+}
+
+/** Press and hold "Hold to continue" for `ms` (the gate needs 1.5 s). */
+export async function holdGate(page: Page, ms = 1_700) {
+  const confirm = page.locator(GATE).locator('.gate-v2-confirm');
+  await expect(confirm).toBeEnabled();
+  await confirm.scrollIntoViewIfNeeded();
+  const box = (await confirm.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(ms);
+  await page.mouse.up();
+}
+
+/** Answer Gate v2 like a grown-up: read the words (the dev hook), type the digits, hold. */
+export async function passGate(page: Page) {
+  const answer = await gateAnswer(page);
+  await typeGate(page, answer);
+  await holdGate(page);
+  await expect(page.locator(GATE)).toHaveCount(0);
+}
+
+/** A wrong three-digit answer (any number but the right one). */
+export function wrongAnswer(answer: string) {
+  return String(answer === '999' ? 998 : Number(answer) + 1);
+}
+
+/** Settings (top bar gear) → Grown-ups → Gate v2 → the Grown-ups area (App.screen 'shop'). */
+export async function openGrownups(page: Page, loc: LocaleId = 'en', via: 'settings' | 'styles' = 'settings') {
+  if (via === 'settings') {
+    await page.locator(`.topbar button[aria-label="${tr(loc, 'Settings')}"]`).click();
+    await page
+      .locator(OPEN_MODAL)
+      .getByRole('button', { name: tr(loc, 'Grown-ups'), exact: true })
+      .click();
+  } else {
+    await page.locator(tabSel('styles')).click();
+    await waitScreen(page, 'styles');
+    await dismissSheets(page);
+    await page.locator('.host .grownups-link').click();
+  }
+  await passGate(page);
+  await waitScreen(page, 'shop');
+  await expect(page.locator('.host .screen.grownups')).toBeVisible();
+  await settle(page);
+}
+
+/**
+ * Everything a child can read on the current screen and any open sheet: visible text plus
+ * aria-label / title / alt / placeholder of visible elements.
+ */
+export function readableText(page: Page) {
+  return page.evaluate(() => {
+    const parts = [document.body.innerText];
+    for (const el of document.querySelectorAll('[aria-label],[title],[alt],[placeholder]')) {
+      const anyEl = el as any;
+      if (typeof anyEl.checkVisibility === 'function' && !anyEl.checkVisibility({ opacityProperty: true, visibilityProperty: true }))
+        continue;
+      for (const a of ['aria-label', 'title', 'alt', 'placeholder']) {
+        const v = el.getAttribute(a);
+        if (v) parts.push(v);
+      }
+    }
+    return parts.join('\n');
+  });
+}

@@ -14,6 +14,7 @@ import { gcAvailable, gcDashboard, gcIsSignedIn, gcSignIn } from '../gamecenter'
 import { parentalGate } from './gate';
 import { ensureWishes } from '../../meta/wishes';
 import { today } from '../../meta/profile';
+import { enterGrownups } from '../screens/grownups';
 
 type Toggle = 'sound' | 'music' | 'haptics' | 'reduceMotion' | 'notifications';
 type TextSize = Settings['textSize'];
@@ -124,34 +125,13 @@ export function settingsFlow(app: App) {
     app.save();
     app.refresh();
   });
-  const gameCenterButton: HTMLButtonElement | null = gcAvailable()
-    ? btn(app.p.settings.gameCenter ? t('Game Center') : t('Game Center: sign in'), 'ghost wide', async () => {
-        gameCenterButton!.disabled = true;
-        try {
-          if (!gcIsSignedIn()) {
-            if (!(await parentalGate('gamecenter'))) return;
-            if (!(await gcSignIn(true))) {
-              toast(t("Game Center didn't sign in. You can sign in from the iPhone Settings app."));
-              return;
-            }
-            app.p.settings.gameCenter = true;
-            app.save();
-            app.syncGameCenter();
-            gameCenterButton!.textContent = t('Game Center');
-          }
-          await gcDashboard(app.p);
-        } finally {
-          gameCenterButton!.disabled = false;
-        }
-      })
-    : null;
   const version = h(
     'p',
     { class: 'tiny muted' },
     `${GAME_NAME} v${VERSION} · ${t('No accounts, no ads, no tracking. Progress is saved on this device.')}`,
   );
   // Dev-only Balance Report; its English labels are never shown in production.
-  if (import.meta.env.DEV || import.meta.env.VITE_TESTER === '1') {
+  if (import.meta.env.DEV) {
     let hold = 0;
     version.addEventListener('pointerdown', () => {
       hold = window.setTimeout(() => {
@@ -171,31 +151,26 @@ export function settingsFlow(app: App) {
     tog(t('Music'), 'music'),
     tog(t('Haptics'), 'haptics'),
     tog(t('Reduce motion'), 'reduceMotion'),
-    tog(t('Reminders'), 'notifications'),
     h('label', { class: 'toggle lang' }, t('Language'), lang),
     h('label', { class: 'toggle lang' }, t('Text size'), size),
     h('label', { class: 'toggle lang' }, t('Seasons'), hemi),
     btn(t('Field Guide'), 'ghost wide', () => (m.close(), app.showFieldGuide())),
-    btn(t('Shop'), 'ghost wide', () => (m.close(), app.showShop())),
-    btn(t('Restore purchases'), 'ghost wide', async () => {
-      if (await parentalGate('buy')) await app.restore();
+    btn(t('Grown-ups'), 'ghost wide', () => {
+      m.close();
+      void enterGrownups(app);
     }),
-    gameCenterButton,
-    Capacitor.isNativePlatform()
-      ? btn(t('Rate Pocket Planet'), 'ghost wide', async () => {
-          if (!(await parentalGate('rate'))) return;
-          try {
-            await InAppReview.requestReview();
-          } catch {
-            /* the system may decline to show a rating sheet */
-          }
-        })
-      : null,
     btn(t('Credits'), 'ghost wide', () => (m.close(), credits())),
     btn(t('Reset progress'), 'danger wide', async () => {
       m.close();
       if (!(await confirmBox(t('Erase all progress? This cannot be undone.'), t('Erase')))) return;
-      const keep = { processedTx: app.p.processedTx, starter: app.p.starter, pass: app.p.pass, settings: app.p.settings };
+      const keep = {
+        processedTx: app.p.processedTx,
+        pendingPiggy: app.p.pendingPiggy,
+        pendingPurchaseRecords: app.p.pendingPurchaseRecords,
+        starter: app.p.starter,
+        pass: app.p.pass,
+        settings: app.p.settings,
+      };
       app.p = { ...defaultProfile(), ...keep };
       if (keep.starter) app.p.skins.push('aurora');
       ensureWishes(app.p, today());
@@ -205,6 +180,60 @@ export function settingsFlow(app: App) {
     }),
     version,
   ]);
+}
+
+export function grownupSettings(app: App): HTMLElement[] {
+  const reminders = h(
+    'button',
+    { class: `toggle${app.p.settings.notifications ? ' on' : ''}`, role: 'switch', 'aria-checked': String(app.p.settings.notifications) },
+    t('Reminders'),
+    h('i'),
+  );
+  reminders.addEventListener('click', async () => {
+    const s = app.p.settings;
+    if (!s.notifications && Capacitor.isNativePlatform()) {
+      if (!(await parentalGate('reminders'))) return;
+      try {
+        const permission = await LocalNotifications.requestPermissions();
+        if (permission.display !== 'granted') throw new Error('Permission denied');
+      } catch {
+        toast(t('Reminders are off in the iPhone Settings app.'));
+        return;
+      }
+    }
+    s.notifications = !s.notifications;
+    app.p.meta.notifAsked = true;
+    reminders.classList.toggle('on', s.notifications);
+    reminders.setAttribute('aria-checked', String(s.notifications));
+    app.save();
+    await scheduleReminders(app.p);
+  });
+  const gameCenterButton = gcAvailable()
+    ? btn(app.p.settings.gameCenter ? t('Game Center') : t('Game Center: sign in'), 'ghost wide', async () => {
+        if (!gcIsSignedIn()) {
+          if (!(await parentalGate('gamecenter'))) return;
+          if (!(await gcSignIn(true))) {
+            toast(t("Game Center didn't sign in. You can sign in from the iPhone Settings app."));
+            return;
+          }
+          app.p.settings.gameCenter = true;
+          app.save();
+          app.syncGameCenter();
+        }
+        await gcDashboard(app.p);
+      })
+    : null;
+  const rate = Capacitor.isNativePlatform()
+    ? btn(t('Rate Pocket Planet'), 'ghost wide', async () => {
+        if (!(await parentalGate('rate'))) return;
+        try {
+          await InAppReview.requestReview();
+        } catch {
+          /* the system may decline to show a rating sheet */
+        }
+      })
+    : null;
+  return [reminders, gameCenterButton, rate].filter((x): x is HTMLButtonElement => x !== null);
 }
 
 function credits() {

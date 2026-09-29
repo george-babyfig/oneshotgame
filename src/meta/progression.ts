@@ -123,7 +123,7 @@ export function claimRoad(p: Profile, i: number): Reward[] {
   return got;
 }
 
-/** Total gem value of the pass lane (used for the sales pitch). */
+/** The current pass lane contains looks only. */
 export const PASS_GEMS = STAR_ROAD.reduce((a, t) => a + (t.pass.gems ?? 0), 0);
 
 // Legacy quest shape supports save migration in wishes.ts.

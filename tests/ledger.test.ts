@@ -9,7 +9,7 @@ const start = Date.UTC(2026, 0, 1);
 
 describe('private ledger', () => {
   it('aggregates daily totals, histograms, and first discovery', async () => {
-    await clearLedger();
+    await clearLedger(true);
     ledger.count('round_started', 2, start);
     ledger.count('round_won', 1, start);
     ledger.add('round_seconds', 75, start);
@@ -23,7 +23,7 @@ describe('private ledger', () => {
   });
 
   it('rolls daily and weekly buckets by age', async () => {
-    await clearLedger();
+    await clearLedger(true);
     for (let i = 0; i < 90; i++) ledger.count('round_started', 1, start + i * day);
     const s = ledgerSummary(start + 89 * day);
     expect(s.days).toHaveLength(30);
@@ -33,7 +33,7 @@ describe('private ledger', () => {
   });
 
   it('stays within 16 KB over a 90-day engaged career', async () => {
-    await clearLedger();
+    await clearLedger(true);
     for (let i = 0; i < 90; i++) {
       const now = start + i * day;
       for (let round = 0; round < 12; round++) {
@@ -49,7 +49,7 @@ describe('private ledger', () => {
   });
 
   it('keeps the latest 30 days and every lifetime economy total under a full 90-day load', async () => {
-    await clearLedger();
+    await clearLedger(true);
     const kpis: LedgerKpi[] = [
       'round_started',
       'round_won',
@@ -181,7 +181,7 @@ describe('private ledger', () => {
   });
 
   it('evicts old daily buckets before weekly buckets when extra counters fill the cap', async () => {
-    await clearLedger();
+    await clearLedger(true);
     for (let i = 0; i < 30; i++) {
       const now = start + i * day;
       ledger.add('earn_gems_level_win', 1, now);
@@ -196,7 +196,7 @@ describe('private ledger', () => {
   });
 
   it('recovers from a damaged in-memory bucket without throwing', async () => {
-    await clearLedger();
+    await clearLedger(true);
     ledger.count('round_started', 1, start);
     const summary = ledgerSummary(start);
     (summary.days[0] as unknown as { totals: null }).totals = null;
@@ -205,7 +205,7 @@ describe('private ledger', () => {
   });
 
   it('lets wallet credits and debits finish if ledger recording throws', async () => {
-    await clearLedger();
+    await clearLedger(true);
     const p = defaultProfile(start);
     const before = p.gems;
     const broken = vi.spyOn(ledger, 'add').mockImplementation(() => {

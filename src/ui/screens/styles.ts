@@ -1,5 +1,4 @@
-// Styles: dress your Keeper and pick its launcher and trail. Tap any item to
-// try it on in the live preview before buying or equipping it.
+// Styles: dress your Keeper and preview looks without changing the saved outfit.
 import { h, btn, fmt, toast } from '../dom';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
@@ -16,6 +15,10 @@ import {
   owns,
   ownedCount,
   sourceText,
+  isPaidLook,
+  visibleCosmetics,
+  toggleFavourite,
+  STYLES_RELEASE,
   DEFAULT_LOOK,
   PRESETS,
   loadPreset,
@@ -34,8 +37,11 @@ import { ensureFestival, festivalActive } from '../../meta/festivals';
 import { RESIDENT_ACCS } from '../../meta/homeworld';
 import { SPECIES_BY_ID } from '../../core/world';
 import { critterCanvas, drawCreature } from '../art/critters';
+import { enterGrownups } from './grownups';
+import { SKINS } from '../../meta/tuning';
+import { skinSwatch } from './shop';
 
-type Tab = Slot | 'dye' | 'buddy';
+type Tab = Slot | 'dye' | 'buddy' | 'atmosphere';
 let lastSlot: Tab = 'suit';
 
 /** Animated stage: the Keeper flings a rock every couple of seconds. */
@@ -46,6 +52,7 @@ function stage(
   mastered: (id: string) => boolean,
   emoting = false,
   buddy: { species: string; acc: string } | null = null,
+  glow = '#6ec8ff',
 ) {
   const g = canvas.getContext('2d')!;
   let raf = 0;
@@ -74,10 +81,13 @@ function stage(
     const pg = g.createRadialGradient(px - 8, py - 8, 4, px, py, 34);
     pg.addColorStop(0, '#6ee29a');
     pg.addColorStop(1, '#2a7fd0');
+    g.shadowColor = glow === 'aurora' ? '#6ec8ff' : glow === 'cosmic' ? '#a879ff' : glow;
+    g.shadowBlur = 24;
     g.fillStyle = pg;
     g.beginPath();
     g.arc(px, py, 30, 0, Math.PI * 2);
     g.fill();
+    g.shadowBlur = 0;
     if (buddy) {
       const hop = flying > 0.8 ? Math.abs(Math.sin(time * 9)) * hh * 0.08 : 0;
       drawCreature(g, buddy.species, w * 0.1, hh * 0.94 - hop, 0, Math.min(44, hh * 0.26), time + 0.7, buddy.acc);
@@ -241,6 +251,33 @@ function costText(cost?: Partial<Record<Mat, number>>) {
     .join(' ');
 }
 
+function atmospherePanel(app: App, selected: string) {
+  const p = app.p;
+  return h(
+    'div',
+    { class: 'ws-grid' },
+    ...SKINS.filter((x) => !p.settings.hidePaidLooks || (!x.starter && !x.pass)).map((x) => {
+      const owned = p.skins.includes(x.id) || (x.starter && p.starter);
+      return h(
+        'button',
+        {
+          class: `ws-item${owned ? '' : ' locked'}${p.skin === x.id ? ' on' : ''}${selected === x.id ? ' sel' : ''}`,
+          onclick: () => {
+            if (owned) {
+              p.skin = x.id;
+              app.save();
+            }
+            showStyles(app, 'atmosphere', x.id);
+          },
+        },
+        h('i', { class: 'atmosphere-swatch', style: `background:${skinSwatch(x.glow)}` }),
+        h('b', null, t(x.name)),
+        h('small', null, p.skin === x.id ? t('Equipped') : owned ? t('Equip') : t('Try on')),
+      );
+    }),
+  );
+}
+
 /** Three outfit slots: tap to wear, 💾 to save the current look. */
 function presetRow(app: App, slot: Tab) {
   const p = app.p;
@@ -291,10 +328,15 @@ function presetRow(app: App, slot: Tab) {
 export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
   lastSlot = slot;
   const p = app.p;
+  if (p.stylesNewSeen !== STYLES_RELEASE) {
+    p.stylesNewSeen = STYLES_RELEASE;
+    app.save();
+  }
+  document.documentElement.classList.remove('styles-new');
   const worn = currentLook(p);
   const preview: Look = { ...worn };
   if (tryOn && COSMETIC_BY_ID[tryOn]) preview[COSMETIC_BY_ID[tryOn].slot] = tryOn;
-  const sel = tryOn ?? (slot === 'buddy' ? '' : worn[slot === 'dye' ? 'suit' : slot]);
+  const sel = tryOn ?? (slot === 'buddy' || slot === 'atmosphere' ? '' : worn[slot === 'dye' ? 'suit' : slot]);
   const item = COSMETIC_BY_ID[sel];
   const canvas = h('canvas', { class: 'ws-stage' }) as HTMLCanvasElement;
 
@@ -320,8 +362,8 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
       app.save();
       showStyles(app, slot);
     });
-  else if (item.source === 'pass' || item.source === 'road' || item.source === 'starter')
-    action = btn(`🔒 ${sourceText(item)}`, 'ghost', () => (item.source === 'starter' ? app.showShop() : app.showPass()));
+  else if (isPaidLook(item)) action = btn(t(tryOn ? 'Done' : 'Try on'), 'ghost', () => showStyles(app, slot, tryOn ? undefined : item.id));
+  else if (item.source === 'road') action = h('div', { class: 'ws-state locked' }, sourceText(item));
   else action = h('div', { class: 'ws-state locked' }, `🔒 ${sourceText(item)}`);
 
   const flings = p.mastery[worn.launcher] ?? 0;
@@ -349,11 +391,11 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
   const tabs = h(
     'div',
     { class: 'tabs' },
-    ...[...SLOTS, 'dye' as const, 'buddy' as const].map((s) =>
+    ...[...SLOTS, 'dye' as const, 'buddy' as const, 'atmosphere' as const].map((s) =>
       h(
         'button',
         { class: `tab${s === slot ? ' on' : ''}`, onclick: () => (sfx.click(), showStyles(app, s)) },
-        s === 'dye' ? t('Dye') : s === 'buddy' ? t('Buddy') : t(SLOT_NAMES[s]),
+        s === 'dye' ? t('Dye') : s === 'buddy' ? t('Buddy') : s === 'atmosphere' ? t('Atmosphere') : t(SLOT_NAMES[s]),
       ),
     ),
   );
@@ -362,24 +404,28 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
       ? dyePanel(app)
       : slot === 'buddy'
         ? buddyPanel(app)
-        : h(
-            'div',
-            { class: 'ws-grid' },
-            ...COSMETICS.filter((x) => x.slot === slot).map((x) => {
-              const have = owns(p, x.id);
-              const on = worn[x.slot] === x.id;
-              return h(
-                'button',
-                {
-                  class: `ws-item t-${x.tier}${have ? '' : ' locked'}${on ? ' on' : ''}${x.id === sel ? ' sel' : ''}`,
-                  onclick: () => (sfx.click(), haptic.light(), showStyles(app, slot, x.id)),
-                },
-                itemCanvas(x.id, worn, 64),
-                h('b', null, t(x.name)),
-                h('small', null, on ? t('Equipped') : have ? t('Owned') : sourceText(x)),
-              );
-            }),
-          );
+        : slot === 'atmosphere'
+          ? atmospherePanel(app, tryOn ?? p.skin)
+          : h(
+              'div',
+              { class: 'ws-grid' },
+              ...visibleCosmetics(p, slot).map((x) => {
+                const have = owns(p, x.id);
+                const on = worn[x.slot] === x.id;
+                return h(
+                  'button',
+                  {
+                    class: `ws-item t-${x.tier}${have ? '' : ' locked'}${on ? ' on' : ''}${x.id === sel ? ' sel' : ''}`,
+                    onclick: () => (sfx.click(), haptic.light(), showStyles(app, slot, x.id)),
+                  },
+                  itemCanvas(x.id, worn, 64),
+                  h('b', null, t(x.name)),
+                  h('small', null, on ? t('Equipped') : have ? t('Owned') : isPaidLook(x) ? t('Try on') : sourceText(x)),
+                );
+              }),
+            );
+  const previewSkin = SKINS.find((x) => x.id === (slot === 'atmosphere' ? (tryOn ?? p.skin) : p.skin));
+  const glow = previewSkin && (!p.settings.hidePaidLooks || (!previewSkin.starter && !previewSkin.pass)) ? previewSkin.glow : SKINS[0].glow;
   const stop = stage(
     canvas,
     () => preview,
@@ -387,13 +433,19 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
     (id) => masteryLevel(p.mastery[id] ?? 0) >= MASTERY_STEPS.length,
     slot === 'emote',
     currentBuddy(p, festivalActive(p) ? ensureFestival(p).acc : undefined),
+    glow,
   );
   app.mount(
     h(
       'div',
       { class: 'screen page workshop' },
       app.topBar(),
-      h('div', { class: 'page-title' }, t('Styles'), h('small', { class: 'muted' }, ` ${ownedCount(p)}/${COSMETICS.length}`)),
+      h(
+        'div',
+        { class: 'page-title' },
+        t('Styles'),
+        h('small', { class: 'muted' }, ` ${ownedCount(p)}/${COSMETICS.filter((x) => !isPaidLook(x)).length}`),
+      ),
       h(
         'div',
         { class: 'ws-top' },
@@ -416,7 +468,14 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
         tabs,
         mastery,
         grid,
-        btn(t('Shop'), 'ghost wide', () => app.showShop()),
+        item
+          ? btn(p.favourites.includes(item.id) ? t('♥ Favourited') : t('♡ Favourite'), 'ghost wide', () => {
+              toggleFavourite(p, item.id);
+              app.save();
+              showStyles(app, slot, tryOn);
+            })
+          : null,
+        btn(t('Grown-ups'), 'ghost small grownups-link', () => void enterGrownups(app)),
       ),
     ),
     'styles',

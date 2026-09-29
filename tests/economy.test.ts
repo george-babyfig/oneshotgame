@@ -63,12 +63,34 @@ describe('economy', () => {
     p.piggy = 90;
     expect(grantProduct(p, 'com.pocketplanet.game.piggy', 't2')?.gems).toBe(90);
     expect(p.piggy).toBe(0);
-    grantProduct(p, 'com.pocketplanet.game.starter', 't3');
+    grantProduct(p, 'com.pocketplanet.game.startercrew', 't3');
     expect(p.starter).toBe(true);
     expect(p.skins).toContain('aurora');
-    expect(grantProduct(p, 'com.pocketplanet.game.starter', 't4')?.gems).toBe(0);
-    grantProduct(p, 'com.pocketplanet.game.cosmicpass', 't5');
+    expect(grantProduct(p, 'com.pocketplanet.game.startercrew', 't4')?.gems).toBe(0);
+    grantProduct(p, 'com.pocketplanet.game.road00', 't5');
     expect(p.pass).toBe(true);
+  });
+
+  it('keeps the Piggy Bank quote when more gems are saved before approval', () => {
+    const p = defaultProfile(0);
+    p.piggy = 40;
+    p.pendingPiggy = { amount: 40, startedAt: 1 };
+    p.piggy = 52;
+    const before = p.gems;
+    expect(grantProduct(p, 'com.pocketplanet.game.piggy', 'pending-piggy')?.gems).toBe(40);
+    expect(p.gems).toBe(before + 40);
+    expect(p.piggy).toBe(12);
+    expect(p.pendingPiggy).toBeNull();
+    expect(grantProduct(p, 'com.pocketplanet.game.piggy', 'pending-piggy')).toBeNull();
+  });
+
+  it('records a new transaction id for an already-owned look without paying twice', () => {
+    const p = defaultProfile(0);
+    grantProduct(p, 'com.pocketplanet.game.startercrew', 'original-starter');
+    const before = p.gems;
+    expect(grantProduct(p, 'com.pocketplanet.game.startercrew', 'restored-starter')?.gems).toBe(0);
+    expect(p.processedTx).toContain('restored-starter');
+    expect(p.gems).toBe(before);
   });
 });
 

@@ -21,7 +21,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - name: Reject dev tools in production bundle
-        run: '! grep -rqE "Balance Report|__i18n" dist/'
+        run: '! grep -rqE "Balance Report|__i18n|__scene|__gate" dist/'
 
   # Difficulty survey (casual/decent/sharp on planets 1-60). Watch only in M1:
   # it prints drift against tests/sim/baseline.json but never fails the build.

@@ -270,7 +270,8 @@ export function buildCost(type: BuildingType, lv: number) {
 }
 
 export function drones(p: Profile) {
-  return p.pass ? 3 : 2;
+  // Tester saves with the old Pass keep their third drone.
+  return p.pass && !(p.meta as Profile['meta'] & { passLooksOnly?: boolean }).passLooksOnly ? 3 : 2;
 }
 
 export function busyDrones(h: HomeState, now = Date.now()) {

@@ -15,6 +15,7 @@ import {
   freshInstall,
   localesToRun,
   midGame,
+  passGate,
   screenName,
   settle,
   snap,
@@ -292,16 +293,16 @@ test.describe('J2 every tab and screen [en]', () => {
     if (await entry(page, '.mission-entry', 'Event').count())
       await sheet(page, info, guard, () => entry(page, '.mission-entry', 'Event').click(), 'missions-event');
     await sheet(page, info, guard, () => entry(page, '.mission-entry', 'Festival').click(), 'missions-festival');
-    // top-bar shortcuts on a tab: stardust → Upgrades, Passport, gems → Shop
+    // top-bar shortcuts on a tab: stardust → Upgrades, Passport (the gem count is not a shop link since M5)
     await go(page, info, guard, () => page.locator('.topbar button.pill.dust').click(), 'upgrades', 'missions-upgrades');
     await goBack(page, info, 'button', 'missions', 'upgrades');
     await go(page, info, guard, () => page.locator('.topbar button.avatar').click(), 'passport', 'missions-passport');
     await goBack(page, info, 'swipe', 'missions', 'passport');
-    // (the gem pill links to the Shop once a chapter chest has been opened)
+    // M5: real money lives only in Grown-ups, so the gem count is plain text, even after a chapter chest
     await page.evaluate(() => (window as any).__app.p.chapters.push(1));
     await openTab(page, 'missions');
-    await go(page, info, guard, () => page.locator('.topbar button.pill.gems').click(), 'shop', 'missions-shop');
-    await goBack(page, info, 'button', 'missions', 'shop');
+    await expect(page.locator('.topbar .pill.gems')).toHaveCount(1);
+    await expect(page.locator('.topbar button.pill.gems'), 'the gem count is not a button').toHaveCount(0);
 
     // ---- Homeworld
     await openTab(page, 'homeworld');
@@ -347,13 +348,17 @@ test.describe('J2 every tab and screen [en]', () => {
     // ---- Styles
     await openTab(page, 'styles');
     await snap(page, info, guard, 'styles');
+    // M5: the small Grown-ups link at the bottom of Styles, behind Gate v2
     await go(
       page,
       info,
       guard,
-      () => page.locator('.host').getByRole('button', { name: 'Shop', exact: true }).click(),
+      async () => {
+        await page.locator('.host .grownups-link').click();
+        await passGate(page);
+      },
       'shop',
-      'styles-shop',
+      'styles-grownups',
     );
     await goBack(page, info, 'button', 'styles', 'shop');
 

@@ -31,7 +31,14 @@ export type LedgerKpi =
   | `spend_${string}`;
 type Bucket = { day: number; totals: Record<string, number>; seconds: number[] };
 type Week = { week: number; totals: Record<string, number> };
-type State = { days: Bucket[]; weeks: Week[]; economy: Record<string, number>; discovery: Record<string, number> };
+export type PurchaseRecord = { tx: string; key: string; cents: number; at: number; currency?: string };
+type State = {
+  days: Bucket[];
+  weeks: Week[];
+  economy: Record<string, number>;
+  discovery: Record<string, number>;
+  purchases: PurchaseRecord[];
+};
 type Packed = {
   v: 1;
   k: string[];
@@ -40,8 +47,9 @@ type Packed = {
   s: string[];
   e: [number, number, number, number][];
   f: Record<string, number>;
+  p?: PurchaseRecord[];
 };
-const fresh = (): State => ({ days: [], weeks: [], economy: {}, discovery: {} });
+const fresh = (): State => ({ days: [], weeks: [], economy: {}, discovery: {}, purchases: [] });
 let state = fresh();
 let loaded = false;
 let pending: Promise<void> = Promise.resolve();
@@ -74,6 +82,7 @@ function pack(): Packed {
     s: sources,
     e: economy,
     f: state.discovery,
+    p: state.purchases,
   };
 }
 
@@ -146,7 +155,12 @@ function unpack(value: unknown): State {
     if (!validKey(key) || !validIndex(planet) || planet < 1) throw new Error('Invalid discovery');
     discovery[key] = planet;
   }
-  return { days, weeks, economy, discovery };
+  const purchases = Array.isArray(p.p)
+    ? (p.p.filter(
+        (x) => record(x) && typeof x.tx === 'string' && typeof x.key === 'string' && validAmount(x.cents) && validAmount(x.at),
+      ) as PurchaseRecord[])
+    : [];
+  return { days, weeks, economy, discovery, purchases: purchases.slice(-50) };
 }
 
 function encoded() {
@@ -253,8 +267,9 @@ export async function loadLedger() {
     state = fresh();
   }
 }
-export async function clearLedger() {
-  state = fresh();
+export async function clearLedger(includePurchases = false) {
+  const purchases = state.purchases;
+  state = { ...fresh(), purchases: includePurchases ? [] : purchases };
   homeworldPending = false;
   pending = pending
     .catch(() => {})
@@ -263,6 +278,44 @@ export async function clearLedger() {
       state = fresh();
     });
   await pending;
+}
+export async function flushLedger(txId?: string) {
+  await Promise.resolve();
+  await pending;
+  if (txId) {
+    const saved = await loadKey(KEY);
+    if (!saved || !JSON.parse(saved).p?.some((entry: PurchaseRecord) => entry.tx === txId))
+      throw new Error('Purchase history was not saved');
+  }
+}
+export function recordPurchase(record: PurchaseRecord) {
+  if (!record.tx || !validKey(record.key) || !validAmount(record.cents) || !validAmount(record.at)) return;
+  if (state.purchases.some((x) => x.tx === record.tx)) return;
+  state.purchases = [...state.purchases.slice(-49), record];
+  persist();
+}
+
+export function playTimeThisWeek(now = Date.now()) {
+  const week = weekOf(dayOf(now));
+  const days = state.days.filter((x) => weekOf(x.day) === week);
+  return {
+    rounds: days.reduce((n, x) => n + (x.totals.round_started ?? 0), 0),
+    minutes: Math.round(days.reduce((n, x) => n + (x.totals.round_seconds ?? 0), 0) / 60),
+  };
+}
+
+export function spentThisMonth(now = Date.now(), currency = 'USD') {
+  const date = new Date(now);
+  return state.purchases
+    .filter((x) => {
+      const at = new Date(x.at);
+      return at.getFullYear() === date.getFullYear() && at.getMonth() === date.getMonth() && (x.currency ?? 'USD') === currency;
+    })
+    .reduce((cents, x) => cents + x.cents, 0);
+}
+
+export function purchaseHistory() {
+  return [...state.purchases].reverse();
 }
 export function serializedSize() {
   return new TextEncoder().encode(fit()).length;
@@ -295,6 +348,7 @@ export function ledgerSummary(now = Date.now()) {
     weeks: state.weeks,
     economy: state.economy,
     discovery: state.discovery,
+    purchases: purchaseHistory(),
     bytes: serializedSize(),
   };
 }

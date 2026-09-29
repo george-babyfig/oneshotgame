@@ -96,6 +96,14 @@ describe('save goldens', () => {
 });
 
 describe('save goldens: specific migrations', () => {
+  it('migrates the old dollar reminder and adds a parent PIN default', () => {
+    const raw = load('b-mid-game.v3.json');
+    (raw.settings as Raw).spendingReminder = 5;
+    delete (raw.settings as Raw).parentPin;
+    const p = migrate(raw);
+    expect(p.settings.spendingReminder).toEqual({ cents: 500, currency: 'USD' });
+    expect(p.settings.parentPin).toBeNull();
+  });
   it('grandfathers pre-M3 gates and marks past intro cards as seen', () => {
     const p = loadSave('e-pre-m3.v3.json');
     expect(p.m3Migrated).toBe(true);

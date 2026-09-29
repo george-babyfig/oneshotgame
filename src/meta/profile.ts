@@ -35,6 +35,12 @@ export interface Settings {
   /** For real-calendar seasons. */
   hemi: 'north' | 'south';
   textSize: 'standard' | 'large' | 'extra-large';
+  hidePaidLooks: boolean;
+  spendingReminder: { cents: number; currency: string } | null;
+  breakAfterRounds: number | null;
+  /** A digest, never the entered PIN. */
+  parentPin: string | null;
+  gatePausedUntil: number;
 }
 
 export interface Stats {
@@ -89,6 +95,8 @@ export interface Profile {
   skin: string;
   skins: string[];
   processedTx: string[];
+  pendingPiggy: { amount: number; startedAt: number } | null;
+  pendingPurchaseRecords: { tx: string; key: string; at: number }[];
   daily: { last: string; streak: number };
   quests: { day: string; list: QuestState[]; bonusClaimed: boolean };
   /** Star Road tiers already claimed (indices). */
@@ -121,6 +129,8 @@ export interface Profile {
   /** Keeper outfit (see meta/cosmetics.ts) and items bought with gems. */
   look: Record<'suit' | 'hat' | 'launcher' | 'trail' | 'emote', string>;
   wardrobe: string[];
+  favourites: string[];
+  stylesNewSeen: string;
   /** Flings per launcher, for launcher mastery. */
   mastery: Record<string, number>;
   /** Planet Passport: name parts, title, banner and pinned badges. */
@@ -196,6 +206,8 @@ export function defaultProfile(now = Date.now()): Profile {
     skin: 'classic',
     skins: ['classic'],
     processedTx: [],
+    pendingPiggy: null,
+    pendingPurchaseRecords: [],
     daily: { last: '', streak: 0 },
     quests: { day: '', list: [], bonusClaimed: false },
     road: [],
@@ -211,6 +223,11 @@ export function defaultProfile(now = Date.now()): Profile {
       lang: '',
       hemi: 'north',
       textSize: 'standard',
+      hidePaidLooks: false,
+      spendingReminder: null,
+      breakAfterRounds: null,
+      parentPin: null,
+      gatePausedUntil: 0,
     },
     tutorial: false,
     meta: { installed: now, lastSeen: now, sessions: 0, rated: false, starterOffered: false, notifAsked: false },
@@ -241,6 +258,8 @@ export function defaultProfile(now = Date.now()): Profile {
     gcReported: [],
     look: { suit: 'suit_sky', hat: 'hat_antenna', launcher: 'l_pad', trail: 'tr_dots', emote: 'em_cheer' },
     wardrobe: [],
+    favourites: [],
+    stylesNewSeen: '',
     mastery: {},
     passport: { first: -1, second: -1, set: false, title: '', banner: 0, badges: [], badgesSet: false },
     home: defaultHome(now),
@@ -329,6 +348,8 @@ export function migrate(raw: Record<string, unknown>): Profile {
     p.m3Migrated = true;
   }
   const savedSettings = raw.settings as Record<string, unknown> | undefined;
+  if (typeof p.settings.spendingReminder === 'number')
+    p.settings.spendingReminder = { cents: p.settings.spendingReminder * 100, currency: 'USD' };
   if (!savedSettings || !Object.hasOwn(savedSettings, 'gameCenter')) {
     p.settings.notifications = false;
     p.settings.gameCenter = false;
@@ -374,12 +395,25 @@ export async function loadProfile(): Promise<Profile> {
 }
 
 let saves = 0;
+let saveQueue: Promise<void> = Promise.resolve();
 /** Save the profile; every few saves also refresh a backup copy. */
 export async function saveProfile(p: Profile) {
   if (readOnly) return;
   const json = JSON.stringify(p);
-  await saveKey(KEY, json);
-  if (saves++ % 5 === 0) await saveKey(BACKUP_KEY, json);
+  const write = async () => {
+    await saveKey(KEY, json);
+    if (saves++ % 5 === 0) await saveKey(BACKUP_KEY, json);
+  };
+  const job = saveQueue.then(write, write);
+  saveQueue = job.catch(() => {});
+  await job;
+}
+
+/** Check that a paid grant reached durable storage before StoreKit is finished. */
+export async function saveProfileChecked(p: Profile) {
+  if (readOnly) throw new Error('Profile storage is read-only');
+  await saveProfile(p);
+  if ((await loadKey(KEY)) !== JSON.stringify(p)) throw new Error('Profile was not saved');
 }
 
 export function today(d = new Date()) {

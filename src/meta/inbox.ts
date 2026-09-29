@@ -130,7 +130,7 @@ const RULES: Rule[] = [
     letter: () => ({
       from: MC,
       title: 'Welcome aboard, Captain',
-      body: 'Your Star Captain uniform is waiting in Styles, and the golden lane of the Star Road is open. Thank you for supporting Pocket Planet!',
+      body: 'The golden lane of the Star Road is open. Its Keeper looks unlock as you travel along the road. Thank you for supporting Pocket Planet!',
     }),
   },
   {

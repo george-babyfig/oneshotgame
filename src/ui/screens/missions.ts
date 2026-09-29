@@ -9,9 +9,11 @@ import { letterOf } from '../../meta/inbox';
 import { wishesPanel } from '../flows/wishes';
 import { eventReady } from '../../meta/events';
 import { festivalReady } from '../../meta/festivals';
+import { STYLES_RELEASE } from '../../meta/cosmetics';
 
 export function showMissions(app: App) {
   const p = app.p;
+  document.documentElement.classList.toggle('styles-new', p.stylesNewSeen !== STYLES_RELEASE);
   const open = unlocked(p, 'quests');
   const entry = (label: string, ready: number, action: () => void, enabled = true, reason = '') => {
     const button = btn(

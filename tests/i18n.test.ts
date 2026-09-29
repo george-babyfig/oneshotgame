@@ -8,7 +8,8 @@ import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { BIOMES, KINDS, SPECIES } from '../src/core/world';
 import { TWISTS } from '../src/core/levels';
-import { BOOSTERS, PRODUCTS, SKINS, UPGRADES } from '../src/meta/config';
+import { BOOSTERS, SKINS, UPGRADES } from '../src/meta/config';
+import { PRODUCT_TEXT_KEYS } from '../src/meta/tuning';
 import { HABITATS } from '../src/meta/habitats';
 import { EVENTS } from '../src/meta/events';
 import { RANK_TITLES, RANK_UNLOCKS } from '../src/meta/rank';
@@ -61,7 +62,20 @@ export function allKeys(): string[] {
   Object.values(BOOSTERS).forEach((b) => (add(b.name), add(b.desc)));
   Object.values(UPGRADES).forEach((u) => add(u.name));
   SKINS.forEach((s) => add(s.name));
-  PRODUCTS.forEach((p) => add(p.title));
+  PRODUCT_TEXT_KEYS.forEach(add);
+  [
+    'Starter Crew is in Styles → Keeper. The Aurora banner is in Passport.',
+    'Cosmic Road looks are in Missions, gold paints are in Homeworld, and the banner and title are in Passport',
+    '{n} gems added',
+    '{n} gems saved',
+    'To continue to the App Store, please answer:',
+    'Sharing is for grown-ups. Please answer:',
+    'To rate the game, please answer:',
+    'To turn on reminders, please answer:',
+    'To sign in to Game Center, please answer:',
+    'To leave the game, please answer:',
+    'To open Grown-ups, please answer:',
+  ].forEach(add);
   HABITATS.forEach((h) => add(h.name));
   EVENTS.forEach((e) => (add(e.name), add(e.desc)));
   RANK_TITLES.forEach(add);

@@ -42,7 +42,10 @@ export function passportCard(app: App, compact = false) {
   const badges = pinnedBadges(p);
   return h(
     'div',
-    { class: `pp-card${p.pass ? ' gold' : ''}${compact ? ' compact' : ''}`, style: `--b1:${banner.colors[0]};--b2:${banner.colors[1]}` },
+    {
+      class: `pp-card${p.pass && !p.settings.hidePaidLooks ? ' gold' : ''}${compact ? ' compact' : ''}`,
+      style: `--b1:${banner.colors[0]};--b2:${banner.colors[1]}`,
+    },
     h(
       'div',
       { class: 'pp-av' },
@@ -178,7 +181,7 @@ export function editPassport(app: App, first = false) {
   const swatches = h(
     'div',
     { class: 'pe-banners' },
-    ...BANNERS.map((x) => {
+    ...BANNERS.filter((x) => !p.settings.hidePaidLooks || (x.id !== 6 && x.id !== 7)).map((x) => {
       const ok = x.unlocked(p);
       const el = h(
         'button',
@@ -253,7 +256,7 @@ function renderPassportImage(app: App): HTMLCanvasElement {
   }
   g.globalAlpha = 1;
   // card frame
-  g.strokeStyle = p.pass ? '#ffd24a' : 'rgba(255,255,255,0.5)';
+  g.strokeStyle = p.pass && !p.settings.hidePaidLooks ? '#ffd24a' : 'rgba(255,255,255,0.5)';
   g.lineWidth = 14;
   g.beginPath();
   g.roundRect(40, 40, W - 80, H - 80, 60);
@@ -265,7 +268,7 @@ function renderPassportImage(app: App): HTMLCanvasElement {
   g.fillText(t('PLANET PASSPORT'), W / 2, 130);
   drawKeeper(g, currentLook(p), W / 2, 640, 480, 0.3, { cheer: 1 });
   if (p.buddy.species) drawCreature(g, p.buddy.species, W / 2 - 250, 640, 0, 150, 0.7, currentBuddy(p, festAcc(p))?.acc ?? '');
-  g.fillStyle = p.pass ? '#ffd24a' : '#ffffff';
+  g.fillStyle = p.pass && !p.settings.hidePaidLooks ? '#ffd24a' : '#ffffff';
   g.font = font(700, 88);
   g.fillText(passportName(p), W / 2, 770);
   const title = currentTitle(p);

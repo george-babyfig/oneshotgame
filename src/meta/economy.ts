@@ -1,4 +1,4 @@
-import { WIN_REWARD, GALAXY_RATE, STARTER_BOOSTERS } from './tuning';
+import { WIN_REWARD, GALAXY_RATE } from './tuning';
 import { earn, spend, type SpendSink } from './wallet';
 // Pure game-economy rules. Everything here mutates a Profile and returns what
 // happened, so the UI can celebrate it and tests can pin it down.
@@ -181,27 +181,56 @@ export function discoverSpecies(p: Profile, id: string): boolean {
   return true;
 }
 
+type CheckoutMeta = Profile['meta'] & { passLooksOnly?: boolean; refundQuietUntil?: number; revokedProducts?: Record<string, number> };
+
+export function refundQuietUntil(p: Profile): number {
+  return (p.meta as CheckoutMeta).refundQuietUntil ?? 0;
+}
+
+/** A revoked entitlement loses its looks; previously spent rewards stay put. */
+export function revokeProduct(p: Profile, productId: string, at = Date.now()): boolean {
+  const def = PRODUCT_BY_ID[productId];
+  if (!def || def.consumable) return false;
+  const meta = p.meta as CheckoutMeta;
+  meta.revokedProducts = { ...meta.revokedProducts, [productId]: at };
+  meta.refundQuietUntil = Math.max(meta.refundQuietUntil ?? 0, at + 7 * 86400000);
+  if (def.key === 'starter') {
+    p.starter = false;
+    p.skins = p.skins.filter((id) => id !== 'aurora');
+    if (p.skin === 'aurora') p.skin = 'classic';
+  }
+  if (def.key === 'pass') {
+    p.pass = false;
+    p.skins = p.skins.filter((id) => id !== 'cosmic');
+    if (p.skin === 'cosmic') p.skin = 'classic';
+  }
+  return true;
+}
+
 /** Daily login streak. Returns the gift to show, or null if already claimed today. */
 /** Apply a completed store transaction exactly once. Returns gems granted or null if ignored. */
-export function grantProduct(p: Profile, productId: string, txId: string): { gems: number; title: string } | null {
+export function grantProduct(p: Profile, productId: string, txId: string, piggyQuote?: number): { gems: number; title: string } | null {
   const def = PRODUCT_BY_ID[productId];
   if (!def || p.processedTx.includes(txId)) return null;
-  p.processedTx = [...p.processedTx.slice(-200), txId];
+  if (!def.consumable && (def.key === 'starter' ? p.starter : def.key === 'pass' ? p.pass : false)) {
+    p.processedTx.push(txId);
+    return { gems: 0, title: def.title };
+  }
+  p.processedTx.push(txId);
   let gems = def.gems;
   switch (def.key) {
     case 'piggy':
-      gems = p.piggy;
-      p.piggy = 0;
+      gems = Math.max(0, piggyQuote ?? p.pendingPiggy?.amount ?? p.piggy);
+      p.piggy = Math.max(0, p.piggy - gems);
+      p.pendingPiggy = null;
       break;
     case 'starter':
-      if (p.starter) gems = 0;
-      else for (const k of Object.keys(p.boosters) as (keyof Profile['boosters'])[]) p.boosters[k] += STARTER_BOOSTERS;
       p.starter = true;
       if (!p.skins.includes('aurora')) p.skins.push('aurora');
       break;
     case 'pass':
-      if (p.pass) gems = 0;
       p.pass = true;
+      (p.meta as CheckoutMeta).passLooksOnly = true;
       break;
   }
   earn(p, 'gems', gems, 'iap');

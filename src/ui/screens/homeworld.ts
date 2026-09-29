@@ -1110,7 +1110,9 @@ function paintSheet(app: App) {
     h(
       'div',
       { class: 'paint-row' },
-      ...PAINTS.filter((x) => x.channel === channel && (p.chapters.length >= 1 || (!x.gems && !x.pass))).map((x) => {
+      ...PAINTS.filter(
+        (x) => x.channel === channel && (!p.settings.hidePaidLooks || !x.pass) && (p.chapters.length >= 1 || (!x.gems && !x.pass)),
+      ).map((x) => {
         const owned = ownsPaint(p, x.id);
         const on = cur[channel].id === x.id;
         return h(
@@ -1120,7 +1122,7 @@ function paintSheet(app: App) {
             onclick: () => {
               const r = applyPaint(p, x.id);
               if (r === 'gems') return app.needGems();
-              if (r === 'pass') return toast(t('A Cosmic Pass reward on the Star Road'));
+              if (r === 'pass') return toast(t('Available with the Cosmic Pass'));
               sfx.click();
               haptic.light();
               app.save();
@@ -1237,13 +1239,13 @@ function photoMode(app: App, src: HTMLCanvasElement) {
   const frames = h(
     'div',
     { class: 'photo-frames' },
-    ...FRAMES.filter((f) => p.chapters.length >= 1 || !f.pass).map((f) => {
+    ...FRAMES.filter((f) => (!p.settings.hidePaidLooks || !f.pass) && (p.chapters.length >= 1 || !f.pass)).map((f) => {
       const el = h(
         'button',
         {
           class: `tab${f.id === frame ? ' on' : ''}`,
           onclick: () => {
-            if (f.pass && !p.pass) return toast(t('A Cosmic Pass reward on the Star Road'));
+            if (f.pass && !p.pass) return toast(t('Available with the Cosmic Pass'));
             frame = f.id;
             frames.querySelectorAll('.tab').forEach((x) => x.classList.remove('on'));
             el.classList.add('on');

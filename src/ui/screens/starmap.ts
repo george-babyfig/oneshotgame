@@ -6,7 +6,6 @@ import { totalStars } from '../../meta/profile';
 import { difficultyOf } from '../../core/levels';
 import { chapterOf, chapterReward, chestsReady, openChest, rewardText, LEVELS_PER_CHAPTER } from '../../meta/progression';
 import type { App } from '../app';
-import { maybeStarterOffer } from '../flows/offers';
 import { t } from '../../i18n';
 
 export function showStarMap(app: App) {
@@ -49,15 +48,12 @@ export function showStarMap(app: App) {
           haptic.success();
           app.save();
           showStarMap(app);
-          const m = modal(
-            [
-              h('div', { class: 'chest-anim' }, '🎁'),
-              h('div', { class: 'm-title' }, t('{name} complete!', { name: t(ch.name) })),
-              h('div', { class: 'reward-list' }, ...rewardText(r).map((x) => h('span', null, x))),
-              btn(t('Awesome'), 'primary wide', () => m.close()),
-            ],
-            { onClose: () => maybeStarterOffer(app) },
-          );
+          const m = modal([
+            h('div', { class: 'chest-anim' }, '🎁'),
+            h('div', { class: 'm-title' }, t('{name} complete!', { name: t(ch.name) })),
+            h('div', { class: 'reward-list' }, ...rewardText(r).map((x) => h('span', null, x))),
+            btn(t('Awesome'), 'primary wide', () => m.close()),
+          ]);
         })
       : p.chapters.includes(n)
         ? h('div', { class: 'chest-done' }, t('✓ Chest opened'))

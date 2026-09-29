@@ -49,6 +49,8 @@ export const OUTBOUND_CALLS = [
   'app.restore(',
   'this.iap.restore(',
   'iap.purchase(',
+  'showShop(',
+  'app.buy(',
 ];
 // These chokepoints are invoked only after their callers pass the gate; the low-level
 // IAP adapter cannot show UI, and shareTextUngated is used after the postcard gate.
@@ -125,6 +127,8 @@ function outboundViolations(file: string, src: string): string[] {
     const re = new RegExp(escapeRe(call), 'g');
     for (const m of src.matchAll(re)) {
       const index = m.index!;
+      if (call === 'showShop(' && (file === 'src/ui/app.ts' || file === 'src/ui/screens/shop.ts')) continue;
+      if (call === 'app.buy(' && file === 'src/ui/screens/shop.ts') continue;
       if (call === 'restorePurchases(' && /(?:function|async)\s+$/.test(src.slice(Math.max(0, index - 20), index))) continue;
       const fn = enclosingFunction(src, index);
       if (!fn) {
@@ -176,6 +180,11 @@ function sourceStrings(): { file: string; s: string }[] {
 // ---- Rules ----
 
 describe('policy: outbound actions are gated (0.1, 0.2)', () => {
+  it('routes the shop through the Grown-ups gate', () => {
+    expect(code('src/ui/screens/shop.ts')).toContain('refreshGrownups(app)');
+    expect(code('src/ui/screens/grownups.ts')).toContain("parentalGate('grownups')");
+    expect(code('src/ui/app.ts')).toContain("if (this.screen !== 'shop')");
+  });
   it('checks an awaited parental gate before each outbound call in its function', () => {
     const bad = SRC.flatMap(({ file, src }) => outboundViolations(file, src));
     expect(bad, bad.join('\n')).toEqual([]);

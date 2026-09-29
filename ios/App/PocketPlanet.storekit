@@ -38,7 +38,7 @@
       "internalID": "6600000003",
       "localizations": [
         {
-          "description": "1200 gems",
+          "description": "1,200 gems",
           "displayName": "Chest of Gems",
           "locale": "en_US"
         }
@@ -53,7 +53,7 @@
       "internalID": "6600000004",
       "localizations": [
         {
-          "description": "2800 gems",
+          "description": "2,800 gems",
           "displayName": "Galaxy of Gems",
           "locale": "en_US"
         }
@@ -68,7 +68,7 @@
       "internalID": "6600000005",
       "localizations": [
         {
-          "description": "All the gems saved in your piggy bank",
+          "description": "The gems saved so far, up to 250",
           "displayName": "Gem Piggy Bank",
           "locale": "en_US"
         }
@@ -79,32 +79,32 @@
     },
     {
       "displayPrice": "2.99",
-      "familyShareable": false,
+      "familyShareable": true,
       "internalID": "6600000006",
       "localizations": [
         {
-          "description": "300 gems, 5 of every booster and the Aurora atmosphere",
-          "displayName": "Starter Pack",
+          "description": "Aurora atmosphere, Aurora Explorer suit, Aurora trail and Aurora Passport banner",
+          "displayName": "Starter Crew",
           "locale": "en_US"
         }
       ],
-      "productID": "com.pocketplanet.game.starter",
-      "referenceName": "Starter Pack",
+      "productID": "com.pocketplanet.game.startercrew",
+      "referenceName": "Starter Crew",
       "type": "NonConsumable"
     },
     {
-      "displayPrice": "4.99",
-      "familyShareable": false,
+      "displayPrice": "3.99",
+      "familyShareable": true,
       "internalID": "6600000007",
       "localizations": [
         {
-          "description": "Unlock the premium Star Road lane forever",
-          "displayName": "Cosmic Pass",
+          "description": "Cosmic Road looks, gold paints, Gilded Passport banner and Star Captain title",
+          "displayName": "Cosmic Pass: Cosmic Road",
           "locale": "en_US"
         }
       ],
-      "productID": "com.pocketplanet.game.cosmicpass",
-      "referenceName": "Cosmic Pass",
+      "productID": "com.pocketplanet.game.road00",
+      "referenceName": "Cosmic Pass: Cosmic Road",
       "type": "NonConsumable"
     }
   ],

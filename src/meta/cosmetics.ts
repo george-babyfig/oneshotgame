@@ -35,6 +35,21 @@ export interface Cosmetic {
 export { COSMETICS } from './tuning';
 
 export const COSMETIC_BY_ID: Record<string, Cosmetic> = Object.fromEntries(COSMETICS.map((x) => [x.id, x]));
+export const STYLES_RELEASE = 'm5';
+
+export function isPaidLook(x: Cosmetic): boolean {
+  return x.source === 'starter' || x.source === 'pass';
+}
+
+export function visibleCosmetics(p: Profile, slot?: Slot): Cosmetic[] {
+  return COSMETICS.filter((x) => (!slot || x.slot === slot) && (!p.settings.hidePaidLooks || !isPaidLook(x)));
+}
+
+export function toggleFavourite(p: Profile, id: string): boolean {
+  if (!COSMETIC_BY_ID[id]) return false;
+  p.favourites = p.favourites.includes(id) ? p.favourites.filter((x) => x !== id) : [...p.favourites, id];
+  return true;
+}
 
 /** Items per slot, plus optional suit dye colours. */
 export type Look = Record<Slot, string> & { dyeMain?: string; dyeTrim?: string };
@@ -82,7 +97,7 @@ export function currentLook(p: Profile): Look {
   const out: Look = { ...DEFAULT_LOOK };
   for (const s of SLOTS) {
     const id = p.look?.[s];
-    if (id && COSMETIC_BY_ID[id]?.slot === s && owns(p, id)) out[s] = id;
+    if (id && COSMETIC_BY_ID[id]?.slot === s && owns(p, id) && (!p.settings.hidePaidLooks || !isPaidLook(COSMETIC_BY_ID[id]))) out[s] = id;
   }
   const d = dyeColors(p);
   if (d.main) out.dyeMain = d.main;
@@ -113,7 +128,7 @@ export function fullSet(look: Look): string | null {
 }
 
 export function ownedCount(p: Profile) {
-  return COSMETICS.filter((x) => owns(p, x.id)).length;
+  return COSMETICS.filter((x) => !isPaidLook(x) && owns(p, x.id)).length;
 }
 
 /** How to get an item, for the locked tile. */
@@ -124,7 +139,7 @@ export function sourceText(x: Cosmetic): string {
     case 'gems':
       return `💎${x.gems}`;
     case 'starter':
-      return t('Starter Pack');
+      return t('Try on');
     case 'chapter':
       return t('Chapter {n} chest', { n: x.unlock as number });
     case 'habitat': {
@@ -142,7 +157,7 @@ export function sourceText(x: Cosmetic): string {
       return r ? t('Star Road {n} points', { n: STAR_ROAD[r.i].stars }) : t('Star Road');
     }
     case 'pass':
-      return t('Cosmic Pass');
+      return t('Try on');
   }
 }
 

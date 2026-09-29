@@ -75,7 +75,6 @@ export interface SceneOpts {
   eventEmoji?: string;
   onEnd: (r: LevelResult) => void;
   onQuit: () => void;
-  onShop: () => void;
 }
 
 export interface LevelResult {

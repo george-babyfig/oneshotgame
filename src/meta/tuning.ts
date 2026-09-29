@@ -15,17 +15,34 @@ export interface ProductDef {
   /** Must match the Product ID you create in App Store Connect. */
   id: string;
   title: string;
+  description: string;
+  /** Exact contents shown before checkout. */
+  contents: string[];
+  emoji: string;
   gems: number;
   consumable: boolean;
   fallbackPrice: string;
 }
 
 export const PRODUCTS: ProductDef[] = [
-  { key: 'gems_s', id: 'com.pocketplanet.game.gems80', title: 'Handful of Gems', gems: 80, consumable: true, fallbackPrice: '$0.99' },
+  {
+    key: 'gems_s',
+    id: 'com.pocketplanet.game.gems80',
+    title: 'Handful of Gems',
+    description: '80 gems',
+    contents: ['80 gems'],
+    emoji: '💎',
+    gems: 80,
+    consumable: true,
+    fallbackPrice: '$0.99',
+  },
   {
     key: 'gems_m',
     id: 'com.pocketplanet.game.gems500',
     title: 'Pouch of Gems',
+    description: '500 gems',
+    contents: ['500 gems'],
+    emoji: '💎',
     gems: 500,
     consumable: true,
     fallbackPrice: '$4.99',
@@ -34,6 +51,9 @@ export const PRODUCTS: ProductDef[] = [
     key: 'gems_l',
     id: 'com.pocketplanet.game.gems1200',
     title: 'Chest of Gems',
+    description: '1,200 gems',
+    contents: ['1,200 gems'],
+    emoji: '💎',
     gems: 1200,
     consumable: true,
     fallbackPrice: '$9.99',
@@ -42,17 +62,64 @@ export const PRODUCTS: ProductDef[] = [
     key: 'gems_xl',
     id: 'com.pocketplanet.game.gems2800',
     title: 'Galaxy of Gems',
+    description: '2,800 gems',
+    contents: ['2,800 gems'],
+    emoji: '💎',
     gems: 2800,
     consumable: true,
     fallbackPrice: '$19.99',
   },
-  { key: 'piggy', id: 'com.pocketplanet.game.piggy', title: 'Gem Piggy Bank', gems: 0, consumable: true, fallbackPrice: '$1.99' },
-  { key: 'starter', id: 'com.pocketplanet.game.starter', title: 'Starter Pack', gems: 300, consumable: false, fallbackPrice: '$2.99' },
-  { key: 'pass', id: 'com.pocketplanet.game.cosmicpass', title: 'Cosmic Pass', gems: 0, consumable: false, fallbackPrice: '$4.99' },
+  {
+    key: 'piggy',
+    id: 'com.pocketplanet.game.piggy',
+    title: 'Gem Piggy Bank',
+    description: 'The gems saved so far, up to 250',
+    contents: ['The gems saved so far, up to 250'],
+    emoji: '🐷',
+    gems: 0,
+    consumable: true,
+    fallbackPrice: '$1.99',
+  },
+  {
+    key: 'starter',
+    id: 'com.pocketplanet.game.startercrew',
+    title: 'Starter Crew',
+    description: 'Aurora atmosphere, Aurora Explorer suit, Aurora trail and Aurora Passport banner',
+    contents: ['Aurora atmosphere', 'Aurora Explorer suit', 'Aurora trail', 'Aurora Passport banner'],
+    emoji: '🌈',
+    gems: 0,
+    consumable: false,
+    fallbackPrice: '$2.99',
+  },
+  {
+    key: 'pass',
+    id: 'com.pocketplanet.game.road00',
+    title: 'Cosmic Pass: Cosmic Road',
+    description: 'Cosmic Road looks, gold paints, Gilded Passport banner and Star Captain title',
+    contents: [
+      'Cosmic atmosphere',
+      'Golden Orbit launcher',
+      'Halo Ring hat',
+      'Comet Tail trail',
+      'Star Captain suit',
+      'Gilded Homeworld ground paint',
+      'Liquid Gold Homeworld sea paint',
+      'Gold Homeworld photo frame',
+      'Gilded Passport banner',
+      'Star Captain title',
+    ],
+    emoji: '🌌',
+    gems: 0,
+    consumable: false,
+    fallbackPrice: '$3.99',
+  },
 ];
+
+// Themes, Planet Packs and Style Singles arrive with their art in M12.
 
 export const PRODUCT_BY_KEY: Record<string, ProductDef> = Object.fromEntries(PRODUCTS.map((p) => [p.key, p]));
 export const PRODUCT_BY_ID: Record<string, ProductDef> = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]));
+export const PRODUCT_TEXT_KEYS = PRODUCTS.flatMap((p) => [p.title, p.description, ...p.contents]);
 
 // Boosters: bought with stardust (soft) or gems (premium), used before a level.
 export type BoosterId = 'shower' | 'spark' | 'scope';
@@ -131,21 +198,21 @@ import type { Constellation } from './constellations';
 import type { Dye } from './dyes';
 
 export const STAR_ROAD: RoadTier[] = [
-  { stars: 5, reward: { gems: 15 }, pass: { skin: 'cosmic', gems: 30, item: 'l_orbit' } },
-  { stars: 12, reward: { boosters: { shower: 2 } }, pass: { gems: 40 } },
-  { stars: 20, reward: { dust: 400 }, pass: { boosters: { shower: 2, spark: 2, scope: 2 } } },
-  { stars: 30, reward: { skin: 'rose', gems: 10 }, pass: { gems: 50, item: 'hat_halo' } },
-  { stars: 42, reward: { gems: 30 }, pass: { dust: 1500 } },
-  { stars: 55, reward: { boosters: { spark: 2, scope: 2 }, item: 'l_crystal' }, pass: { gems: 60 } },
-  { stars: 70, reward: { dust: 1200 }, pass: { boosters: { shower: 3, spark: 3, scope: 3 } } },
-  { stars: 85, reward: { skin: 'lime', gems: 20 }, pass: { gems: 80, item: 'tr_cosmic' } },
-  { stars: 100, reward: { gems: 50 }, pass: { dust: 4000 } },
-  { stars: 120, reward: { boosters: { shower: 3, spark: 3, scope: 3 }, item: 'tr_rainbow' }, pass: { gems: 100 } },
-  { stars: 140, reward: { dust: 3000 }, pass: { boosters: { shower: 5, spark: 5, scope: 5 } } },
-  { stars: 165, reward: { skin: 'gold', gems: 40 }, pass: { gems: 120, item: 'suit_star' } },
-  { stars: 190, reward: { gems: 80, item: 'em_fireworks' }, pass: { dust: 8000 } },
-  { stars: 220, reward: { dust: 6000, gems: 50, item: 'hat_crown' }, pass: { gems: 150 } },
-  { stars: 260, reward: { gems: 120 }, pass: { gems: 250 } },
+  { stars: 5, reward: { gems: 15 }, pass: { skin: 'cosmic', item: 'l_orbit' } },
+  { stars: 12, reward: { boosters: { shower: 2 }, gems: 40 }, pass: {} },
+  { stars: 20, reward: { dust: 400 }, pass: {} },
+  { stars: 30, reward: { skin: 'rose', gems: 10 }, pass: { item: 'hat_halo' } },
+  { stars: 42, reward: { gems: 30 }, pass: {} },
+  { stars: 55, reward: { boosters: { spark: 2, scope: 2 }, item: 'l_crystal' }, pass: {} },
+  { stars: 70, reward: { dust: 1200 }, pass: {} },
+  { stars: 85, reward: { skin: 'lime', gems: 20 }, pass: { item: 'tr_cosmic' } },
+  { stars: 100, reward: { gems: 50 }, pass: {} },
+  { stars: 120, reward: { boosters: { shower: 3, spark: 3, scope: 3 }, item: 'tr_rainbow' }, pass: {} },
+  { stars: 140, reward: { dust: 3000 }, pass: {} },
+  { stars: 165, reward: { skin: 'gold', gems: 40 }, pass: { item: 'suit_star' } },
+  { stars: 190, reward: { gems: 80, item: 'em_fireworks' }, pass: {} },
+  { stars: 220, reward: { dust: 6000, gems: 50, item: 'hat_crown' }, pass: {} },
+  { stars: 260, reward: { gems: 120 }, pass: {} },
 ];
 
 export const QUESTS: QuestDef[] = [
@@ -284,8 +351,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     name: 'Keeper Statue',
     desc: 'Decoration · residents adore it',
     ring: 1,
-    cost: 0,
-    gems: 120,
+    cost: 5000,
+    gems: 0,
     decor: true,
     charm: 4,
     max: 1,
@@ -620,6 +687,8 @@ export const COSMETICS: Cosmetic[] = [
     tier: 'epic',
     colors: ['#6ef2c0', '#6ec8ff', '#b58cff'],
   }),
+  // The constellation trail remains earnable for existing saves.
+  c({ id: 'tr_aurora_crew', slot: 'trail', name: 'Aurora', source: 'starter', tier: 'epic', colors: ['#6ef2c0', '#6ec8ff', '#b58cff'] }),
   c({
     id: 'tr_rainbow',
     slot: 'trail',

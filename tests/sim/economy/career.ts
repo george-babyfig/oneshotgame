@@ -331,7 +331,11 @@ export async function simulate(type: PlayerType): Promise<Career> {
       let wins = 0;
       const before = { ...ledgerSummary(START + (day - 1) * DAY).economy };
       for (let v = 0; v < visits; v++) wins += visit(p, type, day, v, budget / visits, levels, voyageLevels);
-      if (type === 'Payer' && day === 1) grantProduct(p, 'com.pocketplanet.game.cosmicpass', 'sim-cosmetic-pass');
+      if (type === 'Payer' && day === 1) {
+        grantProduct(p, 'com.pocketplanet.game.startercrew', 'sim-starter-crew');
+        grantProduct(p, 'com.pocketplanet.game.road00', 'sim-cosmic-road');
+      }
+      if (type === 'Payer' && day % 7 === 1) grantProduct(p, 'com.pocketplanet.game.gems500', `sim-gems-${day}`);
       const now = START + (day - 1) * DAY + (visits ? (visits - 1) * 4 * 3_600_000 : 0);
       vi.setSystemTime(now);
       const economy = ledgerSummary(now).economy;

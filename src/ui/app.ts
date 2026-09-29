@@ -1,4 +1,4 @@
-import { ledger, loadLedger } from '../meta/ledger';
+import { ledger, flushLedger, loadLedger, recordPurchase } from '../meta/ledger';
 // App shell: owns the profile, screen mounting, purchases and the level flow.
 // Each screen lives in ./screens and each modal flow in ./flows.
 import { Capacitor } from '@capacitor/core';
@@ -12,11 +12,11 @@ import { LevelScene, type LevelResult, type SceneOpts } from './game';
 import { makeLevel, type LevelDef } from '../core/levels';
 import { modifiersFor, type RoundMode } from '../core/modifiers';
 import { KINDS, type Kind } from '../core/world';
-import { loadProfile, saveProfile, today, type Profile } from '../meta/profile';
-import { createIap } from '../meta/iap';
+import { loadProfile, saveProfile, saveProfileChecked, today, type Profile } from '../meta/profile';
+import { createIap, type IapEvent, type StorePrice } from '../meta/iap';
 import { PRODUCT_BY_ID, PRODUCT_BY_KEY, SKINS, type BoosterId } from '../meta/config';
 import { clearFails, continueAllowed, countsAsFail, recordFail } from '../meta/continues';
-import { discoverSpecies, grantProduct, spendGems } from '../meta/economy';
+import { discoverSpecies, grantProduct, refundQuietUntil, revokeProduct, spendGems } from '../meta/economy';
 import { chapterOf } from '../meta/progression';
 import { ensureWishes } from '../meta/wishes';
 import { MOMENTUM_PERKS, momentumActive, momentumLoss, momentumWin } from '../meta/momentum';
@@ -53,9 +53,10 @@ import { showMissions } from './screens/missions';
 import { showCollection } from './screens/collection';
 import { showFieldGuide } from './screens/fieldguide';
 import { showPassport } from './screens/passport';
-import { showPass } from './screens/pass';
 import { showHomeworld } from './screens/homeworld';
 import { parentalGate } from './flows/gate';
+import { contentsSheet } from './flows/contents';
+import { receiptCard } from './flows/receipt';
 import { inboxFlow } from './flows/inbox';
 import { showSky } from './screens/sky';
 import { currentBuddy } from '../meta/buddy';
@@ -88,7 +89,6 @@ export type ScreenName =
   | 'missions'
   | 'collection'
   | 'fieldguide'
-  | 'pass'
   | 'passport'
   | 'homeworld'
   | 'sky'
@@ -121,7 +121,7 @@ export class App {
   host!: HTMLElement;
   p!: Profile;
   iap = createIap();
-  prices: Record<string, string> = {};
+  prices: Record<string, StorePrice> = {};
   scene: LevelScene | null = null;
   screen: ScreenName = 'home';
   /** Cleanup for the current screen (animation loops etc). */
@@ -135,6 +135,11 @@ export class App {
   private roundFirstCampaignClear = false;
   private screenStack = new ScreenHistory();
   private returning = false;
+  private lastReceipt: Promise<void> | null = null;
+  private processingTx = new Map<string, Promise<void>>();
+  private txQueue: Promise<void> = Promise.resolve();
+  private roundsThisSession = 0;
+  private breakDue = false;
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -199,13 +204,21 @@ export class App {
       saveProfile(this.p);
     });
     this.iap
-      .init((pid, tx) => this.grant(pid, tx))
-      .then(() => this.syncOwned())
+      .init((event) => {
+        if (event.revokedAt) {
+          if (revokeProduct(this.p, event.productId, event.revokedAt)) {
+            this.saveNow();
+            this.refresh();
+          }
+        } else void this.handleTransaction(event);
+      })
       .then(() => this.iap.prices())
-      .then((pr) => {
+      .then(async (pr) => {
         this.prices = pr;
+        await this.flushPendingPurchaseRecords();
         if (this.screen === 'shop') this.refresh();
       })
+      .then(() => this.reconcilePurchases())
       .catch(() => {});
     if (!this.p.tutorial) {
       if (this.p.meta.sessions === 1) titleBeat(this, () => this.startLevel(1, { tutorial: true }));
@@ -283,7 +296,6 @@ export class App {
       road: () => this.showRoad(),
       workshop: () => this.showStyles(),
       passport: () => this.showPassport(),
-      pass: () => this.showPass(),
       homeworld: () => this.showHomeworld(),
       sky: () => this.showSky(),
       voyage: () => this.showVoyage(),
@@ -391,7 +403,6 @@ export class App {
       road: () => this.showRoad(),
       workshop: () => this.showStyles(),
       passport: () => this.showPassport(),
-      pass: () => this.showPass(),
       voyage: () => this.showVoyage(),
     };
     render[name]?.();
@@ -426,6 +437,15 @@ export class App {
     if (!this.returning && !this.refreshing) this.screenStack.reset();
     showHome(this);
     if (quiet) return;
+    if (this.breakDue) {
+      this.breakDue = false;
+      const card = modal([
+        h('div', { class: 'm-title' }, t('Time for a stretch?')),
+        h('p', null, t('Your planets will wait.')),
+        btn(t('Keep playing'), 'primary wide', () => card.close()),
+      ]);
+      return;
+    }
     this.homeSeenThisOpen = true;
     if (this.p.meta.sessions > 1 && awayCollectables(this.p, this.awayMs).show && this.autoPopup('away')) {
       awayFlow(this, this.awayMs);
@@ -495,11 +515,6 @@ export class App {
   showPassport() {
     ledger.discover('passport', this.p.level);
     showPassport(this);
-  }
-  showPass() {
-    ledger.discover('pass', this.p.level);
-    if (this.screen !== 'pass') ledger.count('contents_sheet');
-    showPass(this);
   }
   showSky() {
     ledger.discover('sky', this.p.level);
@@ -599,14 +614,7 @@ export class App {
       compact
         ? h('span', { class: 'pill dust', 'aria-label': t('Stardust') }, `✨ ${fmt(this.p.dust)}`)
         : h('button', { class: 'pill dust', 'aria-label': t('Stardust'), onclick: () => this.showUpgrades() }, `✨ ${fmt(this.p.dust)}`),
-      !compact && this.p.chapters.length && this.p.meta.sessions > 1
-        ? h(
-            'button',
-            { class: 'pill gems', 'aria-label': t('Gems'), onclick: () => this.showShop() },
-            `💎 ${fmt(this.p.gems)}`,
-            h('span', { class: 'plus' }, '+'),
-          )
-        : h('span', { class: 'pill gems', 'aria-label': t('Gems') }, `💎 ${fmt(this.p.gems)}`),
+      h('span', { class: 'pill gems', 'aria-label': t('Gems') }, `💎 ${fmt(this.p.gems)}`),
     );
   }
 
@@ -617,7 +625,7 @@ export class App {
     boosters: Boosters = NO_BOOSTERS,
     tutorial = false,
   ): SceneOpts {
-    const skin = SKINS.find((s) => s.id === this.p.skin) ?? SKINS[0];
+    const skin = SKINS.find((s) => s.id === this.p.skin && (!this.p.settings.hidePaidLooks || (!s.starter && !s.pass))) ?? SKINS[0];
     const look = currentLook(this.p);
     const mods = modifiersFor(mode === 'tutorial' ? 'campaign' : mode, {
       scopeLevel: tutorial ? 3 : this.p.upgrades.scope,
@@ -671,11 +679,18 @@ export class App {
               return n;
             },
       onQuit: () => this.showHome(),
-      onShop: () => this.showShop(),
       season: seasonOf(new Date(), this.p.settings.hemi),
       festAcc: festivalActive(this.p) ? ensureFestival(this.p).acc : undefined,
       buddy: currentBuddy(this.p, festivalActive(this.p) ? ensureFestival(this.p).acc : undefined),
       ...extra,
+      onEnd: (result) => {
+        if (result.throwsUsed !== -1 && !extra.endless) {
+          this.roundsThisSession++;
+          const breakAfter = this.p.settings.breakAfterRounds;
+          if (breakAfter && this.roundsThisSession % breakAfter === 0) this.breakDue = true;
+        }
+        extra.onEnd(result);
+      },
       scopeLevel: mods.scopeLevel,
       splash: mods.splash,
       extraThrows: mods.extraThrows,
@@ -758,13 +773,33 @@ export class App {
   }
 
   skinGlow() {
-    return (SKINS.find((s) => s.id === this.p.skin) ?? SKINS[0]).glow;
+    return (SKINS.find((s) => s.id === this.p.skin && (!this.p.settings.hidePaidLooks || (!s.starter && !s.pass))) ?? SKINS[0]).glow;
   }
 
   // ------------------------------------------------------------------ purchases
+  get refundQuietUntil() {
+    return refundQuietUntil(this.p);
+  }
+
   priceOf(key: string) {
     const pr = PRODUCT_BY_KEY[key];
-    return this.prices[pr.id] ?? pr.fallbackPrice;
+    return pr ? (this.prices[pr.id]?.display ?? (this.iap.kind === 'native' ? '' : pr.fallbackPrice)) : '';
+  }
+
+  canBuy(key: string) {
+    const pr = PRODUCT_BY_KEY[key];
+    return (
+      !!pr &&
+      (this.iap.kind !== 'native' || !!this.prices[pr.id]?.display) &&
+      !(key === 'starter' && this.p.starter) &&
+      !(key === 'pass' && this.p.pass) &&
+      !(key === 'piggy' && (!this.p.piggy || this.p.pendingPiggy))
+    );
+  }
+
+  currencyOf(key: string) {
+    const pr = PRODUCT_BY_KEY[key];
+    return pr ? this.prices[pr.id]?.currency || undefined : undefined;
   }
 
   needGems() {
@@ -775,37 +810,116 @@ export class App {
   async buy(key: string) {
     if (this.busy) return;
     const pr = PRODUCT_BY_KEY[key];
-    if ((key === 'starter' && this.p.starter) || (key === 'pass' && this.p.pass)) return;
+    if (!pr) return;
+    if (this.screen !== 'shop') {
+      this.showShop();
+      return;
+    }
+    if (!this.canBuy(key)) return;
     this.busy = true;
-    if (!(await parentalGate())) {
+    if (!(await parentalGate('buy')) || !(await contentsSheet(pr, this.priceOf(key), this.p.piggy, this.p.roadPoints))) {
       this.busy = false;
       return;
     }
     this.root.classList.add('buying');
     try {
-      const r = await this.iap.purchase(pr);
-      if (r.ok) {
-        this.grant(r.productId ?? pr.id, r.txId ?? `local-${Date.now()}`);
-      } else if (r.cancelled) ledger.count('purchase_cancelled');
-      else if (r.error) {
-        ledger.count(/pending|ask to buy/i.test(r.error) ? 'purchase_pending' : 'purchase_failed');
-        toast(r.error, 'bad');
+      if (key === 'piggy') {
+        this.p.pendingPiggy = { amount: this.p.piggy, startedAt: Date.now() };
+        await saveProfileChecked(this.p);
       }
+      const r = await this.iap.purchase(pr);
+      if (r.ok && r.txId) {
+        this.root.classList.remove('buying');
+        await this.handleTransaction({ productId: r.productId ?? pr.id, txId: r.txId });
+        if (this.lastReceipt) await this.lastReceipt;
+      } else if (r.pending) {
+        ledger.count('purchase_pending');
+        toast(t("Waiting for a grown-up's approval"));
+      } else if (r.cancelled) {
+        if (key === 'piggy') this.p.pendingPiggy = null;
+        ledger.count('purchase_cancelled');
+      } else if (r.error) {
+        if (key === 'piggy') this.p.pendingPiggy = null;
+        ledger.count('purchase_failed');
+        toast(t('Purchase could not be completed'), 'bad');
+      }
+    } catch {
+      toast(t('Purchase could not be completed'), 'bad');
     } finally {
+      if (key === 'piggy') await this.saveNow();
       this.busy = false;
       this.root.classList.remove('buying');
+      if (this.screen === 'shop') this.refresh();
     }
   }
 
-  grant(productId: string, txId: string) {
+  private handleTransaction(event: IapEvent): Promise<void> {
+    const running = this.processingTx.get(event.txId);
+    if (running) return running;
+    const task = this.txQueue
+      .then(() => this.grant(event.productId, event.txId, event.purchasedAt))
+      .catch(() => toast(t('Purchase could not be completed'), 'bad'))
+      .finally(() => this.processingTx.delete(event.txId));
+    this.txQueue = task;
+    this.processingTx.set(event.txId, task);
+    return task;
+  }
+
+  async grant(productId: string, txId: string, purchasedAt = Date.now()) {
+    const alreadyProcessed = this.p.processedTx.includes(txId);
+    const product = PRODUCT_BY_ID[productId];
+    const alreadyOwned = (product?.key === 'starter' && this.p.starter) || (product?.key === 'pass' && this.p.pass);
     const g = grantProduct(this.p, productId, txId);
-    if (!g) return;
-    ledger.count('purchase_ok');
-    this.saveNow();
+    if (!g && alreadyProcessed) {
+      await saveProfileChecked(this.p);
+      if (this.iap.kind === 'native') await this.iap.finish(txId).catch(() => {});
+      return;
+    }
+    if (g && !alreadyOwned) {
+      ledger.count('purchase_ok');
+    }
+    if (product && g && !alreadyOwned) {
+      const storePrice = this.prices[product.id];
+      if (storePrice || this.iap.kind !== 'native')
+        recordPurchase({
+          tx: txId,
+          key: product.key,
+          cents: Math.round((storePrice?.amount ?? Number(product.fallbackPrice.slice(1))) * 100),
+          currency: storePrice?.currency || 'USD',
+          at: purchasedAt,
+        });
+      else this.p.pendingPurchaseRecords.push({ tx: txId, key: product.key, at: purchasedAt });
+    }
+    await flushLedger(product && g && !alreadyOwned && (this.prices[product.id] || this.iap.kind !== 'native') ? txId : undefined);
+    await saveProfileChecked(this.p);
+    if (this.iap.kind === 'native') await this.iap.finish(txId).catch(() => {});
+    if (!g || alreadyOwned) return;
     sfx.gem();
     haptic.success();
-    toast(g.gems ? t('Thank you! +{n} 💎', { n: fmt(g.gems) }) : t('{name} unlocked!', { name: t(g.title) }), 'good');
     this.refresh();
+    if (product) this.lastReceipt = receiptCard(product, g.gems);
+  }
+
+  private async flushPendingPurchaseRecords() {
+    const unresolved: Profile['pendingPurchaseRecords'] = [];
+    const recorded: string[] = [];
+    for (const entry of this.p.pendingPurchaseRecords) {
+      const product = PRODUCT_BY_KEY[entry.key];
+      const price = product && this.prices[product.id];
+      if (!price) {
+        unresolved.push(entry);
+        continue;
+      }
+      recordPurchase({ tx: entry.tx, key: entry.key, cents: Math.round(price.amount * 100), currency: price.currency, at: entry.at });
+      recorded.push(entry.tx);
+    }
+    try {
+      for (const tx of recorded) await flushLedger(tx);
+    } catch {
+      return;
+    }
+    this.p.pendingPurchaseRecords = unresolved;
+    if (recorded.length) await saveProfileChecked(this.p).catch(() => {});
   }
 
   /** Mark one-time purchases as owned (flags only — gems are never re-granted). */
@@ -820,6 +934,7 @@ export class App {
       }
       if (key === 'pass' && !this.p.pass) {
         this.p.pass = true;
+        (this.p.meta as Profile['meta'] & { passLooksOnly?: boolean }).passLooksOnly = true;
         restored++;
       }
     }
@@ -827,8 +942,39 @@ export class App {
     return restored;
   }
 
-  private async syncOwned() {
-    if (this.applyOwned(await this.iap.owned())) this.refresh();
+  private async reconcilePurchases() {
+    if (this.iap.kind === 'native') {
+      try {
+        const transactions = await this.iap.transactions();
+        for (const event of transactions) {
+          const product = PRODUCT_BY_ID[event.productId];
+          if (!product || event.revokedAt || this.p.processedTx.includes(event.txId)) continue;
+          if (!event.purchasedAt || event.purchasedAt < this.p.meta.installed - 60_000) continue;
+          await this.handleTransaction(event);
+        }
+      } catch {
+        // StoreKit can be unavailable offline; retry next launch.
+      }
+    }
+    try {
+      const owned = await this.iap.owned();
+      if (this.iap.kind === 'native') {
+        for (const id of Object.keys(PRODUCT_BY_ID)) {
+          const key = PRODUCT_BY_ID[id].key;
+          if (
+            !PRODUCT_BY_ID[id].consumable &&
+            !owned.includes(id) &&
+            ((key === 'starter' && this.p.starter) || (key === 'pass' && this.p.pass))
+          ) {
+            revokeProduct(this.p, id);
+            await this.saveNow();
+          }
+        }
+      }
+      if (this.applyOwned(owned)) this.refresh();
+    } catch {
+      // Keep local ownership if the store cannot answer.
+    }
   }
 
   async restore() {

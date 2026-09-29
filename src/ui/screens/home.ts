@@ -10,9 +10,11 @@ import type { App } from '../app';
 import { t, tp } from '../../i18n';
 import { unlocked } from '../../meta/unlocks';
 import { nextUp } from '../../meta/nextup';
+import { STYLES_RELEASE } from '../../meta/cosmetics';
 
 export function showHome(app: App) {
   const p = app.p;
+  document.documentElement.classList.toggle('styles-new', p.stylesNewSeen !== STYLES_RELEASE);
   const now = Date.now();
   const next = levelMeta(p.level);
   const ch = chapterOf(p.level);

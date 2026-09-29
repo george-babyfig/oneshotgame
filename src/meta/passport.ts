@@ -90,7 +90,7 @@ export function titlesOwned(p: Profile): TitleDef[] {
   const out: TitleDef[] = RANK_TITLES.slice(0, Math.min(p.rank, RANK_TITLES.length)).map((x) => ({ id: `rank:${x}`, text: x }));
   for (const a of ACHIEVEMENTS) if (a.done(p)) out.push({ id: `ach:${a.id}`, text: a.title });
   for (const x of recordTitles(p)) out.push({ id: `rec:${x}`, text: x });
-  if (p.pass) out.push({ id: 'pass', text: 'Star Captain', gold: true });
+  if (p.pass && !p.settings.hidePaidLooks) out.push({ id: 'pass', text: 'Star Captain', gold: true });
   return out;
 }
 
@@ -121,13 +121,13 @@ export const BANNERS: BannerDef[] = [
     unlocked: (p) => p.rank >= 4 || p.chapters.includes(4),
     how: 'Open chapter 4 chest',
   },
-  { id: 6, name: 'Aurora', colors: ['#6ef2c0', '#6a4dff'], unlocked: (p) => p.starter, how: 'Starter Pack' },
+  { id: 6, name: 'Aurora', colors: ['#6ef2c0', '#6a4dff'], unlocked: (p) => p.starter, how: 'Starter Crew' },
   { id: 7, name: 'Gilded', colors: ['#ffd24a', '#8a4a10'], unlocked: (p) => p.pass, how: 'Cosmic Pass' },
 ];
 
 export function currentBanner(p: Profile): BannerDef {
   const b = BANNERS[p.passport.banner];
-  return b && b.unlocked(p) ? b : BANNERS[0];
+  return b && b.unlocked(p) && (!p.settings.hidePaidLooks || b.id < 6) ? b : BANNERS[0];
 }
 
 // ------------------------------------------------------------------ badges

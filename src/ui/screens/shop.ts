@@ -1,14 +1,9 @@
-// Shop: one-time offers, piggy bank, gem packs, boosters and atmospheres.
-import { h, btn, fmt, toast, confirmBox } from '../dom';
-import { sfx } from '../audio';
-import { BOOSTERS, PRODUCTS, SKINS, type BoosterId } from '../../meta/config';
-import { spendGems } from '../../meta/economy';
+// The shop is a section of the gated Grown-ups area.
+import { h, btn, fmt } from '../dom';
+import { PRODUCTS } from '../../meta/tuning';
 import type { App } from '../app';
 import { t } from '../../i18n';
-import { parentalGate } from '../flows/gate';
-import { unlocked } from '../../meta/unlocks';
-
-const PACK_ICONS = ['💎', '👝', '🧰', '🌌'];
+import { refreshGrownups } from './grownups';
 
 export function skinSwatch(glow: string) {
   if (glow === 'aurora') return 'conic-gradient(#ff8fc8,#6ec8ff,#b8ff6e,#ffd24a,#ff8fc8)';
@@ -16,153 +11,67 @@ export function skinSwatch(glow: string) {
   return glow;
 }
 
-export function showShop(app: App) {
-  const p = app.p;
-  const starter =
-    !p.starter && p.chapters.length >= 1
-      ? h(
-          'div',
-          { class: 'offer' },
-          h('div', { class: 'offer-t' }, t('Starter Pack')),
-          h(
-            'ul',
-            null,
-            h('li', null, t('💎 300 gems')),
-            h('li', null, t('🌠 ✨ 🔭 5 of every booster')),
-            h('li', null, t('🌈 Aurora atmosphere')),
-          ),
-          btn(app.priceOf('starter'), 'buy-real wide', () => app.buy('starter')),
-        )
-      : null;
-  const pass =
-    !p.pass && unlocked(p, 'star_road')
-      ? h(
-          'div',
-          { class: 'offer pass' },
-          h('div', { class: 'offer-t' }, t('🌌 Cosmic Pass')),
-          h(
-            'p',
-            null,
-            t(
-              'Unlock the golden lane of the Star Road: a second reward at every tier, forever. Rewards you already passed are waiting for you.',
-            ),
-          ),
-          h(
-            'div',
-            { class: 'row' },
-            btn(t('See rewards'), 'ghost', () => app.showPass()),
-            btn(app.priceOf('pass'), 'buy-real', () => app.buy('pass')),
-          ),
-        )
-      : null;
-  const packs = h(
-    'div',
-    { class: 'packs' },
-    ...PRODUCTS.filter((x) => x.consumable && x.gems > 0).map((x, i) =>
-      h(
-        'button',
-        { class: 'pack', onclick: () => app.buy(x.key) },
-        h('div', { class: 'pi' }, PACK_ICONS[i]),
-        h('b', null, fmt(x.gems)),
-        h('small', null, t(x.title)),
-        h('div', { class: 'pp' }, app.priceOf(x.key)),
-      ),
-    ),
-  );
-  const boosters = h(
-    'div',
-    { class: 'bshop' },
-    ...(Object.keys(BOOSTERS) as BoosterId[]).map((id) => {
-      const b = BOOSTERS[id];
+async function purchase(app: App, key: string) {
+  await app.buy(key);
+  refreshGrownups(app);
+}
+
+export function shopSection(app: App) {
+  if (!app.p.chapters.length)
+    return h(
+      'section',
+      { class: 'grownups-section' },
+      h('h2', null, t('Shop')),
+      h('p', null, t('The shop opens after the first chapter chest.')),
+    );
+  return h(
+    'section',
+    { class: 'grownups-section' },
+    h('h2', null, t('Shop')),
+    ...PRODUCTS.map((product) => {
+      const piggy = product.key === 'piggy';
+      const owned = (product.key === 'starter' && app.p.starter) || (product.key === 'pass' && app.p.pass);
+      const buy = btn(
+        owned ? t('Owned') : app.priceOf(product.key) || t('Price unavailable'),
+        'buy-real',
+        () => void purchase(app, product.key),
+      );
+      buy.disabled = !app.canBuy(product.key);
       return h(
         'div',
-        { class: 'up-row' },
-        h('div', { class: 'up-ic' }, b.emoji),
-        h('div', { class: 'up-body' }, h('b', null, `${t(b.name)} ×${p.boosters[id]}`), h('small', null, t(b.desc))),
-        btn(`💎${b.gems}`, 'buy', () => {
-          if (!spendGems(p, b.gems, 'booster')) return app.needGems();
-          p.boosters[id]++;
-          sfx.coin();
-          app.save();
-          showShop(app);
-        }),
-      );
-    }),
-  );
-  const skins = h(
-    'div',
-    { class: 'skins' },
-    ...SKINS.map((s) => {
-      const owned = p.skins.includes(s.id);
-      const on = p.skin === s.id;
-      return h(
-        'button',
-        {
-          class: `skin${on ? ' on' : ''}`,
-          onclick: async () => {
-            if (owned) p.skin = s.id;
-            else if (s.starter) return toast(t('Included in the Starter Pack'));
-            else if (s.pass) return toast(t('A Cosmic Pass reward on the Star Road'));
-            else if (s.road) return toast(t('Earn it on the Star Road'));
-            else {
-              if (p.gems < s.gems) return app.needGems();
-              if (!(await confirmBox(t('Buy {name} for 💎{n}?', { name: t(s.name), n: s.gems }), t('Buy')))) return;
-              if (!spendGems(p, s.gems, 'atmosphere')) return app.needGems();
-              p.skins.push(s.id);
-              p.skin = s.id;
-            }
-            sfx.coin();
-            app.save();
-            showShop(app);
-          },
-        },
-        h('div', { class: 'sk-orb', style: `--g:${skinSwatch(s.glow)}` }),
-        h('b', null, t(s.name)),
+        { class: 'grownups-product' },
         h(
-          'small',
+          'div',
           null,
-          on
-            ? t('Equipped')
-            : owned
-              ? t('Equip')
-              : s.starter
-                ? t('Starter Pack')
-                : s.pass
-                  ? t('Cosmic Pass')
-                  : s.road
-                    ? t('Star Road')
-                    : `💎${s.gems}`,
+          h('b', null, t(product.title)),
+          h(
+            'small',
+            null,
+            piggy
+              ? app.p.pendingPiggy
+                ? t('{n} gems saved', { n: fmt(app.p.pendingPiggy.amount) })
+                : app.p.piggy
+                  ? t('{n} gems saved', { n: fmt(app.p.piggy) })
+                  : t('Nothing saved yet')
+              : t(product.description),
+          ),
+          piggy && app.p.pendingPiggy ? h('small', null, t("Waiting for a grown-up's approval")) : null,
+          // Ask to Buy sends no decline, so a parent can stop waiting; a late approval still grants.
+          piggy && app.p.pendingPiggy
+            ? btn(t('Stop waiting'), 'ghost small', () => {
+                app.p.pendingPiggy = null;
+                app.save();
+                refreshGrownups(app);
+              })
+            : null,
         ),
+        buy,
       );
     }),
   );
-  app.mount(
-    h(
-      'div',
-      { class: 'screen page' },
-      app.topBar(true),
-      h('div', { class: 'page-title' }, t('Shop')),
-      h(
-        'div',
-        { class: 'scroll' },
-        starter,
-        h('div', { class: 'sec-title' }, t('Gems')),
-        packs,
-        pass,
-        h('div', { class: 'sec-title' }, t('Boosters')),
-        boosters,
-        h('div', { class: 'sec-title' }, t('Atmospheres')),
-        skins,
-        btn(t('Restore purchases'), 'ghost small restore-purchases', async () => {
-          if (await parentalGate('buy')) await app.restore();
-        }),
-        h(
-          'p',
-          { class: 'tiny muted' },
-          t('Payment is charged to your Apple ID. Gems have no cash value. No random rewards — you always see exactly what you get.'),
-        ),
-      ),
-    ),
-    'shop',
-  );
+}
+
+// Legacy app routes must pass through the same gate as Settings and Styles.
+export function showShop(app: App) {
+  refreshGrownups(app);
 }
