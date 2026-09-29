@@ -35,6 +35,7 @@ import {
   setPageBg,
 } from '../src/meta/stickers';
 import { SPECIES } from '../src/core/world';
+import { FESTIVAL_UNLOCK_LEVEL } from '../src/meta/unlocks';
 
 const SEPT = new Date(2026, 8, 20);
 
@@ -51,7 +52,7 @@ describe('festivals', () => {
     const p = defaultProfile();
     spotFestival(p, SEPT);
     expect(p.festival.spotted).toBe(0); // level 1: not unlocked yet
-    p.level = 10;
+    p.level = FESTIVAL_UNLOCK_LEVEL;
     for (let i = 0; i < FESTIVAL_TIERS[2].spot; i++) spotFestival(p, SEPT);
     expect(festivalReady(p, SEPT)).toEqual([0, 1, 2]);
     const gems = p.gems;
@@ -72,7 +73,7 @@ describe('festivals', () => {
   it("plays festival music only until this month's track is finished", () => {
     const p = defaultProfile();
     expect(festivalLive(p, SEPT)).toBe(false); // not unlocked yet
-    p.level = 10;
+    p.level = FESTIVAL_UNLOCK_LEVEL;
     expect(festivalLive(p, SEPT)).toBe(true);
     for (let i = 0; i < FESTIVAL_TIERS[2].spot; i++) spotFestival(p, SEPT);
     FESTIVAL_TIERS.forEach((_, i) => claimFestival(p, i, SEPT));

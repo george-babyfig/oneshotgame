@@ -13,6 +13,8 @@ describe('buddy', () => {
     expect(buddyEligible(p)).toEqual([]);
     expect(setBuddy(p, 'bunny')).toBe(false);
     p.sightings.bunny = BUDDY_AT;
+    expect(buddyEligible(p)).toEqual([]);
+    p.level = 18;
     expect(buddyEligible(p)).toEqual(['bunny']);
     expect(setBuddy(p, 'bunny')).toBe(true);
     expect(setBuddy(p, 'nope')).toBe(false);
@@ -36,9 +38,10 @@ describe('round 6 tie-ins', () => {
     expect(need('spot6')(p)).toBe(false);
     p.level = FESTIVAL_UNLOCK_LEVEL;
     expect(need('spot6')(p)).toBe(true);
-    expect(need('voyage1')(p)).toBe(false);
     p.level = VOYAGE_UNLOCK_LEVEL;
     expect(need('voyage1')(p)).toBe(true);
+    p.level = VOYAGE_UNLOCK_LEVEL - 1;
+    expect(need('voyage1')(p)).toBe(false);
     // a new player never gets a quest they cannot do
     for (let d = 1; d <= 28; d++) {
       const q = defaultProfile();
@@ -52,7 +55,7 @@ describe('round 6 tie-ins', () => {
   it('sends festival, voyage and buddy letters once', () => {
     const p = defaultProfile();
     p.tutorial = true;
-    p.level = 20;
+    p.level = FESTIVAL_UNLOCK_LEVEL;
     p.sightings.otter = BUDDY_AT;
     const now = new Date(2026, 9, 3);
     checkMail(p, now);

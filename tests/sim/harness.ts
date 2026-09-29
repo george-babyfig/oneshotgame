@@ -20,7 +20,7 @@ export interface BotPolicy {
 
 function oneStep(context: BotContext): number {
   const { level, planet, turn, nova, labLevel } = context;
-  const state = roundState(planet);
+  const state = roundState(planet, level.nova);
   let best = -Infinity;
   let aim = 0;
   for (let sector = 0; sector < SECTORS; sector++) {
@@ -69,9 +69,11 @@ export interface PlayResult {
 }
 
 export function playLevel(level: LevelDef, policy: BotPolicy, random: () => number): PlayResult {
-  let state = roundState(level.start);
+  let state = roundState(level.start, level.nova);
   let halfStars = 0;
-  for (let turn = 0; turn < level.throws; turn++) {
+  let throws = level.throws;
+  let gifts = 0;
+  for (let turn = 0; turn < throws; turn++) {
     const nova = state.charge >= NOVA_CHARGE;
     const aim = policy.chooseAim({ level, planet: state.planet, turn, nova, labLevel: policy.labLevel, random });
     state = stepRound(
@@ -81,6 +83,14 @@ export function playLevel(level: LevelDef, policy: BotPolicy, random: () => numb
       ROUND_RULES_V0,
     ).state;
     if (turn + 1 === Math.floor(level.throws / 2)) halfStars = starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level);
+    if (level.n <= 3 && turn + 1 === throws && starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level) === 0) {
+      if (gifts < 2) {
+        gifts++;
+        throws += 3;
+      } else {
+        state.bonus += Math.max(0, level.stars[0] - lifeScore(state.planet) - state.bonus);
+      }
+    }
   }
   const score = lifeScore(state.planet) + state.bonus;
   return {

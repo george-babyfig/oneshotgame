@@ -14,7 +14,7 @@ import { EVENTS } from '../src/meta/events';
 import { RANK_TITLES, RANK_UNLOCKS } from '../src/meta/rank';
 import { CHAPTER_NAMES } from '../src/meta/progression';
 import { ITEMS } from '../src/meta/visitors';
-import { COACH } from '../src/meta/coach';
+import { COACH, COACH_EVENTS } from '../src/meta/coach';
 import { COSMETICS, SLOT_NAMES } from '../src/meta/cosmetics';
 import { BANNERS } from '../src/meta/passport';
 import { ACHIEVEMENTS } from '../src/meta/achievements';
@@ -65,6 +65,7 @@ export function allKeys(): string[] {
   Object.values(RANK_UNLOCKS).forEach(add);
   CHAPTER_NAMES.forEach(add);
   Object.values(COACH).forEach((tips) => Object.values(tips).forEach(add));
+  Object.values(COACH_EVENTS).forEach(add);
   ITEMS.forEach(add);
   COSMETICS.forEach((c) => add(c.name));
   Object.values(SLOT_NAMES).forEach(add);

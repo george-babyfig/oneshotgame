@@ -61,7 +61,22 @@ function checkRows(name: string, rows: Row[]) {
 
 // ------------------------------------------------------------------ encoding
 /** Every LevelDef field. A new field must be added here (and to the encoder) on purpose. */
-const LEVEL_KEYS = ['difficulty', 'goals', 'hue', 'n', 'name', 'queue', 'seed', 'size', 'spin', 'stars', 'start', 'throws', 'twist'];
+const LEVEL_KEYS = [
+  'difficulty',
+  'goals',
+  'hue',
+  'n',
+  'name',
+  'nova',
+  'queue',
+  'seed',
+  'size',
+  'spin',
+  'stars',
+  'start',
+  'throws',
+  'twist',
+];
 const PLANET_KEYS = ['sectors', 'speciesFound'];
 const SECTOR_KEYS = ['biome', 'heat', 'land', 'life', 'species', 'water'];
 
@@ -79,6 +94,7 @@ function levelRow(id: string, L: LevelDef): Row {
     name: L.name,
     hue: L.hue,
     difficulty: L.difficulty,
+    ...(L.nova ? {} : { nova: false }),
     twist: L.twist,
     spin: L.spin,
     size: L.size,
@@ -153,13 +169,13 @@ function modeRows(): Row[] {
  * It must reproduce greedyPlan's final planet exactly (checked below), so the moves
  * are the solver's real line of play: best `after` wins, first sector on ties.
  */
-function greedyMoves(start: Planet, queue: Kind[], throws: number, splash = 0) {
+function greedyMoves(start: Planet, queue: Kind[], throws: number, splash = 0, novaEnabled = true) {
   const p = clonePlanet(start);
   const moves: [Kind, number, boolean][] = [];
   let charge = 0;
   for (let t = 0; t < throws; t++) {
     const kind = queue[t];
-    const boost = { nova: charge >= NOVA_CHARGE };
+    const boost = { nova: novaEnabled && charge >= NOVA_CHARGE };
     let best = -1;
     let bestAt = 0;
     for (let i = 0; i < SECTORS; i++) {
@@ -171,7 +187,7 @@ function greedyMoves(start: Planet, queue: Kind[], throws: number, splash = 0) {
     }
     const res = impact(p, kind, bestAt, splash, boost);
     moves.push([kind, bestAt, !!boost.nova]);
-    charge = boost.nova ? 0 : Math.min(NOVA_CHARGE, charge + novaCharge(res.changed.length, res.spawned.length));
+    charge = boost.nova ? 0 : novaEnabled ? Math.min(NOVA_CHARGE, charge + novaCharge(res.changed.length, res.spawned.length)) : 0;
   }
   return { moves, planet: p };
 }
@@ -180,13 +196,13 @@ function greedyRows(): Row[] {
   const rows: Row[] = [];
   for (let n = 1; n <= 60; n++) {
     const L = makeLevel(n);
-    const plan = greedyPlan(L.start, L.queue, L.throws);
-    const replay = greedyMoves(L.start, L.queue, L.throws);
+    const plan = greedyPlan(L.start, L.queue, L.throws, 0, L.nova);
+    const replay = greedyMoves(L.start, L.queue, L.throws, 0, L.nova);
     expect(replay.planet, `PP-${n}: replayed greedy line matches greedyPlan`).toEqual(plan);
     rows.push({
       id: `PP-${n}`,
       score: lifeScore(plan),
-      greedyScore: greedyScore(L.start, L.queue, L.throws),
+      greedyScore: greedyScore(L.start, L.queue, L.throws, 0, L.nova),
       moves: replay.moves.map(([k, at, nova]) => `${k}@${at}${nova ? '!' : ''}`).join(' '),
       final: planetRow(plan),
     });

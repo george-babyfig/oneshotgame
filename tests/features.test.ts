@@ -18,17 +18,17 @@ import { difficultyOf, makeLevel } from '../src/core/levels';
 import { SPECIES } from '../src/core/world';
 
 describe('momentum', () => {
-  it('builds to 3, is saved once a day by the shield, then breaks', () => {
+  it('builds to 3 and pauses through losses', () => {
     const p = defaultProfile(0);
     momentumWin(p);
-    expect(p.momentum.streak).toBe(0); // locked before level 6
+    expect(p.momentum.streak).toBe(0); // locked before level 17
     p.level = MOMENTUM_UNLOCK;
     for (let i = 0; i < 5; i++) momentumWin(p);
     expect(p.momentum.streak).toBe(3);
-    expect(momentumLoss(p, '2026-02-02')).toBe('shield');
+    expect(momentumLoss(p, '2026-02-02')).toBeNull();
     expect(p.momentum.streak).toBe(3);
-    expect(momentumLoss(p, '2026-02-02')).toBe('lost');
-    expect(p.momentum.streak).toBe(0);
+    expect(momentumLoss(p, '2026-02-02')).toBeNull();
+    expect(p.momentum.streak).toBe(3);
     expect(momentumLoss(p, '2026-02-02')).toBeNull();
   });
 });
@@ -103,12 +103,14 @@ describe('modes', () => {
   });
 
   it('hard planets follow the rhythm and have tougher targets', () => {
-    expect(difficultyOf(5)).toBe('hard');
+    expect(difficultyOf(5)).toBe('normal');
+    expect(difficultyOf(10)).toBe('normal');
+    expect(difficultyOf(15)).toBe('hard');
     expect(difficultyOf(9)).toBe('normal'); // no Super Hard in chapter one
     expect(difficultyOf(19)).toBe('super');
     expect(difficultyOf(7)).toBe('normal');
     expect(difficultyOf(5, 'DAY-x')).toBe('normal');
-    expect(makeLevel(10).difficulty).toBe('hard');
+    expect(makeLevel(10).difficulty).toBe('normal');
   });
 });
 

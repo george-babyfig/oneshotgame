@@ -13,6 +13,8 @@ import { rarityName } from './text';
 import { toast } from './dom';
 import { CONTINUE_COST, CONTINUE_THROWS } from '../meta/continues';
 import { waysToEarnGems } from './flows/earn';
+import { COACH_EVENTS, practiceHelp, type CoachEvent } from '../meta/coach';
+import type { Unlock } from '../meta/unlocks';
 
 import type { LevelScene } from './game';
 
@@ -45,6 +47,7 @@ export function buildHud(scene: LevelScene) {
   );
   scene.discoverEl = h('div', { class: 'discover' });
   scene.coachEl = h('div', { class: 'coach' });
+  scene.liveEl = h('div', { class: 'sr-only', 'aria-live': 'polite', 'aria-atomic': 'true' });
   return h(
     'div',
     { class: 'hud' },
@@ -68,6 +71,7 @@ export function buildHud(scene: LevelScene) {
     scene.goalsEl,
     twist,
     h('div', { class: 'banners' }, scene.coachEl, scene.discoverEl),
+    scene.liveEl,
     scene.finishEl,
     h(
       'div',
@@ -165,6 +169,7 @@ export function checkStars(scene: LevelScene) {
   const got = scene.starsNow(scene.shownScore);
   if (got <= scene.starsGot) return;
   scene.starsGot = got;
+  speak(scene, tp(got, '{n} star earned', '{n} stars earned'));
   sfx.star(got - 1);
   haptic.success();
   if (got === 3) {
@@ -206,10 +211,14 @@ export function renderGoals(scene: LevelScene) {
   if (n > scene.goalsDone) {
     scene.goalsDone = n;
     const all = n === scene.L.goals.length;
+    const previousStars = scene.starsGot;
     if (all) {
       scene.renderScore();
       scene.checkStars();
     }
+    scene.showCoachEvent('goal');
+    const message = all ? t('All goals complete!') : t('Goal complete!');
+    speak(scene, scene.starsGot > previousStars ? `${message} ${tp(scene.starsGot, '{n} star earned', '{n} stars earned')}` : message);
     setTimeout(() => {
       scene.popup(scene.cx, scene.cy - scene.R * 1.6, all ? t('All goals complete!') : t('Goal complete!'), '#9dffb0', 24, 1.6);
       sfx.star(all ? 2 : 0);
@@ -302,6 +311,65 @@ export function announce(scene: LevelScene, id: string, at: number, firstArrival
   }
 }
 
+/** Replace stale announcements, including rapid Meteor Rush throws. */
+export function speak(scene: LevelScene, message: string) {
+  clearTimeout(scene.liveTimer);
+  scene.liveEl.textContent = '';
+  scene.liveTimer = window.setTimeout(() => {
+    if (!scene.destroyed) scene.liveEl.textContent = message;
+  }, 80);
+}
+
+export function announceLanding(scene: LevelScene, biome: string, delta: number, creature?: string) {
+  const land = t(biome);
+  const friend = creature ? t(creature) : '';
+  const text =
+    delta === 0
+      ? creature
+        ? t('{land}. {creature} moved in.', { land, creature: friend })
+        : land
+      : creature
+        ? delta >= 0
+          ? t('{land}. Plus {n} life. {creature} moved in.', { land, n: delta, creature: friend })
+          : t('{land}. {n} less life. {creature} moved in.', { land, n: -delta, creature: friend })
+        : delta >= 0
+          ? t('{land}. Plus {n} life.', { land, n: delta })
+          : t('{land}. {n} less life.', { land, n: -delta });
+  speak(scene, text);
+}
+
+/** The first arriving creature carries its landing points into the life bar. */
+export function flyCreaturePoints(scene: LevelScene, at: number, points: number) {
+  if (scene.firstCreaturePointsShown || points <= 0) return;
+  scene.firstCreaturePointsShown = true;
+  const bar = scene.hudFill.parentElement;
+  if (!bar) return;
+  bar.classList.add('coach-focus');
+  window.setTimeout(() => bar.classList.remove('coach-focus'), 1700);
+  if (scene.o.reduceMotion) return;
+  const [x, y] = scene.sectorPoint(at, 1.2);
+  const canvas = scene.canvas.getBoundingClientRect();
+  const target = bar.getBoundingClientRect();
+  const fromX = canvas.left + x;
+  const fromY = canvas.top + y;
+  const toX = target.left + target.width / 2;
+  const toY = target.top + target.height / 2;
+  const pip = h('div', { class: 'life-fly' }, t('+{n} life', { n: points }));
+  document.body.append(pip);
+  if (!pip.animate) {
+    pip.remove();
+    return;
+  }
+  const animation = pip.animate(
+    [
+      { transform: `translate(${fromX}px, ${fromY}px) scale(1)`, opacity: 1 },
+      { transform: `translate(${toX}px, ${toY}px) scale(.75)`, opacity: 0.2 },
+    ],
+    { duration: 850, easing: 'ease-in', fill: 'forwards' },
+  );
+  animation.finished.then(() => pip.remove()).catch(() => pip.remove());
+}
+
 export function showDiscover(scene: LevelScene) {
   if (scene.discoverBusy || scene.ended) return;
   const id = scene.discoverQueue.shift();
@@ -332,26 +400,77 @@ export function showDiscover(scene: LevelScene) {
 
 export function showCoach(scene: LevelScene, k: number) {
   const text = scene.o.coach?.[k];
-  if (!text) {
-    scene.coachEl.classList.remove('show');
-    return;
-  }
-  scene.coachEl.replaceChildren(h('span', { class: 'coach-ic' }, '💡'), h('span', null, t(text)));
+  if (!text) return;
+  scene.coachEl.replaceChildren(h('span', { class: 'coach-ic' }, k === 0 && scene.L.n === 1 ? '↑' : '💡'), h('span', null, t(text)));
+  scene.coachEl.classList.toggle('star-tip', k === 0 && scene.L.n === 1);
   scene.coachEl.classList.remove('show');
   void scene.coachEl.offsetWidth;
-  scene.coachEl.classList.add('show');
+  revealCoach(scene);
 }
 
-export function introCard(scene: LevelScene, kind: Kind) {
-  const k = KINDS[kind];
+function revealCoach(scene: LevelScene) {
+  const hud = scene.coachEl.closest('.hud');
+  const banners = scene.coachEl.parentElement;
+  if (hud && banners && scene.L.goals.length) {
+    banners.style.top = `${Math.max(112, scene.goalsEl.getBoundingClientRect().bottom - hud.getBoundingClientRect().top + 8)}px`;
+  }
+  scene.coachEl.classList.add('show');
+  clearTimeout(scene.coachTimer);
+  scene.coachTimer = window.setTimeout(() => scene.coachEl.classList.remove('show'), 4000);
+}
+
+const shownEvents = new Set<CoachEvent>();
+
+export function showCoachEvent(scene: LevelScene, event: CoachEvent) {
+  if (scene.coachEvents.has(event) || shownEvents.has(event)) return;
+  try {
+    const seen = JSON.parse(localStorage.getItem('pp.coach.events') ?? '[]') as unknown;
+    if (Array.isArray(seen) && seen.includes(event)) return;
+    localStorage.setItem('pp.coach.events', JSON.stringify([...(Array.isArray(seen) ? seen : []), event]));
+  } catch {
+    // An unavailable store still allows one tip per session.
+  }
+  scene.coachEvents.add(event);
+  shownEvents.add(event);
+  scene.coachEl.classList.remove('star-tip');
+  scene.coachEl.replaceChildren(h('span', { class: 'coach-ic' }, '💡'), h('span', null, t(COACH_EVENTS[event])));
+  revealCoach(scene);
+}
+
+const shownIntros = new Set<string>();
+
+export function introCard(scene: LevelScene, row: Unlock) {
+  if (!row.intro || shownIntros.has(row.id)) return;
+  let seen: string[] = [];
+  try {
+    const saved = JSON.parse(localStorage.getItem('pp.coach.intros') ?? '[]') as unknown;
+    if (Array.isArray(saved)) seen = saved as string[];
+  } catch {
+    // A private session still shows each card once in memory.
+  }
+  if (seen.includes(row.id) || (scene.o.allowIntro && !scene.o.allowIntro(row.id))) return;
+  try {
+    localStorage.setItem('pp.coach.intros', JSON.stringify([...seen, row.id]));
+  } catch {
+    // The profile still records the card.
+  }
+  shownIntros.add(row.id);
+  scene.o.onIntro?.(row.id);
+  const kind = row.id in KINDS ? (row.id as Kind) : null;
+  const focus = row.id === 'goals' ? scene.goalsEl : row.id === 'supernova' ? scene.curEl : kind ? scene.curEl : null;
   scene.paused = true;
   const m = modal(
     [
-      h('div', { class: 'm-sub' }, t('New object!')),
-      h('div', { class: 'intro-art' }, projectileCanvas(kind, 110)),
-      h('div', { class: 'm-title' }, t(k.name)),
-      h('p', null, t(k.desc)),
-      btn(t('Got it!'), 'primary wide', () => m.close()),
+      h('div', { class: 'intro-art' }, kind ? projectileCanvas(kind, 110) : h('span', null, row.id === 'goals' ? '★' : '✨')),
+      h('div', { class: 'm-title' }, t(row.intro.title)),
+      h('p', null, t(row.intro.body)),
+      btn(t('Show me'), 'primary wide', () => {
+        m.close();
+        if (focus) {
+          focus.classList.add('coach-focus');
+          window.setTimeout(() => focus.classList.remove('coach-focus'), 3000);
+        }
+      }),
     ],
     { onClose: () => ((scene.paused = false), (scene.modalOpen = null)) },
   );
@@ -536,7 +655,6 @@ export function pause(scene: LevelScene) {
 
 export function afterShot(scene: LevelScene) {
   scene.renderHud();
-  scene.showCoach(scene.throwsUsed);
   if (scene.o.endless) return;
   if (scene.over) {
     clearTimeout(scene.endTimer);
@@ -552,5 +670,37 @@ export function checkEnd(scene: LevelScene) {
   }
   scene.shownScore = scene.score;
   scene.renderScore();
-  scene.endModal(scene.starsNow());
+  const stars = scene.starsNow();
+  const help =
+    !scene.o.competitive && !scene.o.timeLimit && !scene.o.endless
+      ? practiceHelp(scene.L.n, !!scene.o.practice, stars, scene.practiceGifts, !!scene.o.practiceFirstClear)
+      : 'none';
+  if (help !== 'none') {
+    if (help === 'throws') {
+      scene.practiceGifts++;
+      scene.throwsLeft += 3;
+      scene.throwsTotal += 3;
+      scene.renderHud();
+      scene.coachEl.classList.remove('star-tip');
+      scene.coachEl.replaceChildren(h('span', { class: 'coach-ic' }, '✨'), h('span', null, t('Here, 3 more throws!')));
+      revealCoach(scene);
+      speak(scene, t('Here, 3 more throws!'));
+      return;
+    }
+    if (!goalsMet(scene.planet, scene.L.goals)) {
+      scene.practiceGifts++;
+      scene.throwsLeft += 3;
+      scene.throwsTotal += 3;
+      scene.renderHud();
+      speak(scene, t('Here, 3 more throws!'));
+      return;
+    }
+    scene.bonus += Math.max(0, scene.L.stars[0] - scene.score);
+    scene.score = Math.max(scene.score, scene.L.stars[0]);
+    scene.shownScore = scene.score;
+    scene.renderScore();
+    scene.endModal(1);
+    return;
+  }
+  scene.endModal(stars);
 }

@@ -2,11 +2,16 @@ import { WIN_REWARD, GALAXY_RATE, STARTER_BOOSTERS } from './tuning';
 import { earn, spend, type SpendSink } from './wallet';
 // Pure game-economy rules. Everything here mutates a Profile and returns what
 // happened, so the UI can celebrate it and tests can pin it down.
-import { BIOMES, type Planet } from '../core/world';
+import { BIOMES, SPECIES_BY_ID, type Planet } from '../core/world';
 import { DIFFICULTY_DUST, type Difficulty } from '../core/levels';
 import { PIGGY_MAX, PIGGY_PER_WIN, PRODUCT_BY_ID, VAULT_HOURS, GEMS_PER_NEW_SPECIES } from './config';
 import { type GalaxyPlanet, type Profile } from './profile';
 import { questEvent, type QuestEvent } from './progression';
+import { collectAll, pendingHomeProduction } from './homeworld';
+import { openVisitor } from './visitors';
+import { WELCOME_BACK_GEMS } from './tuning';
+import { t } from '../i18n';
+import { unlocked } from './unlocks';
 
 /** Stardust per hour produced by one galaxy planet. */
 export function planetRate(g: Pick<GalaxyPlanet, 'stars' | 'species'>) {
@@ -43,6 +48,58 @@ export function collectDust(p: Profile, now = Date.now(), multiplier = 1) {
   p.lastCollect = now;
   track(p, 'collect');
   return d;
+}
+
+export function awayCollectables(p: Profile, awayMs: number, now = Date.now()) {
+  const vault = pendingDust(p, now);
+  const home = pendingHomeProduction(p.home, now);
+  const visitors = p.visitors.reduce((sum, gift) => sum + gift.dust, 0);
+  const vaultFull = galaxyRate(p) > 0 && now >= vaultFullAt(p);
+  const ready = vaultFull || home.dust > 0 || home.gems > 0 || home.boosters > 0 || p.visitors.length > 0;
+  return {
+    vault,
+    home,
+    visitors,
+    visitorCount: p.visitors.length,
+    welcomeGems: awayMs >= 3 * 86400000 ? WELCOME_BACK_GEMS : 0,
+    show: p.tutorial && awayMs >= 30 * 60_000 && (awayMs >= 4 * 3600000 || ready),
+  };
+}
+
+/** The card gives each engine one collection, and one quest tick for the tap. */
+export function collectAway(p: Profile, awayMs: number, now = Date.now()) {
+  const vault = collectDust(p, now);
+  const home = collectAll(p, now);
+  let visitors = 0;
+  let visitorCount = 0;
+  while (p.visitors.length) {
+    const gift = openVisitor(p);
+    if (!gift) break;
+    visitors += gift.dust;
+    visitorCount++;
+  }
+  if (!vault && (home.dust || home.gems || Object.keys(home.boosters).length || visitorCount)) track(p, 'collect');
+  const welcomeGems = awayMs >= 3 * 86400000 ? WELCOME_BACK_GEMS : 0;
+  if (welcomeGems) earn(p, 'gems', welcomeGems, 'welcome_back');
+  return { vault, home, visitors, visitorCount, welcomeGems };
+}
+
+/** Three stable, gentle facts for a long absence. */
+export function awayRecapLines(p: Profile, awayMs: number, now = Date.now()): [string, string, string] {
+  const friend = p.home.residents.find((resident) => resident.species !== p.home.expedition?.species);
+  const pending = awayCollectables(p, awayMs, now);
+  return [
+    t('Collect all: ✨{dust} · 💎{gems} · {boosters} boosters · {keepsakes} keepsakes', {
+      dust: (pending.vault + pending.home.dust + pending.visitors).toLocaleString('en-US'),
+      gems: (pending.home.gems + pending.welcomeGems).toLocaleString('en-US'),
+      boosters: pending.home.boosters,
+      keepsakes: new Set(p.visitors.map((gift) => gift.memento).filter((id): id is string => !!id && !p.mementos.includes(id))).size,
+    }),
+    friend
+      ? t('{name} is waiting in your Den', { name: t(SPECIES_BY_ID[friend.species]?.name ?? 'Someone') })
+      : t('Your creatures are safe at home'),
+    t("You're on planet {n}", { n: p.level }),
+  ];
 }
 
 export interface LevelOutcome {
@@ -165,5 +222,5 @@ export function spendDust(p: Profile, n: number, sink: SpendSink = 'generic_spen
 
 /** Quest tracking helper (keeps call sites short). */
 export function track(p: Profile, ev: QuestEvent, amount = 1) {
-  return questEvent(p, ev, amount);
+  return unlocked(p, 'quests') ? questEvent(p, ev, amount) : [];
 }

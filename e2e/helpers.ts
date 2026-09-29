@@ -114,12 +114,40 @@ export function expectNoErrors(guard: Guard) {
   expect(guard.errors, 'page errors / console errors').toEqual([]);
 }
 
+/** One modal that appeared during a journey (recorded in the page by `freshInstall`). */
+export interface ModalSeen {
+  /** ms since navigation start */
+  t: number;
+  screen: string;
+  level: number;
+  planet: number | null;
+  /** Home had been shown before this modal appeared. */
+  afterHome: boolean;
+  /** 'results' = a round's end/results sheet (part of the flow); 'popup' = anything that interrupts. */
+  kind: 'results' | 'popup';
+  title: string;
+  cls: string;
+}
+
+export interface Install {
+  /** The first-launch title beat (".first-title") appeared. */
+  titleShown: boolean;
+  /** How long the title beat stayed on screen, in ms (0 if it never showed). */
+  titleMs: number;
+  /** ms from navigation start until planet 1 accepted a fling (null if the app opened on Home). */
+  flingReadyMs: number | null;
+}
+
 /**
  * Fresh install: clear storage once before the app's first script runs, keep the
  * Vite HMR socket closed (developers editing src/ must not reload the page mid-journey),
  * and freeze CSS animations so buttons are stable and boxes measure at rest.
+ *
+ * The first launch opens on the title beat (M3 3.1). `title: 'tap'` (default) taps "Tap to start"
+ * like an eager child; `title: 'wait'` lets it auto-advance (~4.5 s) to time the first fling.
+ * Every modal the page opens is logged (see `modalsSeen`).
  */
-export async function freshInstall(page: Page, opts: { pseudo?: boolean } = {}) {
+export async function freshInstall(page: Page, opts: { pseudo?: boolean; title?: 'tap' | 'wait' } = {}): Promise<Install> {
   await page.routeWebSocket(/^wss?:\/\//, () => {
     /* mocked, never connected: no hot reloads during a journey */
   });
@@ -136,21 +164,85 @@ export async function freshInstall(page: Page, opts: { pseudo?: boolean } = {}) 
     };
     if (document.head) still();
     else document.addEventListener('DOMContentLoaded', still);
+    // Log every modal (and the first Home view) so journeys can count interruptions.
+    const w = window as any;
+    w.__e2eModals = [];
+    w.__e2eHomeAt = null;
+    w.__e2eTitle = { shownAt: null, goneAt: null };
+    new MutationObserver((muts) => {
+      for (const m of muts) {
+        for (const n of m.removedNodes)
+          if (n instanceof HTMLElement && n.matches('.first-title') && w.__e2eTitle.goneAt === null)
+            w.__e2eTitle.goneAt = Math.round(performance.now());
+        for (const n of m.addedNodes) {
+          if (!(n instanceof HTMLElement)) continue;
+          if (n.matches('.first-title') && w.__e2eTitle.shownAt === null) w.__e2eTitle.shownAt = Math.round(performance.now());
+          if (n.matches('.screen.home') && w.__e2eHomeAt === null) w.__e2eHomeAt = performance.now();
+          const box = n.matches('.scrim') ? n.querySelector('.modal') : null;
+          if (!box) continue;
+          const a = w.__app;
+          w.__e2eModals.push({
+            t: Math.round(performance.now()),
+            screen: a?.screen ?? '',
+            level: a?.p?.level ?? 0,
+            planet: a?.scene?.L?.n ?? null,
+            afterHome: w.__e2eHomeAt !== null,
+            kind: box.querySelector('.end-stars') ? 'results' : 'popup',
+            title: (box.querySelector('.m-title, .end-title')?.textContent ?? box.textContent ?? '').trim().slice(0, 60),
+            cls: box.className,
+          });
+        }
+      }
+    }).observe(document, { childList: true, subtree: true });
   });
   await page.goto('/');
   await page.waitForFunction(() => {
     const a = (window as any).__app;
-    return !!a?.p && (a.screen === 'home' || !!a.scene);
+    // the first screen is mounted (App.screen starts as 'home' before init mounts anything)
+    return !!a?.p && !!document.querySelector('.host > .screen');
   });
-  if (opts.pseudo) {
-    await page.waitForFunction(() => !!window.__i18n);
-    await page.evaluate(() => {
+  const titleShown = await page.evaluate(() => (window as any).__app.screen === 'title');
+  if (titleShown) {
+    await expect(page.locator('.first-title')).toBeVisible();
+    if (opts.title !== 'wait') await page.locator('.first-title button').click();
+  }
+  await page.waitForFunction(() => {
+    const a = (window as any).__app;
+    return (a.screen === 'home' && !!document.querySelector('.host > .screen.home')) || !!a.scene;
+  });
+  const titleMs = titleShown
+    ? await page.evaluate(() => {
+        const t = (window as any).__e2eTitle;
+        return (t.goneAt ?? Math.round(performance.now())) - (t.shownAt ?? 0);
+      })
+    : 0;
+  let flingReadyMs: number | null = null;
+  if (await page.evaluate(() => !!(window as any).__app.scene)) {
+    await expect(page.locator('.game-canvas')).toBeVisible();
+    flingReadyMs = await page.evaluate(async () => {
       const a = (window as any).__app;
-      a.p.settings.lang = 'pseudo';
-      window.__i18n!.setLang('pseudo');
-      a.startLevel(1, { tutorial: true });
+      while (!(a.scene?.canAim() && (window as any).__scene)) await new Promise((r) => requestAnimationFrame(r));
+      return Math.round(performance.now());
     });
   }
+  if (opts.pseudo) await usePseudo(page);
+  return { titleShown, titleMs, flingReadyMs };
+}
+
+/** Switch to the dev-only pseudo language and restart planet 1 in it. */
+export async function usePseudo(page: Page) {
+  await page.waitForFunction(() => !!(window as any).__i18n);
+  await page.evaluate(() => {
+    const a = (window as any).__app;
+    a.p.settings.lang = 'pseudo';
+    (window as any).__i18n.setLang('pseudo');
+    a.startLevel(1, { tutorial: true });
+  });
+}
+
+/** Every modal logged since the page loaded. */
+export function modalsSeen(page: Page): Promise<ModalSeen[]> {
+  return page.evaluate(() => (window as any).__e2eModals as ModalSeen[]);
 }
 
 /** Read from the App instance (serializable values only). */
@@ -233,6 +325,8 @@ function collectViolations(): Violation[] {
     for (const el of els) {
       if (!shown(el)) continue;
       const r = el.getBoundingClientRect();
+      // visually hidden screen-reader text (.sr-only live regions) is meant to be 1 px
+      if (el.matches('.sr-only') || (r.width <= 2 && r.height <= 2)) continue;
       const isButton = el.matches('button, [role=button], a[href]');
       const sp = scrollParent(el);
       // 1. nothing outside the viewport (vertical overflow is fine inside a scroller)

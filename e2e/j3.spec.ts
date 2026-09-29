@@ -1,7 +1,7 @@
 // J3 — Purchases with the mock store (ROADMAP-v2 7.7): the parental gate fails closed,
 // a pass grants exactly once, and a replayed transaction is ignored.
 // Dev builds use the mock store in src/meta/iap.ts, which grants after ~300 ms.
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { OPEN_MODAL, expectNoErrors, freshInstall, settle, snap, tap, waitScreen, watchErrors, type Guard } from './helpers';
 
 test.use({ locale: 'en-US' });
@@ -35,7 +35,7 @@ async function expectStableWallet(page: Page, before: Wallet, label: string) {
 }
 
 /** A player who has finished chapter 1 and opened its chest, standing in the Shop. */
-async function openShop(page: Page, guard: Guard) {
+async function openShop(page: Page, guard: Guard, info?: TestInfo) {
   await freshInstall(page);
   await page.evaluate(() => {
     const a = (window as any).__app;
@@ -43,10 +43,17 @@ async function openShop(page: Page, guard: Guard) {
     a.p.level = 11; // chapter 1 (planets 1-10) cleared
     a.p.chapters = [1]; // …and its chest opened: the Shop's one-time offers are now live
     a.p.passport.set = true;
-    a.launched = true; // skip the launch pop-ups
-    a.showHome(true);
+    a.p.meta.sessions = 2; // a returning player: session 1 never shows the Shop (M3)
+    a.showHome(true); // quiet: no automatic Home pop-ups
   });
   await waitScreen(page, 'home');
+  // an intro card (Coach 2.0) may still sit on Home: count it, then close it like a player
+  const intros = page.locator(OPEN_MODAL);
+  if (await intros.count()) {
+    info?.annotations.push({ type: 'intro-card', description: `Home: ${await intros.first().innerText()}` });
+    await intros.locator('button').last().click();
+    await settle(page);
+  }
   await tap(page, '.nav .nav-btn:last-child'); // Shop
   await waitScreen(page, 'shop');
   await settle(page);
@@ -73,7 +80,7 @@ async function gateChoices(page: Page) {
 test.describe('J3 purchases (mock store)', () => {
   test('Shop opens after the chapter-1 chest, with the Starter Pack offer', async ({ page }, info) => {
     const guard = watchErrors(page);
-    await openShop(page, guard);
+    await openShop(page, guard, info);
     await expect(page.locator('.offer').first()).toBeVisible();
     await expect(page.locator('.pack')).toHaveCount(4);
     await snap(page, info, guard, 'shop');
@@ -82,7 +89,7 @@ test.describe('J3 purchases (mock store)', () => {
 
   test('gate: a wrong answer or Cancel means no purchase', async ({ page }, info) => {
     const guard = watchErrors(page);
-    await openShop(page, guard);
+    await openShop(page, guard, info);
     const before = await wallet(page);
 
     await tap(page, '.pack');
@@ -103,7 +110,7 @@ test.describe('J3 purchases (mock store)', () => {
 
   test('gate: the right answer grants exactly once; a replayed transaction is ignored', async ({ page }, info) => {
     const guard = watchErrors(page);
-    await openShop(page, guard);
+    await openShop(page, guard, info);
     const before = await wallet(page);
 
     await tap(page, '.pack'); // Handful of Gems: 80
@@ -144,7 +151,7 @@ test.describe('J3 purchases (mock store)', () => {
 
   test('Starter Pack (one-time): grants once, then cannot be bought again', async ({ page }, info) => {
     const guard = watchErrors(page);
-    await openShop(page, guard);
+    await openShop(page, guard, info);
     const before = await wallet(page);
     expect(before.starter).toBe(false);
 

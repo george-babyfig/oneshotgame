@@ -75,6 +75,7 @@ export interface LevelDef {
   name: string;
   hue: number;
   difficulty: Difficulty;
+  nova: boolean;
   /** Extra goals that must be met (with at least 1★) to win. */
   goals: Goal[];
 }
@@ -105,11 +106,11 @@ export const GOALS_FROM = 6;
 
 export type Difficulty = 'normal' | 'hard' | 'super';
 
-/** Every 5th planet is Hard; from chapter 2, the 9th of every chapter is Super Hard (Royal Match style). */
+/** The first Hard planet is 15; later chapters keep their established slots. */
 export function difficultyOf(n: number, seedPrefix = 'PP'): Difficulty {
   if (seedPrefix !== 'PP') return 'normal';
   if (n >= 19 && n % 10 === 9) return 'super';
-  if (n >= 5 && n % 5 === 0) return 'hard';
+  if (n >= 15 && n % 5 === 0) return 'hard';
   return 'normal';
 }
 
@@ -167,16 +168,16 @@ function startFor(twist: Twist, rnd: () => number): Planet {
  * Best life score a perfect-aim greedy player reaches with this queue.
  * Used to set star targets so every generated level is beatable.
  */
-export function greedyScore(start: Planet, queue: Kind[], throws: number, splash = 0): number {
-  return lifeScore(greedyPlan(start, queue, throws, splash));
+export function greedyScore(start: Planet, queue: Kind[], throws: number, splash = 0, nova = true): number {
+  return lifeScore(greedyPlan(start, queue, throws, splash, nova));
 }
 
 /** The planet the greedy solver ends up with (used to set targets and goals). */
-export function greedyPlan(start: Planet, queue: Kind[], throws: number, splash = 0): Planet {
-  return solvePlan({ start, queue, throws }, ROUND_RULES_V0, splash ? { ...NO_MODIFIERS, splash } : NO_MODIFIERS);
+export function greedyPlan(start: Planet, queue: Kind[], throws: number, splash = 0, nova = true): Planet {
+  return solvePlan({ start, queue, throws, nova }, ROUND_RULES_V0, splash ? { ...NO_MODIFIERS, splash } : NO_MODIFIERS);
 }
 
-type SolverLevel = Pick<LevelDef, 'start' | 'queue' | 'throws'>;
+type SolverLevel = Pick<LevelDef, 'start' | 'queue' | 'throws' | 'nova'>;
 
 /** Today's perfect-aim, immediate-life choice, with automatic Supernovas. */
 export function solve2(level: SolverLevel, rules: RoundRules = ROUND_RULES_V0): Planet {
@@ -184,10 +185,10 @@ export function solve2(level: SolverLevel, rules: RoundRules = ROUND_RULES_V0): 
 }
 
 function solvePlan(level: SolverLevel, rules: RoundRules, mods: typeof NO_MODIFIERS): Planet {
-  let state = roundState(level.start);
+  let state = roundState(level.start, level.nova);
   for (let turn = 0; turn < level.throws; turn++) {
     const kind = level.queue[turn];
-    const nova = state.charge >= NOVA_CHARGE;
+    const nova = level.nova && state.charge >= NOVA_CHARGE;
     let best = -1;
     let at = 0;
     for (let sector = 0; sector < SECTORS; sector++) {
@@ -354,8 +355,9 @@ export function makeLevel(n: number, seedPrefix = 'PP', o: LevelOptions = {}): L
 function buildLevel(n: number, seedPrefix: string, o: LevelOptions): LevelDef {
   const layout = levelLayout(n, seedPrefix, o);
   const { seed, throws, queue, twist, spin, size, start, name, hue, difficulty } = layout;
+  const nova = seedPrefix !== 'PP' || n >= 9;
   const rules = o.rules ?? rulesForSeed(seed);
-  const plan = solve2(layout, rules);
+  const plan = solve2({ ...layout, nova }, rules);
   const best = lifeScore(plan);
   const base = lifeScore(start);
   // Star targets as a share of the greedy optimum: gentle for the first chapter,
@@ -384,6 +386,7 @@ function buildLevel(n: number, seedPrefix: string, o: LevelOptions): LevelDef {
     name,
     hue,
     difficulty,
+    nova,
     goals,
   };
 }

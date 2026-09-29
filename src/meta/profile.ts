@@ -3,6 +3,7 @@ import type { BoosterId, UpgradeId } from './config';
 import type { Kind, Planet } from '../core/world';
 import { defaultHome, type HomeState } from './homeworld';
 import type { Mail } from './inbox';
+import { UNLOCKS } from './unlocks';
 
 export interface GalaxyPlanet {
   n: number;
@@ -33,6 +34,7 @@ export interface Settings {
   lang: string;
   /** For real-calendar seasons. */
   hemi: 'north' | 'south';
+  textSize: 'standard' | 'large' | 'extra-large';
 }
 
 export interface Stats {
@@ -76,6 +78,9 @@ export interface Profile {
   starter: boolean;
   /** Cosmic Pass owned: unlocks the premium Star Road lane. */
   pass: boolean;
+  /** M3 migration is complete; older gates already earned are kept. */
+  m3Migrated: boolean;
+  legacyUnlocks: string[];
   /** Premium Star Road tiers already claimed. */
   roadPass: number[];
   skin: string;
@@ -93,7 +98,7 @@ export interface Profile {
   meta: { installed: number; lastSeen: number; sessions: number; rated: boolean; starterOffered: boolean; notifAsked: boolean };
   stats: Stats;
   /** Momentum win streak (0..3) and the day the free shield was last used. */
-  momentum: { streak: number; shieldDay: string };
+  momentum: { streak: number; shieldDay: string; paused: boolean };
   /** Gifts left by visiting creatures, waiting to be opened. */
   visitors: VisitorGift[];
   mementos: string[];
@@ -178,6 +183,8 @@ export function defaultProfile(now = Date.now()): Profile {
     piggy: 0,
     starter: false,
     pass: false,
+    m3Migrated: true,
+    legacyUnlocks: [],
     roadPass: [],
     skin: 'classic',
     skins: ['classic'],
@@ -196,6 +203,7 @@ export function defaultProfile(now = Date.now()): Profile {
       gameCenter: false,
       lang: '',
       hemi: 'north',
+      textSize: 'standard',
     },
     tutorial: false,
     meta: { installed: now, lastSeen: now, sessions: 0, rated: false, starterOffered: false, notifAsked: false },
@@ -214,7 +222,7 @@ export function defaultProfile(now = Date.now()): Profile {
       hardWins: 0,
       bestStreak: 0,
     },
-    momentum: { streak: 0, shieldDay: '' },
+    momentum: { streak: 0, shieldDay: '', paused: false },
     visitors: [],
     mementos: [],
     rank: 1,
@@ -275,6 +283,39 @@ function merge<T>(base: T, saved: unknown): T {
 /** Upgrade older save formats in place. */
 export function migrate(raw: Record<string, unknown>): Profile {
   const p = merge(defaultProfile(), raw);
+  if (raw.m3Migrated !== true) {
+    const oldLevels: Record<string, number> = {
+      swap: 1,
+      supernova: 3,
+      hard: 5,
+      weekly_event: 8,
+      festival: 8,
+      quest_spot: 8,
+      voyage: 12,
+      quest_voyage: 12,
+      momentum: 6,
+      star_road: 1,
+      quests: 1,
+      star_atlas: 5,
+      sticker_album: 1,
+      passport: 1,
+      workshop: 1,
+      object_lab: 1,
+      upgrades: 1,
+    };
+    p.legacyUnlocks = Object.entries(oldLevels)
+      .filter(([, level]) => p.tutorial && p.level >= level)
+      .map(([id]) => id);
+    if (p.tutorial) p.legacyUnlocks.push('star_calendar');
+    if (Object.values(p.sightings).some((count) => count >= 5)) p.legacyUnlocks.push('buddy');
+    for (const row of UNLOCKS) {
+      if (row.intro && (p.legacyUnlocks.includes(row.id) || (row.planet > 0 && p.level > row.planet))) {
+        const key = `coach-${row.id}`;
+        if (!p.mailSeen.includes(key)) p.mailSeen.push(key);
+      }
+    }
+    p.m3Migrated = true;
+  }
   const savedSettings = raw.settings as Record<string, unknown> | undefined;
   if (!savedSettings || !Object.hasOwn(savedSettings, 'gameCenter')) {
     p.settings.notifications = false;

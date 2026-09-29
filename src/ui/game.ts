@@ -6,6 +6,8 @@ import * as fx from './fx';
 import { type BiomeId, BIOMES, SECTORS, clonePlanet, lifeScore, type Kind, type Planet } from '../core/world';
 import { BOSS_HP, type Goal, type LevelDef } from '../core/levels';
 import { h, type Modal } from './dom';
+import { roundIntro, type CoachEvent } from '../meta/coach';
+import { UNLOCKS } from '../meta/unlocks';
 import { surfaceK } from './art/planet';
 import { DEFAULT_LOOK, type Look } from '../meta/cosmetics';
 import { NOVA_CHARGE, type RoundState } from '../core/round';
@@ -36,13 +38,18 @@ export interface SceneOpts {
   glow: string;
   seen: Set<string>;
   tutorial: boolean;
+  /** Warm-up replay: the Keeper always helps this planet finish. */
+  practice?: boolean;
+  practiceFirstClear?: boolean;
   reduceMotion?: boolean;
   /** Momentum tier (0-3) active this level. */
   momentum?: number;
-  /** Coach tips keyed by throws used (0 = at the start). */
+  /** Opening coach tip (0 = before the first throw). */
   coach?: Record<number, string>;
   /** Object introduced on this level (shows an intro card). */
   intro?: Kind;
+  allowIntro?: (id: string) => boolean;
+  onIntro?: (id: string) => void;
   /** HUD title override (modes). */
   label?: string;
   /** Meteor Rush: seconds on the clock, unlimited throws. */
@@ -193,6 +200,12 @@ export class LevelScene {
   finishEl!: HTMLElement;
   coachEl!: HTMLElement;
   discoverEl!: HTMLElement;
+  liveEl!: HTMLElement;
+  coachEvents = new Set<CoachEvent>();
+  practiceGifts = 0;
+  firstCreaturePointsShown = false;
+  liveTimer = 0;
+  coachTimer = 0;
 
   startedAt = performance.now();
 
@@ -219,19 +232,25 @@ export class LevelScene {
     this.el = h('div', { class: 'screen level' }, this.canvas, this.buildHud());
     this.bindInput();
     if (import.meta.env.DEV) {
-      window.__scene = {
+      this.devHook = {
         aimAt: (sector) => this.aimAt(sector),
         fire: (vector) => {
           if (this.canAim()) this.fire(vector.vx, vector.vy);
         },
       };
+      window.__scene = this.devHook;
     }
     this.raf = requestAnimationFrame(() => {
       if (this.destroyed) return;
       this.resize();
       this.renderHud();
       this.showCoach(0);
-      if (opts.intro) this.introCard(opts.intro);
+      const intro = opts.intro
+        ? roundIntro(level.n, opts.intro)
+        : !opts.competitive && !opts.endless && !opts.timeLimit
+          ? roundIntro(level.n)
+          : undefined;
+      if (intro) this.introCard(intro.id);
       this.raf = requestAnimationFrame(this.frame);
     });
     window.addEventListener('resize', this.resize);
@@ -380,6 +399,7 @@ export class LevelScene {
 
   aimPointer: number | null = null;
   destroyed = false;
+  private devHook?: Window['__scene'];
 
   /** Can the player start or release a throw right now? */
   canAim() {
@@ -405,7 +425,7 @@ export class LevelScene {
 
   fire(vx: number, vy: number) {
     const { x, y } = this.launch;
-    const nova = this.charge >= NOVA_CHARGE;
+    const nova = this.novaOn && this.charge >= NOVA_CHARGE;
     this.shot = { kind: this.cur, x, y, vx, vy, t: 0, carry: 0, t0: this.time, rot0: this.rot, trail: [], nova };
     if (nova) {
       sfx.combo(6);
@@ -413,6 +433,8 @@ export class LevelScene {
     }
     if (Number.isFinite(this.throwsLeft)) this.throwsLeft--;
     this.throwsUsed++;
+    this.coachEl.classList.remove('show');
+    clearTimeout(this.coachTimer);
     sfx.launch();
     haptic.medium();
     this.o.onThrow?.(this.shot.kind);
@@ -464,8 +486,13 @@ export class LevelScene {
     return hud.showCoach(this, k);
   }
 
-  introCard(kind: Kind) {
-    return hud.introCard(this, kind);
+  showCoachEvent(event: CoachEvent) {
+    return hud.showCoachEvent(this, event);
+  }
+
+  introCard(id: string) {
+    const row = UNLOCKS.find((x) => x.id === id && x.intro);
+    if (row) return hud.introCard(this, row);
   }
 
   endTimer = 0;
@@ -571,7 +598,7 @@ export class LevelScene {
   /** Supernova meter: a ring around the launcher that fills as you transform land. */
   /** The Supernova is introduced after the first tutorial planets. */
   get novaOn() {
-    return !(this.o.tutorial && this.L.n < 3);
+    return this.L.nova;
   }
 
   drawNovaMeter(x: number, y: number, aiming: boolean) {
@@ -584,13 +611,16 @@ export class LevelScene {
 
   destroy() {
     clearTimeout(this.endTimer);
+    clearTimeout(this.liveTimer);
+    clearTimeout(this.coachTimer);
     this.ended = true;
     this.destroyed = true;
     cancelAnimationFrame(this.raf);
     cancelAnimationFrame(this.exitRaf);
     window.removeEventListener('resize', this.resize);
     this.modalOpen?.close();
-    if (import.meta.env.DEV) delete window.__scene;
+    // the next round may already have installed its own hook
+    if (import.meta.env.DEV && window.__scene === this.devHook) delete window.__scene;
   }
 }
 

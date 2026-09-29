@@ -26,9 +26,13 @@ export function drawLanding(scene: LevelScene, i: number) {
   g.arc(scene.cx, scene.cy, r + 4, a0 - step * 0.5, a0 + step * 1.5);
   g.stroke();
   g.restore();
-  const key = `${i}|${scene.cur}|${scene.throwsUsed}|${scene.charge >= NOVA_CHARGE}`;
+  const key = `${i}|${scene.cur}|${scene.throwsUsed}|${scene.novaOn && scene.charge >= NOVA_CHARGE}`;
   if (scene.predictCache?.key !== key) {
-    const res = previewStep(scene.roundState(), { kind: scene.cur, sector: i, nova: scene.charge >= NOVA_CHARGE }, scene.roundModifiers());
+    const res = previewStep(
+      scene.roundState(),
+      { kind: scene.cur, sector: i, nova: scene.novaOn && scene.charge >= NOVA_CHARGE },
+      scene.roundModifiers(),
+    );
     const before = BIOMES[scene.planet.sectors[i].biome];
     const after = BIOMES[res.state.planet.sectors[i].biome];
     scene.predictCache = {

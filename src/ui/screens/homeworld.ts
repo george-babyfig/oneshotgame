@@ -597,7 +597,7 @@ export function showHomeworld(app: App) {
         h(
           'div',
           { class: 'hw-build' },
-          ...BUILDING_TYPES.map((type) => {
+          ...BUILDING_TYPES.filter((type) => p.chapters.length >= 1 || !BUILDINGS[type].gems).map((type) => {
             const d = BUILDINGS[type];
             const check = canBuild(p, i, type, now);
             const locked = check === 'ring' || check === 'max';
@@ -1117,7 +1117,7 @@ function paintSheet(app: App) {
     h(
       'div',
       { class: 'paint-row' },
-      ...PAINTS.filter((x) => x.channel === channel).map((x) => {
+      ...PAINTS.filter((x) => x.channel === channel && (p.chapters.length >= 1 || (!x.gems && !x.pass))).map((x) => {
         const owned = ownsPaint(p, x.id);
         const on = cur[channel].id === x.id;
         return h(
@@ -1127,7 +1127,7 @@ function paintSheet(app: App) {
             onclick: () => {
               const r = applyPaint(p, x.id);
               if (r === 'gems') return app.needGems();
-              if (r === 'pass') return (m.close(), app.showPass());
+              if (r === 'pass') return toast(t('A Cosmic Pass reward on the Star Road'));
               sfx.click();
               haptic.light();
               app.save();
@@ -1244,13 +1244,13 @@ function photoMode(app: App, src: HTMLCanvasElement) {
   const frames = h(
     'div',
     { class: 'photo-frames' },
-    ...FRAMES.map((f) => {
+    ...FRAMES.filter((f) => p.chapters.length >= 1 || !f.pass).map((f) => {
       const el = h(
         'button',
         {
           class: `tab${f.id === frame ? ' on' : ''}`,
           onclick: () => {
-            if (f.pass && !p.pass) return (m.close(), app.showPass());
+            if (f.pass && !p.pass) return toast(t('A Cosmic Pass reward on the Star Road'));
             frame = f.id;
             frames.querySelectorAll('.tab').forEach((x) => x.classList.remove('on'));
             el.classList.add('on');
@@ -1263,7 +1263,7 @@ function photoMode(app: App, src: HTMLCanvasElement) {
       return el;
     }),
   );
-  const m = modal([
+  modal([
     h('div', { class: 'm-title' }, t('Photo mode')),
     preview,
     frames,
@@ -1317,7 +1317,7 @@ function accSheet(app: App, species: string, back: () => void) {
     h(
       'div',
       { class: 'acc-grid' },
-      ...RESIDENT_ACCS.map((a) => {
+      ...RESIDENT_ACCS.filter((a) => p.chapters.length >= 1 || !a.gems).map((a) => {
         const ok = accAvailable(p, r, a.id);
         return h(
           'button',

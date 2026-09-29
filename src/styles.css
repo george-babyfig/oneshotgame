@@ -11,6 +11,7 @@
   --gem: #4de1ff;
   --dust: #ffd76a;
   --bad: #ff7b93;
+  --text-scale: 1;
   --font: 'Fredoka', ui-rounded, system-ui, sans-serif;
   --st: env(safe-area-inset-top, 0px);
   --sb: env(safe-area-inset-bottom, 0px);
@@ -24,6 +25,7 @@ html,
 body {
   margin: 0;
   height: 100%;
+  font-size: calc(16px * var(--text-scale));
   background: var(--space);
   color: var(--text);
   font-family: var(--font);
@@ -78,7 +80,7 @@ button {
   color: var(--muted);
 }
 .tiny {
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
   text-align: center;
 }
 .stack {
@@ -88,7 +90,7 @@ button {
   line-height: 1.1;
 }
 .stack small {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   opacity: 0.85;
   font-weight: 500;
 }
@@ -96,7 +98,7 @@ button {
 /* buttons */
 .btn {
   font-weight: 700;
-  font-size: 17px;
+  font-size: max(12px, calc(17px * var(--text-scale)));
   padding: 13px 16px;
   border-radius: 16px;
   background: var(--panel-2);
@@ -118,7 +120,7 @@ button {
   color: #3a1600;
 }
 .btn.big {
-  font-size: 21px;
+  font-size: max(12px, calc(21px * var(--text-scale)));
   padding: 16px;
 }
 .btn.wide {
@@ -138,20 +140,20 @@ button {
   color: #042a40;
 }
 .btn.small {
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
   padding: 9px 14px;
   align-self: center;
 }
 .btn.buy {
   padding: 9px 12px;
-  font-size: 15px;
+  font-size: max(12px, calc(15px * var(--text-scale)));
   background: linear-gradient(180deg, #ffe17a, #e0a000);
   color: #3a2500;
 }
 .btn.buy-real {
   background: linear-gradient(180deg, #5ef2b0, #16a86a);
   color: #04301c;
-  font-size: 18px;
+  font-size: max(12px, calc(18px * var(--text-scale)));
 }
 .btn.dust-btn {
   background: linear-gradient(180deg, #fff0a8, #e8b43a);
@@ -163,7 +165,7 @@ button {
   border-radius: 13px;
   background: var(--panel);
   box-shadow: inset 0 0 0 1px var(--line);
-  font-size: 20px;
+  font-size: max(12px, calc(20px * var(--text-scale)));
   font-weight: 700;
   display: grid;
   place-items: center;
@@ -179,7 +181,7 @@ button {
 .pill {
   min-height: 44px;
   font-weight: 700;
-  font-size: 16px;
+  font-size: max(12px, calc(16px * var(--text-scale)));
   padding: 9px 12px;
   border-radius: 13px;
   background: var(--panel);
@@ -203,7 +205,7 @@ button {
   color: #04301c;
   display: grid;
   place-items: center;
-  font-size: 15px;
+  font-size: max(12px, calc(15px * var(--text-scale)));
 }
 
 /* home */
@@ -216,7 +218,7 @@ button {
 }
 .title span {
   font-weight: 700;
-  font-size: clamp(40px, 13vw, 58px);
+  font-size: clamp(calc(40px * var(--text-scale)), calc(13vw * var(--text-scale)), calc(58px * var(--text-scale)));
   letter-spacing: -1px;
 }
 .title span:first-child {
@@ -242,6 +244,15 @@ button {
   background: radial-gradient(circle at 50% 50%, rgba(255, 177, 61, 0.12), transparent 60%), rgba(0, 0, 0, 0.2);
   box-shadow: inset 0 0 0 1px var(--line);
 }
+.screen.home {
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  overscroll-behavior: contain;
+}
+.screen.home .galaxy-wrap {
+  flex: 1 0 160px;
+}
 .galaxy {
   position: absolute;
   inset: 0;
@@ -256,7 +267,7 @@ button {
   text-align: center;
   white-space: pre-line;
   color: var(--muted);
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
 }
 .nav {
   display: grid;
@@ -277,10 +288,10 @@ button {
     0 3px 0 rgba(0, 0, 0, 0.3);
 }
 .ni {
-  font-size: 22px;
+  font-size: max(12px, calc(22px * var(--text-scale)));
 }
 .nl {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   color: var(--muted);
   font-weight: 700;
 }
@@ -288,7 +299,7 @@ button {
   position: absolute;
   top: -6px;
   right: 4px;
-  font-size: 10px;
+  font-size: max(12px, calc(10px * var(--text-scale)));
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 8px;
@@ -298,7 +309,7 @@ button {
 .piggy-chip {
   align-self: center;
   font-weight: 700;
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   padding: 7px 14px;
   border-radius: 12px;
   background: rgba(255, 143, 200, 0.2);
@@ -340,14 +351,14 @@ button {
   text-align: center;
 }
 .hud-level {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   color: var(--muted);
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
 }
 .hud-name {
-  font-size: 19px;
+  font-size: max(12px, calc(19px * var(--text-scale)));
   font-weight: 700;
 }
 .hud-throws {
@@ -361,13 +372,13 @@ button {
   box-shadow: inset 0 0 0 1px var(--line);
 }
 .hud-throws .n {
-  font-size: 22px;
+  font-size: max(12px, calc(22px * var(--text-scale)));
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 .hud-throws .l {
-  font-size: 10px;
+  font-size: max(12px, calc(10px * var(--text-scale)));
   color: var(--muted);
 }
 .hud-throws.low .n {
@@ -399,7 +410,7 @@ button {
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  font-size: 22px;
+  font-size: max(12px, calc(22px * var(--text-scale)));
   color: #4a466e;
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
 }
@@ -417,7 +428,7 @@ button {
 }
 .life-score {
   font-weight: 700;
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
   min-width: 70px;
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -425,7 +436,7 @@ button {
 .twist {
   align-self: center;
   margin-top: 8px;
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   font-weight: 700;
   padding: 5px 12px;
   border-radius: 10px;
@@ -450,7 +461,7 @@ button {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 26px;
+  font-size: max(12px, calc(26px * var(--text-scale)));
   background: radial-gradient(circle, color-mix(in srgb, var(--c) 35%, transparent), rgba(0, 0, 0, 0.35));
   box-shadow: 0 0 0 2px var(--c);
 }
@@ -460,7 +471,7 @@ button {
 .obj.next {
   width: 44px;
   height: 44px;
-  font-size: 22px;
+  font-size: max(12px, calc(22px * var(--text-scale)));
 }
 .obj.pop {
   animation: starpop 0.3s;
@@ -472,12 +483,12 @@ button {
   gap: 3px;
 }
 .swap-lbl {
-  font-size: 10px;
+  font-size: max(12px, calc(10px * var(--text-scale)));
   color: var(--muted);
   font-weight: 700;
 }
 .obj-desc {
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
   color: var(--muted);
   text-align: center;
 }
@@ -494,11 +505,11 @@ button {
   align-items: center;
   gap: 4px;
   font-weight: 700;
-  font-size: 16px;
+  font-size: max(12px, calc(16px * var(--text-scale)));
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
 }
 .hint-hand {
-  font-size: 34px;
+  font-size: max(12px, calc(34px * var(--text-scale)));
   animation: pull 1.6s ease-in-out infinite;
 }
 @keyframes pull {
@@ -578,19 +589,19 @@ button {
 }
 .m-title {
   font-weight: 700;
-  font-size: 26px;
+  font-size: max(12px, calc(26px * var(--text-scale)));
   line-height: 1.1;
   text-wrap: balance;
 }
 .m-sub {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--muted);
 }
 .confirm {
-  font-size: 17px;
+  font-size: max(12px, calc(17px * var(--text-scale)));
 }
 .toasts {
   position: absolute;
@@ -607,7 +618,7 @@ button {
 .toast {
   max-width: 88vw;
   font-weight: 700;
-  font-size: 15px;
+  font-size: max(12px, calc(15px * var(--text-scale)));
   padding: 10px 16px;
   border-radius: 14px;
   background: rgba(22, 20, 58, 0.96);
@@ -637,7 +648,7 @@ button {
 /* end / pre-level */
 .end-title {
   font-weight: 700;
-  font-size: 30px;
+  font-size: max(12px, calc(30px * var(--text-scale)));
   color: var(--life);
 }
 .end-title.lost {
@@ -647,7 +658,7 @@ button {
   display: flex;
   justify-content: center;
   gap: 6px;
-  font-size: 46px;
+  font-size: max(12px, calc(46px * var(--text-scale)));
   color: #3b3766;
 }
 .end-stars .on {
@@ -663,13 +674,13 @@ button {
 }
 .end-score {
   font-weight: 700;
-  font-size: 20px;
+  font-size: max(12px, calc(20px * var(--text-scale)));
 }
 .end-need {
   color: var(--dust);
 }
 .twist-chip {
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   font-weight: 700;
   padding: 7px 10px;
   border-radius: 10px;
@@ -689,13 +700,13 @@ button {
 }
 .tg b {
   color: #5d588e;
-  font-size: 16px;
+  font-size: max(12px, calc(16px * var(--text-scale)));
 }
 .tg.got b {
   color: var(--sun);
 }
 .tg span {
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   font-variant-numeric: tabular-nums;
 }
 .kinds {
@@ -705,7 +716,7 @@ button {
 }
 .kc {
   position: relative;
-  font-size: 26px;
+  font-size: max(12px, calc(26px * var(--text-scale)));
   width: 44px;
   height: 44px;
   display: grid;
@@ -719,7 +730,7 @@ button {
 .kc small {
   position: absolute;
   bottom: -8px;
-  font-size: 9px;
+  font-size: max(12px, calc(9px * var(--text-scale)));
   font-weight: 700;
   background: var(--life);
   color: #04301c;
@@ -727,7 +738,7 @@ button {
   border-radius: 5px;
 }
 .newkind {
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
   color: var(--life);
 }
 .boosters {
@@ -750,14 +761,14 @@ button {
   background: rgba(94, 242, 176, 0.12);
 }
 .be {
-  font-size: 24px;
+  font-size: max(12px, calc(24px * var(--text-scale)));
 }
 .bn {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   font-weight: 700;
 }
 .bc {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   color: var(--muted);
 }
 .rewards {
@@ -773,10 +784,10 @@ button {
   background: rgba(0, 0, 0, 0.28);
 }
 .rewards b {
-  font-size: 20px;
+  font-size: max(12px, calc(20px * var(--text-scale)));
 }
 .rewards small {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   color: var(--muted);
 }
 .streak {
@@ -791,13 +802,13 @@ button {
   padding: 6px 0;
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.3);
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
 }
 .sd b {
-  font-size: 15px;
+  font-size: max(12px, calc(15px * var(--text-scale)));
 }
 .sd small {
-  font-size: 9px;
+  font-size: max(12px, calc(9px * var(--text-scale)));
   color: var(--muted);
 }
 .sd.done {
@@ -818,7 +829,7 @@ button {
 }
 .btn.lv {
   padding: 10px 4px;
-  font-size: 16px;
+  font-size: max(12px, calc(16px * var(--text-scale)));
 }
 .btn.lv.gold {
   box-shadow:
@@ -864,13 +875,13 @@ button {
   flex-direction: column;
   gap: 10px;
   text-align: left;
-  font-size: 15px;
+  font-size: max(12px, calc(15px * var(--text-scale)));
 }
 
 /* pages */
 .page-title {
   font-weight: 700;
-  font-size: 26px;
+  font-size: max(12px, calc(26px * var(--text-scale)));
   text-align: center;
 }
 .scroll {
@@ -888,11 +899,11 @@ button {
 .scroll > p {
   margin: 0;
   text-align: center;
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
 }
 .sec-title {
   font-weight: 700;
-  font-size: 17px;
+  font-size: max(12px, calc(17px * var(--text-scale)));
   color: var(--dust);
   margin-top: 6px;
 }
@@ -922,7 +933,7 @@ button {
   box-shadow: inset 0 0 0 2px var(--sun);
 }
 .lbe {
-  font-size: 30px;
+  font-size: max(12px, calc(30px * var(--text-scale)));
 }
 .lb.locked .lbe {
   color: var(--muted);
@@ -930,10 +941,10 @@ button {
 }
 .lbn {
   font-weight: 700;
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
 }
 .lbh {
-  font-size: 10px;
+  font-size: max(12px, calc(10px * var(--text-scale)));
   color: var(--muted);
   line-height: 1.2;
 }
@@ -947,14 +958,14 @@ button {
   flex-direction: column;
   gap: 2px;
   text-align: left;
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
   padding: 8px 10px;
   border-radius: 12px;
   background: color-mix(in srgb, var(--c) 25%, transparent);
   box-shadow: inset 0 0 0 1px var(--c);
 }
 .bchip small {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   color: var(--muted);
 }
 .up-row {
@@ -967,7 +978,7 @@ button {
   box-shadow: inset 0 0 0 1px var(--line);
 }
 .up-ic {
-  font-size: 28px;
+  font-size: max(12px, calc(28px * var(--text-scale)));
 }
 .up-body {
   flex: 1;
@@ -977,7 +988,7 @@ button {
 }
 .up-body small {
   color: var(--muted);
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
 }
 .pips {
   display: flex;
@@ -1016,12 +1027,12 @@ button {
   background: var(--sun);
   color: #3a1600;
   font-weight: 700;
-  font-size: 10px;
+  font-size: max(12px, calc(10px * var(--text-scale)));
   padding: 3px 34px;
 }
 .offer-t {
   font-weight: 700;
-  font-size: 26px;
+  font-size: max(12px, calc(26px * var(--text-scale)));
 }
 .offer ul {
   margin: 0;
@@ -1040,7 +1051,7 @@ button {
   box-shadow: inset 0 0 0 1px rgba(255, 143, 200, 0.45);
 }
 .piggy-ic {
-  font-size: 36px;
+  font-size: max(12px, calc(36px * var(--text-scale)));
 }
 .piggy-body {
   flex: 1;
@@ -1050,7 +1061,7 @@ button {
   gap: 3px;
 }
 .piggy-body small {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   color: var(--muted);
 }
 .pbar {
@@ -1085,21 +1096,21 @@ button {
 .pack .tag {
   position: absolute;
   top: -8px;
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 8px;
   background: var(--bad);
 }
 .pi {
-  font-size: 30px;
+  font-size: max(12px, calc(30px * var(--text-scale)));
 }
 .pack b {
-  font-size: 24px;
+  font-size: max(12px, calc(24px * var(--text-scale)));
   color: var(--gem);
 }
 .pack small {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   color: var(--muted);
 }
 .pp {
@@ -1143,15 +1154,15 @@ button {
     0 0 18px var(--g);
 }
 .skin b {
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
 }
 .skin small {
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
   color: var(--muted);
 }
 @media (max-height: 700px) {
   .title span {
-    font-size: 38px;
+    font-size: max(12px, calc(38px * var(--text-scale)));
   }
   .screen {
     gap: 8px;
@@ -1210,10 +1221,10 @@ button {
   background: rgba(22, 20, 58, 0.78);
 }
 .side-btn .ni {
-  font-size: 20px;
+  font-size: max(12px, calc(20px * var(--text-scale)));
 }
 .side-btn .nl {
-  font-size: 10px;
+  font-size: max(12px, calc(10px * var(--text-scale)));
 }
 .btn.dust-btn.full {
   animation: glowPulse 1.4s ease-in-out infinite;
@@ -1253,19 +1264,19 @@ button {
   display: block;
   text-align: center;
   line-height: 26px;
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   font-weight: 700;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 .up-body small.next {
   color: var(--life);
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
 }
 button.lb {
   font: inherit;
 }
 .lb-big {
-  font-size: 72px;
+  font-size: max(12px, calc(72px * var(--text-scale)));
   line-height: 1;
   padding: 10px 0;
 }
@@ -1275,7 +1286,7 @@ button.lb {
 }
 .gift-ic,
 .chest-anim {
-  font-size: 64px;
+  font-size: max(12px, calc(64px * var(--text-scale)));
   line-height: 1;
   animation: giftBounce 1s cubic-bezier(0.2, 1.6, 0.4, 1);
 }
@@ -1298,7 +1309,7 @@ button.lb {
 }
 .reward-list span {
   font-weight: 700;
-  font-size: 18px;
+  font-size: max(12px, calc(18px * var(--text-scale)));
   padding: 8px 12px;
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.3);
@@ -1315,14 +1326,14 @@ button.lb {
 }
 .nudge {
   font-weight: 700;
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
   padding: 8px 10px;
   border-radius: 12px;
   background: rgba(94, 242, 176, 0.12);
   box-shadow: inset 0 0 0 1px rgba(94, 242, 176, 0.4);
 }
 .value {
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   font-weight: 700;
   color: var(--dust);
 }
@@ -1331,7 +1342,7 @@ button.lb {
 }
 .offer.pass p {
   margin: 0;
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
   line-height: 1.35;
 }
 .pass-owned {
@@ -1368,14 +1379,14 @@ button.lb {
 }
 .ch-head small {
   display: block;
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
   color: var(--muted);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 .ch-head b {
-  font-size: 20px;
+  font-size: max(12px, calc(20px * var(--text-scale)));
 }
 .ch-stars {
   font-weight: 700;
@@ -1385,7 +1396,7 @@ button.lb {
 .chest-done,
 .chest-preview {
   text-align: center;
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   color: var(--muted);
 }
 .path {
@@ -1412,11 +1423,11 @@ button.lb {
     inset 0 0 0 2px rgba(255, 255, 255, 0.25);
 }
 .node b {
-  font-size: 18px;
+  font-size: max(12px, calc(18px * var(--text-scale)));
   line-height: 1;
 }
 .node small {
-  font-size: 9px;
+  font-size: max(12px, calc(9px * var(--text-scale)));
   color: var(--sun);
   letter-spacing: -1px;
 }
@@ -1454,7 +1465,7 @@ button.lb {
 .rhead {
   display: grid;
   grid-template-columns: 1fr 64px 1fr;
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   font-weight: 700;
   color: var(--muted);
   text-align: center;
@@ -1474,7 +1485,7 @@ button.lb {
   place-items: center;
 }
 .rmid b {
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
   color: var(--muted);
 }
 .rrow.reached .rmid b {
@@ -1492,7 +1503,7 @@ button.lb {
   border-radius: 14px;
   background: var(--panel);
   box-shadow: inset 0 0 0 1px var(--line);
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   font-weight: 700;
 }
 .rc.prem {
@@ -1522,7 +1533,7 @@ button.lb {
   top: 3px;
   right: 5px;
   font-style: normal;
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
 }
 
 /* quests */
@@ -1550,7 +1561,7 @@ button.lb {
   background: rgba(255, 177, 61, 0.12);
 }
 .q-ic {
-  font-size: 26px;
+  font-size: max(12px, calc(26px * var(--text-scale)));
   width: 34px;
   text-align: center;
 }
@@ -1561,10 +1572,10 @@ button.lb {
   gap: 4px;
 }
 .q-body b {
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
 }
 .q-body small {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   color: var(--muted);
 }
 .qbar {
@@ -1582,7 +1593,7 @@ button.lb {
 .qbar span {
   position: relative;
   display: block;
-  font-size: 10px;
+  font-size: max(12px, calc(10px * var(--text-scale)));
   line-height: 14px;
   text-align: center;
   font-weight: 700;
@@ -1590,7 +1601,7 @@ button.lb {
 .q-ok {
   color: var(--life);
   font-weight: 700;
-  font-size: 20px;
+  font-size: max(12px, calc(20px * var(--text-scale)));
   width: 40px;
   text-align: center;
 }
@@ -1613,10 +1624,10 @@ button.lb {
     transform 0.2s;
 }
 .finish b {
-  font-size: 15px;
+  font-size: max(12px, calc(15px * var(--text-scale)));
 }
 .finish small {
-  font-size: 10px;
+  font-size: max(12px, calc(10px * var(--text-scale)));
   font-weight: 700;
 }
 .finish.hidden {
@@ -1678,7 +1689,7 @@ button.lb {
     0 0 30px rgba(255, 177, 61, 0.8);
 }
 .d-emoji {
-  font-size: 38px;
+  font-size: max(12px, calc(38px * var(--text-scale)));
 }
 .d-body {
   display: flex;
@@ -1687,17 +1698,17 @@ button.lb {
   line-height: 1.15;
 }
 .d-body small {
-  font-size: 10px;
+  font-size: max(12px, calc(10px * var(--text-scale)));
   font-weight: 700;
   color: var(--life);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 .d-body b {
-  font-size: 18px;
+  font-size: max(12px, calc(18px * var(--text-scale)));
 }
 .d-body span {
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
   color: var(--muted);
 }
 
@@ -1739,7 +1750,7 @@ button.lb {
 .visit-name {
   min-width: 0;
   flex: 1;
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   line-height: 1.1;
 }
 .visit-name b,
@@ -1752,7 +1763,7 @@ button.lb {
 .visit-memento {
   margin-top: 2px;
   color: #ffb4d5;
-  font-size: 10px;
+  font-size: max(12px, calc(10px * var(--text-scale)));
 }
 .visit-reward {
   flex-shrink: 0;
@@ -1760,11 +1771,11 @@ button.lb {
   border-radius: 9px;
   background: rgba(255, 215, 106, 0.18);
   color: var(--dust);
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   font-weight: 700;
 }
 .visit-emoji {
-  font-size: 84px;
+  font-size: max(12px, calc(84px * var(--text-scale)));
   line-height: 1;
   animation: giftBounce 0.8s cubic-bezier(0.2, 1.6, 0.4, 1);
 }
@@ -1778,21 +1789,21 @@ button.lb {
   animation: pop 0.5s 0.2s backwards;
 }
 .memento small {
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
   font-weight: 700;
   color: #ff8fc8;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 .rank-reward {
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   font-weight: 700;
   color: var(--dust);
   padding: 6px;
 }
 .diff-chip {
   align-self: center;
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   font-weight: 700;
   padding: 6px 14px;
   border-radius: 12px;
@@ -1819,7 +1830,7 @@ button.lb {
   position: absolute;
   top: -6px;
   right: -4px;
-  font-size: 16px;
+  font-size: max(12px, calc(16px * var(--text-scale)));
 }
 .momentum {
   display: flex;
@@ -1830,11 +1841,11 @@ button.lb {
   border-radius: 14px;
   background: rgba(94, 242, 176, 0.12);
   box-shadow: inset 0 0 0 1px rgba(94, 242, 176, 0.45);
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   font-weight: 700;
 }
 .momentum .halo {
-  font-size: 20px;
+  font-size: max(12px, calc(20px * var(--text-scale)));
   filter: drop-shadow(0 0 6px rgba(94, 242, 176, 0.9));
 }
 .momentum.off {
@@ -1856,7 +1867,7 @@ button.lb {
   box-shadow: inset 0 0 0 2px var(--sun);
 }
 .hab-ic {
-  font-size: 26px;
+  font-size: max(12px, calc(26px * var(--text-scale)));
 }
 .hab-body {
   flex: 1;
@@ -1865,7 +1876,7 @@ button.lb {
   gap: 3px;
 }
 .hab-body small {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   color: var(--muted);
 }
 .memento-grid {
@@ -1874,14 +1885,14 @@ button.lb {
   gap: 6px;
 }
 .memento-grid div {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   padding: 8px;
   border-radius: 12px;
   background: rgba(255, 143, 200, 0.12);
   text-align: left;
 }
 .hud-diff {
-  font-size: 10px;
+  font-size: max(12px, calc(10px * var(--text-scale)));
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 8px;
@@ -1916,7 +1927,7 @@ button.lb {
   opacity: 0.55;
 }
 .mode-ic {
-  font-size: 32px;
+  font-size: max(12px, calc(32px * var(--text-scale)));
   width: 42px;
   text-align: center;
 }
@@ -1927,22 +1938,22 @@ button.lb {
   gap: 2px;
 }
 .mode-body b {
-  font-size: 17px;
+  font-size: max(12px, calc(17px * var(--text-scale)));
 }
 .mode-body small {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   color: var(--muted);
   line-height: 1.25;
 }
 .mode-body span {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   font-weight: 700;
   color: var(--life);
 }
 .share-preview {
   margin: 0;
   font: inherit;
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
   line-height: 1.4;
   padding: 10px;
   border-radius: 12px;
@@ -1965,10 +1976,10 @@ button.lb {
   background: rgba(0, 0, 0, 0.3);
 }
 .versus b {
-  font-size: 26px;
+  font-size: max(12px, calc(26px * var(--text-scale)));
 }
 .versus small {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   color: var(--muted);
 }
 .versus i {
@@ -1977,7 +1988,7 @@ button.lb {
   color: var(--sun);
 }
 .code {
-  font-size: 26px;
+  font-size: max(12px, calc(26px * var(--text-scale)));
   font-weight: 700;
   letter-spacing: 3px;
   padding: 10px;
@@ -1989,7 +2000,7 @@ button.lb {
 }
 .code-input {
   font: inherit;
-  font-size: 22px;
+  font-size: max(12px, calc(22px * var(--text-scale)));
   font-weight: 700;
   letter-spacing: 3px;
   text-align: center;
@@ -2019,7 +2030,7 @@ button.lb {
   .kc {
     width: 38px;
     height: 38px;
-    font-size: 22px;
+    font-size: max(12px, calc(22px * var(--text-scale)));
   }
   .tg {
     padding: 6px 4px;
@@ -2029,7 +2040,7 @@ button.lb {
     gap: 10px;
   }
   .m-title {
-    font-size: 23px;
+    font-size: max(12px, calc(23px * var(--text-scale)));
   }
 }
 .lb.locked .lbe canvas,
@@ -2065,16 +2076,44 @@ button.lb {
   background: rgba(255, 247, 214, 0.96);
   color: #3a2a10;
   font-weight: 700;
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
   line-height: 1.3;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.coach.star-tip {
+  outline: 2px solid var(--sun);
+}
+.coach-focus {
+  outline: 3px solid var(--sun);
+  outline-offset: 4px;
 }
 .coach.show {
   display: flex;
   animation: bannerIn 0.35s cubic-bezier(0.2, 1.5, 0.4, 1);
 }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+.life-fly {
+  position: fixed;
+  z-index: 1000;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  font-size: max(12px, calc(22px * var(--text-scale)));
+  font-weight: 700;
+  color: var(--life);
+  text-shadow: 0 2px 6px #0b0a24;
+}
 .coach-ic {
-  font-size: 20px;
+  font-size: max(12px, calc(20px * var(--text-scale)));
 }
 .intro-art {
   display: grid;
@@ -2083,7 +2122,7 @@ button.lb {
   animation: giftBounce 0.8s cubic-bezier(0.2, 1.6, 0.4, 1);
 }
 .offer-art {
-  font-size: 64px;
+  font-size: max(12px, calc(64px * var(--text-scale)));
   line-height: 1;
   animation: giftBounce 1s cubic-bezier(0.2, 1.6, 0.4, 1);
 }
@@ -2093,7 +2132,7 @@ button.lb {
   list-style: none;
   font-weight: 700;
   line-height: 1.7;
-  font-size: 17px;
+  font-size: max(12px, calc(17px * var(--text-scale)));
 }
 .collect-row {
   display: flex;
@@ -2118,18 +2157,18 @@ button.lb {
   text-align: center;
 }
 .hab-grid .hab-ic {
-  font-size: 22px;
+  font-size: max(12px, calc(22px * var(--text-scale)));
 }
 .hab-grid .hab-body b {
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
 }
 .hab-n {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   color: var(--muted);
   font-weight: 700;
 }
 .hab-grid .hab-body small {
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
 }
 .life-score.heat1 {
   color: #9fe6ff;
@@ -2181,14 +2220,14 @@ button.lb {
 }
 .ev-banner b {
   display: block;
-  font-size: 22px;
+  font-size: max(12px, calc(22px * var(--text-scale)));
 }
 .ev-banner small {
   color: var(--muted);
   font-weight: 700;
 }
 .ev-emoji {
-  font-size: 42px;
+  font-size: max(12px, calc(42px * var(--text-scale)));
 }
 .ev-body {
   display: flex;
@@ -2215,11 +2254,11 @@ button.lb {
 }
 .ev-need {
   min-width: 64px;
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
 }
 .ev-rew {
   flex: 1;
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -2248,7 +2287,7 @@ button.lb {
   bottom: 10px;
   white-space: nowrap;
   font-weight: 700;
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   padding: 8px 14px;
   border-radius: 14px;
   background: rgba(94, 242, 176, 0.18);
@@ -2263,10 +2302,10 @@ button.lb {
     padding: 5px 2px;
   }
   .side-btn .ni {
-    font-size: 17px;
+    font-size: max(12px, calc(17px * var(--text-scale)));
   }
   .side-btn .nl {
-    font-size: 9px;
+    font-size: max(12px, calc(9px * var(--text-scale)));
   }
   .side {
     gap: 6px;
@@ -2297,6 +2336,16 @@ button.lb {
 .lang-select option {
   color: #000;
 }
+@media (max-width: 360px) {
+  .text-xl .toggle.lang {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .text-xl .toggle.lang .lang-select {
+    width: 100%;
+  }
+}
 
 /* ---------------------------------------------------------------- workshop */
 .ws-top {
@@ -2321,11 +2370,11 @@ button.lb {
 }
 .ws-name {
   font-weight: 700;
-  font-size: 18px;
+  font-size: max(12px, calc(18px * var(--text-scale)));
 }
 .ws-bar .btn {
   flex: 0 0 auto;
-  font-size: 15px;
+  font-size: max(12px, calc(15px * var(--text-scale)));
   padding: 9px 16px;
 }
 .ws-state {
@@ -2347,7 +2396,7 @@ button.lb {
   padding: 9px 4px;
   border-radius: 12px;
   font-weight: 700;
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
   color: var(--muted);
 }
 .tab.on {
@@ -2373,11 +2422,11 @@ button.lb {
   position: relative;
 }
 .ws-item b {
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   line-height: 1.15;
 }
 .ws-item small {
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
   color: var(--muted);
 }
 .ws-item.t-fancy {
@@ -2416,7 +2465,7 @@ button.lb {
 }
 .ws-mastery small {
   color: var(--muted);
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
 }
 
 /* ---------------------------------------------------------------- passport */
@@ -2484,7 +2533,7 @@ button.lb {
 }
 .pp-name {
   font-weight: 700;
-  font-size: 24px;
+  font-size: max(12px, calc(24px * var(--text-scale)));
   line-height: 1.1;
 }
 .pp-card.gold .pp-name {
@@ -2499,7 +2548,7 @@ button.lb {
   color: var(--dust);
 }
 .pp-num {
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   color: rgba(255, 255, 255, 0.65);
 }
 .pp-strip {
@@ -2518,10 +2567,10 @@ button.lb {
   background: rgba(10, 6, 30, 0.35);
 }
 .pp-strip b {
-  font-size: 20px;
+  font-size: max(12px, calc(20px * var(--text-scale)));
 }
 .pp-strip small {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   color: rgba(255, 255, 255, 0.7);
 }
 .pp-badges {
@@ -2536,7 +2585,7 @@ button.lb {
   height: 52px;
   display: grid;
   place-items: center;
-  font-size: 28px;
+  font-size: max(12px, calc(28px * var(--text-scale)));
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #fff6d0, #ffc94a 55%, #c47a10);
   box-shadow: 0 3px 0 #8a4a10;
@@ -2560,10 +2609,10 @@ button.lb {
   background: var(--panel);
 }
 .pp-stats b {
-  font-size: 18px;
+  font-size: max(12px, calc(18px * var(--text-scale)));
 }
 .pp-stats small {
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
   color: var(--muted);
   line-height: 1.2;
 }
@@ -2587,16 +2636,16 @@ button.lb {
   height: 42px;
   display: grid;
   place-items: center;
-  font-size: 22px;
+  font-size: max(12px, calc(22px * var(--text-scale)));
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #fff6d0, #ffc94a 55%, #c47a10);
 }
 .trophy.locked .ti {
   background: rgba(255, 255, 255, 0.08);
-  font-size: 16px;
+  font-size: max(12px, calc(16px * var(--text-scale)));
 }
 .trophy small {
-  font-size: 10px;
+  font-size: max(12px, calc(10px * var(--text-scale)));
   line-height: 1.15;
   color: var(--muted);
 }
@@ -2610,7 +2659,7 @@ button.lb {
 .pe-name {
   text-align: center;
   font-weight: 700;
-  font-size: 26px;
+  font-size: max(12px, calc(26px * var(--text-scale)));
   color: var(--dust);
 }
 .pe-wheel {
@@ -2638,7 +2687,7 @@ button.lb {
   height: 44px;
   border-radius: 12px;
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.2);
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
 }
 .pe-sw.on {
   box-shadow:
@@ -2672,12 +2721,12 @@ button.lb {
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
 }
 .pass-logo small {
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
   letter-spacing: 0.2em;
   color: #ffe9a8;
 }
 .pass-logo b {
-  font-size: 30px;
+  font-size: max(12px, calc(30px * var(--text-scale)));
   line-height: 1;
   background: linear-gradient(180deg, #fff6c8, #ffc94a 60%, #e08a1a);
   -webkit-background-clip: text;
@@ -2709,7 +2758,7 @@ button.lb {
   box-shadow: inset 0 0 0 2px var(--sun);
 }
 .pass-item small {
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
   line-height: 1.15;
 }
 .pass-rows {
@@ -2726,11 +2775,11 @@ button.lb {
   background: var(--panel);
 }
 .pass-row span {
-  font-size: 22px;
+  font-size: max(12px, calc(22px * var(--text-scale)));
 }
 .pass-row p {
   margin: 0;
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
   line-height: 1.3;
   text-align: left;
 }
@@ -2791,14 +2840,14 @@ button.lb {
 }
 .hw-panel p {
   margin: 0;
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
 }
 .hw-hint {
   text-align: center;
 }
 .hw-title {
   font-weight: 700;
-  font-size: 19px;
+  font-size: max(12px, calc(19px * var(--text-scale)));
 }
 .hw-stats {
   display: grid;
@@ -2810,13 +2859,13 @@ button.lb {
   flex-direction: column;
   align-items: center;
   font-weight: 700;
-  font-size: 18px;
+  font-size: max(12px, calc(18px * var(--text-scale)));
   padding: 6px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.05);
 }
 .hw-stats small {
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
   color: var(--muted);
   font-weight: 500;
 }
@@ -2836,11 +2885,11 @@ button.lb {
   text-align: center;
 }
 .hw-opt b {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   line-height: 1.15;
 }
 .hw-opt small {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   color: var(--dust);
 }
 .hw-opt.no small {
@@ -2866,13 +2915,13 @@ button.lb {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.05);
   font-weight: 700;
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
 }
 .hw-timer {
   color: var(--dust);
 }
 .hw-actions .btn {
-  font-size: 15px;
+  font-size: max(12px, calc(15px * var(--text-scale)));
   padding: 10px 8px;
 }
 .hw-res {
@@ -2892,11 +2941,11 @@ button.lb {
 }
 .hw-res .btn {
   align-self: flex-start;
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   padding: 6px 10px;
 }
 .hearts {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   letter-spacing: 1px;
 }
 .hw-x {
@@ -2904,7 +2953,7 @@ button.lb {
   height: 30px;
   border-radius: 50%;
   color: var(--muted);
-  font-size: 20px;
+  font-size: max(12px, calc(20px * var(--text-scale)));
   background: rgba(255, 255, 255, 0.06);
 }
 .hw-invite {
@@ -2918,7 +2967,7 @@ button.lb {
   padding: 6px 2px;
 }
 .hw-invite .lb small {
-  font-size: 10px;
+  font-size: max(12px, calc(10px * var(--text-scale)));
 }
 .hw-invite .lb.on {
   box-shadow: inset 0 0 0 2px var(--life);
@@ -2948,7 +2997,7 @@ button.lb {
   animation: pop 0.45s ease;
 }
 .goals-l {
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -2962,10 +3011,10 @@ button.lb {
   border-radius: 999px;
   background: rgba(10, 6, 30, 0.65);
   box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.2);
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
 }
 .goal .gi {
-  font-size: 18px;
+  font-size: max(12px, calc(18px * var(--text-scale)));
   width: 26px;
   text-align: center;
 }
@@ -3008,7 +3057,7 @@ button.lb {
   text-align: center;
   line-height: 26px;
   font-weight: 700;
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   color: #2a1600;
 }
 .pre-goals {
@@ -3061,7 +3110,7 @@ button.lb {
   padding: 0;
   display: grid;
   gap: 2px;
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   color: var(--muted);
 }
 .lab-perks li.got {
@@ -3090,18 +3139,18 @@ button.lb {
   padding: 2px;
   border-radius: 10px;
   background: var(--panel-2);
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
   overflow: hidden;
 }
 .cal small {
   position: absolute;
   top: 2px;
   left: 4px;
-  font-size: 9px;
+  font-size: max(12px, calc(9px * var(--text-scale)));
   color: var(--muted);
 }
 .cal .ci {
-  font-size: 10px;
+  font-size: max(12px, calc(10px * var(--text-scale)));
   font-weight: 700;
   white-space: nowrap;
 }
@@ -3123,7 +3172,7 @@ button.lb {
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: 22px;
+  font-size: max(12px, calc(22px * var(--text-scale)));
   color: var(--life);
   font-style: normal;
 }
@@ -3131,7 +3180,7 @@ button.lb {
 /* ---------------------------------------------------------------- parental gate */
 .gate-q {
   text-align: center;
-  font-size: 34px;
+  font-size: max(12px, calc(34px * var(--text-scale)));
   font-weight: 700;
   color: var(--dust);
 }
@@ -3161,12 +3210,12 @@ button.lb {
   box-shadow: inset 0 -4px 8px rgba(0, 0, 0, 0.3);
 }
 .paint small {
-  font-size: 10px;
+  font-size: max(12px, calc(10px * var(--text-scale)));
   line-height: 1.1;
   text-align: center;
 }
 .paint b {
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
   color: var(--dust);
   min-height: 13px;
 }
@@ -3198,7 +3247,7 @@ button.lb {
 }
 .photo-frames .tab {
   flex: 1 0 28%;
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   padding: 7px 4px;
 }
 .season-chip {
@@ -3206,7 +3255,7 @@ button.lb {
   margin-top: -6px;
   padding: 3px 12px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   font-weight: 700;
   color: var(--muted);
   background: rgba(255, 255, 255, 0.06);
@@ -3218,7 +3267,7 @@ button.lb {
 }
 .lab-head .rec {
   color: var(--dust);
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
 }
 .nick {
   display: flex;
@@ -3234,7 +3283,7 @@ button.lb {
   margin-left: 6px;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
   font-weight: 700;
   color: #5a1030;
   background: linear-gradient(90deg, #ffb3cf, #ff8fc8);
@@ -3247,7 +3296,7 @@ button.lb {
   overflow-y: auto;
 }
 .nick-grid .btn {
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   padding: 8px 2px;
 }
 .nick-grid .btn.on {
@@ -3267,7 +3316,7 @@ button.lb {
   margin-left: 6px;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
   font-weight: 700;
   color: #5a1030;
   background: linear-gradient(90deg, #ffb3cf, #ff8fc8);
@@ -3280,7 +3329,7 @@ button.lb {
   overflow-y: auto;
 }
 .nick-grid .btn {
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   padding: 8px 2px;
 }
 .nick-grid .btn.on {
@@ -3306,7 +3355,7 @@ button.lb {
 }
 .lore p {
   margin: 0;
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
   line-height: 1.35;
 }
 .lore small {
@@ -3320,7 +3369,7 @@ button.lb {
 /* ---------------------------------------------------------------- inbox */
 .topbar .icon.mailbtn {
   position: relative;
-  font-size: 22px;
+  font-size: max(12px, calc(22px * var(--text-scale)));
 }
 .topbar .icon.mailbtn .nb {
   position: absolute;
@@ -3354,12 +3403,12 @@ button.lb {
   box-shadow: inset 0 0 0 1.5px var(--dust);
 }
 .mail-mc {
-  font-size: 30px;
+  font-size: max(12px, calc(30px * var(--text-scale)));
   width: 44px;
   text-align: center;
 }
 .mail-gift {
-  font-size: 20px;
+  font-size: max(12px, calc(20px * var(--text-scale)));
 }
 .mail-dot {
   width: 10px;
@@ -3381,7 +3430,7 @@ button.lb {
   color: #2a2440;
   line-height: 1.45;
   text-align: left;
-  font-size: 15px;
+  font-size: max(12px, calc(15px * var(--text-scale)));
 }
 .nudge.boss {
   background: linear-gradient(90deg, rgba(255, 138, 61, 0.3), rgba(255, 210, 74, 0.2));
@@ -3405,10 +3454,10 @@ button.lb {
   background: var(--panel-2);
 }
 .acc small {
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
 }
 .acc b {
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
   color: var(--dust);
   min-height: 13px;
 }
@@ -3451,7 +3500,7 @@ button.lb {
   box-shadow: inset 0 0 0 2px var(--line);
 }
 .preset-save {
-  font-size: 16px;
+  font-size: max(12px, calc(16px * var(--text-scale)));
   padding: 4px;
 }
 
@@ -3470,7 +3519,7 @@ button.lb {
   background: var(--panel);
 }
 .mats small {
-  font-size: 10px;
+  font-size: max(12px, calc(10px * var(--text-scale)));
   color: var(--muted);
 }
 .const-card {
@@ -3505,7 +3554,7 @@ button.lb {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   color: var(--dust);
 }
 .bundles {
@@ -3527,7 +3576,7 @@ button.lb {
   flex-wrap: wrap;
   gap: 8px;
   font-weight: 700;
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
   color: var(--muted);
 }
 .bundle .need .ok {
@@ -3579,7 +3628,7 @@ button.lb {
   color: var(--muted);
 }
 .dye small {
-  font-size: 9px;
+  font-size: max(12px, calc(9px * var(--text-scale)));
   line-height: 1.1;
   text-align: center;
   color: var(--muted);
@@ -3597,7 +3646,7 @@ button.lb {
   gap: 4px;
 }
 .nick-row .dress {
-  font-size: 16px;
+  font-size: max(12px, calc(16px * var(--text-scale)));
   padding: 2px 6px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.08);
@@ -3611,7 +3660,7 @@ button.lb {
 }
 @media (max-width: 360px) {
   .topbar .pill {
-    font-size: 14px;
+    font-size: max(12px, calc(14px * var(--text-scale)));
     padding-left: 8px;
     padding-right: 8px;
   }
@@ -3638,7 +3687,7 @@ button.lb {
   padding: 3px 12px;
   border-radius: 999px;
   font: inherit;
-  font-size: 13px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
   font-weight: 700;
   color: #2a1600;
   background: linear-gradient(90deg, #fff4d6, var(--c));
@@ -3674,7 +3723,7 @@ button.lb {
   flex-wrap: wrap;
 }
 .muted.small {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
 }
 
 .voy-head {
@@ -3688,7 +3737,7 @@ button.lb {
   border: 1px solid var(--line);
 }
 .voy-head b {
-  font-size: 18px;
+  font-size: max(12px, calc(18px * var(--text-scale)));
 }
 .vroute {
   position: relative;
@@ -3716,11 +3765,11 @@ button.lb {
   border-radius: 50%;
 }
 .vstop b {
-  font-size: 12px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
   white-space: nowrap;
 }
 .vstop small {
-  font-size: 11px;
+  font-size: max(12px, calc(11px * var(--text-scale)));
   color: var(--sun);
 }
 .vstop.locked b {
@@ -3736,7 +3785,7 @@ button.lb {
   position: absolute;
   top: 2px;
   right: 16px;
-  font-size: 20px;
+  font-size: max(12px, calc(20px * var(--text-scale)));
 }
 .vthumb {
   display: flex;
@@ -3786,7 +3835,7 @@ button.lb {
   font: inherit;
 }
 .stk small {
-  font-size: 10px;
+  font-size: max(12px, calc(10px * var(--text-scale)));
   line-height: 1.1;
   text-align: center;
   overflow: hidden;
@@ -3863,7 +3912,7 @@ button.lb {
   background: var(--panel-2);
   color: var(--text);
   font: inherit;
-  font-size: 18px;
+  font-size: max(12px, calc(18px * var(--text-scale)));
 }
 .stool:disabled {
   opacity: 0.35;
@@ -3878,7 +3927,7 @@ button.lb {
   height: 38px;
   border-radius: 10px;
   border: 2px solid transparent;
-  font-size: 14px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
 }
 .sbg.on {
   border-color: #fff;
@@ -3915,7 +3964,7 @@ button.lb {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
+  font-size: max(12px, calc(26px * var(--text-scale)));
   color: var(--muted);
 }
 .acc .buddy-none {
@@ -3929,4 +3978,110 @@ button.lb {
   position: absolute;
   left: -10px;
   bottom: -4px;
+}
+
+/* M3 first-session flows */
+.first-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  text-align: center;
+  background: radial-gradient(circle at 50% 35%, #243663, #0b102b 72%);
+}
+.first-title h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+.title-scene {
+  width: min(100%, 360px);
+  height: auto;
+  max-height: 45vh;
+  object-fit: contain;
+}
+.first-purpose {
+  max-width: 300px;
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+  line-height: 1.35;
+}
+.calendar-chip {
+  font-size: 0.75rem;
+  padding: 6px 10px;
+}
+.calendar-chip.ready {
+  box-shadow: 0 0 0 2px var(--life);
+}
+.passport-next,
+.home-next {
+  margin: 4px 0;
+  text-align: center;
+}
+.home-next {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.away-card .visit {
+  max-height: 180px;
+  overflow: auto;
+}
+.away-recap p,
+.away-summary p {
+  margin: 6px 0;
+}
+.away-gift {
+  text-align: center;
+}
+.purpose-orbit {
+  text-align: center;
+}
+.purpose-orbit p {
+  margin: 4px 0 12px;
+}
+.modal.first-win {
+  gap: 6px;
+  padding: 12px 14px;
+}
+.modal.first-win .purpose-orbit p {
+  margin: 0;
+}
+.modal.first-win .purpose-planet {
+  width: 52px;
+  height: 52px;
+}
+.modal.first-win .end-stars {
+  margin: 0;
+}
+.purpose-planet {
+  width: 100px;
+  height: 100px;
+  animation: purpose-shrink 1.1s ease-out both;
+}
+.purpose-dust {
+  display: inline-block;
+  animation: purpose-trickle 1.2s ease-out both;
+}
+@keyframes purpose-shrink {
+  from {
+    transform: scale(1.3);
+  }
+  to {
+    transform: scale(0.6);
+  }
+}
+@keyframes purpose-trickle {
+  from {
+    opacity: 0;
+    transform: translate(-35px, -35px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 15px);
+  }
+}
+.reduce-motion .purpose-planet,
+.reduce-motion .purpose-dust {
+  animation: none;
 }

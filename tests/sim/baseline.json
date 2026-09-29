@@ -5,21 +5,11 @@
       "band": "1-10",
       "difficulty": "normal",
       "policy": "casual",
-      "planets": 8,
-      "runs": 128,
-      "fail": 0.03125,
-      "threeStar": 0.390625,
-      "attemptsPerClear": 1.032258064516129
-    },
-    {
-      "band": "1-10",
-      "difficulty": "hard",
-      "policy": "casual",
-      "planets": 2,
-      "runs": 32,
-      "fail": 0.21875,
-      "threeStar": 0.1875,
-      "attemptsPerClear": 1.28
+      "planets": 10,
+      "runs": 160,
+      "fail": 0.10625,
+      "threeStar": 0.36875,
+      "attemptsPerClear": 1.118881118881119
     },
     {
       "band": "11-20",
@@ -145,20 +135,10 @@
       "band": "1-10",
       "difficulty": "normal",
       "policy": "decent",
-      "planets": 8,
-      "runs": 128,
-      "fail": 0.03125,
-      "threeStar": 0.640625,
-      "attemptsPerClear": 1.032258064516129
-    },
-    {
-      "band": "1-10",
-      "difficulty": "hard",
-      "policy": "decent",
-      "planets": 2,
-      "runs": 32,
+      "planets": 10,
+      "runs": 160,
       "fail": 0.0625,
-      "threeStar": 0.625,
+      "threeStar": 0.6125,
       "attemptsPerClear": 1.0666666666666667
     },
     {
@@ -285,21 +265,11 @@
       "band": "1-10",
       "difficulty": "normal",
       "policy": "sharp",
-      "planets": 8,
-      "runs": 128,
-      "fail": 0,
-      "threeStar": 0.859375,
-      "attemptsPerClear": 1
-    },
-    {
-      "band": "1-10",
-      "difficulty": "hard",
-      "policy": "sharp",
-      "planets": 2,
-      "runs": 32,
-      "fail": 0.03125,
-      "threeStar": 0.875,
-      "attemptsPerClear": 1.032258064516129
+      "planets": 10,
+      "runs": 160,
+      "fail": 0.0125,
+      "threeStar": 0.83125,
+      "attemptsPerClear": 1.0126582278481013
     },
     {
       "band": "11-20",

@@ -5,7 +5,7 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { icon } from './icons';
-import { h, fmt, mountOverlays, closeModals, toast } from './dom';
+import { h, btn, modal, fmt, mountOverlays, closeModals, toast } from './dom';
 import { sfx, setAudio, unlockAudio, pauseAudio, setMusicTheme, chapterTheme } from './audio';
 import { haptic, setHaptics } from './haptics';
 import { LevelScene, type LevelResult, type SceneOpts } from './game';
@@ -23,7 +23,10 @@ import { addVisitors } from '../meta/visitors';
 import { rankFlow } from './flows/rank';
 import { visitorsFlow } from './flows/visitors';
 import { modesFlow } from './flows/modes';
-import { welcomeBackFlow } from './flows/offers';
+import { awayFlow } from './flows/away';
+import { titleBeat } from './flows/title';
+import { choosePopup, type PopupKind } from '../meta/governor';
+import { awayCollectables } from '../meta/economy';
 import { scheduleReminders } from './platform';
 import { addTokens, ensureEvent, eventActive, tokensForLand } from '../meta/events';
 import { eventFlow } from './flows/event';
@@ -36,10 +39,11 @@ import { showRoad } from './screens/road';
 import { dailyGiftFlow } from './flows/daily';
 import { preLevel } from './flows/prelevel';
 import { levelResults } from './flows/results';
-import { settingsFlow } from './flows/settings';
+import { settingsFlow, setTextSize } from './flows/settings';
 import { questsFlow } from './flows/quests';
 import { setLang, t, type Lang } from '../i18n';
-import { COACH } from '../meta/coach';
+import { COACH, pendingIntroAfterWin } from '../meta/coach';
+import { addIntroLetter } from '../meta/inbox';
 import { gcSignIn, gcSync } from './gamecenter';
 import { fixClock } from '../meta/economy';
 import { currentLook, masteryLevel, MASTERY_STEPS } from '../meta/cosmetics';
@@ -77,7 +81,8 @@ export type ScreenName =
   | 'homeworld'
   | 'sky'
   | 'voyage'
-  | 'album';
+  | 'album'
+  | 'title';
 export type Boosters = Record<BoosterId, boolean>;
 export const NO_BOOSTERS: Boosters = { shower: false, spark: false, scope: false };
 
@@ -93,7 +98,11 @@ export class App {
   private teardown: (() => void) | null = null;
   private saveTimer = 0;
   private awayMs = 0;
+  private lastAbsenceMs = 0;
   private busy = false;
+  private homeSeenThisOpen = false;
+  private popupShownThisOpen = false;
+  private roundFirstCampaignClear = false;
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -112,7 +121,8 @@ export class App {
     fixClock(this.p);
     addVisitors(this.p, Date.now());
     tickHome(this.p);
-    this.awayMs = Date.now() - this.p.meta.lastSeen;
+    this.lastAbsenceMs = this.p.meta.sessions === 1 ? Infinity : Math.max(0, Date.now() - this.p.meta.lastSeen);
+    this.awayMs = this.lastAbsenceMs === Infinity ? 0 : this.lastAbsenceMs;
     this.p.meta.lastSeen = Date.now();
     const unlock = () => {
       unlockAudio();
@@ -133,10 +143,11 @@ export class App {
         fixClock(this.p);
         if (addVisitors(this.p, Date.now())) this.save();
         tickHome(this.p);
-        this.awayMs = Date.now() - this.p.meta.lastSeen;
+        this.lastAbsenceMs = Math.max(0, Date.now() - this.p.meta.lastSeen);
+        this.awayMs = Math.max(this.awayMs, this.lastAbsenceMs);
+        if (this.lastAbsenceMs >= 30 * 60_000) this.popupShownThisOpen = false;
         this.p.meta.lastSeen = Date.now();
-        if (this.screen === 'home') this.refresh();
-        if (this.screen !== 'level') this.daily();
+        if (this.screen === 'home') this.showHome();
       });
     }
     document.addEventListener('visibilitychange', () => {
@@ -153,8 +164,10 @@ export class App {
         if (this.screen === 'shop') this.refresh();
       })
       .catch(() => {});
-    if (!this.p.tutorial) this.startLevel(1, { tutorial: true });
-    else this.showHome(); // the first home screen of a session runs the daily-gift sequence
+    if (!this.p.tutorial) {
+      if (this.p.meta.sessions === 1) titleBeat(this, () => this.startLevel(1, { tutorial: true }));
+      else this.startLevel(1, { tutorial: true });
+    } else this.showHome();
     this.save();
     if (this.p.settings.gameCenter) gcSignIn().then((ok) => ok && this.syncGameCenter());
   }
@@ -168,6 +181,7 @@ export class App {
     setLang(this.p.settings.lang as Lang);
     setAudio(this.p.settings.sound, this.p.settings.music);
     setHaptics(this.p.settings.haptics);
+    setTextSize(this.p.settings.textSize);
     document.documentElement.classList.toggle('reduce-motion', this.p.settings.reduceMotion);
   }
 
@@ -230,7 +244,48 @@ export class App {
 
   // ------------------------------------------------------------------ navigation
   showHome(quiet = false) {
-    showHome(this, quiet);
+    showHome(this);
+    if (quiet) return;
+    this.homeSeenThisOpen = true;
+    if (this.p.meta.sessions > 1 && awayCollectables(this.p, this.awayMs).show && this.autoPopup('away')) {
+      awayFlow(this, this.awayMs);
+      return;
+    }
+    const intro = pendingIntroAfterWin(this.p);
+    if (intro?.intro && this.autoPopup('intro')) {
+      addIntroLetter(this.p, intro.id);
+      this.save();
+      const target: Record<string, string> = {
+        homeworld: '.world-btn',
+        festival: '.fest-chip',
+        star_calendar: '.calendar-chip',
+        voyage: '.voyage-btn',
+      };
+      const focus = target[intro.id] ? this.host.querySelector<HTMLElement>(target[intro.id]) : null;
+      const card = modal(
+        [
+          h('div', { class: 'intro-art' }, '✨'),
+          h('div', { class: 'm-title' }, intro.id === 'homeworld' ? t('Your Homeworld is ready') : t(intro.intro.title)),
+          h('p', null, t(intro.intro.body)),
+          focus
+            ? btn(t('Show me'), 'primary wide', () => {
+                card.close();
+                if (intro.id === 'homeworld') return this.showHomeworld();
+                focus.scrollIntoView({ block: 'nearest' });
+                focus.classList.add('coach-focus');
+                window.setTimeout(() => focus.classList.remove('coach-focus'), 3000);
+              })
+            : btn(t('Close'), 'primary wide', () => card.close()),
+        ],
+        { dismiss: false },
+      );
+    }
+  }
+  keepAwayPending(awayMs: number) {
+    this.awayMs = Math.max(this.awayMs, awayMs);
+  }
+  clearAwayPending() {
+    this.awayMs = 0;
   }
   showLifebook() {
     ledger.discover('lifebook', this.p.level);
@@ -307,21 +362,25 @@ export class App {
   modes() {
     modesFlow(this);
   }
-  /** Launch sequence: daily gift, then any visitors' gifts. */
-  launched = false;
+  /** The calendar opens from its Home chip. */
   daily() {
     if (!unlocked(this.p, 'star_calendar')) return;
-    this.launched = true;
-    const away = this.awayMs;
-    this.awayMs = 0;
-    dailyGiftFlow(this, () =>
-      welcomeBackFlow(this, away, () => {
-        if (this.p.visitors.length && this.screen === 'home') this.visitors();
-      }),
-    );
+    dailyGiftFlow(this);
+  }
+  /** Reserve the one automatic card before creating its sheet. */
+  autoPopup(kind: PopupKind) {
+    if (kind === 'intro' && this.screen === 'level') return true;
+    if (
+      (this.p.meta.sessions <= 1 && kind !== 'intro') ||
+      choosePopup({ homeSeen: this.homeSeenThisOpen, shownThisOpen: this.popupShownThisOpen, awayMs: this.lastAbsenceMs }, [kind]) !== kind
+    )
+      return false;
+    this.popupShownThisOpen = true;
+    return true;
   }
   preLevel(n: number) {
-    preLevel(this, n);
+    if (this.p.meta.sessions === 1) this.startLevel(n);
+    else preLevel(this, n);
   }
 
   /** Shared top bar with currencies. */
@@ -346,7 +405,7 @@ export class App {
 
       h('div', { class: 'grow' }),
       h('button', { class: 'pill dust', 'aria-label': t('Stardust'), onclick: () => this.showUpgrades() }, `✨ ${fmt(this.p.dust)}`),
-      this.p.chapters.length
+      this.p.chapters.length && this.p.meta.sessions > 1
         ? h(
             'button',
             { class: 'pill gems', 'aria-label': t('Gems'), onclick: () => this.showShop() },
@@ -360,7 +419,7 @@ export class App {
   // ------------------------------------------------------------------ level flow
   sceneOpts(
     mode: RoundMode | 'tutorial',
-    extra: Partial<SceneOpts> & Pick<SceneOpts, 'onEnd'>,
+    extra: Partial<SceneOpts> & { practice?: boolean } & Pick<SceneOpts, 'onEnd'>,
     boosters: Boosters = NO_BOOSTERS,
     tutorial = false,
   ): SceneOpts {
@@ -437,15 +496,16 @@ export class App {
     };
   }
 
-  startLevel(n: number, o: { tutorial?: boolean; boosters?: Boosters; level?: LevelDef } = {}) {
+  startLevel(n: number, o: { tutorial?: boolean; warmup?: boolean; boosters?: Boosters; level?: LevelDef } = {}) {
     const L = o.level ?? makeLevel(n);
+    this.roundFirstCampaignClear = !o.warmup && n === this.p.level && !this.p.stars[n];
     const boosters = o.boosters ?? NO_BOOSTERS;
     if (Object.values(boosters).some(Boolean)) {
       track(this.p, 'booster');
       ledger.count('boosters_used', Object.values(boosters).filter(Boolean).length);
     }
     this.p.stats.plays++;
-    const tier = momentumActive(this.p) ? this.p.momentum.streak : 0;
+    const tier = momentumActive(this.p) && !this.p.momentum.paused && !o.warmup ? this.p.momentum.streak : 0;
     const perk = MOMENTUM_PERKS[tier];
     const merged: Boosters = { shower: boosters.shower, spark: boosters.spark || perk.spark, scope: boosters.scope || perk.scope };
     const debut = debutsAt(n).find((entry) => entry.id in KINDS && n > 2 && unlocked(this.p, entry.id));
@@ -454,6 +514,7 @@ export class App {
       {
         onEnd: (r) => this.levelEnded(r),
         continueOk: (won) =>
+          this.p.meta.sessions > 1 &&
           continueAllowed({
             mode: o.tutorial || n === 1 ? 'tutorial' : 'campaign',
             planet: n,
@@ -467,8 +528,15 @@ export class App {
           this.save();
         },
         momentum: tier,
+        practice: !!o.warmup,
+        practiceFirstClear: this.roundFirstCampaignClear,
         coach: COACH[n],
         intro: debut && n === this.p.level ? (debut.id as Kind) : undefined,
+        allowIntro: () => this.autoPopup('intro'),
+        onIntro: (id) => {
+          addIntroLetter(this.p, id);
+          this.save();
+        },
       },
       merged,
       !!o.tutorial || n === 1,
@@ -484,7 +552,7 @@ export class App {
     if (r.throwsUsed === -1) return this.startLevel(r.level.n); // restart: no penalty, same as leaving
     if (!r.won) {
       if (r.level.n >= this.p.level && countsAsFail(r.throwsUsed, r.throwsTotal)) recordFail(this.p, r.level.n);
-      const res = momentumLoss(this.p, today());
+      const res = momentumLoss(this.p, today(), this.roundFirstCampaignClear);
       this.save();
       // campaign retries go through the pre-level sheet, where boosters can help
       if (r.level.n === this.p.level && r.level.n >= 4) {
@@ -496,7 +564,7 @@ export class App {
       return;
     }
     clearFails(this.p, r.level.n);
-    momentumWin(this.p);
+    momentumWin(this.p, this.roundFirstCampaignClear);
     levelResults(this, r);
   }
 

@@ -6,6 +6,7 @@ import { spendGems } from '../../meta/economy';
 import type { App } from '../app';
 import { t } from '../../i18n';
 import { parentalGate } from '../flows/gate';
+import { unlocked } from '../../meta/unlocks';
 
 const PACK_ICONS = ['💎', '👝', '🧰', '🌌'];
 
@@ -33,26 +34,27 @@ export function showShop(app: App) {
           btn(app.priceOf('starter'), 'buy-real wide', () => app.buy('starter')),
         )
       : null;
-  const pass = !p.pass
-    ? h(
-        'div',
-        { class: 'offer pass' },
-        h('div', { class: 'offer-t' }, t('🌌 Cosmic Pass')),
-        h(
-          'p',
-          null,
-          t(
-            'Unlock the golden lane of the Star Road: a second reward at every tier, forever. Rewards you already passed are waiting for you.',
-          ),
-        ),
-        h(
+  const pass =
+    !p.pass && unlocked(p, 'star_road')
+      ? h(
           'div',
-          { class: 'row' },
-          btn(t('See rewards'), 'ghost', () => app.showPass()),
-          btn(app.priceOf('pass'), 'buy-real', () => app.buy('pass')),
-        ),
-      )
-    : null;
+          { class: 'offer pass' },
+          h('div', { class: 'offer-t' }, t('🌌 Cosmic Pass')),
+          h(
+            'p',
+            null,
+            t(
+              'Unlock the golden lane of the Star Road: a second reward at every tier, forever. Rewards you already passed are waiting for you.',
+            ),
+          ),
+          h(
+            'div',
+            { class: 'row' },
+            btn(t('See rewards'), 'ghost', () => app.showPass()),
+            btn(app.priceOf('pass'), 'buy-real', () => app.buy('pass')),
+          ),
+        )
+      : null;
   const packs = h(
     'div',
     { class: 'packs' },

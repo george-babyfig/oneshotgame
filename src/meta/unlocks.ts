@@ -5,10 +5,10 @@ import type { Profile } from './profile';
 import { LORE_AT } from './lore';
 
 export const HOME_UNLOCK_LEVEL = 5;
-export const MOMENTUM_UNLOCK = 6;
-export const EVENT_UNLOCK_LEVEL = 8;
-export const FESTIVAL_UNLOCK_LEVEL = 8;
-export const VOYAGE_UNLOCK_LEVEL = 12;
+export const MOMENTUM_UNLOCK = 17;
+export const EVENT_UNLOCK_LEVEL = 20;
+export const FESTIVAL_UNLOCK_LEVEL = 34;
+export const VOYAGE_UNLOCK_LEVEL = 20;
 export const BUDDY_AT = LORE_AT;
 
 export type UnlockId =
@@ -65,10 +65,10 @@ const objectRows: Unlock[] = (Object.values(KINDS) as (typeof KINDS)[Kind][]).ma
 
 export const UNLOCKS: readonly Unlock[] = [
   ...objectRows,
-  { id: 'swap', planet: 1, placement: 'round' },
+  { id: 'swap', planet: 2, placement: 'round' },
   { id: 'goals', planet: GOALS_FROM, placement: 'round' },
-  { id: 'supernova', planet: 3, placement: 'round' },
-  { id: 'hard', planet: 5, placement: 'round' },
+  { id: 'supernova', planet: 9, placement: 'round' },
+  { id: 'hard', planet: 15, placement: 'round' },
   { id: 'super_hard', planet: 19, placement: 'round' },
   { id: 'guardian', planet: 10, placement: 'round' },
   {
@@ -79,10 +79,10 @@ export const UNLOCKS: readonly Unlock[] = [
     letter: 'homeworld',
     intro: {
       title: 'A planet of your own',
-      body: 'We found you a quiet little world. Build a Stardust Mill and a Critter Den — it will grow with every chapter you finish.',
+      body: 'Build a home. Welcome a friend.',
     },
   },
-  { id: 'weekly_event', planet: EVENT_UNLOCK_LEVEL, placement: 'home', button: true },
+  { id: 'weekly_event', planet: EVENT_UNLOCK_LEVEL, placement: 'home' },
   {
     id: 'festival',
     planet: FESTIVAL_UNLOCK_LEVEL,
@@ -90,8 +90,8 @@ export const UNLOCKS: readonly Unlock[] = [
     button: true,
     letter: 'fest-{YYYY-MM}',
     intro: {
-      title: '{e} has begun!',
-      body: 'All month long, every creature on your planets wears a festival costume. Spot them to earn a sticker and a keepsake your residents can wear.',
+      title: 'Festival time!',
+      body: 'Spot dressed-up friends and collect a festival sticker.',
     },
   },
   {
@@ -102,17 +102,17 @@ export const UNLOCKS: readonly Unlock[] = [
     letter: 'voyage-intro',
     intro: {
       title: 'Set sail on the Weekly Voyage',
-      body: 'Every Monday a new route of seven planets opens. Clear them one by one, and watch out for the Comet Guardian at the end!',
+      body: 'Explore seven planets, one by one.',
     },
   },
-  { id: 'star_road', planet: 1, placement: 'home', button: true },
-  { id: 'quests', planet: 1, placement: 'home', button: true },
-  { id: 'quest_spot', planet: EVENT_UNLOCK_LEVEL, placement: 'missions' },
+  { id: 'star_road', planet: 12, placement: 'home' },
+  { id: 'quests', planet: 12, placement: 'home', button: true },
+  { id: 'quest_spot', planet: FESTIVAL_UNLOCK_LEVEL, placement: 'missions' },
   { id: 'quest_voyage', planet: VOYAGE_UNLOCK_LEVEL, placement: 'missions' },
-  { id: 'star_calendar', planet: 1, placement: 'home', button: true },
-  { id: 'star_atlas', planet: HOME_UNLOCK_LEVEL, placement: 'homeworld', button: true },
-  { id: 'lifebook', planet: 1, placement: 'home', button: true },
-  { id: 'sticker_album', planet: 1, placement: 'collection', button: true },
+  { id: 'star_calendar', planet: 21, placement: 'home', button: true },
+  { id: 'star_atlas', planet: 23, placement: 'homeworld', button: true },
+  { id: 'lifebook', planet: 3, placement: 'home', button: true },
+  { id: 'sticker_album', planet: 13, placement: 'collection', button: true },
   {
     id: 'buddy',
     planet: 0,
@@ -120,7 +120,7 @@ export const UNLOCKS: readonly Unlock[] = [
     letter: 'buddy-intro',
     intro: {
       title: 'Can I come along?',
-      body: 'I have seen you on so many planets. Could I be your buddy? Pick me in the Workshop and I will cheer for every throw.',
+      body: 'Pick a buddy to cheer for you.',
     },
   },
   { id: 'momentum', planet: MOMENTUM_UNLOCK, placement: 'round' },
@@ -128,20 +128,38 @@ export const UNLOCKS: readonly Unlock[] = [
   { id: 'rush', planet: 0, placement: 'modes', rank: 3 },
   { id: 'zen', planet: 0, placement: 'modes', rank: 4 },
   { id: 'challenge', planet: 0, placement: 'modes', rank: 5 },
-  { id: 'passport', planet: 1, placement: 'home', button: true },
+  { id: 'passport', planet: 16, placement: 'home', button: true },
   { id: 'passport_setup', planet: 0, placement: 'home' },
-  { id: 'workshop', planet: 1, placement: 'collection', button: true },
-  { id: 'object_lab', planet: 1, placement: 'collection', button: true },
-  { id: 'upgrades', planet: 1, placement: 'home', button: true },
+  { id: 'workshop', planet: 18, placement: 'collection', button: true },
+  { id: 'object_lab', planet: HOME_UNLOCK_LEVEL, placement: 'collection' },
+  { id: 'upgrades', planet: 14, placement: 'home', button: true },
   { id: 'inbox', planet: 1, placement: 'home', button: true, letter: 'welcome' },
 ];
 
 export function unlocked(p: Profile, id: UnlockId): boolean {
   const row = UNLOCKS.find((entry) => entry.id === id);
   if (!row) return false;
-  if (id === 'buddy') return Object.values(p.sightings).some((count) => count >= BUDDY_AT);
+  if (p.legacyUnlocks.includes(id)) return true;
+  if (id === 'star_road' && (p.pass || p.road.length > 0 || p.roadPass.length > 0)) return true;
+  if (id === 'quests' && (p.quests.list.some((q) => q.progress > 0 || q.claimed) || p.quests.bonusClaimed)) return true;
+  if (id === 'quest_spot' && (p.festival.spotted > 0 || p.quests.list.some((q) => q.id.startsWith('spot') && q.progress > 0))) return true;
+  if (id === 'quest_voyage' && (p.voyage.cleared > 0 || p.voyageDone > 0)) return true;
+  if (id === 'voyage' && (p.voyage.cleared > 0 || p.voyageDone > 0)) return true;
+  if (id === 'festival' && (p.festival.spotted > 0 || p.festival.claimed.length > 0)) return true;
+  if (id === 'weekly_event' && (p.event.tokens > 0 || p.event.claimed.length > 0)) return true;
+  if (id === 'star_calendar' && !!p.daily.last) return true;
+  if (id === 'momentum' && p.momentum.streak > 0) return true;
+  if (id === 'homeworld' && (p.home.intro || p.home.plots.some(Boolean) || p.home.residents.length > 0)) return true;
+  if (id === 'star_atlas' && (p.bundles.length > 0 || p.constellations.length > 0)) return true;
+  if (id === 'sticker_album' && (p.album.fest.length > 0 || p.album.pagesClaimed.length > 0)) return true;
+  if (id === 'passport' && p.passport.set) return true;
+  if (id === 'workshop' && (p.wardrobe.length > 0 || p.presets.some(Boolean))) return true;
+  if (id === 'object_lab' && Object.values(p.lab).some((level) => level > 1)) return true;
+  if (id === 'upgrades' && Object.values(p.upgrades).some((level) => level > 0)) return true;
+  if (id === 'buddy' && p.buddy.species) return true;
+  if (id === 'buddy') return p.level >= 18 && Object.values(p.sightings).some((count) => count >= BUDDY_AT);
   if (id === 'passport_setup') return p.stats.wins >= 1;
-  if (id === 'star_calendar') return p.tutorial;
+  if (id === 'star_calendar') return p.level >= row.planet;
   if (row.rank !== undefined) return p.rank >= row.rank;
   return p.level >= row.planet;
 }

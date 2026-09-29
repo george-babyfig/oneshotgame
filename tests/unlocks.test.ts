@@ -8,15 +8,30 @@ import { festivalActive, FESTIVAL_UNLOCK_LEVEL } from '../src/meta/festivals';
 import { homeUnlocked, HOME_UNLOCK_LEVEL } from '../src/meta/homeworld';
 import { letterStrings } from '../src/meta/inbox';
 import { momentumActive, MOMENTUM_UNLOCK } from '../src/meta/momentum';
-import { defaultProfile } from '../src/meta/profile';
+import { defaultProfile, migrate } from '../src/meta/profile';
 import { unlocked as rankUnlocked } from '../src/meta/rank';
 import { UNLOCKS, debutsAt, unlocked } from '../src/meta/unlocks';
 import { voyageActive, VOYAGE_UNLOCK_LEVEL } from '../src/meta/voyage';
 
 // M3 must empty this list as it moves today's crowded Home debuts.
-const KNOWN_UNTIL_M3 = [1, 5, 8];
+const KNOWN_UNTIL_M3: number[] = [];
 
 describe('unlock ladder', () => {
+  it('preserves old gates while fresh players follow the new ladder', () => {
+    const fresh = defaultProfile();
+    fresh.level = 12;
+    expect(unlocked(fresh, 'festival')).toBe(false);
+    expect(unlocked(fresh, 'voyage')).toBe(false);
+    const old = migrate({ ...fresh, tutorial: true, m3Migrated: undefined });
+    expect(unlocked(old, 'festival')).toBe(true);
+    expect(unlocked(old, 'voyage')).toBe(true);
+    expect(old.mailSeen).toContain('coach-festival');
+    expect(old.mailSeen).toContain('coach-voyage');
+    fresh.pass = true;
+    expect(unlocked(fresh, 'star_road')).toBe(true);
+    fresh.quests.list = [{ id: 'collect2', progress: 1, claimed: false }];
+    expect(unlocked(fresh, 'quests')).toBe(true);
+  });
   it('has one row per feature and keeps known debut collisions honest', () => {
     expect(new Set(UNLOCKS.map((entry) => entry.id)).size).toBe(UNLOCKS.length);
     const crowded = Array.from({ length: 60 }, (_, i) => i + 1).filter(
@@ -57,8 +72,8 @@ describe('unlock ladder', () => {
         expect(unlocked(p, 'momentum')).toBe(level >= MOMENTUM_UNLOCK);
         expect(momentumActive(p)).toBe(level >= MOMENTUM_UNLOCK);
         expect(unlocked(p, 'goals')).toBe(level >= GOALS_FROM);
-        expect(unlocked(p, 'quest_spot')).toBe(level >= 8);
-        expect(unlocked(p, 'quest_voyage')).toBe(level >= 12);
+        expect(unlocked(p, 'quest_spot')).toBe(level >= FESTIVAL_UNLOCK_LEVEL);
+        expect(unlocked(p, 'quest_voyage')).toBe(level >= VOYAGE_UNLOCK_LEVEL);
         for (const kind of Object.keys(KINDS) as Kind[]) expect(unlocked(p, kind)).toBe(level >= KINDS[kind].unlock);
         for (const [mode, need] of Object.entries({ daily: 2, rush: 3, zen: 4, challenge: 5 }) as [
           'daily' | 'rush' | 'zen' | 'challenge',
@@ -67,12 +82,12 @@ describe('unlock ladder', () => {
           expect(unlocked(p, mode)).toBe(rank >= need);
           expect(rankUnlocked(p, mode)).toBe(rank >= need);
         }
-        expect(unlocked(p, 'star_calendar')).toBe(p.tutorial);
+        expect(unlocked(p, 'star_calendar')).toBe(level >= 21);
         expect(unlocked(p, 'passport_setup')).toBe(p.stats.wins >= 1);
         expect(unlocked(p, 'buddy')).toBe(false);
         p.sightings.bunny = BUDDY_AT;
-        expect(unlocked(p, 'buddy')).toBe(true);
-        expect(buddyEligible(p)).toContain('bunny');
+        expect(unlocked(p, 'buddy')).toBe(level >= 18);
+        expect(buddyEligible(p).includes('bunny')).toBe(level >= 18);
       }
     }
   });

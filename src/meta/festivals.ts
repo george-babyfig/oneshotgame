@@ -34,7 +34,7 @@ export const FESTIVALS: Festival[] = [
 
 export const FESTIVAL_BY_ID: Record<string, Festival> = Object.fromEntries(FESTIVALS.map((f) => [f.id, f]));
 
-/** Festivals start once the weekly event does. */
+/** Festivals open on planet 34. */
 export { FESTIVAL_UNLOCK_LEVEL } from './unlocks';
 
 export interface FestivalTier {

@@ -1,5 +1,4 @@
-// Momentum: a win streak that gives free head-starts (Royal Match / Candy Crush style),
-// with one free "shield" per day so a single slip doesn't wipe it out.
+// Momentum: wins build free head starts; a loss pauses progress.
 import type { Profile } from './profile';
 import { t, tp } from '../i18n';
 import { unlocked } from './unlocks';
@@ -33,19 +32,15 @@ export function momentumActive(p: Profile) {
   return unlocked(p, 'momentum');
 }
 
-export function momentumWin(p: Profile) {
-  if (!momentumActive(p)) return;
-  p.momentum.streak = Math.min(MOMENTUM_MAX, p.momentum.streak + 1);
+export function momentumWin(p: Profile, firstCampaignClear = true) {
+  if (!momentumActive(p) || !firstCampaignClear) return;
+  if (p.momentum.paused) p.momentum.paused = false;
+  else p.momentum.streak = Math.min(MOMENTUM_MAX, p.momentum.streak + 1);
   p.stats.bestStreak = Math.max(p.stats.bestStreak, p.momentum.streak);
 }
 
-/** A lost level. Returns 'shield' if the daily shield saved the streak, 'lost' if it broke, or null if there was none. */
-export function momentumLoss(p: Profile, day: string): 'shield' | 'lost' | null {
-  if (!momentumActive(p) || p.momentum.streak === 0) return null;
-  if (p.momentum.shieldDay !== day) {
-    p.momentum.shieldDay = day;
-    return 'shield';
-  }
-  p.momentum.streak = 0;
-  return 'lost';
+/** A lost level pauses Momentum at its current tier. */
+export function momentumLoss(p: Profile, _day: string, firstCampaignClear = true): null {
+  if (momentumActive(p) && firstCampaignClear) p.momentum.paused = true;
+  return null;
 }

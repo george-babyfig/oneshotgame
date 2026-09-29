@@ -7,7 +7,7 @@ import type { Profile } from './profile';
 import { applyReward, type Reward } from './progression';
 import { seasonOf, skyEventOn } from './seasons';
 import { chaptersDone, friendLevel, FRIEND_LEVELS } from './homeworld';
-import { unlocked } from './unlocks';
+import { UNLOCKS, unlocked } from './unlocks';
 
 export interface Mail {
   id: string;
@@ -42,7 +42,7 @@ const MC = 'Mission Control';
 const RULES: Rule[] = [
   {
     kind: 'welcome',
-    key: (p) => (unlocked(p, 'star_calendar') ? 'welcome' : null),
+    key: (p) => (p.tutorial ? 'welcome' : null),
     letter: () => ({
       from: MC,
       title: 'Welcome, Keeper!',
@@ -226,8 +226,21 @@ export function checkMail(p: Profile, now = new Date()): number {
 }
 
 export function letterOf(m: Mail): LetterDef | null {
+  if (m.kind === 'coach_intro') {
+    const row = UNLOCKS.find((x) => x.id === m.vars?.id && x.intro);
+    return row?.intro ? { from: 'Keeper', title: row.intro.title, body: row.intro.body } : null;
+  }
   const r = RULES.find((x) => x.kind === m.kind);
   return r ? r.letter(m.vars ?? {}) : null;
+}
+
+/** Copy a shown intro into the child's letters without duplicating it. */
+export function addIntroLetter(p: Profile, id: string, at = Date.now()): boolean {
+  const row = UNLOCKS.find((x) => x.id === id && x.intro);
+  if (!row || p.mailSeen.includes(`coach-${id}`) || p.mail.some((m) => m.id === `coach-${id}`)) return false;
+  p.mail.unshift({ id: `coach-${id}`, kind: 'coach_intro', at, read: false, claimed: false, vars: { id } });
+  p.mailSeen = [...p.mailSeen, `coach-${id}`];
+  return true;
 }
 
 export function unread(p: Profile) {
@@ -253,5 +266,7 @@ export function letterStrings(): string[] {
       const L = r.letter({ s, n: 1, c: '', e: '' });
       [L.from, L.title, L.body].forEach((x) => x && out.add(x));
     }
+  out.add('Keeper');
+  for (const row of UNLOCKS) if (row.intro) [row.intro.title, row.intro.body].forEach((x) => out.add(x));
   return [...out];
 }

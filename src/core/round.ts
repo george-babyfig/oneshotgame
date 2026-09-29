@@ -60,7 +60,7 @@ export function stepRound(
 ): StepResult {
   const planet = clonePlanet(state.planet);
   const priorSpecies = state.planet.sectors.map((s) => s.species);
-  const nova = action.nova ?? (state.novaEnabled && state.charge >= NOVA_CHARGE);
+  const nova = state.novaEnabled && (action.nova ?? state.charge >= NOVA_CHARGE);
   const result = impact(planet, action.kind, action.sector, mods.splash, { nova });
   const lost = result.lost.map((id) => ({ id, at: priorSpecies.indexOf(id) }));
   const regionBests = [...state.regionBests];

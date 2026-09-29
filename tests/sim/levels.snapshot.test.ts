@@ -6,9 +6,9 @@ import originalHashes from './levels.default.snapshot.json';
 describe('campaign level seeds', () => {
   it('preserves every original layout when no salt is selected', () => {
     for (let n = 1; n <= 60; n++) {
-      const digest = createHash('sha256')
-        .update(JSON.stringify(makeLevel(n, 'PP', { salt: 0 })))
-        .digest('hex');
+      // Nova availability is a new rule flag; this fixture fingerprints the layout.
+      const { nova: _nova, ...layout } = makeLevel(n, 'PP', { salt: 0 });
+      const digest = createHash('sha256').update(JSON.stringify(layout)).digest('hex');
       expect(digest, `planet ${n}`).toBe(originalHashes[n - 1]);
     }
   });

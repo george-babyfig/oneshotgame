@@ -12,10 +12,12 @@
 //   c-pre-m0.v3.json       v3 before the M0 kid-safe update: no fails / visits / continuesUsed, no
 //                          settings.gameCenter, home.started instead of home.lastTick, notifications: true
 //   d-round4.v2.json       v2 (round 4): no mailSeen / festival / voyage / album / buddy / home.friends
+//   e-pre-m3.v3.json       v3 before the M3 unlock ladder, with Pass and mode progress
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { defaultProfile, migrate, PROFILE_VERSION, type Profile } from '../src/meta/profile';
+import { unlocked } from '../src/meta/unlocks';
 
 const DIR = 'tests/fixtures/saves';
 const FILES = readdirSync(DIR)
@@ -48,8 +50,8 @@ function wallet(p: Raw) {
 }
 
 describe('save goldens', () => {
-  it('has the four fixtures (add one for every save format change)', () => {
-    expect(FILES).toEqual(['a-new-profile.v3.json', 'b-mid-game.v3.json', 'c-pre-m0.v3.json', 'd-round4.v2.json']);
+  it('has the five fixtures (add one for every save format change)', () => {
+    expect(FILES).toEqual(['a-new-profile.v3.json', 'b-mid-game.v3.json', 'c-pre-m0.v3.json', 'd-round4.v2.json', 'e-pre-m3.v3.json']);
   });
 
   for (const f of FILES) {
@@ -94,6 +96,15 @@ describe('save goldens', () => {
 });
 
 describe('save goldens: specific migrations', () => {
+  it('grandfathers pre-M3 gates and marks past intro cards as seen', () => {
+    const p = loadSave('e-pre-m3.v3.json');
+    expect(p.m3Migrated).toBe(true);
+    for (const id of ['voyage', 'weekly_event', 'festival', 'star_calendar', 'momentum', 'quests', 'star_road'] as const)
+      expect(unlocked(p, id), id).toBe(true);
+    for (const id of ['homeworld', 'festival', 'voyage'] as const) expect(p.mailSeen).toContain(`coach-${id}`);
+    expect(migrate(JSON.parse(JSON.stringify(p))).legacyUnlocks).toEqual(p.legacyUnlocks);
+  });
+
   it('a brand-new profile loads as a default profile', () => {
     const raw = load('a-new-profile.v3.json');
     const now = raw.lastCollect as number;
@@ -104,6 +115,7 @@ describe('save goldens: specific migrations', () => {
   it('the mid-game player keeps the choices a grown-up made and this week’s progress', () => {
     const p = loadSave('b-mid-game.v3.json');
     expect(p.settings).toMatchObject({ notifications: true, gameCenter: true, lang: 'es', hemi: 'south', music: false });
+    expect(p.settings.textSize).toBe('standard');
     expect(p.festival).toEqual({ key: '2026-09', spotted: 31, claimed: [0, 1] });
     expect(p.voyage).toEqual({ week: '2026-W39', base: 19, cleared: 3, stars: [3, 2, 3] });
     expect(p.event).toEqual({ week: '2026-W39', tokens: 64, claimed: [0, 1] });
@@ -145,7 +157,8 @@ describe('save goldens: specific migrations', () => {
     expect((raw.daily as Raw).streak).toBe(12);
     expect(p.daily).toEqual({ last: '2026-07-29', streak: 0 });
     expect(p.settings).toMatchObject({ haptics: false, reduceMotion: true, lang: 'de' });
-    expect(p.mailSeen).toEqual([]);
+    expect(p.mailSeen).toContain('coach-homeworld');
+    expect(p.mailSeen).toContain('coach-festival');
     expect(p.festival).toEqual({ key: '', spotted: 0, claimed: [] });
     expect(p.voyage).toEqual({ week: '', base: 8, cleared: 0, stars: [] });
     expect(p.buddy).toEqual({ species: null, acc: null });

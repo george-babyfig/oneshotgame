@@ -16,6 +16,22 @@ import { ensureQuests } from '../../meta/progression';
 import { today } from '../../meta/profile';
 
 type Toggle = 'sound' | 'music' | 'haptics' | 'reduceMotion' | 'notifications';
+type TextSize = Settings['textSize'];
+
+export function setTextSize(size: TextSize) {
+  document.documentElement.style.setProperty('--text-scale', size === 'extra-large' ? '1.36' : size === 'large' ? '1.18' : '1');
+  document.documentElement.classList.toggle('text-xl', size === 'extra-large');
+}
+
+// Settings is loaded with the app, so the mirrored choice applies before the first screen.
+if (typeof document !== 'undefined') {
+  try {
+    const saved = localStorage.getItem('pp.textSize');
+    if (saved === 'large' || saved === 'extra-large') setTextSize(saved);
+  } catch {
+    // Browsers may disable local storage.
+  }
+}
 
 export function settingsFlow(app: App) {
   const s: Settings = app.p.settings;
@@ -75,6 +91,26 @@ export function settingsFlow(app: App) {
     m.close();
     app.refresh();
     settingsFlow(app);
+  });
+  const size = h(
+    'select',
+    { class: 'lang-select', 'aria-label': t('Text size') },
+    h('option', { value: 'standard' }, t('Standard')),
+    h('option', { value: 'large' }, t('Large')),
+    h('option', { value: 'extra-large' }, t('Extra large')),
+  ) as HTMLSelectElement;
+  size.value = s.textSize;
+  setTextSize(s.textSize);
+  size.addEventListener('change', () => {
+    const choice = size.value as TextSize;
+    s.textSize = choice;
+    setTextSize(choice);
+    try {
+      localStorage.setItem('pp.textSize', choice);
+    } catch {
+      // The profile still saves the choice.
+    }
+    app.save();
   });
   const hemi = h(
     'select',
@@ -137,6 +173,7 @@ export function settingsFlow(app: App) {
     tog(t('Reduce motion'), 'reduceMotion'),
     tog(t('Reminders'), 'notifications'),
     h('label', { class: 'toggle lang' }, t('Language'), lang),
+    h('label', { class: 'toggle lang' }, t('Text size'), size),
     h('label', { class: 'toggle lang' }, t('Seasons'), hemi),
     btn(t('How to play'), 'ghost wide', () => (m.close(), howTo())),
     btn(t('Restore purchases'), 'ghost wide', async () => {

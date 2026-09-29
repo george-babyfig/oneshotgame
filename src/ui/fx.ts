@@ -11,6 +11,7 @@ import { drawMeteors, drawSeason } from './art/seasons';
 import { sfx } from './audio';
 import { haptic } from './haptics';
 import { t, tp } from '../i18n';
+import * as hud from './hud';
 
 import type { LevelScene, Shot } from './game';
 
@@ -394,11 +395,12 @@ export function land(scene: LevelScene, sh: Shot, i: number) {
     scene.burst(sh.x, sh.y, '#fff2b8', 50, 9);
     setTimeout(() => scene.popup(scene.cx, scene.cy - scene.R * 1.5, t('SUPERNOVA!'), '#ffd24a', 32, 1.4), 120);
   } else {
-    if (beforeCharge < NOVA_CHARGE && scene.charge >= NOVA_CHARGE) {
+    if (scene.novaOn && beforeCharge < NOVA_CHARGE && scene.charge >= NOVA_CHARGE) {
       setTimeout(() => {
         const L = scene.launch;
         scene.popup(L.x, L.y - 70, t('Supernova charged!'), '#ffd24a', 20, 1.6);
         sfx.levelUp();
+        scene.showCoachEvent('nova');
       }, 700);
     }
   }
@@ -420,6 +422,13 @@ export function land(scene: LevelScene, sh: Shot, i: number) {
     }, 260);
   }
   scene.score = res.after + scene.bonus;
+  if (res.lost.length) scene.showCoachEvent('wander');
+  if (res.spawned.length) scene.showCoachEvent('creature');
+  if (res.spawned.length) {
+    const first = res.spawned[0];
+    hud.flyCreaturePoints(scene, first.at, Math.max(0, delta));
+  }
+  hud.announceLanding(scene, BIOMES[scene.planet.sectors[i].biome].name, delta, res.spawned[0] && SPECIES_BY_ID[res.spawned[0].id]?.name);
   scene.heat(delta);
   if (regions.length) scene.o.onTransform?.(regions.length);
   if (res.changed.length) {

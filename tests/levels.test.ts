@@ -12,6 +12,7 @@ import {
   starsEarned,
 } from '../src/core/levels';
 import { lifeScore } from '../src/core/world';
+import { roundState, stepRound } from '../src/core/round';
 
 describe('level generator', () => {
   it('every level in the first twelve chapters is beatable with rising targets', () => {
@@ -21,10 +22,10 @@ describe('level generator', () => {
       expect(L.stars[1]).toBeLessThan(L.stars[2]);
       expect(L.stars[0]).toBeGreaterThan(lifeScore(L.start));
       // the solver that set the targets can reach 3 stars
-      expect(greedyScore(L.start, L.queue, L.throws)).toBeGreaterThanOrEqual(L.stars[2]);
+      expect(greedyScore(L.start, L.queue, L.throws, 0, L.nova)).toBeGreaterThanOrEqual(L.stars[2]);
       expect(L.queue.length).toBeGreaterThanOrEqual(L.throws);
       // goals come from the solver's own line of play, so stars and goals are reachable together
-      expect(goalsMet(greedyPlan(L.start, L.queue, L.throws), L.goals)).toBe(true);
+      expect(goalsMet(greedyPlan(L.start, L.queue, L.throws, 0, L.nova), L.goals)).toBe(true);
       const plan2 = solve2(L);
       expect(starsEarned(plan2, lifeScore(plan2), L), `solver 2 planet ${n}`).toBe(3);
       expect(goalsMet(plan2, L.goals), `solver 2 goals planet ${n}`).toBe(true);
@@ -37,8 +38,21 @@ describe('level generator', () => {
 
   it('keeps the first Super Hard planet out of chapter one', () => {
     expect(difficultyOf(9)).toBe('normal');
+    expect(difficultyOf(5)).toBe('normal');
+    expect(difficultyOf(10)).toBe('normal');
     expect(difficultyOf(19)).toBe('super');
     expect(difficultyOf(15)).toBe('hard');
+    expect(difficultyOf(20)).toBe('hard');
+  });
+
+  it('enables Supernova from planet 9', () => {
+    for (let n = 1; n <= 20; n++) expect(makeLevel(n).nova).toBe(n >= 9);
+    const early = makeLevel(8);
+    const state = roundState(early.start, early.nova);
+    const result = stepRound(state, { kind: early.queue[0], sector: 0, nova: true });
+    expect(result.after).toBe(stepRound(state, { kind: early.queue[0], sector: 0, nova: false }).after);
+    expect(result.state.charge).toBe(0);
+    expect(result.novaCharge).toBe(0);
   });
 
   it('is deterministic', () => {

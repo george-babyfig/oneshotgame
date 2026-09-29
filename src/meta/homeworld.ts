@@ -476,6 +476,20 @@ export function anyReady(h: HomeState, now = Date.now()) {
   return h.plots.some((_, i) => ready(h, i, now) > 0);
 }
 
+/** Read-only totals for a single collect card. */
+export function pendingHomeProduction(h: HomeState, now = Date.now()) {
+  const total = { dust: 0, gems: 0, boosters: 0 };
+  h.plots.forEach((b, i) => {
+    if (!b) return;
+    const n = ready(h, i, now);
+    const kind = PRODUCES[b.type];
+    if (kind === 'dust') total.dust += n;
+    else if (kind === 'gem') total.gems += n;
+    else if (kind === 'booster') total.boosters += n;
+  });
+  return total;
+}
+
 // ------------------------------------------------------------------ residents
 export { FRIEND_LEVELS } from './tuning';
 

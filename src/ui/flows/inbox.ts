@@ -2,7 +2,7 @@
 import { h, btn, modal } from '../dom';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
-import { claimMail, letterOf, type Mail } from '../../meta/inbox';
+import { addIntroLetter, claimMail, letterOf, type Mail } from '../../meta/inbox';
 import { rewardText } from '../../meta/progression';
 import { SPECIES_BY_ID } from '../../core/world';
 import { critterCanvas } from '../art/critters';
@@ -53,6 +53,16 @@ function openLetter(app: App, m: Mail) {
 
 export function inboxFlow(app: App) {
   const p = app.p;
+  try {
+    const seen = JSON.parse(localStorage.getItem('pp.coach.intros') ?? '[]') as unknown;
+    if (Array.isArray(seen)) {
+      let added = false;
+      for (const id of seen) if (typeof id === 'string') added = addIntroLetter(p, id) || added;
+      if (added) app.save();
+    }
+  } catch {
+    // Storage can be unavailable in a private browser session.
+  }
   const rows = p.mail.map((m) => {
     const L = letterOf(m);
     if (!L) return null;

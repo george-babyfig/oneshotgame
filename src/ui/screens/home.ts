@@ -21,6 +21,8 @@ import { homeBadge } from '../../meta/homeworld';
 import { FESTIVAL_TIERS, ensureFestival, festivalActive, festivalReady } from '../../meta/festivals';
 import { VOYAGE_LEN, ensureVoyage } from '../../meta/voyage';
 import { unlocked } from '../../meta/unlocks';
+import { canStamp } from '../../meta/calendar';
+import { today } from '../../meta/profile';
 
 export function navBtn(icon: string, label: string, badge: string | number, fn: () => void, cls = '') {
   return h(
@@ -31,8 +33,6 @@ export function navBtn(icon: string, label: string, badge: string | number, fn: 
     badge ? h('span', { class: `nb${typeof badge === 'number' ? ' dot' : ''}` }, String(badge)) : null,
   );
 }
-
-let setupAsked = false;
 
 /** This month's festival: tap for its tiers. */
 function festivalChip(app: App) {
@@ -67,7 +67,7 @@ function seasonChip(hemi: 'north' | 'south') {
   );
 }
 
-export function showHome(app: App, quiet = false) {
+export function showHome(app: App) {
   const p = app.p;
   if (checkMail(p)) app.save();
   const next = levelMeta(p.level);
@@ -106,7 +106,15 @@ export function showHome(app: App, quiet = false) {
     { class: 'screen home' },
     app.topBar(),
     h('div', { class: 'title' }, h('span', null, t('Pocket')), h('span', null, t('Planet'))),
-    h('div', { class: 'chip-row' }, seasonChip(p.settings.hemi), festivalChip(app)),
+    h(
+      'div',
+      { class: 'chip-row' },
+      seasonChip(p.settings.hemi),
+      festivalChip(app),
+      unlocked(p, 'star_calendar')
+        ? btn(t('Star Calendar'), `calendar-chip${canStamp(p, today()) ? ' ready' : ''}`, () => app.daily())
+        : null,
+    ),
     h(
       'div',
       { class: 'galaxy-wrap' },
@@ -132,13 +140,14 @@ export function showHome(app: App, quiet = false) {
         { class: 'side side-r' },
         unlocked(p, 'homeworld') ? navBtn('world', t('Homeworld'), homeBadge(p), () => app.showHomeworld(), 'side-btn world-btn') : null,
         navBtn('pad', t('Modes'), modesBadge(app), () => app.modes(), 'side-btn'),
-        unlocked(p, 'voyage') ? navBtn('rocket', t('Voyage'), voyageBadge(p), () => app.showVoyage(), 'side-btn') : null,
+        unlocked(p, 'voyage') ? navBtn('rocket', t('Voyage'), voyageBadge(p), () => app.showVoyage(), 'side-btn voyage-btn') : null,
         unlocked(p, 'weekly_event')
           ? navBtn(ensureEvent(p).emoji, t('Event'), eventReady(p).length, () => app.events(), 'side-btn event-btn')
           : null,
       ),
     ),
     p.galaxy.length ? h('div', { class: 'collect-row' }, collect) : null,
+    !p.passport.set && p.level >= 6 ? btn(t('Name your planet passport'), 'ghost wide passport-next', () => editPassport(app, true)) : null,
     btn(
       h(
         'span',
@@ -147,7 +156,7 @@ export function showHome(app: App, quiet = false) {
         h('small', null, `${t(ch.name)} · ${next.twist !== 'none' ? t(TWISTS[next.twist].name) : next.name}`),
       ),
       'primary big wide play',
-      () => app.preLevel(p.level),
+      () => (p.level <= 3 ? app.startLevel(p.level) : app.preLevel(p.level)),
     ),
     h(
       'div',
@@ -155,7 +164,9 @@ export function showHome(app: App, quiet = false) {
       navBtn('map', t('Star Map'), `${stars}★`, () => app.showStarMap()),
       unlocked(p, 'lifebook') ? navBtn('book', t('Lifebook'), `${p.seen.length}/${SPECIES.length}`, () => app.showLifebook()) : null,
       unlocked(p, 'upgrades') ? navBtn('up', t('Upgrades'), '', () => app.showUpgrades()) : null,
-      navBtn('bag', t('Shop'), p.starter || p.chapters.length < 1 ? '' : t('OFFER'), () => app.showShop()),
+      p.meta.sessions > 1 && p.level > 6
+        ? navBtn('bag', t('Shop'), p.starter || p.chapters.length < 1 ? '' : t('OFFER'), () => app.showShop())
+        : null,
     ),
   );
   const view = drawGalaxy(canvas, p.galaxy, {
@@ -166,11 +177,4 @@ export function showHome(app: App, quiet = false) {
     },
   });
   app.mount(el, 'home', view.stop);
-  if (quiet) return;
-  if (!app.launched && p.tutorial) app.daily();
-  // One-time Passport setup once the first planet is done (after any launch pop-ups).
-  else if (unlocked(p, 'passport_setup') && !p.passport.set && !setupAsked && !document.querySelector('.modal')) {
-    setupAsked = true;
-    editPassport(app, true);
-  }
 }

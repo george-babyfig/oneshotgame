@@ -13,7 +13,7 @@ import { t } from '../../i18n';
 export function dailyGiftFlow(app: App, then?: () => void) {
   const day = today();
   const p = app.p;
-  if (app.screen !== 'home' || p.stats.wins < 2 || !canStamp(p, day)) return then?.();
+  if (app.screen !== 'home') return then?.();
   const n = stamps(p);
   const cycle = Math.floor(n / CALENDAR_DAYS);
   const todayIdx = calendarIndex(n);
@@ -44,7 +44,7 @@ export function dailyGiftFlow(app: App, then?: () => void) {
       h('p', { class: 'muted' }, t('One stamp for every day you visit. Missing a day never resets it!')),
       h('div', { class: 'calendar' }, ...cells),
       h('div', { class: 'reward-list' }, ...rewardText(reward).map((x) => h('span', null, x))),
-      btn(t('Stamp day {n}', { n: todayIdx + 1 }), 'primary wide', () => m.close()),
+      canStamp(p, day) ? btn(t('Stamp day {n}', { n: todayIdx + 1 }), 'primary wide', () => m.close()) : null,
       btn(t('Close'), 'ghost small', () => m.close()),
     ],
     {
