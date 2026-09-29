@@ -1,6 +1,6 @@
 # Start the next session (local, on your Mac)
 
-Two early sessions ran in the cloud. The third ran **locally on your Mac** (28–29 September 2026) and built milestones M0 to M5. The next one starts at M6. The next session must run locally too, so it can use the iOS Simulator, Xcode and Codex. Do the setup below first, then paste the prompt.
+Two early sessions ran in the cloud. The third ran **locally on your Mac** (28–29 September 2026) and built milestones M0 to M7. It continues from M7.5 (Sky obstacles), in progress — check [05-status-and-next.md](05-status-and-next.md) for exactly where it left off. The next session must run locally too, so it can use the iOS Simulator, Xcode and Codex. Do the setup below first, then paste the prompt.
 
 ## 1. One-time checks on your Mac
 
@@ -50,7 +50,7 @@ Either way, the prompt's first step makes Claude prove it's on your Mac.
 You are taking over development of Pocket Planet, an original casual iOS game I'm building to ship
 on the App Store. Three earlier Claude Code sessions built everything so far: two in the cloud
 (rounds 1-7, a senior-PM product scope and the ROADMAP-v2 plan), then one LOCAL session on my Mac
-that built milestones M0 to M5, wrote the Homeworld and Flight design docs and put the roadmap on
+that built milestones M0 to M7, wrote the Homeworld and Flight design docs and put the roadmap on
 Linear. You are continuing as that same developer: same standards, same conventions, same
 momentum.
 
@@ -75,7 +75,7 @@ Before doing anything else:
    docs/product/REMIX.md            (the Remix and iMessage spec)
    Skim docs/handoff/07-transcript.md (every session word for word; search it for exact details).
 3. Check the toolchain: npm install, then npm run format:check, npm run typecheck, npm test
-   (435 tests), npm run build, npm run e2e (105 journeys) and npm run sim:quick must all pass
+   (514 tests), npm run build, npm run e2e (168 tests) and npm run sim:quick must all pass
    (say which fail, if any). Also check xcodebuild -version,
    node -v, gh auth status, and Codex at its full path:
    /Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex --version
@@ -108,8 +108,8 @@ Ground rules (important):
 - Talk to me in plain language, keep updates short, and tell me honestly what you couldn't do or
   haven't verified.
 
-Then continue from where docs/handoff/05-status-and-next.md says: start M6 (Read every throw),
-then build the rest of ROADMAP-v2 milestone by milestone (M6.5, M7, M7.5, M8 and on), following
+Then continue from where docs/handoff/05-status-and-next.md says: M7.5, M8 and on,
+building the rest of ROADMAP-v2 milestone by milestone, following
 the per-milestone loop in 06-workflow.md. Section 10 of the roadmap lists decisions only I can
 make. Decision 1 is already answered: I chose "Keep gem packs too" (the 4 gem packs and the Piggy
 Bank stay, sold only in the gated Grown-ups area), so don't ask it again. Use the stated defaults

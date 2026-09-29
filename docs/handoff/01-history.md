@@ -1,6 +1,6 @@
 # 01: Conversation history
 
-The owner (George, GitHub `george-babyfig`) worked with Claude Code in three sessions: a long first one in the cloud (27–28 September), a short second one in the cloud (28 September evening) that scoped the next big roadmap, and a third one, the first **local** session on the owner's Mac (28–29 September), which built M0–M5. Their messages are quoted as sent, typos included; the notes under each say what happened.
+The owner (George, GitHub `george-babyfig`) worked with Claude Code in three sessions: a long first one in the cloud (27–28 September), a short second one in the cloud (28 September evening) that scoped the next big roadmap, and a third one, the first **local** session on the owner's Mac (28–29 September), which built M0–M7. Their messages are quoted as sent, typos included; the notes under each say what happened.
 
 ## Day 1 — 27 September 2026
 
@@ -260,7 +260,31 @@ Before M5, Claude asked decision 1 from ROADMAP-v2 section 10: retire the gem pa
 - **Tests:** 435 unit tests and 105 Playwright journeys.
 - **Linear:** M0–M5 are marked built.
 
-Next is M6, "Read every throw". See [05-status-and-next.md](05-status-and-next.md).
+### 24. M6 built: read every throw
+
+Through this stretch and the two milestones after it, the owner's only messages were "continue":
+
+> "continue"
+
+- **M6** (`b310def`): the queue (current + next 2, a swap badge); a landing card off the aim path (new land, life change, who moves in, a second row only when a creature would wander off); wander-off ghosts and "came back!"; one priority pop-up queue (at most 2 at once, 250 ms apart); Supernova 2.0 (charges from better lands and first arrivals, super-sized shot, tap-to-hold from planet 24); object stats in data with a solver retune; per-object sound, haptics and trails, a skippable tally; the Clear colour-blind-safe palette; resume a round after the web view is killed. Playwright J6 (overlap) and J7 (resume).
+- **Small fix:** `68fbde8` kept the Grown-ups settings column within 320 px for long German labels (CI's Linux fonts had pushed it 3 px over).
+
+### 25. M6.5 built: Showtime, the art and animation pass
+
+- **M6.5** (`6712805`): a motion kit on every sheet, button, toast and tab; a living Home (orbiting galaxy, the Keeper waving, creatures peeking); celebrations through one `celebrate()` (stars, a new creature's silhouette reveal and dance, the chapter chest, a Passport title, a festival curtain), skippable and within 2 s; all 36 creatures get idle, happy, surprised and wave poses; the Keeper avatar creator (free); 10 new looks, 4 portrait frames, painted chapter backdrops; one effective Reduce Motion.
+- **Small fix:** `0ddf90a` made the fling hint wrap so it never runs into the next-object bubble, and stopped it from blocking taps (seen in the Simulator on planet 1).
+
+### 26. M7 built: Fusions, the first Clash and Combos
+
+- **M7** (`755d533`): four Fusions (Steam, Rain Garden, Wildflowers, Glacier) and the first Clash, **Dry Spell**, in the round step and the solver; the landing card always previews a Fusion or Clash chip; Combos from planet 26 (beads, "COMBO n!", a Combo Bloom, a Combos page). A tuning pass brought casual fail on planets 21–60 to about 37%, down from 43.9% before M7.
+- **The reviews' key catches:**
+  - Clashes were being rewarded and could land completely unwarned, because the landing card only showed on about 56% of throws (it used the Star Scope's shortened line instead of the full flight). Fixed: the card now always previews from the full flight.
+  - Scorch was renamed **"Dry Spell"** (internal id stayed `scorch`) so no language uses burn words for a kids' game.
+  - The round canvas was being measured mid zoom-in, at 86% of its real size — an M6.5 regression that caused missed taps on the level screen.
+- **CI:** `b20ee93` split the Playwright journeys into three parallel jobs, one per browser project (the single job had outgrown its 20-minute limit); `60580b9` made the Showtime frame-time gates run only locally, since CI's shared runners have no GPU.
+- **Owner-facing decision surfaced:** a **"Gentle planets"** setting is being built into Grown-ups in M7.5 — the roadmap relies on it for children who find hazards stressful, and it will ship off by default.
+
+Next is M7.5, Sky obstacles, in progress. See [05-status-and-next.md](05-status-and-next.md).
 
 ## Recurring patterns in how the owner works
 

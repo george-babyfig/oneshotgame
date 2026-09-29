@@ -7,7 +7,7 @@ npm install
 npm run dev            # browser play at http://localhost:5173 (mock purchases); window.__app for debugging
 npm run format         # Prettier (CI runs format:check)
 npm run typecheck
-npm test               # 435 Vitest tests, including i18n coverage for all 5 locales and the frozen snapshots
+npm test               # 514 Vitest tests, including i18n coverage for all 5 locales and the frozen snapshots
 npm run build          # typecheck + production web build to dist/
 npm run music          # record every music theme to WAV + print loudness (needs npm run dev)
 ```
@@ -25,7 +25,7 @@ npm run sim            # every sim, including the level lint (tests/levels.lint.
 
 ```bash
 npm run e2e:install    # once: download Chromium and WebKit
-npm run e2e            # 105 journeys: J1, J2, J3, prices.spec, gate.spec; Chromium 320x568 and 390x844, WebKit 390x844; 6 languages + pseudo-locale
+npm run e2e            # 168 tests: J1, J2, J3, J6 overlap, J7 resume, palette.spec, prices.spec, gate.spec, showtime.spec; Chromium 320x568 and 390x844, WebKit 390x844; 6 languages + pseudo-locale
 npm run e2e:quick      # English only, Chromium 390x844
 ```
 
@@ -35,7 +35,7 @@ In dev, `window.__gate.answer()` returns the parental gate's answer so journeys 
 
 **Frozen snapshots:** if a test says a rules or level snapshot changed and you didn't mean to change the rules, it's a bug. Only for an intended change: `UPDATE_FIXTURES=1 npx vitest run tests/rules.snapshot.test.ts tests/levels.snapshot.test.ts` (see [03-architecture.md](03-architecture.md)).
 
-Before every push, run `format:check`, `typecheck`, `test`, `build`, `e2e` and `sim:quick`. CI runs `verify` (format, typecheck, tests, build, and a grep that fails if `Balance Report`, `__i18n`, `__scene` or `__gate` appear in `dist/`), `sim-quick`, `e2e` and the macOS `ios-build`; `nightly.yml` runs the full sims.
+Before every push, run `format:check`, `typecheck`, `test`, `build`, `e2e` and `sim:quick`. CI runs `verify` (format, typecheck, tests, build, and a grep that fails if `Balance Report`, `__i18n`, `__scene` or `__gate` appear in `dist/`), `sim-quick`, `e2e` (now three parallel jobs, one per browser project, since the suite outgrew a single 20-minute job) and the macOS `ios-build`; `nightly.yml` runs the full sims. The Showtime frame-time gates (`e2e/showtime.spec.ts`) only assert locally — CI's runners have no GPU, so there they just report the numbers.
 
 ## iOS (on a Mac with Xcode)
 
@@ -130,7 +130,7 @@ $CODEX exec -C /Users/georgeapostolopoulos/oneshotgame -s read-only -c model_rea
 
 Run packages in the background, in parallel when their files don't overlap. Keep briefs and reports in the scratchpad, not the repo. Codex can't open a local port, so it can't run Playwright or the dev server: Claude does those.
 
-**One milestone, start to finish (the loop that worked for M0–M5):**
+**One milestone, start to finish (the loop that worked for M0–M7):**
 
 1. **Plan:** split the milestone into 2–3 Codex packages with **disjoint file ownership**. Write one shared "common" brief (repo, rules, conventions, checks) plus one brief per package.
 2. **Tests first:** a test engineer sub-agent writes the tests and snapshots from the spec before or while Codex works.
@@ -141,8 +141,18 @@ Run packages in the background, in parallel when their files don't overlap. Keep
 7. **Review:** 3 adversarial Claude reviewers, each with a lens (correctness; economy and kid safety; UX and i18n), plus Codex in `-s read-only`. Claude verifies every finding before anyone fixes it.
 8. **Fix:** one Codex fix pass for the verified findings; re-run the checks.
 9. **Ship:** commit, push, watch CI with `gh run watch`, keep it green.
-10. **Record:** update the PR #2 description, the milestone's "✅ built" note in ROADMAP-v2 section 8, `BUILT` in `tests/glossary.test.ts` (it lists M0–M4 now; see [05-status-and-next.md](05-status-and-next.md) for M5), and the milestone's Linear document.
+10. **Record:** update the PR #2 description, the milestone's "✅ built" note in ROADMAP-v2 section 8, `BUILT` in `tests/glossary.test.ts` (it lists M0–M7 now; see [05-status-and-next.md](05-status-and-next.md)), and the milestone's Linear document.
 11. **Report:** a short plain-language summary to the owner with what to try in the Simulator.
+
+**Lessons learned (M6–M7):**
+
+- **Codex can't run Playwright or a dev server.** Its sandbox can't bind a local port or launch a browser, so the engineering manager (Claude) runs Playwright itself after Codex's packages land, never Codex.
+- **Never `git stash` while a QA agent's Vite server is running.** The dev server hot-reloads, so a stash pulls the old code out from under a server that's still up and the QA agent ends up testing stale behaviour. Stop the server (or let the QA agent finish) before stashing.
+- **Simulator QA with a mid-game save:** generate a profile JSON in a headless browser via `window.__app` against the dev server, then write it straight into the app's own container plist (not the plain domain form, which writes to the wrong place):
+  1. Terminate the app in the Simulator first.
+  2. Find its container: `xcrun simctl get_app_container <UDID> com.pocketplanet.game data`.
+  3. Write the save: `xcrun simctl spawn <UDID> defaults write <container>/Library/Preferences/com.pocketplanet.game CapacitorStorage.pp.profile -string "$(cat profile.json)"`.
+- **Run the full Playwright suite locally after every fix pass, before pushing.** It's what caught a Reduce Motion regression in M6.5/M7 that a narrower check would have missed.
 
 ## Linear
 
@@ -150,7 +160,7 @@ Run packages in the background, in parallel when their files don't overlap. Keep
 - **Shape:** 22 milestones, each with one "work items" checklist **document**, plus an "Owner decisions and to-dos" document. There are **no issues**: the workspace hit the free-plan issue limit, and the owner chose checklists in documents. Don't create issues.
 - **Order:** M7.5, M10.5, M11.5 and M17 sit at the end of Linear's milestone list, because the API can't reorder milestones.
 - **Keep it in step:** when a milestone is built, mark its document ✅ (and tick its checklist). When the roadmap changes, change Linear too.
-- **State now:** M0–M5 are marked built, and owner decision 1 (keep gem packs, Grown-ups only) is recorded in the "Owner decisions and to-dos" document.
+- **State now:** M0–M7 are marked built, and owner decision 1 (keep gem packs, Grown-ups only) is recorded in the "Owner decisions and to-dos" document.
 - **Never touch the Babyfig team** or anything else in the workspace. It belongs to the owner's other project.
 
 ## Translations
