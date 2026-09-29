@@ -3,9 +3,7 @@ import {
   SECTORS,
   SPECIES_BY_ID,
   clonePlanet,
-  impact,
   lifeScore,
-  novaCharge,
   newPlanet,
   settle,
   type BiomeId,
@@ -13,6 +11,10 @@ import {
   type Planet,
   type Sector,
 } from './world';
+import { NO_MODIFIERS } from './modifiers';
+import { NOVA_CHARGE, ROUND_RULES_V0, roundState, stepRound, type RoundRules } from './round';
+
+export { NOVA_CHARGE } from './round';
 
 // ------------------------------------------------------------------ rng
 export function rngFrom(seed: string) {
@@ -171,30 +173,50 @@ export function greedyScore(start: Planet, queue: Kind[], throws: number, splash
 
 /** The planet the greedy solver ends up with (used to set targets and goals). */
 export function greedyPlan(start: Planet, queue: Kind[], throws: number, splash = 0): Planet {
-  const p = clonePlanet(start);
-  // the solver charges and fires Supernovas exactly like a player does
-  let charge = 0;
-  for (let t = 0; t < throws; t++) {
-    const kind = queue[t];
-    const boost = { nova: charge >= NOVA_CHARGE };
-    let best = -1;
-    let bestAt = 0;
-    for (let i = 0; i < SECTORS; i++) {
-      const q = clonePlanet(p);
-      const r = impact(q, kind, i, splash, boost);
-      if (r.after > best) {
-        best = r.after;
-        bestAt = i;
-      }
-    }
-    const res = impact(p, kind, bestAt, splash, boost);
-    charge = boost.nova ? 0 : Math.min(NOVA_CHARGE, charge + novaCharge(res.changed.length, res.spawned.length));
-  }
-  return p;
+  return solvePlan({ start, queue, throws }, ROUND_RULES_V0, splash ? { ...NO_MODIFIERS, splash } : NO_MODIFIERS);
 }
 
-/** Regions transformed (+2 per creature) needed to charge a Supernova. */
-export const NOVA_CHARGE = 10;
+type SolverLevel = Pick<LevelDef, 'start' | 'queue' | 'throws'>;
+
+/** Today's perfect-aim, immediate-life choice, with automatic Supernovas. */
+export function solve2(level: SolverLevel, rules: RoundRules = ROUND_RULES_V0): Planet {
+  return solvePlan(level, rules, NO_MODIFIERS);
+}
+
+function solvePlan(level: SolverLevel, rules: RoundRules, mods: typeof NO_MODIFIERS): Planet {
+  let state = roundState(level.start);
+  for (let turn = 0; turn < level.throws; turn++) {
+    const kind = level.queue[turn];
+    const nova = state.charge >= NOVA_CHARGE;
+    let best = -1;
+    let at = 0;
+    for (let sector = 0; sector < SECTORS; sector++) {
+      const trial = stepRound(state, { kind, sector, nova }, mods, rules);
+      if (trial.after > best) {
+        best = trial.after;
+        at = sector;
+      }
+    }
+    state = stepRound(state, { kind, sector: at, nova }, mods, rules).state;
+  }
+  return state.planet;
+}
+
+/**
+ * The old blind greedy choice: highest immediate life, with no goal weighting.
+ * PLACEHOLDER until the rules differ: with rules v0 it follows the same path as solve2,
+ * so the "Solver 0 reaches 1 star" test can't fail yet. M7/M8 must give it its own
+ * reaction- and Trouble-blind path (the kid floor).
+ */
+export function solve0(level: SolverLevel, rules: RoundRules = ROUND_RULES_V0): Planet {
+  return solvePlan(level, rules, NO_MODIFIERS);
+}
+
+/** Rules have their own seed stream, leaving the layout stream unchanged. */
+export function rulesForSeed(seed: string): RoundRules {
+  rngFrom(`${seed}-rules`)();
+  return ROUND_RULES_V0;
+}
 
 /** Difficulty knobs (tuned with a skill-level simulation; see tests/levels.test.ts). */
 export const TUNE = {
@@ -246,8 +268,14 @@ function pickGoals(n: number, difficulty: Difficulty, start: Planet, plan: Plane
   return out;
 }
 
-/** `o.goals` / `o.boss` give non-campaign planets (the weekly Voyage) goals and a Comet Guardian. */
-export function makeLevel(n: number, seedPrefix = 'PP', o: { goals?: boolean; boss?: boolean; salt?: number } = {}): LevelDef {
+export interface LevelOptions {
+  goals?: boolean;
+  boss?: boolean;
+  salt?: number;
+  rules?: RoundRules;
+}
+
+function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
   const salt = o.salt ?? (seedPrefix === 'PP' ? LEVEL_SALT[n] : undefined);
   const seed = `${seedPrefix}-${n}${salt ? `~${salt}` : ''}`;
   const rnd = rngFrom(seed);
@@ -283,14 +311,57 @@ export function makeLevel(n: number, seedPrefix = 'PP', o: { goals?: boolean; bo
   }
   const start = startFor(twist, rnd);
   settle(start); // creatures that already fit the starting planet are there from the start
-  const plan = greedyPlan(start, queue, throws);
+  const difficulty = difficultyOf(n, seedPrefix);
+  const spin = (twist === 'fast' ? 0.9 : 0.35 + Math.min(0.3, n * 0.012)) * (rnd() < 0.5 ? 1 : -1);
+  const name = `${NAMES_A[Math.floor(rnd() * NAMES_A.length)]} ${NAMES_B[Math.floor(rnd() * NAMES_B.length)]}`;
+  const hue = difficulty === 'super' ? 285 : difficulty === 'hard' ? 15 : 200 + Math.floor(rnd() * 110);
+  return { n, seed, throws, queue, twist, spin, size: twist === 'tiny' ? 0.72 : 1, start, name, hue, difficulty };
+}
+
+export type LevelMeta = Pick<LevelDef, 'name' | 'hue' | 'twist' | 'difficulty'> & { boss: boolean };
+
+/** Preview metadata without running either solver. */
+export function levelMeta(n: number, seedPrefix = 'PP'): LevelMeta {
+  const { name, hue, twist, difficulty } = levelLayout(n, seedPrefix, {});
+  return { name, hue, twist, difficulty, boss: twist === 'boss' };
+}
+
+const LEVEL_CACHE_LIMIT = 256;
+const levelCache = new Map<string, LevelDef>();
+
+function copyLevel(level: LevelDef): LevelDef {
+  return {
+    ...level,
+    queue: [...level.queue],
+    start: clonePlanet(level.start),
+    stars: [...level.stars],
+    goals: level.goals.map((goal) => ({ ...goal })),
+  };
+}
+
+/** `o.goals` / `o.boss` give non-campaign planets (the weekly Voyage) goals and a Comet Guardian. */
+export function makeLevel(n: number, seedPrefix = 'PP', o: LevelOptions = {}): LevelDef {
+  const salt = o.salt ?? (seedPrefix === 'PP' ? LEVEL_SALT[n] : undefined);
+  const key = JSON.stringify([n, seedPrefix, !!o.goals, !!o.boss, salt ?? null, o.rules?.version ?? 0]);
+  const cached = levelCache.get(key);
+  if (cached) return copyLevel(cached);
+  const level = buildLevel(n, seedPrefix, o);
+  if (levelCache.size >= LEVEL_CACHE_LIMIT) levelCache.delete(levelCache.keys().next().value!);
+  levelCache.set(key, level);
+  return copyLevel(level);
+}
+
+function buildLevel(n: number, seedPrefix: string, o: LevelOptions): LevelDef {
+  const layout = levelLayout(n, seedPrefix, o);
+  const { seed, throws, queue, twist, spin, size, start, name, hue, difficulty } = layout;
+  const rules = o.rules ?? rulesForSeed(seed);
+  const plan = solve2(layout, rules);
   const best = lifeScore(plan);
   const base = lifeScore(start);
   // Star targets as a share of the greedy optimum: gentle for the first chapter,
   // then a sawtooth inside every chapter (easier after a chest, harder near the end).
   const ease = Math.min(1, (n - 1) / TUNE.rampLevels);
   const saw = seedPrefix === 'PP' ? ((n - 1) % 10) / 9 : 0.5;
-  const difficulty = difficultyOf(n, seedPrefix);
   const bump = TUNE.bump[difficulty];
   const f1 = TUNE.f1[0] + TUNE.f1[1] * ease + TUNE.saw * saw + bump[0];
   const f2 = TUNE.f2[0] + TUNE.f2[1] * ease + TUNE.saw * 0.7 * saw + bump[1];
@@ -299,7 +370,6 @@ export function makeLevel(n: number, seedPrefix = 'PP', o: { goals?: boolean; bo
   const stars: [number, number, number] = [t(f1), t(f2), t(f3)];
   if (stars[1] <= stars[0]) stars[1] = stars[0] + 5;
   if (stars[2] <= stars[1]) stars[2] = stars[1] + 5;
-  const spin = (twist === 'fast' ? 0.9 : 0.35 + Math.min(0.3, n * 0.012)) * (rnd() < 0.5 ? 1 : -1);
   const goals = seedPrefix === 'PP' || o.goals ? pickGoals(n, difficulty, start, plan, rngFrom(`${seed}-goals`)) : [];
   return {
     n,
@@ -308,11 +378,11 @@ export function makeLevel(n: number, seedPrefix = 'PP', o: { goals?: boolean; bo
     queue,
     twist,
     spin,
-    size: twist === 'tiny' ? 0.72 : 1,
+    size,
     stars,
     start,
-    name: `${NAMES_A[Math.floor(rnd() * NAMES_A.length)]} ${NAMES_B[Math.floor(rnd() * NAMES_B.length)]}`,
-    hue: difficulty === 'super' ? 285 : difficulty === 'hard' ? 15 : 200 + Math.floor(rnd() * 110), // space blues; warm for hard
+    name,
+    hue,
     difficulty,
     goals,
   };

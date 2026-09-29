@@ -3,6 +3,7 @@ import { RANK_REWARD } from './tuning';
 import type { Profile } from './profile';
 import type { Reward } from './progression';
 import { t, tp } from '../i18n';
+import { unlocked as featureUnlocked } from './unlocks';
 
 export type RankStat =
   'wins' | 'seen' | 'throws' | 'threeStars' | 'bestLife' | 'chapters' | 'dailies' | 'rushBest' | 'mementos' | 'bestStreak' | 'hardWins';
@@ -95,8 +96,7 @@ export const RANK_UNLOCKS: Record<number, string> = {
 };
 
 export function unlocked(p: Profile, feature: 'daily' | 'rush' | 'zen' | 'challenge') {
-  const need = { daily: 2, rush: 3, zen: 4, challenge: 5 }[feature];
-  return p.rank >= need;
+  return featureUnlocked(p, feature);
 }
 
 export const RANK_TITLES = [

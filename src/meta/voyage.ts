@@ -7,9 +7,10 @@ import { makeLevel, type LevelDef } from '../core/levels';
 import type { Profile } from './profile';
 import { applyReward, type Reward } from './progression';
 import { isoWeek, weekAtMostOneAhead } from './events';
+import { unlocked } from './unlocks';
 
 export const VOYAGE_LEN = 7;
-export const VOYAGE_UNLOCK_LEVEL = 12;
+export { VOYAGE_UNLOCK_LEVEL } from './unlocks';
 
 /** Paid the first time each stop is cleared this week. */
 export { VOYAGE_REWARDS } from './tuning';
@@ -28,7 +29,7 @@ export const VOYAGE_NAMES = [
 ];
 
 export function voyageActive(p: Profile) {
-  return p.level >= VOYAGE_UNLOCK_LEVEL;
+  return unlocked(p, 'voyage');
 }
 
 /** Campaign level the week's first stop plays like (clamped so it stays fair). */

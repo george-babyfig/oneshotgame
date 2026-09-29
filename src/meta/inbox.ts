@@ -1,13 +1,13 @@
 import { INBOX_GIFTS } from './tuning';
 // Inbox: letters shipped with the app, delivered when something happens
 // (milestones, seasons, meteor showers, new friends). Some carry a small gift.
-import { festivalActive, festivalKey, festivalOn } from './festivals';
-import { voyageActive } from './voyage';
+import { festivalKey, festivalOn } from './festivals';
 import { buddyEligible } from './buddy';
 import type { Profile } from './profile';
 import { applyReward, type Reward } from './progression';
 import { seasonOf, skyEventOn } from './seasons';
-import { chaptersDone, friendLevel, FRIEND_LEVELS, homeUnlocked } from './homeworld';
+import { chaptersDone, friendLevel, FRIEND_LEVELS } from './homeworld';
+import { unlocked } from './unlocks';
 
 export interface Mail {
   id: string;
@@ -42,7 +42,7 @@ const MC = 'Mission Control';
 const RULES: Rule[] = [
   {
     kind: 'welcome',
-    key: (p) => (p.tutorial ? 'welcome' : null),
+    key: (p) => (unlocked(p, 'star_calendar') ? 'welcome' : null),
     letter: () => ({
       from: MC,
       title: 'Welcome, Keeper!',
@@ -52,7 +52,7 @@ const RULES: Rule[] = [
   },
   {
     kind: 'homeworld',
-    key: (p) => (homeUnlocked(p) ? 'homeworld' : null),
+    key: (p) => (unlocked(p, 'homeworld') ? 'homeworld' : null),
     letter: () => ({
       from: MC,
       title: 'A planet of your own',
@@ -135,7 +135,7 @@ const RULES: Rule[] = [
   },
   {
     kind: 'festival',
-    key: (p, now) => (festivalActive(p) ? `fest-${festivalKey(now)}` : null),
+    key: (p, now) => (unlocked(p, 'festival') ? `fest-${festivalKey(now)}` : null),
     vars: (_p, now) => ({ e: festivalOn(now).name }),
     letter: () => ({
       from: MC,
@@ -146,7 +146,7 @@ const RULES: Rule[] = [
   },
   {
     kind: 'voyage',
-    key: (p) => (voyageActive(p) ? 'voyage-intro' : null),
+    key: (p) => (unlocked(p, 'voyage') ? 'voyage-intro' : null),
     letter: () => ({
       from: MC,
       title: 'Set sail on the Weekly Voyage',
@@ -156,7 +156,7 @@ const RULES: Rule[] = [
   },
   {
     kind: 'buddy',
-    key: (p) => (buddyEligible(p).length ? 'buddy-intro' : null),
+    key: (p) => (unlocked(p, 'buddy') ? 'buddy-intro' : null),
     vars: (p) => ({ c: buddyEligible(p)[0] ?? '' }),
     letter: () => ({
       from: '{c}',

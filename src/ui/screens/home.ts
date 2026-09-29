@@ -2,13 +2,13 @@
 import { h, btn, fmt, toast } from '../dom';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
-import { makeLevel, TWISTS } from '../../core/levels';
+import { levelMeta, TWISTS } from '../../core/levels';
 import { SPECIES } from '../../core/world';
 import { totalStars } from '../../meta/profile';
 import { collectDust, galaxyRate, pendingDust, planetRate, vaultHours } from '../../meta/economy';
 import { chapterOf, chestsReady, questsClaimable, roadReady } from '../../meta/progression';
 import { drawGalaxy } from './galaxy';
-import { ensureEvent, eventActive, eventReady } from '../../meta/events';
+import { ensureEvent, eventReady } from '../../meta/events';
 import { rankReady } from '../../meta/rank';
 import { modesBadge } from '../flows/modes';
 import type { App } from '../app';
@@ -17,9 +17,10 @@ import { t, tp } from '../../i18n';
 import { editPassport } from './passport';
 import { checkMail, unread } from '../../meta/inbox';
 import { SEASON_EMOJI, SEASON_NAMES, seasonOf, skyEventOn } from '../../meta/seasons';
-import { homeBadge, homeUnlocked } from '../../meta/homeworld';
+import { homeBadge } from '../../meta/homeworld';
 import { FESTIVAL_TIERS, ensureFestival, festivalActive, festivalReady } from '../../meta/festivals';
-import { VOYAGE_LEN, ensureVoyage, voyageActive } from '../../meta/voyage';
+import { VOYAGE_LEN, ensureVoyage } from '../../meta/voyage';
+import { unlocked } from '../../meta/unlocks';
 
 export function navBtn(icon: string, label: string, badge: string | number, fn: () => void, cls = '') {
   return h(
@@ -69,7 +70,7 @@ function seasonChip(hemi: 'north' | 'south') {
 export function showHome(app: App, quiet = false) {
   const p = app.p;
   if (checkMail(p)) app.save();
-  const next = makeLevel(p.level);
+  const next = levelMeta(p.level);
   const ch = chapterOf(p.level);
   const pending = pendingDust(p);
   const rate = galaxyRate(p);
@@ -121,18 +122,20 @@ export function showHome(app: App, quiet = false) {
       h(
         'div',
         { class: 'side side-l' },
-        navBtn('scroll', t('Quests'), questBadge, () => app.quests(), 'side-btn'),
-        navBtn('road', t('Star Road'), roadBadge, () => app.showRoad(), 'side-btn'),
+        unlocked(p, 'quests') ? navBtn('scroll', t('Quests'), questBadge, () => app.quests(), 'side-btn') : null,
+        unlocked(p, 'star_road') ? navBtn('road', t('Star Road'), roadBadge, () => app.showRoad(), 'side-btn') : null,
         navBtn('medal', t('Rank {n}', { n: p.rank }), rankReady(p) ? 1 : 0, () => app.rank(), 'side-btn'),
-        navBtn('mail', t('Inbox'), unread(p), () => app.inbox(), 'side-btn'),
+        unlocked(p, 'inbox') ? navBtn('mail', t('Inbox'), unread(p), () => app.inbox(), 'side-btn') : null,
       ),
       h(
         'div',
         { class: 'side side-r' },
-        homeUnlocked(p) ? navBtn('world', t('Homeworld'), homeBadge(p), () => app.showHomeworld(), 'side-btn world-btn') : null,
+        unlocked(p, 'homeworld') ? navBtn('world', t('Homeworld'), homeBadge(p), () => app.showHomeworld(), 'side-btn world-btn') : null,
         navBtn('pad', t('Modes'), modesBadge(app), () => app.modes(), 'side-btn'),
-        voyageActive(p) ? navBtn('rocket', t('Voyage'), voyageBadge(p), () => app.showVoyage(), 'side-btn') : null,
-        eventActive(p) ? navBtn(ensureEvent(p).emoji, t('Event'), eventReady(p).length, () => app.events(), 'side-btn event-btn') : null,
+        unlocked(p, 'voyage') ? navBtn('rocket', t('Voyage'), voyageBadge(p), () => app.showVoyage(), 'side-btn') : null,
+        unlocked(p, 'weekly_event')
+          ? navBtn(ensureEvent(p).emoji, t('Event'), eventReady(p).length, () => app.events(), 'side-btn event-btn')
+          : null,
       ),
     ),
     p.galaxy.length ? h('div', { class: 'collect-row' }, collect) : null,
@@ -150,8 +153,8 @@ export function showHome(app: App, quiet = false) {
       'div',
       { class: 'nav' },
       navBtn('map', t('Star Map'), `${stars}★`, () => app.showStarMap()),
-      navBtn('book', t('Lifebook'), `${p.seen.length}/${SPECIES.length}`, () => app.showLifebook()),
-      navBtn('up', t('Upgrades'), '', () => app.showUpgrades()),
+      unlocked(p, 'lifebook') ? navBtn('book', t('Lifebook'), `${p.seen.length}/${SPECIES.length}`, () => app.showLifebook()) : null,
+      unlocked(p, 'upgrades') ? navBtn('up', t('Upgrades'), '', () => app.showUpgrades()) : null,
       navBtn('bag', t('Shop'), p.starter || p.chapters.length < 1 ? '' : t('OFFER'), () => app.showShop()),
     ),
   );
@@ -166,7 +169,7 @@ export function showHome(app: App, quiet = false) {
   if (quiet) return;
   if (!app.launched && p.tutorial) app.daily();
   // One-time Passport setup once the first planet is done (after any launch pop-ups).
-  else if (p.stats.wins >= 1 && !p.passport.set && !setupAsked && !document.querySelector('.modal')) {
+  else if (unlocked(p, 'passport_setup') && !p.passport.set && !setupAsked && !document.querySelector('.modal')) {
     setupAsked = true;
     editPassport(app, true);
   }

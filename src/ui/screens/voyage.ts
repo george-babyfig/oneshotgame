@@ -201,6 +201,7 @@ function play(app: App, i: number) {
   const L = stopLevel(week, v.base, i);
   p.stats.plays++;
   const opts = app.sceneOpts(
+    'voyage',
     {
       label: t('Voyage · Stop {n}', { n: i + 1 }),
       onEnd: (r) => ended(app, i, week, r),

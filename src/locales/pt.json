@@ -1120,5 +1120,7 @@
   "until tonight": "até hoje à noite",
   "until {date}": "até {date}",
   "×{n}": "×{n}",
-  "Pause": "Pausar"
+  "Pause": "Pausar",
+  "Current object": "Objeto atual",
+  "Swap with next object": "Trocar pelo próximo objeto"
 }

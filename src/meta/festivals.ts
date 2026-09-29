@@ -5,6 +5,7 @@ import { FESTIVAL_TIERS } from './tuning';
 // residents can wear. The same festivals come back every year; nothing is sold.
 import type { Profile } from './profile';
 import { applyReward, type Reward } from './progression';
+import { unlocked } from './unlocks';
 
 export interface Festival {
   id: string;
@@ -34,7 +35,7 @@ export const FESTIVALS: Festival[] = [
 export const FESTIVAL_BY_ID: Record<string, Festival> = Object.fromEntries(FESTIVALS.map((f) => [f.id, f]));
 
 /** Festivals start once the weekly event does. */
-export const FESTIVAL_UNLOCK_LEVEL = 8;
+export { FESTIVAL_UNLOCK_LEVEL } from './unlocks';
 
 export interface FestivalTier {
   spot: number;
@@ -56,7 +57,7 @@ export function festivalKey(d = new Date()) {
 }
 
 export function festivalActive(p: Profile) {
-  return p.level >= FESTIVAL_UNLOCK_LEVEL;
+  return unlocked(p, 'festival');
 }
 
 /** This month's festival still has tiers to earn. A festival runs every month,

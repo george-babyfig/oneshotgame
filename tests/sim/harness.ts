@@ -1,6 +1,7 @@
 import { goalProgress, goalsMet, makeLevel, rngFrom, starsEarned, starsFor, type Difficulty, type LevelDef } from '../../src/core/levels';
-import { SECTORS, clonePlanet, impact, labBonus, lifeScore, novaCharge, type Planet } from '../../src/core/world';
-import { NOVA_CHARGE } from '../../src/meta/lab';
+import { SECTORS, lifeScore, type Planet } from '../../src/core/world';
+import { NO_MODIFIERS } from '../../src/core/modifiers';
+import { NOVA_CHARGE, ROUND_RULES_V0, roundState, stepRound } from '../../src/core/round';
 
 export interface BotContext {
   level: LevelDef;
@@ -19,15 +20,17 @@ export interface BotPolicy {
 
 function oneStep(context: BotContext): number {
   const { level, planet, turn, nova, labLevel } = context;
+  const state = roundState(planet);
   let best = -Infinity;
   let aim = 0;
   for (let sector = 0; sector < SECTORS; sector++) {
-    const copy = clonePlanet(planet);
-    const result = impact(copy, level.queue[turn], sector, 0, { nova });
+    const result = stepRound(state, { kind: level.queue[turn], sector, nova }, NO_MODIFIERS, ROUND_RULES_V0);
     const value =
       result.after +
-      labBonus(labLevel, result.changed.length, result.spawned.length) +
-      level.goals.reduce((sum, goal) => sum + 25 * Math.min(goal.count, goalProgress(copy, goal)), 0);
+      (labLevel >= 2 ? result.changed.length * 2 : 0) +
+      (labLevel >= 4 ? result.spawned.length * 6 : 0) +
+      (labLevel >= 5 ? 3 : 0) +
+      level.goals.reduce((sum, goal) => sum + 25 * Math.min(goal.count, goalProgress(result.state.planet, goal)), 0);
     if (value > best) {
       best = value;
       aim = sector;
@@ -66,24 +69,25 @@ export interface PlayResult {
 }
 
 export function playLevel(level: LevelDef, policy: BotPolicy, random: () => number): PlayResult {
-  const planet = clonePlanet(level.start);
-  let charge = 0;
-  let bonus = 0;
+  let state = roundState(level.start);
   let halfStars = 0;
   for (let turn = 0; turn < level.throws; turn++) {
-    const nova = charge >= NOVA_CHARGE;
-    const aim = policy.chooseAim({ level, planet, turn, nova, labLevel: policy.labLevel, random });
-    const result = impact(planet, level.queue[turn], ((aim % SECTORS) + SECTORS) % SECTORS, 0, { nova });
-    bonus += labBonus(policy.labLevel, result.changed.length, result.spawned.length);
-    charge = nova ? 0 : Math.min(NOVA_CHARGE, charge + novaCharge(result.changed.length, result.spawned.length, policy.labLevel));
-    if (turn + 1 === Math.floor(level.throws / 2)) halfStars = starsEarned(planet, lifeScore(planet) + bonus, level);
+    const nova = state.charge >= NOVA_CHARGE;
+    const aim = policy.chooseAim({ level, planet: state.planet, turn, nova, labLevel: policy.labLevel, random });
+    state = stepRound(
+      state,
+      { kind: level.queue[turn], sector: ((aim % SECTORS) + SECTORS) % SECTORS, nova },
+      { ...NO_MODIFIERS, lab: { [level.queue[turn]]: policy.labLevel } },
+      ROUND_RULES_V0,
+    ).state;
+    if (turn + 1 === Math.floor(level.throws / 2)) halfStars = starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level);
   }
-  const score = lifeScore(planet) + bonus;
+  const score = lifeScore(state.planet) + state.bonus;
   return {
-    stars: starsEarned(planet, score, level),
+    stars: starsEarned(state.planet, score, level),
     halfStars,
     scoreMet: starsFor(score, level.stars) > 0,
-    goalsMet: goalsMet(planet, level.goals),
+    goalsMet: goalsMet(state.planet, level.goals),
   };
 }
 

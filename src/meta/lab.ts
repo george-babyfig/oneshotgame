@@ -7,6 +7,7 @@ import type { Kind } from '../core/world';
 import { KINDS } from '../core/world';
 import type { Profile } from './profile';
 import { t } from '../i18n';
+import { unlocked } from './unlocks';
 
 export const LAB_MAX = 5;
 /** Stardust to reach each level (index = target level). */
@@ -41,7 +42,7 @@ export type LabCheck = 'ok' | 'max' | 'locked' | 'dust';
 export function canLab(p: Profile, kind: Kind): LabCheck {
   const lv = labLevel(p, kind);
   if (lv >= LAB_MAX) return 'max';
-  if (p.level < KINDS[kind].unlock) return 'locked';
+  if (!unlocked(p, kind)) return 'locked';
   return p.dust >= LAB_COST[lv + 1] ? 'ok' : 'dust';
 }
 

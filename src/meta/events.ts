@@ -4,6 +4,7 @@ import { EVENT_TIERS } from './tuning';
 import { BIOMES, type BiomeId, type ImpactResult, type Planet } from '../core/world';
 import type { Profile } from './profile';
 import { applyReward, type Reward } from './progression';
+import { unlocked } from './unlocks';
 
 export interface EventDef {
   id: string;
@@ -100,7 +101,7 @@ export function eventEndsIn(now = new Date()): number {
   return d.getTime() - now.getTime();
 }
 
-export const EVENT_UNLOCK_LEVEL = 8;
+export { EVENT_UNLOCK_LEVEL } from './unlocks';
 
 /** One saved week ahead can happen when local time zones change. */
 export function weekAtMostOneAhead(saved: string, current: string): boolean {
@@ -122,7 +123,7 @@ export function ensureEvent(p: Profile, week = isoWeek()) {
 }
 
 export function eventActive(p: Profile) {
-  return p.level >= EVENT_UNLOCK_LEVEL;
+  return unlocked(p, 'weekly_event');
 }
 
 /** Tokens earned by one landed throw. */

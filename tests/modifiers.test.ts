@@ -1,0 +1,31 @@
+import { describe, expect, it } from 'vitest';
+import { NO_MODIFIERS, modifiersFor } from '../src/core/modifiers';
+
+describe('round modifiers', () => {
+  const bonuses = {
+    extraThrows: 2,
+    splash: 1,
+    scopeLevel: 3,
+    lab: { rock: 5 },
+    boosters: { shower: true, spark: true, scope: true },
+    momentum: 3,
+    buddy: { species: 'bunny', acc: 'bow' },
+    shower: true,
+  };
+
+  it.each(['campaign', 'voyage', 'zen'] as const)('%s receives player bonuses', (mode) => {
+    expect(modifiersFor(mode, bonuses)).toEqual(bonuses);
+  });
+
+  it.each(['daily', 'rush', 'challenge', 'remix'] as const)('%s uses the base loadout', (mode) => {
+    expect(modifiersFor(mode, bonuses)).toEqual(NO_MODIFIERS);
+  });
+
+  it('returns independent nested objects', () => {
+    const first = modifiersFor('campaign', bonuses);
+    first.lab.rock = 1;
+    first.boosters.shower = false;
+    expect(bonuses.lab.rock).toBe(5);
+    expect(bonuses.boosters.shower).toBe(true);
+  });
+});

@@ -10,6 +10,7 @@ import { sfx, setAudio, unlockAudio, pauseAudio, setMusicTheme, chapterTheme } f
 import { haptic, setHaptics } from './haptics';
 import { LevelScene, type LevelResult, type SceneOpts } from './game';
 import { makeLevel, type LevelDef } from '../core/levels';
+import { modifiersFor, type RoundMode } from '../core/modifiers';
 import { KINDS, type Kind } from '../core/world';
 import { loadProfile, saveProfile, today, type Profile } from '../meta/profile';
 import { createIap } from '../meta/iap';
@@ -60,6 +61,7 @@ import { addFling } from '../meta/records';
 import { sight } from '../meta/lore';
 import { seasonOf, skyEventOn } from '../meta/seasons';
 import { keeperHead } from './art/keeper';
+import { debutsAt, unlocked } from '../meta/unlocks';
 
 export type ScreenName =
   | 'home'
@@ -308,7 +310,7 @@ export class App {
   /** Launch sequence: daily gift, then any visitors' gifts. */
   launched = false;
   daily() {
-    if (!this.p.tutorial) return;
+    if (!unlocked(this.p, 'star_calendar')) return;
     this.launched = true;
     const away = this.awayMs;
     this.awayMs = 0;
@@ -330,7 +332,7 @@ export class App {
       back
         ? h('button', { class: 'icon', 'aria-label': t('Back'), onclick: () => (sfx.click(), this.showHome()) }, icon('back', 24))
         : h('button', { class: 'icon', 'aria-label': t('Settings'), onclick: () => this.settings() }, icon('gear', 26)),
-      back
+      back || !unlocked(this.p, 'passport')
         ? null
         : h(
             'button',
@@ -356,16 +358,27 @@ export class App {
   }
 
   // ------------------------------------------------------------------ level flow
-  sceneOpts(extra: Partial<SceneOpts> & Pick<SceneOpts, 'onEnd'>, boosters: Boosters = NO_BOOSTERS, tutorial = false): SceneOpts {
+  sceneOpts(
+    mode: RoundMode | 'tutorial',
+    extra: Partial<SceneOpts> & Pick<SceneOpts, 'onEnd'>,
+    boosters: Boosters = NO_BOOSTERS,
+    tutorial = false,
+  ): SceneOpts {
     const skin = SKINS.find((s) => s.id === this.p.skin) ?? SKINS[0];
     const look = currentLook(this.p);
-    return {
-      look,
-      mastered: masteryLevel(this.p.mastery[look.launcher] ?? 0) >= MASTERY_STEPS.length,
+    const mods = modifiersFor(mode === 'tutorial' ? 'campaign' : mode, {
       scopeLevel: tutorial ? 3 : this.p.upgrades.scope,
       splash: this.p.upgrades.splash,
       extraThrows: this.p.upgrades.throws,
       boosters,
+      lab: labLevels(this.p),
+      momentum: extra.momentum ?? 0,
+      shower: !!skyEventOn(new Date()),
+    });
+    return {
+      look,
+      mastered: masteryLevel(this.p.mastery[look.launcher] ?? 0) >= MASTERY_STEPS.length,
+      ...mods,
       glow: skin.glow,
       seen: new Set(this.p.seen),
       tutorial,
@@ -410,18 +423,17 @@ export class App {
             },
       onQuit: () => this.showHome(),
       onShop: () => this.showShop(),
-      // Object Lab levels apply to the campaign and Zen, not to the score-competitive modes
-      lab: extra.competitive ? undefined : labLevels(this.p),
       season: seasonOf(new Date(), this.p.settings.hemi),
       festAcc: festivalActive(this.p) ? ensureFestival(this.p).acc : undefined,
       buddy: currentBuddy(this.p, festivalActive(this.p) ? ensureFestival(this.p).acc : undefined),
-      // the meteor-shower bonus stays out of score-competitive modes
-      shower: !extra.competitive && !!skyEventOn(new Date()),
       ...extra,
-      // Score modes use the same base throw, aim, and loadout for every player.
-      ...(extra.competitive
-        ? { scopeLevel: 0, splash: 0, extraThrows: 0, boosters: NO_BOOSTERS, momentum: 0, lab: undefined, shower: false }
-        : {}),
+      scopeLevel: mods.scopeLevel,
+      splash: mods.splash,
+      extraThrows: mods.extraThrows,
+      boosters: mods.boosters,
+      lab: mods.lab,
+      momentum: mods.momentum,
+      shower: mods.shower,
     };
   }
 
@@ -436,8 +448,9 @@ export class App {
     const tier = momentumActive(this.p) ? this.p.momentum.streak : 0;
     const perk = MOMENTUM_PERKS[tier];
     const merged: Boosters = { shower: boosters.shower, spark: boosters.spark || perk.spark, scope: boosters.scope || perk.scope };
-    const debut = (Object.values(KINDS) as { id: Kind; unlock: number }[]).find((k) => k.unlock === n && n > 2);
+    const debut = debutsAt(n).find((entry) => entry.id in KINDS && n > 2 && unlocked(this.p, entry.id));
     const opts = this.sceneOpts(
+      o.tutorial || n === 1 ? 'tutorial' : 'campaign',
       {
         onEnd: (r) => this.levelEnded(r),
         continueOk: (won) =>
@@ -455,7 +468,7 @@ export class App {
         },
         momentum: tier,
         coach: COACH[n],
-        intro: debut && n === this.p.level ? debut.id : undefined,
+        intro: debut && n === this.p.level ? (debut.id as Kind) : undefined,
       },
       merged,
       !!o.tutorial || n === 1,

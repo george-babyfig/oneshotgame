@@ -6,14 +6,16 @@ import { SPECIES_BY_ID, SPECIES } from '../core/world';
 import type { Profile } from './profile';
 import { LORE_AT, sightings } from './lore';
 import { RESIDENT_ACCS } from './homeworld';
+import { unlocked } from './unlocks';
 
 /** Sightings needed before a creature will be your buddy (same as its field notes). */
-export const BUDDY_AT = LORE_AT;
+export { BUDDY_AT } from './unlocks';
 /** Accessories every buddy can wear from the start. */
 export const BUDDY_FREE_ACCS = ['bow', 'flower'];
 
 export function buddyEligible(p: Profile): string[] {
-  return SPECIES.filter((s) => sightings(p, s.id) >= BUDDY_AT).map((s) => s.id);
+  if (!unlocked(p, 'buddy')) return [];
+  return SPECIES.filter((s) => sightings(p, s.id) >= LORE_AT).map((s) => s.id);
 }
 
 export function buddyAccs(p: Profile): string[] {

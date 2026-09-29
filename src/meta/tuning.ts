@@ -1,6 +1,7 @@
 // Canonical prices, rewards and costs. Review changes against the tuning snapshot.
 // DIFFICULTY_DUST stays in core/levels.ts so core never imports meta.
 import { t, tp } from '../i18n';
+import { unlocked } from './unlocks';
 
 export const GAME_NAME = 'Pocket Planet';
 export const VERSION = '1.0.0';
@@ -163,7 +164,7 @@ export const QUESTS: QuestDef[] = [
     gems: 10,
     emoji: '🚀',
     text: () => t('Clear a Weekly Voyage stop'),
-    need: (p) => p.level >= 12,
+    need: (p) => unlocked(p, 'quest_voyage'),
   },
   {
     id: 'spot6',
@@ -172,7 +173,7 @@ export const QUESTS: QuestDef[] = [
     gems: 8,
     emoji: '🎪',
     text: (g) => t('Spot {n} costumed critters', { n: g }),
-    need: (p) => p.level >= 8,
+    need: (p) => unlocked(p, 'quest_spot'),
   },
 ];
 

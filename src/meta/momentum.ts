@@ -2,8 +2,9 @@
 // with one free "shield" per day so a single slip doesn't wipe it out.
 import type { Profile } from './profile';
 import { t, tp } from '../i18n';
+import { unlocked } from './unlocks';
 
-export const MOMENTUM_UNLOCK = 6;
+export { MOMENTUM_UNLOCK } from './unlocks';
 export const MOMENTUM_MAX = 3;
 
 export interface MomentumPerk {
@@ -29,7 +30,7 @@ export function momentumPerkText(tier: number): string {
 }
 
 export function momentumActive(p: Profile) {
-  return p.level >= MOMENTUM_UNLOCK;
+  return unlocked(p, 'momentum');
 }
 
 export function momentumWin(p: Profile) {

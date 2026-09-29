@@ -95,6 +95,7 @@ function play(app: App, L: LevelDef, mode: Mode, vs?: { code: string; seed: stri
   const p = app.p;
   p.stats.plays++;
   const opts = app.sceneOpts(
+    mode,
     {
       label: {
         daily: t('Daily #{n}', { n: dailyNumber(today()) }),

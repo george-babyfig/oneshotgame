@@ -26,6 +26,7 @@ import type { BoosterId } from './config';
 import { SPECIES, SPECIES_BY_ID } from '../core/world';
 import { rngFrom } from '../core/levels';
 import { LEVELS_PER_CHAPTER } from './progression';
+import { unlocked } from './unlocks';
 
 const H = 3600e3;
 
@@ -65,7 +66,7 @@ export { RING_COST } from './tuning';
 export const MAX_RING = 5;
 /** Winning a campaign level takes this much off every active build. */
 export { WIN_SPEEDUP } from './tuning';
-export const HOME_UNLOCK_LEVEL = 5;
+export { HOME_UNLOCK_LEVEL } from './unlocks';
 
 export interface Building {
   type: BuildingType;
@@ -259,7 +260,7 @@ export function defaultHome(now = Date.now()): HomeState {
 }
 
 export function homeUnlocked(p: Profile) {
-  return p.level >= HOME_UNLOCK_LEVEL;
+  return unlocked(p, 'homeworld');
 }
 
 // ------------------------------------------------------------------ building
