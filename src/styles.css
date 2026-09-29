@@ -507,6 +507,13 @@ button {
   font-weight: 700;
   font-size: max(12px, calc(16px * var(--text-scale)));
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+/* a narrow block centred on the launcher, so it never runs into the next-object bubble on its right */
+.hint > div:last-child {
+  max-width: 128px;
+  text-align: center;
+  line-height: 1.15;
 }
 .hint-hand {
   font-size: max(12px, calc(34px * var(--text-scale)));
