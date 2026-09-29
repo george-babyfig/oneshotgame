@@ -130,6 +130,22 @@ export function currentBanner(p: Profile): BannerDef {
   return b && b.unlocked(p) && (!p.settings.hidePaidLooks || b.id < 6) ? b : BANNERS[0];
 }
 
+export const PORTRAIT_FRAMES = [
+  { name: 'Starlight Frame', color: '#c9c2ff', unlock: 0 },
+  { name: 'Meadow Frame', color: '#9bdba9', unlock: 2 },
+  { name: 'Tide Frame', color: '#8ed6e5', unlock: 4 },
+  { name: 'Dawn Frame', color: '#f0bb8f', unlock: 6 },
+] as const;
+
+export function ownsPortraitFrame(p: Profile, index: number): boolean {
+  const frame = PORTRAIT_FRAMES[index];
+  return !!frame && (frame.unlock === 0 || p.chapters.includes(frame.unlock) || p.rank > frame.unlock);
+}
+
+export function currentPortraitFrame(p: Profile) {
+  return ownsPortraitFrame(p, p.passport.frame) ? PORTRAIT_FRAMES[p.passport.frame] : PORTRAIT_FRAMES[0];
+}
+
 // ------------------------------------------------------------------ badges
 /** Emoji for each achievement badge (keyed by the achievement's short id). */
 const BADGE_EMOJI: Record<string, string> = {

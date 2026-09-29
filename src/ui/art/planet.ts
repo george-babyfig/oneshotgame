@@ -1,7 +1,7 @@
 // Procedural planet renderer: smooth terrain, water, props, clouds and lighting.
 import { BIOMES, SECTORS, type Planet, type Sector } from '../../core/world';
 import { landColor, type PlanetPalette } from '../../core/palette';
-import { drawProps } from './props';
+import { drawCachedProps } from './props';
 import { shade } from './color';
 
 type G = CanvasRenderingContext2D;
@@ -136,16 +136,60 @@ function radiusAt(p: Planet, R: number, rot: number, ang: number) {
   return R * (a + (b - a) * s);
 }
 
+interface PlanetGradients {
+  cx: number;
+  cy: number;
+  R: number;
+  glow: string;
+  lifeK: number;
+  atm: CanvasGradient;
+  band: CanvasGradient;
+  mantle: CanvasGradient;
+  core: CanvasGradient;
+  shade: CanvasGradient;
+}
+
+const gradients = new WeakMap<G, PlanetGradients>();
+
+function planetGradients(g: G, cx: number, cy: number, R: number, glow: string, lifeK: number): PlanetGradients {
+  const previous = gradients.get(g);
+  if (previous?.cx === cx && previous.cy === cy && previous.R === R && previous.glow === glow && previous.lifeK === lifeK) return previous;
+  const atm = g.createRadialGradient(cx, cy, R * 0.95, cx, cy, R * (1.5 + lifeK * 0.25));
+  atm.addColorStop(0, glow);
+  atm.addColorStop(1, 'rgba(0,0,0,0)');
+  if (previous?.cx === cx && previous.cy === cy && previous.R === R) {
+    const next = { ...previous, glow, lifeK, atm };
+    gradients.set(g, next);
+    return next;
+  }
+  const band = g.createRadialGradient(cx, cy, R * 0.74, cx, cy, R * 0.9);
+  band.addColorStop(0, 'rgba(40,20,40,0.45)');
+  band.addColorStop(1, 'rgba(40,20,40,0)');
+  const mantle = g.createRadialGradient(cx - R * 0.15, cy - R * 0.2, R * 0.05, cx, cy, R * 0.76);
+  mantle.addColorStop(0, '#8a5a6e');
+  mantle.addColorStop(1, '#4e3350');
+  const core = g.createRadialGradient(cx, cy, 0, cx, cy, R * 0.34);
+  core.addColorStop(0, '#fff2a8');
+  core.addColorStop(0.35, '#ffb13d');
+  core.addColorStop(0.75, '#e0562e');
+  core.addColorStop(1, 'rgba(160,50,50,0)');
+  const shade = g.createRadialGradient(cx - R * 0.45, cy - R * 0.5, R * 0.15, cx, cy, R * 1.3);
+  shade.addColorStop(0, 'rgba(255,255,255,0.16)');
+  shade.addColorStop(0.5, 'rgba(255,255,255,0)');
+  shade.addColorStop(1, 'rgba(8,4,30,0.5)');
+  const next = { cx, cy, R, glow, lifeK, atm, band, mantle, core, shade };
+  gradients.set(g, next);
+  return next;
+}
+
 export function renderPlanet(g: G, p: Planet, v: PlanetView) {
   const { cx, cy, R, rot, time } = v;
   const glow = glowColor(v.glow, time);
+  const fills = planetGradients(g, cx, cy, R, glow, v.lifeK);
   // atmosphere halo
-  const atm = g.createRadialGradient(cx, cy, R * 0.95, cx, cy, R * (1.5 + v.lifeK * 0.25));
-  atm.addColorStop(0, glow);
-  atm.addColorStop(1, 'rgba(0,0,0,0)');
   g.save();
   g.globalAlpha = 0.28 + v.lifeK * 0.35;
-  g.fillStyle = atm;
+  g.fillStyle = fills.atm;
   g.beginPath();
   g.arc(cx, cy, R * 1.8, 0, Math.PI * 2);
   g.fill();
@@ -201,19 +245,13 @@ export function renderPlanet(g: G, p: Planet, v: PlanetView) {
     }
   }
   // soil band under the biomes (darkens the lower terrain for depth)
-  const band = g.createRadialGradient(cx, cy, R * 0.74, cx, cy, R * 0.9);
-  band.addColorStop(0, 'rgba(40,20,40,0.45)');
-  band.addColorStop(1, 'rgba(40,20,40,0)');
-  g.fillStyle = band;
+  g.fillStyle = fills.band;
   g.beginPath();
   g.arc(cx, cy, R * 0.9, 0, Math.PI * 2);
   g.fill();
   // crisp cutaway: rock mantle with a glowing magma heart
   const mantleR = R * 0.76;
-  const mantle = g.createRadialGradient(cx - R * 0.15, cy - R * 0.2, R * 0.05, cx, cy, mantleR);
-  mantle.addColorStop(0, '#8a5a6e');
-  mantle.addColorStop(1, '#4e3350');
-  g.fillStyle = mantle;
+  g.fillStyle = fills.mantle;
   g.beginPath();
   g.arc(cx, cy, mantleR, 0, Math.PI * 2);
   g.fill();
@@ -231,15 +269,15 @@ export function renderPlanet(g: G, p: Planet, v: PlanetView) {
   }
   // magma core
   const pulse = 1 + Math.sin(time * 2) * 0.04;
-  const core = g.createRadialGradient(cx, cy, 0, cx, cy, R * 0.34 * pulse);
-  core.addColorStop(0, '#fff2a8');
-  core.addColorStop(0.35, '#ffb13d');
-  core.addColorStop(0.75, '#e0562e');
-  core.addColorStop(1, 'rgba(160,50,50,0)');
-  g.fillStyle = core;
+  g.save();
+  g.translate(cx, cy);
+  g.scale(pulse, pulse);
+  g.translate(-cx, -cy);
+  g.fillStyle = fills.core;
   g.beginPath();
-  g.arc(cx, cy, R * 0.34 * pulse, 0, Math.PI * 2);
+  g.arc(cx, cy, R * 0.34, 0, Math.PI * 2);
   g.fill();
+  g.restore();
   // mantle edge
   g.strokeStyle = 'rgba(30,12,35,0.45)';
   g.lineWidth = Math.max(1.5, R * 0.025);
@@ -284,17 +322,13 @@ export function renderPlanet(g: G, p: Planet, v: PlanetView) {
       g.save();
       g.translate(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
       g.rotate(a + Math.PI / 2);
-      drawProps(g, sec.biome, s, i * 13.7 + sec.land * 3 + sec.water, time);
+      drawCachedProps(g, sec.biome, s, i * 13.7 + sec.land * 3 + sec.water, time);
       g.restore();
     }
   }
 
   // day/night shading and rim light
-  const shadeG = g.createRadialGradient(cx - R * 0.45, cy - R * 0.5, R * 0.15, cx, cy, R * 1.3);
-  shadeG.addColorStop(0, 'rgba(255,255,255,0.16)');
-  shadeG.addColorStop(0.5, 'rgba(255,255,255,0)');
-  shadeG.addColorStop(1, 'rgba(8,4,30,0.5)');
-  g.fillStyle = shadeG;
+  g.fillStyle = fills.shade;
   g.beginPath();
   g.arc(cx, cy, R * 1.16, 0, Math.PI * 2);
   g.fill();

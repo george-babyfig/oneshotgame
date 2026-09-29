@@ -17,6 +17,8 @@ import type { RoundModifiers } from '../core/modifiers';
 import type { Season } from '../meta/seasons';
 import { sfx } from './audio';
 import { haptic } from './haptics';
+import { drawChapterBackdrop } from './art/backdrops';
+import { chapterOf } from '../meta/progression';
 
 export interface SceneOpts {
   scopeLevel: number; // 0..3 aim guide length
@@ -182,6 +184,10 @@ export class LevelScene {
   score: number;
   shownScore: number;
   starsGot = 0;
+  private scoreAtThrow = 0;
+  private shrugUntil = 0;
+  private danceStart = -1;
+  private chapterNumber = 1;
   regionBests: number[];
   arrived: Set<string>;
   ended = false;
@@ -223,6 +229,7 @@ export class LevelScene {
   constructor(level: LevelDef, opts: SceneOpts) {
     if (!opts.endless) ledger.count('round_started');
     this.L = level;
+    this.chapterNumber = chapterOf(level.n).n;
     this.o = opts;
     this.planet = clonePlanet(level.start);
     if (opts.boosters.spark) fx.sparkStart(this.planet, lifeSparkSectors(level, this.planet));
@@ -301,7 +308,13 @@ export class LevelScene {
 
   /** Celebrate newly earned stars (from score rising, or goals completing). */
   checkStars() {
-    return hud.checkStars(this);
+    const before = this.starsGot;
+    const result = hud.checkStars(this);
+    if (this.starsGot > before) {
+      this.cheerUntil = Math.max(this.cheerUntil, this.time + 0.9);
+      if (this.starsGot === 3) this.danceStart = this.time;
+    }
+    return result;
   }
 
   /** Stars that count: every goal must be met first. */
@@ -458,6 +471,7 @@ export class LevelScene {
   }
 
   fire(vx: number, vy: number) {
+    this.scoreAtThrow = this.score;
     const { x, y } = this.launch;
     const nova = this.novaOn && this.nova.charge >= this.nova.threshold && (!this.nova.held || this.throwsLeft === 1);
     this.shot = { kind: this.cur, x, y, vx, vy, t: 0, carry: 0, t0: this.time, rot0: this.rot, trail: [], nova };
@@ -531,6 +545,7 @@ export class LevelScene {
 
   endTimer = 0;
   afterShot() {
+    if (this.score <= this.scoreAtThrow) this.shrugUntil = this.time + 0.75;
     return hud.afterShot(this);
   }
 
@@ -567,10 +582,14 @@ export class LevelScene {
   }
 
   cheerUntil = 0;
+  private readonly fallbackLook: Look = { ...DEFAULT_LOOK };
   /** Bonus life from Object Lab perks (on top of the planet's own life). */
   bonus = 0;
   get look(): Look {
-    return this.o.look ?? DEFAULT_LOOK;
+    const look = this.o.look ?? this.fallbackLook;
+    look.expression = this.aimFrom ? 'focused' : this.shrugUntil > this.time ? 'shrug' : this.cheerUntil > this.time ? 'cheer' : undefined;
+    look.dance = this.danceStart >= 0 && this.time - this.danceStart < 1 ? this.time - this.danceStart : undefined;
+    return look;
   }
 
   emoteAt = -1;
@@ -617,10 +636,12 @@ export class LevelScene {
   }
 
   drawPlanet() {
+    drawChapterBackdrop(this.g, this.chapterNumber, this.w, this.h, this.time, !!this.o.reduceMotion);
     return fx.drawPlanet(this);
   }
 
-  predictCache: { key: string; land: string; icon: string; delta: number; lost: string; creature: string; changed: number[] } | null = null;
+  predictCache: { key: string; title: string; lost: string; changed: number[] } | null = null;
+  previewTextScale = 0;
 
   /** Highlight the landing region and preview what it will become. */
   drawLanding(i: number) {

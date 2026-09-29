@@ -7,6 +7,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import { OPEN_MODAL, expectNoErrors, freshInstall, midGame, settle, snap, watchErrors } from './helpers';
 
+// slow CI runners draw fewer frames per second, so real throws take longer there
+const ROUND_WAIT = process.env.CI ? 60_000 : 15_000;
+
 test.use({ locale: 'en-US' });
 
 const PLANET = 12;
@@ -43,7 +46,7 @@ async function throwAt(page: Page, sector: number) {
     const w = window as any;
     w.__scene.fire(w.__scene.aimAt(sector));
   }, sector);
-  await page.waitForFunction(() => !(window as any).__app.scene.shot, null, { timeout: 15_000 });
+  await page.waitForFunction(() => !(window as any).__app.scene.shot, null, { timeout: ROUND_WAIT });
 }
 
 /** The profile as the storage layer holds it (what survives the web view being killed). */
@@ -112,7 +115,7 @@ test.describe('J7 resume a round [en]', () => {
     for (let k = 0; k < left; k++) await throwAt(page, (k * 5 + 1) % 24);
     // the round ends: results (a win) or the end card; take its first choice like a child would
     const end = page.locator(`${OPEN_MODAL}:has(.end-stars), ${OPEN_MODAL}:has(.end-title)`).last();
-    await expect(end, 'the round ends').toBeVisible({ timeout: 20_000 });
+    await expect(end, 'the round ends').toBeVisible({ timeout: ROUND_WAIT });
     await end.locator('button').first().click();
     await expect
       .poll(() => page.evaluate(() => (window as any).__app.p.savedRound ?? null), { message: 'finishing clears the saved round' })

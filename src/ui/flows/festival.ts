@@ -10,6 +10,8 @@ import { stickerCanvas } from '../art/stickers';
 import type { App } from '../app';
 import { getLang, t } from '../../i18n';
 import { untilText } from '../../meta/dates';
+import { celebrate } from '../celebrate';
+import { effectiveReduceMotion } from '../motion';
 
 const MODELS = ['bunny', 'penguin', 'otter'];
 
@@ -54,7 +56,22 @@ export function festivalFlow(app: App) {
                 sfx.chest();
                 haptic.success();
                 if (tier.sticker) toast(t('New sticker for your Album!'), 'good');
-                if (tier.acc) toast(t('Your residents can now wear the {name}!', { name: t(accName) }), 'good');
+                if (tier.acc) {
+                  const model = h('div', { class: 'celebrate-costume' }, critterCanvas('bunny', 100, 0.4, f.acc));
+                  const curtain = h('div', { class: 'celebrate-curtain', 'aria-hidden': 'true' });
+                  const reveal = modal([
+                    h('div', { class: 'celebrate-stage' }, model, curtain),
+                    h('div', { class: 'm-title' }, t(accName)),
+                    h('p', null, t('Your residents can now wear the {name}!', { name: t(accName) })),
+                    btn(t('Awesome'), 'primary wide', () => reveal.close()),
+                  ]);
+                  celebrate('costume', {
+                    root: reveal.el,
+                    reduceMotion: effectiveReduceMotion(p),
+                    duration: 1300,
+                    beats: [{ at: 260, play: () => curtain.classList.add('open') }],
+                  });
+                }
                 app.save();
                 render();
               }),

@@ -10,6 +10,7 @@ import { wishesPanel } from '../flows/wishes';
 import { eventReady } from '../../meta/events';
 import { festivalReady } from '../../meta/festivals';
 import { STYLES_RELEASE } from '../../meta/cosmetics';
+import { menuParticles } from '../motion';
 
 export function showMissions(app: App) {
   const p = app.p;
@@ -29,6 +30,7 @@ export function showMissions(app: App) {
     h(
       'div',
       { class: 'screen page tab-page' },
+      menuParticles(),
       app.topBar(),
       h('div', { class: 'page-title' }, t('Missions')),
       h(

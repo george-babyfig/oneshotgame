@@ -25,6 +25,14 @@ import {
   savePreset,
   type Look,
   type Slot,
+  FACE_NAMES,
+  HAIR_NAMES,
+  EYE_NAMES,
+  EXPRESSION_NAMES,
+  EXPRESSIONS,
+  SKIN_TONES,
+  HAIR_COLORS,
+  type AvatarParts,
 } from '../../meta/cosmetics';
 import { drawKeeper, drawLauncher, drawTrail, itemCanvas, keeperHead } from '../art/keeper';
 import { drawProjectile } from '../art/projectiles';
@@ -40,9 +48,97 @@ import { critterCanvas, drawCreature } from '../art/critters';
 import { enterGrownups } from './grownups';
 import { SKINS } from '../../meta/tuning';
 import { skinSwatch } from './shop';
+import { effectiveReduceMotion } from '../motion';
 
-type Tab = Slot | 'dye' | 'buddy' | 'atmosphere';
+type Tab = Slot | 'dye' | 'buddy' | 'atmosphere' | 'you';
 let lastSlot: Tab = 'suit';
+
+function avatarPanel(app: App, preview: Look, repaint: () => void): HTMLElement {
+  const draft: AvatarParts = { ...app.p.avatar };
+  preview.avatar = draft;
+  const grid = (
+    label: string,
+    key: 'face' | 'skin' | 'hair' | 'hairColor' | 'eyes' | 'expression',
+    names: readonly string[],
+    colors?: readonly string[],
+  ) =>
+    h(
+      'div',
+      { class: 'avatar-group' },
+      h('b', null, label),
+      h(
+        'div',
+        { class: 'avatar-options' },
+        ...names.map((name, i) => {
+          const value = key === 'expression' ? EXPRESSIONS[i] : i;
+          const button = h(
+            'button',
+            {
+              class: `avatar-option${draft[key] === value ? ' on' : ''}`,
+              'aria-label': colors ? (key === 'skin' ? t('Skin tone {n}', { n: i + 1 }) : t('Hair colour {n}', { n: i + 1 })) : t(name),
+              onclick: () => {
+                if (key === 'expression') draft.expression = EXPRESSIONS[i];
+                else draft[key] = i;
+                sfx.click();
+                haptic.light();
+                button.parentElement?.querySelectorAll('.avatar-option').forEach((el) => el.classList.remove('on'));
+                button.classList.add('on');
+                repaint();
+              },
+            },
+            colors ? h('span', { class: 'avatar-swatch', style: `background:${colors[i]}` }) : t(name),
+          );
+          return button;
+        }),
+      ),
+    );
+  const groups = h(
+    'div',
+    { class: 'avatar-groups' },
+    grid(t('Face'), 'face', FACE_NAMES),
+    grid(t('Skin tone'), 'skin', SKIN_TONES, SKIN_TONES),
+    grid(t('Hair'), 'hair', HAIR_NAMES),
+    grid(t('Hair colour'), 'hairColor', HAIR_COLORS, HAIR_COLORS),
+    grid(t('Eyes'), 'eyes', EYE_NAMES),
+    grid(t('Expression'), 'expression', EXPRESSION_NAMES),
+  );
+  const refresh = () => {
+    groups.querySelectorAll('.avatar-group').forEach((group, groupIndex) => {
+      const key = (['face', 'skin', 'hair', 'hairColor', 'eyes', 'expression'] as const)[groupIndex];
+      group
+        .querySelectorAll('.avatar-option')
+        .forEach((button, i) => button.classList.toggle('on', draft[key] === (key === 'expression' ? EXPRESSIONS[i] : i)));
+    });
+  };
+  return h(
+    'div',
+    { class: 'avatar-panel' },
+    h('p', { class: 'muted' }, t('Make your Keeper look like you imagine. Every part is yours to try.')),
+    groups,
+    h(
+      'div',
+      { class: 'avatar-actions' },
+      btn(t('✨ Mix it up'), 'ghost', () => {
+        draft.face = Math.floor(Math.random() * FACE_NAMES.length);
+        draft.skin = Math.floor(Math.random() * SKIN_TONES.length);
+        draft.hair = Math.floor(Math.random() * HAIR_NAMES.length);
+        draft.hairColor = Math.floor(Math.random() * HAIR_COLORS.length);
+        draft.eyes = Math.floor(Math.random() * EYE_NAMES.length);
+        draft.expression = EXPRESSIONS[Math.floor(Math.random() * EXPRESSIONS.length)];
+        sfx.click();
+        refresh();
+        repaint();
+      }),
+      btn(t('Done'), 'primary', () => {
+        app.p.avatar = { ...draft };
+        app.save();
+        sfx.click();
+        haptic.success();
+        showStyles(app, 'you');
+      }),
+    ),
+  );
+}
 
 /** Animated stage: the Keeper flings a rock every couple of seconds. */
 function stage(
@@ -56,8 +152,14 @@ function stage(
 ) {
   const g = canvas.getContext('2d')!;
   let raf = 0;
+  let stopped = false;
   const t0 = performance.now();
+  const schedule = () => {
+    if (!raf && !stopped && !document.hidden) raf = requestAnimationFrame(frame);
+  };
   const frame = (now: number) => {
+    raf = 0;
+    if (stopped || document.hidden) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const w = canvas.clientWidth;
     const hh = canvas.clientHeight;
@@ -113,10 +215,30 @@ function stage(
       const p = pos(flying);
       drawProjectile(g, 'rock', p.x, p.y, 26, time, flying * 8);
     }
-    if (!reduceMotion) raf = requestAnimationFrame(frame);
+    if (!reduceMotion) schedule();
   };
-  raf = requestAnimationFrame(frame);
-  return () => cancelAnimationFrame(raf);
+  const onVisible = () => {
+    if (document.hidden) {
+      cancelAnimationFrame(raf);
+      raf = 0;
+    } else schedule();
+  };
+  document.addEventListener('visibilitychange', onVisible);
+  schedule();
+  return {
+    stop: () => {
+      stopped = true;
+      cancelAnimationFrame(raf);
+      document.removeEventListener('visibilitychange', onVisible);
+    },
+    repaint: () => {
+      if (reduceMotion) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+        frame(performance.now());
+      }
+    },
+  };
 }
 
 /** Buddy tab: pick a befriended creature and what it wears. */
@@ -336,9 +458,10 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
   const worn = currentLook(p);
   const preview: Look = { ...worn };
   if (tryOn && COSMETIC_BY_ID[tryOn]) preview[COSMETIC_BY_ID[tryOn].slot] = tryOn;
-  const sel = tryOn ?? (slot === 'buddy' || slot === 'atmosphere' ? '' : worn[slot === 'dye' ? 'suit' : slot]);
+  const sel = tryOn ?? (slot === 'buddy' || slot === 'atmosphere' || slot === 'you' ? '' : worn[slot === 'dye' ? 'suit' : slot]);
   const item = COSMETIC_BY_ID[sel];
   const canvas = h('canvas', { class: 'ws-stage' }) as HTMLCanvasElement;
+  let repaintPreview = () => {};
 
   let action: HTMLElement;
   if (!item) action = h('div');
@@ -391,50 +514,61 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
   const tabs = h(
     'div',
     { class: 'tabs' },
-    ...[...SLOTS, 'dye' as const, 'buddy' as const, 'atmosphere' as const].map((s) =>
+    ...['you' as const, ...SLOTS, 'dye' as const, 'buddy' as const, 'atmosphere' as const].map((s) =>
       h(
         'button',
         { class: `tab${s === slot ? ' on' : ''}`, onclick: () => (sfx.click(), showStyles(app, s)) },
-        s === 'dye' ? t('Dye') : s === 'buddy' ? t('Buddy') : s === 'atmosphere' ? t('Atmosphere') : t(SLOT_NAMES[s]),
+        s === 'you'
+          ? t('You')
+          : s === 'dye'
+            ? t('Dye')
+            : s === 'buddy'
+              ? t('Buddy')
+              : s === 'atmosphere'
+                ? t('Atmosphere')
+                : t(SLOT_NAMES[s]),
       ),
     ),
   );
   const grid =
-    slot === 'dye'
-      ? dyePanel(app)
-      : slot === 'buddy'
-        ? buddyPanel(app)
-        : slot === 'atmosphere'
-          ? atmospherePanel(app, tryOn ?? p.skin)
-          : h(
-              'div',
-              { class: 'ws-grid' },
-              ...visibleCosmetics(p, slot).map((x) => {
-                const have = owns(p, x.id);
-                const on = worn[x.slot] === x.id;
-                return h(
-                  'button',
-                  {
-                    class: `ws-item t-${x.tier}${have ? '' : ' locked'}${on ? ' on' : ''}${x.id === sel ? ' sel' : ''}`,
-                    onclick: () => (sfx.click(), haptic.light(), showStyles(app, slot, x.id)),
-                  },
-                  itemCanvas(x.id, worn, 64),
-                  h('b', null, t(x.name)),
-                  h('small', null, on ? t('Equipped') : have ? t('Owned') : isPaidLook(x) ? t('Try on') : sourceText(x)),
-                );
-              }),
-            );
+    slot === 'you'
+      ? avatarPanel(app, preview, () => repaintPreview())
+      : slot === 'dye'
+        ? dyePanel(app)
+        : slot === 'buddy'
+          ? buddyPanel(app)
+          : slot === 'atmosphere'
+            ? atmospherePanel(app, tryOn ?? p.skin)
+            : h(
+                'div',
+                { class: 'ws-grid' },
+                ...visibleCosmetics(p, slot).map((x) => {
+                  const have = owns(p, x.id);
+                  const on = worn[x.slot] === x.id;
+                  return h(
+                    'button',
+                    {
+                      class: `ws-item t-${x.tier}${have ? '' : ' locked'}${on ? ' on' : ''}${x.id === sel ? ' sel' : ''}`,
+                      onclick: () => (sfx.click(), haptic.light(), showStyles(app, slot, x.id)),
+                    },
+                    itemCanvas(x.id, worn, 64),
+                    h('b', null, t(x.name)),
+                    h('small', null, on ? t('Equipped') : have ? t('Owned') : isPaidLook(x) ? t('Try on') : sourceText(x)),
+                  );
+                }),
+              );
   const previewSkin = SKINS.find((x) => x.id === (slot === 'atmosphere' ? (tryOn ?? p.skin) : p.skin));
   const glow = previewSkin && (!p.settings.hidePaidLooks || (!previewSkin.starter && !previewSkin.pass)) ? previewSkin.glow : SKINS[0].glow;
-  const stop = stage(
+  const stageView = stage(
     canvas,
     () => preview,
-    p.settings.reduceMotion,
+    effectiveReduceMotion(p),
     (id) => masteryLevel(p.mastery[id] ?? 0) >= MASTERY_STEPS.length,
     slot === 'emote',
     currentBuddy(p, festivalActive(p) ? ensureFestival(p).acc : undefined),
     glow,
   );
+  repaintPreview = stageView.repaint;
   app.mount(
     h(
       'div',
@@ -456,7 +590,13 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
           h(
             'div',
             { class: 'ws-name' },
-            item ? t(item.name) : slot === 'buddy' && p.buddy.species ? t(SPECIES_BY_ID[p.buddy.species].name) : '',
+            item
+              ? t(item.name)
+              : slot === 'you'
+                ? t('Your Keeper')
+                : slot === 'buddy' && p.buddy.species
+                  ? t(SPECIES_BY_ID[p.buddy.species].name)
+                  : '',
           ),
           action,
         ),
@@ -479,6 +619,6 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
       ),
     ),
     'styles',
-    stop,
+    stageView.stop,
   );
 }

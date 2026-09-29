@@ -8,6 +8,7 @@ import { restoreRound, serializeRound, type RoundState } from '../core/round';
 import { ROUND_RULES_V0 } from '../core/round';
 import { LEVEL_SALT, makeLevel } from '../core/levels';
 import type { RoundModifiers } from '../core/modifiers';
+import { DEFAULT_AVATAR, type AvatarParts } from './cosmetics';
 
 export interface GalaxyPlanet {
   n: number;
@@ -230,13 +231,23 @@ export interface Profile {
   gcReported: string[];
   /** Keeper outfit (see meta/cosmetics.ts) and items bought with gems. */
   look: Record<'suit' | 'hat' | 'launcher' | 'trail' | 'emote', string>;
+  avatar: AvatarParts;
   wardrobe: string[];
   favourites: string[];
   stylesNewSeen: string;
   /** Flings per launcher, for launcher mastery. */
   mastery: Record<string, number>;
   /** Planet Passport: name parts, title, banner and pinned badges. */
-  passport: { first: number; second: number; set: boolean; title: string; banner: number; badges: string[]; badgesSet: boolean };
+  passport: {
+    first: number;
+    second: number;
+    set: boolean;
+    title: string;
+    banner: number;
+    frame: number;
+    badges: string[];
+    badgesSet: boolean;
+  };
   /** Homeworld: the planet you build on between levels. */
   home: HomeState;
   /** Object Lab levels per flingable (missing = 1). */
@@ -361,11 +372,12 @@ export function defaultProfile(now = Date.now()): Profile {
     event: { week: '', tokens: 0, claimed: [] },
     gcReported: [],
     look: { suit: 'suit_sky', hat: 'hat_antenna', launcher: 'l_pad', trail: 'tr_dots', emote: 'em_cheer' },
+    avatar: { ...DEFAULT_AVATAR },
     wardrobe: [],
     favourites: [],
     stylesNewSeen: '',
     mastery: {},
-    passport: { first: -1, second: -1, set: false, title: '', banner: 0, badges: [], badgesSet: false },
+    passport: { first: -1, second: -1, set: false, title: '', banner: 0, frame: 0, badges: [], badgesSet: false },
     home: defaultHome(now),
     lab: {},
     flings: {},

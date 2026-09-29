@@ -3,6 +3,7 @@
 import { h, btn, fmt, modal, toast } from '../dom';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
+import { effectiveReduceMotion } from '../motion';
 import {
   BUILDINGS,
   BUILDING_TYPES,
@@ -161,6 +162,11 @@ export function showHomeworld(app: App) {
   const floaters: { x: number; y: number; text: string; t0: number; color: string }[] = [];
   const bursts: { x: number; y: number; vx: number; vy: number; life: number; color: string }[] = [];
   let raf = 0;
+  let stopped = false;
+  const calm = effectiveReduceMotion(p);
+  const calmTimers: number[] = [];
+  let waving = -1;
+  let waveUntil = 0;
   const t0 = performance.now();
   let geo = { cx: 0, cy: 0, R: 0, w: 0, h: 0 };
 
@@ -168,6 +174,7 @@ export function showHomeworld(app: App) {
   const surf = (a: number, out = 0) => ({ x: geo.cx + Math.cos(a) * (geo.R + out), y: geo.cy + Math.sin(a) * (geo.R + out) });
 
   const burst = (x: number, y: number, color: string) => {
+    if (calm) return;
     for (let i = 0; i < 16; i++) {
       const a = Math.random() * TAU;
       const s = 60 + Math.random() * 140;
@@ -177,6 +184,7 @@ export function showHomeworld(app: App) {
   const floatText = (i: number, text: string, color = '#ffe58a') => {
     const q = surf(plotAngle(i), geo.R * 0.55);
     floaters.push({ x: q.x, y: q.y, text, t0: performance.now(), color });
+    if (calm) calmTimers.push(window.setTimeout(schedule, 1450));
   };
 
   const doCollect = (i: number) => {
@@ -222,6 +230,8 @@ export function showHomeworld(app: App) {
 
   // ---------------------------------------------------------------- canvas
   const frame = (now: number) => {
+    raf = 0;
+    if (stopped || document.hidden) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const w = canvas.clientWidth;
     const hh = canvas.clientHeight;
@@ -230,14 +240,14 @@ export function showHomeworld(app: App) {
       canvas.height = Math.round(hh * dpr);
     }
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const time = p.settings.reduceMotion ? 0.5 : (now - t0) / 1000;
+    const time = calm ? 0.5 : (now - t0) / 1000;
     const R = Math.min(w, hh) * (0.2 + home.ring * 0.028);
     geo = { cx: w / 2, cy: hh * 0.55, R, w, h: hh };
     if (!drag) {
       rot += vel;
       vel *= 0.93;
       if (Math.abs(vel) < 0.0005) vel = 0;
-      if (!vel && !p.settings.reduceMotion) rot += 0.0008;
+      if (!vel && !calm) rot += 0.0008;
     }
     g.clearRect(0, 0, w, hh);
     // stars
@@ -301,7 +311,7 @@ export function showHomeworld(app: App) {
       g.arc(w * 0.86 + 7, hh * 0.12 - 4, 14, 0, TAU);
       g.fill();
       g.globalAlpha = 1;
-      if (!p.settings.reduceMotion) drawMeteors(g, w, hh, time, night);
+      if (!calm) drawMeteors(g, w, hh, time, night);
     }
     // planet body, in the player's paint job
     const paint = currentPaint(p);
@@ -382,7 +392,20 @@ export function showHomeworld(app: App) {
       if (home.expedition?.species === r.species) return;
       const base = rot + ((k + 0.5) * TAU) / Math.max(1, n) + Math.sin(time * 0.3 + k * 2) * (TAU / n) * 0.35;
       const q = surf(base);
-      drawCreature(g, r.species, q.x, q.y, base + Math.PI / 2, s * 0.42, time + k, r.acc ?? festCostume(app.p));
+      if (q.x < -s || q.x > w + s || q.y < -s || q.y > hh + s) return;
+      drawCreature(
+        g,
+        r.species,
+        q.x,
+        q.y,
+        base + Math.PI / 2,
+        s * 0.42,
+        home.residents.length > 24 || calm ? 0 : time + k,
+        r.acc ?? festCostume(app.p),
+        false,
+        waving === k && now < waveUntil ? 'wave' : 'idle',
+        calm,
+      );
     });
     // the Keeper strolls in the gap before the first plot
     const ka = rot - (TAU / n) * 0.5 + Math.sin(time * 0.4) * (TAU / n) * 0.15;
@@ -406,7 +429,7 @@ export function showHomeworld(app: App) {
       g.arc(geo.cx, geo.cy, R, 0, TAU);
       g.fill();
     }
-    if (!p.settings.reduceMotion) drawSeason(g, w, hh, time, seasonOf(new Date(), p.settings.hemi), night, 30);
+    if (!calm) drawSeason(g, w, hh, time, seasonOf(new Date(), p.settings.hemi), night, 30);
     // bursts + floating text
     const dt = 1 / 60;
     for (let i = bursts.length - 1; i >= 0; i--) {
@@ -442,14 +465,26 @@ export function showHomeworld(app: App) {
       g.fillText(f.text, f.x, f.y - k * 50);
     }
     g.globalAlpha = 1;
-    raf = requestAnimationFrame(frame);
+    if (!calm) schedule();
   };
+  const schedule = () => {
+    if (!raf && !stopped && !document.hidden) raf = requestAnimationFrame(frame);
+  };
+  const onVisible = () => {
+    if (document.hidden) {
+      cancelAnimationFrame(raf);
+      raf = 0;
+    } else schedule();
+  };
+  document.addEventListener('visibilitychange', onVisible);
+  window.addEventListener('resize', schedule);
 
   // drag to spin, tap to select
   canvas.addEventListener('pointerdown', (e) => {
     canvas.setPointerCapture(e.pointerId);
     drag = { x: e.clientX, rot, moved: false, t: performance.now() };
     vel = 0;
+    schedule();
   });
   canvas.addEventListener('pointermove', (e) => {
     if (!drag) return;
@@ -458,16 +493,35 @@ export function showHomeworld(app: App) {
     const prev = rot;
     rot = drag.rot + dx / Math.max(80, geo.R);
     vel = rot - prev;
+    schedule();
   });
   const up = (e: PointerEvent) => {
     if (!drag) return;
     const wasTap = !drag.moved;
     drag = null;
+    if (calm) vel = 0;
+    schedule();
     if (!wasTap) return;
     vel = 0;
     const r = canvas.getBoundingClientRect();
     const x = e.clientX - r.left;
     const y = e.clientY - r.top;
+    const time = calm ? 0.5 : (performance.now() - t0) / 1000;
+    const nResidents = Math.max(1, home.plots.length);
+    const hit = Math.max(28, Math.min(84, geo.R * 0.7) * 0.46);
+    for (let k = 0; k < home.residents.length; k++) {
+      if (home.expedition?.species === home.residents[k].species) continue;
+      const base = rot + ((k + 0.5) * TAU) / nResidents + Math.sin(time * 0.3 + k * 2) * (TAU / nResidents) * 0.35;
+      const q = surf(base);
+      if (Math.hypot(x - q.x, y - q.y) <= hit) {
+        waving = k;
+        waveUntil = performance.now() + 900;
+        if (calm) calmTimers.push(window.setTimeout(schedule, 900));
+        sfx.creature(false);
+        haptic.light();
+        return;
+      }
+    }
     const d = Math.hypot(x - geo.cx, y - geo.cy);
     if (d < geo.R * 0.6 || d > geo.R + 110) {
       selected = -1;
@@ -514,8 +568,10 @@ export function showHomeworld(app: App) {
   };
   const tickPanel = () => {
     tickHome(p);
-    if (signature() !== lastSig) renderPanel();
-    else live.forEach((f) => f());
+    if (signature() !== lastSig) {
+      renderPanel();
+      schedule();
+    } else live.forEach((f) => f());
   };
   const liveText = (el: HTMLElement, text: () => string) => {
     live.push(() => (el.textContent = text()));
@@ -523,6 +579,7 @@ export function showHomeworld(app: App) {
   };
 
   function renderPanel() {
+    schedule();
     const now = Date.now();
     tickHome(p, now);
     live = [];
@@ -752,13 +809,17 @@ export function showHomeworld(app: App) {
 
   renderPanel();
   const tick = setInterval(tickPanel, 15000);
-  raf = requestAnimationFrame(frame);
+  schedule();
 
   app.mount(
     h('div', { class: 'screen page homeworld' }, app.topBar(), h('div', { class: 'page-title' }, t('Homeworld'), ringLbl), canvas, panel),
     'homeworld',
     () => {
+      stopped = true;
       cancelAnimationFrame(raf);
+      calmTimers.forEach(clearTimeout);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('resize', schedule);
       clearInterval(tick);
     },
   );

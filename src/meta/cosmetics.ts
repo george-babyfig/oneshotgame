@@ -1,4 +1,4 @@
-import { COSMETICS } from './tuning';
+import { COSMETICS as BASE_COSMETICS } from './tuning';
 import { spend } from './wallet';
 // The Keeper (your little astronaut), its launcher and its throw trail.
 // Every item is earned or bought directly: no random rolls, no duplicates.
@@ -32,10 +32,91 @@ export interface Cosmetic {
   set?: string;
 }
 
-export { COSMETICS } from './tuning';
+export const FACE_SHAPES = ['round', 'oval', 'square', 'heart'] as const;
+export const FACE_NAMES = ['Round', 'Oval', 'Square', 'Heart'] as const;
+export const SKIN_TONES = ['#f8dfc6', '#efd0ae', '#d9aa82', '#c48c64', '#a96e4e', '#85543e', '#633f34', '#432c2b'] as const;
+export const HAIR_STYLES = ['none', 'crop', 'fringe', 'curls', 'puffs', 'waves', 'braids', 'spikes'] as const;
+export const HAIR_NAMES = ['Bare', 'Crop', 'Fringe', 'Curls', 'Puffs', 'Waves', 'Braids', 'Spikes'] as const;
+export const HAIR_COLORS = ['#251c27', '#523224', '#835136', '#b97b42', '#e6b75e', '#a34835', '#eee2cc', '#6f5aa6'] as const;
+export const EYE_STYLES = ['round', 'smile', 'wide', 'sleepy', 'spark'] as const;
+export const EYE_NAMES = ['Bright', 'Smiley', 'Wide', 'Sleepy', 'Sparkly'] as const;
+export const EXPRESSIONS = ['happy', 'focused', 'surprised', 'shrug', 'cheer'] as const;
+export const EXPRESSION_NAMES = ['Happy', 'Focused', 'Surprised', 'Shrug', 'Cheer'] as const;
+export interface AvatarParts {
+  face: number;
+  skin: number;
+  hair: number;
+  hairColor: number;
+  eyes: number;
+  expression: (typeof EXPRESSIONS)[number];
+}
+export const DEFAULT_AVATAR: AvatarParts = { face: 0, skin: 3, hair: 0, hairColor: 0, eyes: 0, expression: 'happy' };
+
+/** These are earned by play and never have a price. */
+export const SHOWTIME_COSMETICS: Cosmetic[] = [
+  {
+    id: 'suit_meadow',
+    slot: 'suit',
+    name: 'Meadow Explorer',
+    source: 'chapter',
+    unlock: 2,
+    tier: 'fancy',
+    colors: ['#74c69d', '#e9ffcc', '#214a44'],
+  },
+  {
+    id: 'suit_cloud',
+    slot: 'suit',
+    name: 'Cloud Jumper',
+    source: 'chapter',
+    unlock: 5,
+    tier: 'fancy',
+    colors: ['#b1d8ed', '#fff5e4', '#384a72'],
+  },
+  {
+    id: 'suit_coralreef',
+    slot: 'suit',
+    name: 'Coral Keeper',
+    source: 'habitat',
+    unlock: 'seaside',
+    tier: 'fancy',
+    colors: ['#ef8d85', '#ffe8ba', '#513c70'],
+  },
+  {
+    id: 'suit_nightgarden',
+    slot: 'suit',
+    name: 'Night Garden',
+    source: 'calendar',
+    unlock: 21,
+    tier: 'fancy',
+    colors: ['#586b9d', '#c9edb5', '#252850'],
+  },
+  { id: 'hat_scarf', slot: 'hat', name: 'Comet Scarf', source: 'chapter', unlock: 3, tier: 'fancy', colors: ['#ff9b83', '#ffe3b1'] },
+  { id: 'hat_mooncap', slot: 'hat', name: 'Moon Cap', source: 'chapter', unlock: 6, tier: 'fancy', colors: ['#8b8ccb', '#e9e8ff'] },
+  { id: 'hat_reed', slot: 'hat', name: 'Reed Crown', source: 'habitat', unlock: 'wetlands', tier: 'fancy', colors: ['#8dcf8c', '#f4dda2'] },
+  {
+    id: 'hat_firefly',
+    slot: 'hat',
+    name: 'Firefly Antenna',
+    source: 'calendar',
+    unlock: 28,
+    tier: 'fancy',
+    colors: ['#e8dc89', '#88d7a3'],
+  },
+  { id: 'l_bloom', slot: 'launcher', name: 'Bloom Sling', source: 'chapter', unlock: 4, tier: 'fancy', colors: ['#79b68e', '#ffc1d2'] },
+  {
+    id: 'l_moonbeam',
+    slot: 'launcher',
+    name: 'Moonbeam Sling',
+    source: 'habitat',
+    unlock: 'frost',
+    tier: 'fancy',
+    colors: ['#a6adf0', '#fff0b8'],
+  },
+];
+export const COSMETICS: Cosmetic[] = [...BASE_COSMETICS, ...SHOWTIME_COSMETICS];
 
 export const COSMETIC_BY_ID: Record<string, Cosmetic> = Object.fromEntries(COSMETICS.map((x) => [x.id, x]));
-export const STYLES_RELEASE = 'm5';
+export const STYLES_RELEASE = 'm6.5';
 
 export function isPaidLook(x: Cosmetic): boolean {
   return x.source === 'starter' || x.source === 'pass';
@@ -52,8 +133,21 @@ export function toggleFavourite(p: Profile, id: string): boolean {
 }
 
 /** Items per slot, plus optional suit dye colours. */
-export type Look = Record<Slot, string> & { dyeMain?: string; dyeTrim?: string };
-export const DEFAULT_LOOK: Look = { suit: 'suit_sky', hat: 'hat_antenna', launcher: 'l_pad', trail: 'tr_dots', emote: 'em_cheer' };
+export type Look = Record<Slot, string> & {
+  dyeMain?: string;
+  dyeTrim?: string;
+  avatar?: AvatarParts;
+  expression?: AvatarParts['expression'];
+  dance?: number;
+  reduceMotion?: boolean;
+};
+export const DEFAULT_LOOK: Record<Slot, string> = {
+  suit: 'suit_sky',
+  hat: 'hat_antenna',
+  launcher: 'l_pad',
+  trail: 'tr_dots',
+  emote: 'em_cheer',
+};
 
 /** Star Road tier index (free or pass lane) that grants an item. */
 export function roadTierOf(id: string): { i: number; lane: 'free' | 'pass' } | null {
@@ -94,7 +188,7 @@ export function owns(p: Profile, id: string): boolean {
 
 /** The look to actually draw: anything not owned (e.g. after a reset) falls back to the default. */
 export function currentLook(p: Profile): Look {
-  const out: Look = { ...DEFAULT_LOOK };
+  const out: Look = { ...DEFAULT_LOOK, avatar: p.avatar, reduceMotion: p.settings.reduceMotion };
   for (const s of SLOTS) {
     const id = p.look?.[s];
     if (id && COSMETIC_BY_ID[id]?.slot === s && owns(p, id) && (!p.settings.hidePaidLooks || !isPaidLook(COSMETIC_BY_ID[id]))) out[s] = id;
@@ -108,7 +202,7 @@ export function currentLook(p: Profile): Look {
 export function equip(p: Profile, id: string): boolean {
   const x = COSMETIC_BY_ID[id];
   if (!x || !owns(p, id)) return false;
-  p.look = { ...currentLook(p), [x.slot]: id };
+  p.look = { ...p.look, [x.slot]: id };
   return true;
 }
 
@@ -176,7 +270,7 @@ export function savePreset(p: Profile, i: number) {
   const list = [...(p.presets ?? [])];
   while (list.length < PRESETS) list.push(null);
   // presets remember items; dyes stay as they are
-  const { dyeMain: _m, dyeTrim: _t, ...items } = currentLook(p);
+  const { dyeMain: _m, dyeTrim: _t, avatar: _a, expression: _e, dance: _d, reduceMotion: _r, ...items } = currentLook(p);
   list[i] = items;
   p.presets = list;
 }
@@ -185,7 +279,8 @@ export function savePreset(p: Profile, i: number) {
 export function loadPreset(p: Profile, i: number): boolean {
   const saved = p.presets?.[i];
   if (!saved) return false;
-  p.look = { ...DEFAULT_LOOK, ...saved } as Look;
-  p.look = currentLook(p);
+  p.look = { ...DEFAULT_LOOK, ...saved };
+  const allowed = currentLook(p);
+  p.look = Object.fromEntries(SLOTS.map((slot) => [slot, allowed[slot]])) as Record<Slot, string>;
   return true;
 }

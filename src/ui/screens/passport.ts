@@ -13,12 +13,15 @@ import {
   NAME_B,
   badgeEmoji,
   currentBanner,
+  currentPortraitFrame,
   currentTitle,
   explorerId,
   passportName,
   passportStats,
   pinnedBadges,
   randomName,
+  PORTRAIT_FRAMES,
+  ownsPortraitFrame,
   titlesOwned,
   toggleBadge,
 } from '../../meta/passport';
@@ -31,6 +34,8 @@ import { ensureFestival, festivalActive } from '../../meta/festivals';
 import { shareCanvas } from '../postcard';
 import type { App } from '../app';
 import { t } from '../../i18n';
+import { celebrate } from '../celebrate';
+import { effectiveReduceMotion } from '../motion';
 
 const festAcc = (p: App['p']) => (festivalActive(p) ? ensureFestival(p).acc : undefined);
 
@@ -48,7 +53,7 @@ export function passportCard(app: App, compact = false) {
     },
     h(
       'div',
-      { class: 'pp-av' },
+      { class: 'pp-av portrait-frame', style: `--portrait-frame:${currentPortraitFrame(p).color}` },
       keeperCanvas(currentLook(p), compact ? 96 : 120, 0.3),
       p.buddy.species
         ? h('span', { class: 'pp-buddy' }, critterCanvas(p.buddy.species, compact ? 40 : 48, 0.4, currentBuddy(p, festAcc(p))?.acc ?? ''))
@@ -85,6 +90,7 @@ export function passportCard(app: App, compact = false) {
 
 export function showPassport(app: App) {
   const p = app.p;
+  const card = passportCard(app);
   const stats = h(
     'div',
     { class: 'pp-stats' },
@@ -125,7 +131,7 @@ export function showPassport(app: App) {
       h(
         'div',
         { class: 'scroll' },
-        passportCard(app),
+        card,
         h(
           'div',
           { class: 'row' },
@@ -141,6 +147,24 @@ export function showPassport(app: App) {
     ),
     'passport',
   );
+  if (currentTitle(p))
+    celebrate('passport', {
+      root: card,
+      reduceMotion: effectiveReduceMotion(p),
+      duration: 850,
+      beats: [
+        {
+          at: 120,
+          play: (instant) => {
+            card.querySelector('.pp-title')?.classList.add('unfurled');
+            if (!instant) {
+              sfx.whoosh();
+              haptic.light();
+            }
+          },
+        },
+      ],
+    });
 }
 
 /** Name, title and banner editor. `first` = the one-time setup after the first planet. */
@@ -149,6 +173,7 @@ export function editPassport(app: App, first = false) {
   let { first: a, second: b } = p.passport.first < 0 ? randomName() : p.passport;
   let title = currentTitle(p)?.id ?? '';
   let banner = currentBanner(p).id;
+  let frame = ownsPortraitFrame(p, p.passport.frame) ? p.passport.frame : 0;
   const wordA = h('span');
   const wordB = h('span');
   const paint = () => {
@@ -202,10 +227,39 @@ export function editPassport(app: App, first = false) {
       return el;
     }),
   );
+  const frameChoices = h(
+    'div',
+    { class: 'portrait-choices' },
+    ...PORTRAIT_FRAMES.map((choice, index) => {
+      const owned = ownsPortraitFrame(p, index);
+      const button = h(
+        'button',
+        {
+          class: `portrait-choice${frame === index ? ' on' : ''}`,
+          style: `--portrait-frame:${choice.color}`,
+          'aria-label': t(choice.name),
+          onclick: () => {
+            if (!owned) return toast(t('Open chapter {n} chest', { n: choice.unlock }));
+            frame = index;
+            sfx.click();
+            (document.querySelector('.pe-av.portrait-frame') as HTMLElement | null)?.style.setProperty('--portrait-frame', choice.color);
+            frameChoices.querySelectorAll('.portrait-choice').forEach((el) => el.classList.remove('on'));
+            button.classList.add('on');
+          },
+        },
+        owned ? t(choice.name) : '🔒',
+      );
+      return button;
+    }),
+  );
   const m = modal([
     h('div', { class: 'm-title' }, first ? t('Your Planet Passport') : t('Edit Passport')),
     first ? h('p', { class: 'muted' }, t('Every explorer needs a name. Pick one you like — you can change it any time.')) : null,
-    h('div', { class: 'pe-av' }, keeperCanvas(currentLook(p), 92, 0.3, { cheer: 1 })),
+    h(
+      'div',
+      { class: 'pe-av portrait-frame', style: `--portrait-frame:${PORTRAIT_FRAMES[frame].color}` },
+      keeperCanvas(currentLook(p), 92, 0.3, { cheer: 1 }),
+    ),
     wheel(0),
     wheel(1),
     btn(t('✨ Surprise me'), 'ghost small passport-surprise', () => {
@@ -216,9 +270,11 @@ export function editPassport(app: App, first = false) {
     first ? null : h('label', { class: 'toggle lang' }, t('Title'), titleSel),
     first ? null : h('div', { class: 'sec-title' }, t('Banner')),
     first ? null : swatches,
+    first ? null : h('div', { class: 'sec-title' }, t('Portrait frame')),
+    first ? null : frameChoices,
     btn(first ? t('Looks good!') : t('Save'), 'primary wide', () => {
       // the first-time sheet has no title picker: keep following the rank title automatically
-      p.passport = { ...p.passport, first: a, second: b, set: true, title: first ? p.passport.title : title, banner };
+      p.passport = { ...p.passport, first: a, second: b, set: true, title: first ? p.passport.title : title, banner, frame };
       sfx.chest();
       haptic.success();
       app.save();
@@ -267,6 +323,11 @@ function renderPassportImage(app: App): HTMLCanvasElement {
   g.font = font(700, 40);
   g.fillText(t('PLANET PASSPORT'), W / 2, 130);
   drawKeeper(g, currentLook(p), W / 2, 640, 480, 0.3, { cheer: 1 });
+  g.strokeStyle = currentPortraitFrame(p).color;
+  g.lineWidth = 12;
+  g.beginPath();
+  g.roundRect(W / 2 - 280, 165, 560, 505, 100);
+  g.stroke();
   if (p.buddy.species) drawCreature(g, p.buddy.species, W / 2 - 250, 640, 0, 150, 0.7, currentBuddy(p, festAcc(p))?.acc ?? '');
   g.fillStyle = p.pass && !p.settings.hidePaidLooks ? '#ffd24a' : '#ffffff';
   g.font = font(700, 88);

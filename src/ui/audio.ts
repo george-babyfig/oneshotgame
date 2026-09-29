@@ -95,6 +95,15 @@ const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
 
 export const sfx = {
   click: () => tone(880, 0.05, 'triangle', 0.1),
+  sheet: () => tone(520, 0.1, 'sine', 0.045, 0, 740),
+  toast: () => tone(740, 0.08, 'sine', 0.035, 0, 880),
+  page: () => tone(460, 0.09, 'triangle', 0.035, 0, 620),
+  zoom: () => tone(340, 0.16, 'sine', 0.07, 0, 700),
+  countTick: () => tone(920, 0.035, 'sine', 0.025),
+  rewardFlight: () => tone(660, 0.25, 'sine', 0.06, 0, 1100),
+  rewardArrive: () => tone(1180, 0.1, 'triangle', 0.06),
+  burst: () => tone(990, 0.12, 'sine', 0.05, 0, 1450),
+  shake: () => tone(130, 0.11, 'sine', 0.065),
   stretch: (k: number) => tone(200 + k * 300, 0.04, 'sine', 0.04),
   launch: () => {
     noise(0.35, 0.25, 1200, 0.6, 0, 'highpass');

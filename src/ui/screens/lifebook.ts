@@ -7,7 +7,7 @@ import type { App } from '../app';
 import { btn, toast } from '../dom';
 import { HABITATS, habitatProgress } from '../../meta/habitats';
 import { rewardText } from '../../meta/progression';
-import { critterCanvas } from '../art/critters';
+import { animateCreatureGallery, critterCanvas, type CreatureCanvas, type CreaturePose } from '../art/critters';
 import { mementoName } from '../../meta/visitors';
 import { t, tp } from '../../i18n';
 import { rarityName, speciesHint } from '../text';
@@ -16,44 +16,57 @@ import { LORE, LORE_AT, STUDIED_AT, loreUnlocked, sightings, studied } from '../
 import type { Profile } from '../../meta/profile';
 import { STICKERS, albumReady, ownedStickers } from '../../meta/stickers';
 import { icon } from '../icons';
+import { effectiveReduceMotion } from '../motion';
 
 const ORDER: Rarity[] = ['common', 'uncommon', 'rare', 'legendary'];
 
 function card(p: Profile, s: SpeciesDef, got: boolean) {
   const n = sightings(p, s.id);
-  modal([
-    h('div', { class: `lb-big r-${s.rarity}${got ? '' : ' locked'}${studied(p, s.id) ? ' studied' : ''}` }, critterCanvas(s.id, 120)),
-    h('div', { class: 'm-sub' }, rarityName(s.rarity)),
-    h('div', { class: 'm-title' }, got ? t(s.name) : t('Undiscovered')),
-    h('p', { class: 'muted' }, t('Lives: {hint}', { hint: speciesHint(s) })),
-    got
-      ? h(
-          'div',
-          { class: 'lore' },
-          h('small', null, tp(n, '📓 Field notes · seen {n} time', '📓 Field notes · seen {n} times')),
-          loreUnlocked(p, s.id)
-            ? h('p', null, t(LORE[s.id] ?? ''))
-            : h(
-                'p',
-                { class: 'muted' },
-                tp(LORE_AT - n, 'See it {n} more time to unlock its story.', 'See it {n} more times to unlock its story.'),
-              ),
-          studied(p, s.id)
-            ? h('b', { class: 'studied-tag' }, t('✦ Studied'))
-            : n >= LORE_AT
-              ? h(
-                  'small',
+  const portrait = critterCanvas(s.id, 120);
+  let pose: CreaturePose = 'idle';
+  let stop = () => {};
+  const wave = () => {
+    pose = 'wave';
+    window.setTimeout(() => (pose = 'idle'), 750);
+  };
+  modal(
+    [
+      h('div', { class: `lb-big r-${s.rarity}${got ? '' : ' locked'}${studied(p, s.id) ? ' studied' : ''}`, onclick: wave }, portrait),
+      h('div', { class: 'm-sub' }, rarityName(s.rarity)),
+      h('div', { class: 'm-title' }, got ? t(s.name) : t('Undiscovered')),
+      h('p', { class: 'muted' }, t('Lives: {hint}', { hint: speciesHint(s) })),
+      got
+        ? h(
+            'div',
+            { class: 'lore' },
+            h('small', null, tp(n, '📓 Field notes · seen {n} time', '📓 Field notes · seen {n} times')),
+            loreUnlocked(p, s.id)
+              ? h('p', null, t(LORE[s.id] ?? ''))
+              : h(
+                  'p',
                   { class: 'muted' },
-                  tp(STUDIED_AT - n, '{n} more sighting for a gold frame', '{n} more sightings for a gold frame'),
-                )
-              : null,
-        )
-      : null,
-  ]);
+                  tp(LORE_AT - n, 'See it {n} more time to unlock its story.', 'See it {n} more times to unlock its story.'),
+                ),
+            studied(p, s.id)
+              ? h('b', { class: 'studied-tag' }, t('✦ Studied'))
+              : n >= LORE_AT
+                ? h(
+                    'small',
+                    { class: 'muted' },
+                    tp(STUDIED_AT - n, '{n} more sighting for a gold frame', '{n} more sightings for a gold frame'),
+                  )
+                : null,
+          )
+        : null,
+    ],
+    { onClose: () => stop() },
+  );
+  stop = animateCreatureGallery([{ canvas: portrait, id: s.id, pose: () => pose }], effectiveReduceMotion(p));
 }
 
 export function showLifebook(app: App) {
   const seen = new Set(app.p.seen);
+  const portraits: CreatureCanvas[] = [];
   const sections = ORDER.map((r) => {
     const list = SPECIES.filter((s) => s.rarity === r);
     const have = list.filter((s) => seen.has(s.id)).length;
@@ -66,13 +79,15 @@ export function showLifebook(app: App) {
         { class: 'lb-grid' },
         ...list.map((s) => {
           const got = seen.has(s.id);
+          const portrait = critterCanvas(s.id, 56);
+          portraits.push({ canvas: portrait, id: s.id });
           return h(
             'button',
             {
               class: `lb r-${r}${got ? '' : ' locked'}${studied(app.p, s.id) ? ' studied' : ''}`,
               onclick: () => (sfx.click(), card(app.p, s, got)),
             },
-            h('div', { class: 'lbe' }, critterCanvas(s.id, 56)),
+            h('div', { class: 'lbe' }, portrait),
             h('div', { class: 'lbn' }, got ? t(s.name) : '???'),
             h('div', { class: 'lbh' }, speciesHint(s)),
           );
@@ -90,6 +105,7 @@ export function showLifebook(app: App) {
       ),
   );
   const pct = Math.round((seen.size / SPECIES.length) * 100);
+  let stop = () => {};
   app.mount(
     h(
       'div',
@@ -165,5 +181,7 @@ export function showLifebook(app: App) {
       ),
     ),
     'lifebook',
+    () => stop(),
   );
+  stop = animateCreatureGallery(portraits, effectiveReduceMotion(app.p));
 }

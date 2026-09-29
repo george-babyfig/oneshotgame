@@ -4,7 +4,7 @@ import { fly, STAR_SLING, type FlightLaunch, type FlightWorld } from '../core/fl
 import type { RoundModifiers } from '../core/modifiers';
 import { BOSS_HP } from '../core/levels';
 import { renderPlanet } from './art/planet';
-import { drawCreature, drawWanderGhost } from './art/critters';
+import { drawCreature, drawStillCreature, drawWanderGhost } from './art/critters';
 import { drawObjectFeelTrail, drawProjectile } from './art/projectiles';
 import { drawTrail } from './art/keeper';
 import { drawMeteors, drawSeason } from './art/seasons';
@@ -186,7 +186,10 @@ export function draw(scene: LevelScene) {
     if (scene.o.season) drawSeason(g, w, H, scene.time, scene.o.season, 0.6, 22);
   }
   if (scene.shake > 0) g.translate((Math.random() - 0.5) * scene.shake, (Math.random() - 0.5) * scene.shake);
-  if (scene.aimFrom) scene.coachEl.classList.remove('show');
+  if (scene.aimFrom) {
+    scene.coachEl.classList.remove('show');
+    scene.discoverEl.classList.remove('show');
+  }
   const overlayCount = () =>
     Number(scene.popups.length > 0) +
     Number(scene.ghosts.length > 0) +
@@ -333,6 +336,8 @@ export function draw(scene: LevelScene) {
 
 export function drawPlanet(scene: LevelScene) {
   const lifeK = scene.o.endless ? 0.6 : Math.min(1, scene.score / scene.L.stars[2]);
+  let creatureCount = 0;
+  for (const sector of scene.planet.sectors) if (sector.species) creatureCount++;
   renderPlanet(scene.g, scene.planet, {
     cx: scene.cx,
     cy: scene.cy,
@@ -349,7 +354,26 @@ export function drawPlanet(scene: LevelScene) {
       const pop = anim > 0 ? 1 + Math.sin((anim / 0.9) * Math.PI) * 0.8 : 1;
       const size = scene.R * (sp.rarity === 'common' ? 0.2 : sp.rarity === 'uncommon' ? 0.24 : 0.3) * pop;
       const walk = scene.o.reduceMotion ? 0 : scene.exitK * 0.45;
-      drawCreature(g, sp.id, x + (scene.cx - x) * walk, y + (scene.cy - y) * walk, a + Math.PI / 2, size, scene.time + i, scene.o.festAcc);
+      const px = x + (scene.cx - x) * walk;
+      const py = y + (scene.cy - y) * walk;
+      if (px < -size || px > scene.w + size || py < -size || py > scene.h + size) return;
+      if (creatureCount > 24 && anim <= 0) {
+        drawStillCreature(g, sp.id, px, py, a + Math.PI / 2, size, scene.o.festAcc);
+        return;
+      }
+      drawCreature(
+        g,
+        sp.id,
+        px,
+        py,
+        a + Math.PI / 2,
+        size,
+        creatureCount > 24 || scene.o.reduceMotion ? 0 : scene.time + i,
+        scene.o.festAcc,
+        false,
+        anim > 0 ? 'happy' : 'idle',
+        !!scene.o.reduceMotion,
+      );
     },
   });
 }

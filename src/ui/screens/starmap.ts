@@ -7,6 +7,9 @@ import { difficultyOf } from '../../core/levels';
 import { chapterOf, chapterReward, chestsReady, openChest, rewardText, LEVELS_PER_CHAPTER } from '../../meta/progression';
 import type { App } from '../app';
 import { t } from '../../i18n';
+import { chapterBackdropUrl } from '../art/backdrops';
+import { celebrate } from '../celebrate';
+import { effectiveReduceMotion } from '../motion';
 
 export function showStarMap(app: App) {
   const p = app.p;
@@ -48,12 +51,24 @@ export function showStarMap(app: App) {
           haptic.success();
           app.save();
           showStarMap(app);
+          const icon = h('div', { class: 'celebrate-chest' }, h('span', { class: 'chest-anim' }, '🎁'));
+          const contents = rewardText(r).map((x) => h('span', { class: 'celebrate-item' }, x));
           const m = modal([
-            h('div', { class: 'chest-anim' }, '🎁'),
+            icon,
             h('div', { class: 'm-title' }, t('{name} complete!', { name: t(ch.name) })),
-            h('div', { class: 'reward-list' }, ...rewardText(r).map((x) => h('span', null, x))),
+            h('div', { class: 'reward-list' }, ...contents),
             btn(t('Awesome'), 'primary wide', () => m.close()),
           ]);
+          celebrate('chest', {
+            root: m.el,
+            reduceMotion: effectiveReduceMotion(p),
+            firstEver: p.chapters.length === 1,
+            duration: p.chapters.length === 1 ? 2100 : 1600,
+            beats: [
+              { at: 180, play: () => icon.classList.add('opened') },
+              ...contents.map((item, i) => ({ at: 400 + i * 260, play: () => item.classList.add('shown') })),
+            ],
+          });
         })
       : p.chapters.includes(n)
         ? h('div', { class: 'chest-done' }, t('✓ Chest opened'))
@@ -65,7 +80,10 @@ export function showStarMap(app: App) {
     chapters.push(
       h(
         'div',
-        { class: `chapter${locked ? ' locked' : ''}`, style: `--h:${ch.hue}` },
+        {
+          class: `chapter${locked ? ' locked' : ''}`,
+          style: `--h:${ch.hue};background-image:linear-gradient(180deg,rgba(19,15,45,.38),rgba(10,9,30,.72)),url("${chapterBackdropUrl(n)}")`,
+        },
         h(
           'div',
           { class: 'ch-head' },

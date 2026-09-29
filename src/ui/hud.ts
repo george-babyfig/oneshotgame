@@ -18,6 +18,15 @@ import type { Unlock } from '../meta/unlocks';
 import type { LevelScene } from './game';
 import { previewStep, novaReady } from '../core/round';
 
+const roundDiscoveries = new WeakMap<LevelScene, string[]>();
+
+export function takeRoundDiscoveries(scene: LevelScene | null): string[] {
+  if (!scene) return [];
+  const found = roundDiscoveries.get(scene) ?? [];
+  roundDiscoveries.delete(scene);
+  return found;
+}
+
 export function buildHud(scene: LevelScene) {
   scene.hudThrows = h('div', { class: 'hud-throws' });
   scene.hudFill = h('div', { class: 'life-fill' });
@@ -352,8 +361,11 @@ export function announce(scene: LevelScene, id: string, at: number, firstArrival
   sfx.creature(rare || isNew);
   haptic.success();
   scene.burst(x, y, rare ? '#ffd84a' : '#ffffff', rare ? 40 : 20, rare ? 7 : 4);
-  scene.popup(x, y - 16, `${t(sp.name)}${isNew ? t(' — NEW!') : ''}`, rare ? '#ffd84a' : '#e0f7ff', rare ? 20 : 16, 2.2, isNew ? 3 : 2);
+  if (!isNew) scene.popup(x, y - 16, t(sp.name), rare ? '#ffd84a' : '#e0f7ff', rare ? 20 : 16, 1.2, 2);
   if (isNew) {
+    const found = roundDiscoveries.get(scene) ?? [];
+    if (!found.includes(id)) found.push(id);
+    roundDiscoveries.set(scene, found);
     scene.o.seen.add(id);
     scene.o.onNewSpecies(id);
     scene.discoverQueue.push(id);
@@ -421,7 +433,7 @@ export function flyCreaturePoints(scene: LevelScene, at: number, points: number)
 }
 
 export function showDiscover(scene: LevelScene) {
-  if (scene.discoverBusy || scene.ended) return;
+  if (scene.discoverBusy || scene.ended || scene.aimFrom) return;
   const id = scene.discoverQueue.shift();
   if (!id) return;
   const sp = SPECIES_BY_ID[id];
@@ -445,7 +457,7 @@ export function showDiscover(scene: LevelScene) {
       scene.discoverBusy = false;
       scene.showDiscover();
     }, 300);
-  }, 2300);
+  }, 1100);
 }
 
 export function showCoach(scene: LevelScene, k: number) {
@@ -721,6 +733,7 @@ export function pause(scene: LevelScene) {
 
 export function afterShot(scene: LevelScene) {
   scene.ghosts = scene.ghosts.filter((ghost) => scene.throwsUsed - ghost.throw < 3);
+  scene.showDiscover();
   scene.renderHud();
   scene.onResolvedThrow?.();
   if (scene.o.endless) return;

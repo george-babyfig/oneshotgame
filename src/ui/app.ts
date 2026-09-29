@@ -81,11 +81,13 @@ import { addFling } from '../meta/records';
 import { sight } from '../meta/lore';
 import { seasonOf, skyEventOn } from '../meta/seasons';
 import { keeperHead } from './art/keeper';
+import { refreshCreatureGalleryMotion } from './art/critters';
 import { debutsAt, unlocked } from '../meta/unlocks';
 import { roadReady, chestsReady } from '../meta/progression';
 import { letterOf } from '../meta/inbox';
 import { homeBadge } from '../meta/homeworld';
 import { wishClaimable } from '../meta/wishes';
+import { countUp, effectiveReduceMotion, screenTransition } from './motion';
 
 export type ScreenName =
   | 'home'
@@ -177,6 +179,9 @@ export class App {
     ledger.count('app_open');
     this.p.meta.sessions++;
     this.applySettings();
+    if (typeof matchMedia === 'function') {
+      matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => this.applySettings());
+    }
     ensureWishes(this.p, today());
     fixClock(this.p);
     addVisitors(this.p, Date.now());
@@ -255,7 +260,8 @@ export class App {
     setHaptics(this.p.settings.haptics);
     setTextSize(this.p.settings.textSize);
     setPlanetPalette(this.p.settings.planetColours);
-    document.documentElement.classList.toggle('reduce-motion', this.p.settings.reduceMotion);
+    document.documentElement.classList.toggle('reduce-motion', effectiveReduceMotion(this.p));
+    refreshCreatureGalleryMotion();
   }
 
   save() {
@@ -304,6 +310,12 @@ export class App {
   }
 
   mount(el: HTMLElement, name: ScreenName, teardown: (() => void) | null = null) {
+    const previousScreen = this.screen;
+    const previousPills = new Map<string, number>();
+    for (const kind of ['dust', 'gems']) {
+      const pill = this.host.querySelector(`.topbar .pill.${kind}`);
+      if (pill) previousPills.set(kind, Number(pill.textContent?.replace(/[^\d]/g, '') ?? 0));
+    }
     if (!this.refreshing && !this.returning) this.screenStack.visit(this.screen, name);
     if (MAIN_TABS.includes(name as MainTab) && this.screenStack.length) {
       const first = el.querySelector('.topbar .icon');
@@ -317,11 +329,24 @@ export class App {
     this.scene = null;
     if (!this.refreshing) closeModals();
     // Re-rendering the same screen (after a tap) keeps its scroll position and skips the entrance animation.
-    const same = name === this.screen && name !== 'level';
+    const same = !!this.host.firstElementChild && name === this.screen && name !== 'level';
     const scrollTop = same ? (this.host.querySelector('.scroll')?.scrollTop ?? 0) : 0;
-    if (!same) el.classList.add('enter');
     if (MAIN_TABS.includes(name as MainTab)) el.append(this.tabBar(name as MainTab));
     this.host.replaceChildren(el);
+    if (!same) {
+      const fromTab = MAIN_TABS.indexOf(previousScreen as MainTab);
+      const toTab = MAIN_TABS.indexOf(name as MainTab);
+      const mode = name === 'level' && previousScreen !== 'level' ? 'planet' : fromTab >= 0 && toTab >= 0 ? 'tab' : 'page';
+      if (mode === 'tab') el.classList.add('tab-enter');
+      screenTransition(el, mode, fromTab >= 0 && toTab >= 0 ? toTab - fromTab : 1);
+    }
+    for (const kind of ['dust', 'gems']) {
+      const pill = el.querySelector<HTMLElement>(`.topbar .pill.${kind}`);
+      const before = previousPills.get(kind);
+      if (!pill || before === undefined) continue;
+      const after = Number(pill.textContent?.replace(/[^\d]/g, '') ?? 0);
+      if (before !== after) countUp(pill, before, after, kind === 'dust' ? '✨ ' : '💎 ');
+    }
     if (scrollTop) {
       const sc = el.querySelector('.scroll');
       if (sc) sc.scrollTop = scrollTop;
@@ -695,7 +720,7 @@ export class App {
       glow: skin.glow,
       seen: new Set(this.p.seen),
       tutorial,
-      reduceMotion: this.p.settings.reduceMotion,
+      reduceMotion: effectiveReduceMotion(this.p),
       gems: () => this.p.gems,
       spendGems: (g) => {
         const ok = spendGems(this.p, g, 'continue');

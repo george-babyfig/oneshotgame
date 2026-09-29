@@ -19,11 +19,20 @@ import { homeUnlocked, speedUpBuilds } from '../../meta/homeworld';
 import { MAT_EMOJI, addDrops, dropsFor, type Mat } from '../../meta/constellations';
 import { renderPlanet } from '../art/planet';
 import { unlocked } from '../../meta/unlocks';
+import { SPECIES_BY_ID } from '../../core/world';
+import { critterCanvas, critterSilhouetteCanvas, animateCreatureGallery, type CreaturePose } from '../art/critters';
+import { haptic } from '../haptics';
+import { celebrate } from '../celebrate';
+import { effectiveReduceMotion } from '../motion';
+import { countUp, flyReward } from '../motion';
+import { takeRoundDiscoveries } from '../hud';
+import { rarityName } from '../text';
 
 export function levelResults(app: App, r: LevelResult) {
   const p = app.p;
   const n = r.level.n;
   const firstEverWin = p.stats.wins === 0;
+  const newCreature = takeRoundDiscoveries(app.scene)[0];
   const out = applyLevelWin(p, {
     n,
     stars: r.stars,
@@ -68,9 +77,11 @@ export function levelResults(app: App, r: LevelResult) {
     m.close();
     app.showHome();
   };
+  const dustValue = h('b', { 'aria-label': `✨ ${fmt(out.dust)}` }, `✨ ${fmt(out.dust)}`);
+  const gemValue = h('b', { 'aria-label': `💎 ${out.gems}` }, `💎 ${out.gems}`);
   const rewards = [
-    h('div', null, h('b', null, `✨ ${fmt(out.dust)}`), h('small', null, t('stardust'))),
-    ...(out.gems ? [h('div', null, h('b', null, `💎 ${out.gems}`), h('small', null, t('3-star bonus')))] : []),
+    h('div', null, dustValue, h('small', null, t('stardust'))),
+    ...(out.gems ? [h('div', null, gemValue, h('small', null, t('3-star bonus')))] : []),
     ...(n < 5 || !Object.keys(drops).length
       ? [h('div', null, h('b', null, `${r.planet.speciesFound.length}`), h('small', null, t('creatures')))]
       : []),
@@ -90,10 +101,31 @@ export function levelResults(app: App, r: LevelResult) {
   planetCanvas.height = 140;
   const g = planetCanvas.getContext('2d');
   if (g) renderPlanet(g, r.planet, { cx: 70, cy: 70, R: 46, rot: 0, time: 0, glow: app.skinGlow(), lifeK: 1, simple: true });
+  const starEls = [0, 1, 2].map((i) => h('span', { class: i < r.stars ? 'on celebrate-star' : '' }, '★'));
+  const creature = newCreature && SPECIES_BY_ID[newCreature];
+  const creatureCanvas = creature ? critterCanvas(creature.id, 100) : null;
+  const creatureCard = creature
+    ? h(
+        'div',
+        { class: 'celebrate-creature' },
+        h('div', { class: 'celebrate-spotlight' }, critterSilhouetteCanvas(creature.id, 100), creatureCanvas),
+        h('div', null, h('small', null, t('New creature · {r}', { r: rarityName(creature.rarity) })), h('b', null, t(creature.name))),
+      )
+    : null;
+  let pose: CreaturePose = 'idle';
+  let stopDance = () => {};
+  const cancelCounts: (() => void)[] = [];
+  let show: ReturnType<typeof celebrate> | null = null;
   const m = modal(
     [
       h('div', { class: 'm-title' }, out.firstClear ? t('Planet added to your galaxy!') : t('Planet improved!')),
-      h('div', { class: 'end-stars' }, ...[0, 1, 2].map((i) => h('span', { class: i < r.stars ? 'on' : '' }, '★'))),
+      h('div', { class: 'end-stars' }, ...starEls),
+      h(
+        'div',
+        { class: 'celebrate-result-topbar topbar' },
+        h('span', { class: 'pill dust' }, `✨ ${fmt(p.dust)}`),
+        h('span', { class: 'pill gems' }, `💎 ${fmt(p.gems)}`),
+      ),
       firstEverWin
         ? h(
             'div',
@@ -104,6 +136,7 @@ export function levelResults(app: App, r: LevelResult) {
           )
         : null,
       h('div', { class: 'rewards' }, ...rewards),
+      creatureCard,
       firstEverWin
         ? null
         : h('p', { class: 'muted' }, t("It now makes ✨{rate}/hour for you, even while you're away.", { rate: planetRate(out.entry) })),
@@ -135,6 +168,7 @@ export function levelResults(app: App, r: LevelResult) {
         { class: 'row' },
         btn(t('Galaxy'), 'ghost', home),
         btn(t('Next ▶'), 'primary', () => {
+          show?.skip();
           m.close();
           if (out.firstClear && (n === 2 || n === 5)) app.showHome();
           else if (out.firstClear && n <= 3) app.startLevel(p.level);
@@ -142,7 +176,70 @@ export function levelResults(app: App, r: LevelResult) {
         }),
       ),
     ],
-    { dismiss: false, cls: firstEverWin ? 'first-win' : '' },
+    { dismiss: false, cls: firstEverWin ? 'first-win' : '', onClose: () => (show?.skip(), stopDance()) },
   );
-  sfx.coin();
+  if (creatureCanvas && creature) {
+    stopDance = animateCreatureGallery([{ canvas: creatureCanvas, id: creature.id, pose: () => pose }], effectiveReduceMotion(p));
+  }
+  const count = (el: HTMLElement, icon: string, amount: number, instant: boolean) => {
+    if (instant) el.textContent = `${icon} ${fmt(amount)}`;
+    else cancelCounts.push(countUp(el, 0, amount, `${icon} `));
+  };
+  show = celebrate('results', {
+    root: m.el,
+    reduceMotion: effectiveReduceMotion(p),
+    firstEver: firstEverWin,
+    duration: firstEverWin ? 2600 : 1850,
+    beats: [
+      ...starEls.slice(0, r.stars).map((el, i) => ({
+        at: 120 + i * 240,
+        play: (instant: boolean) => {
+          el.classList.add('stamped');
+          if (!instant) {
+            sfx.star(i);
+            sfx.impact('rock');
+            haptic.medium();
+          }
+        },
+      })),
+      {
+        at: 850,
+        play: (instant: boolean) => {
+          count(dustValue, '✨', out.dust, instant);
+          if (out.gems) count(gemValue, '💎', out.gems, instant);
+          if (!instant) sfx.coin();
+        },
+      },
+      {
+        at: 1250,
+        play: (instant: boolean) => {
+          if (instant) return;
+          void flyReward(planetCanvas, 'dust', out.dust);
+          if (out.gems) void flyReward(planetCanvas, 'gems', out.gems);
+        },
+      },
+      ...(creatureCard
+        ? [
+            {
+              at: firstEverWin ? 1450 : 850,
+              play: (instant: boolean) => {
+                creatureCard.classList.add('revealed');
+                pose = instant ? 'wave' : 'surprised';
+                if (!instant) {
+                  sfx.creature(true);
+                  haptic.success();
+                }
+              },
+            },
+            { at: firstEverWin ? 1950 : 1350, play: () => (pose = 'happy') },
+          ]
+        : []),
+    ],
+    onComplete: () => {
+      cancelCounts.forEach((cancel) => cancel());
+      dustValue.textContent = `✨ ${fmt(out.dust)}`;
+      gemValue.textContent = `💎 ${out.gems}`;
+      stopDance();
+    },
+  });
 }

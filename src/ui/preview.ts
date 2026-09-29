@@ -32,19 +32,18 @@ export function drawGoalPulse(scene: LevelScene) {
 }
 
 export function drawLanding(scene: LevelScene, i: number) {
-  const ready = scene.novaOn && novaReady(scene.roundState()) && !scene.nova.held;
   const key = `${i}|${scene.cur}|${scene.throwsUsed}|${scene.nova.charge}|${scene.nova.held}`;
   if (scene.predictCache?.key !== key) {
-    const res = previewStep(scene.roundState(), { kind: scene.cur, sector: i, nova: ready }, scene.roundModifiers());
+    const state = scene.roundState();
+    const res = previewStep(state, { kind: scene.cur, sector: i, nova: scene.novaOn && novaReady(state) }, scene.roundModifiers());
     const after = BIOMES[res.state.planet.sectors[i].biome];
     const lost = res.lost[0];
+    const life = res.after - res.before + res.labBonus;
+    const creature = res.spawned[0] ? t(SPECIES_BY_ID[res.spawned[0].id].name) : '';
     scene.predictCache = {
       key,
-      land: t(after.name),
-      icon: after.deco || '●',
-      delta: res.after - res.before + res.labBonus,
-      lost: lost ? t(SPECIES_BY_ID[lost.species].name) : '',
-      creature: res.spawned[0] ? t(SPECIES_BY_ID[res.spawned[0].id].name) : '',
+      title: `${after.deco || '●'} ${t(after.name)}${life ? ` · ${t('{n} life', { n: `${life > 0 ? '+' : ''}${life}` })}` : ''}${creature ? ` · ${t('{creature} moves in', { creature })}` : ''}`,
+      lost: lost ? t('{creature} wanders off', { creature: t(SPECIES_BY_ID[lost.species].name) }) : '',
       changed: res.changed,
     };
   }
@@ -52,7 +51,9 @@ export function drawLanding(scene: LevelScene, i: number) {
   for (const sector of pc.changed) outline(scene, sector, '#ffffff', scene.o.reduceMotion ? 0.9 : 0.65 + Math.sin(scene.time * 8) * 0.2);
   const g = scene.g;
   const { x, y, width, height } = landingCardRect(scene);
-  const scale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--text-scale')) || 1;
+  const scale =
+    scene.previewTextScale ||
+    (scene.previewTextScale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--text-scale')) || 1);
   g.save();
   g.fillStyle = 'rgba(10,6,30,0.9)';
   g.strokeStyle = '#d3d0ed';
@@ -65,18 +66,11 @@ export function drawLanding(scene: LevelScene, i: number) {
   g.textBaseline = 'middle';
   g.font = `700 ${Math.round(13 * scale)}px Fredoka, ui-rounded, system-ui, sans-serif`;
   g.fillStyle = '#ffffff';
-  const life = pc.delta ? t('{n} life', { n: `${pc.delta > 0 ? '+' : ''}${pc.delta}` }) : '';
-  const arrival = pc.creature ? t('{creature} moves in', { creature: pc.creature }) : '';
-  g.fillText(
-    `${pc.icon} ${pc.land}${life ? ` · ${life}` : ''}${arrival ? ` · ${arrival}` : ''}`,
-    x + width / 2,
-    y + (pc.lost ? height * 0.34 : height / 2),
-    width - 12,
-  );
+  g.fillText(pc.title, x + width / 2, y + (pc.lost ? height * 0.34 : height / 2), width - 12);
   if (pc.lost) {
     g.font = `700 ${Math.round(12 * scale)}px Fredoka, ui-rounded, system-ui, sans-serif`;
     g.fillStyle = '#c5c5d2';
-    g.fillText(t('{creature} wanders off', { creature: pc.lost }), x + width / 2, y + height * 0.73, width - 12);
+    g.fillText(pc.lost, x + width / 2, y + height * 0.73, width - 12);
   }
   g.restore();
 }

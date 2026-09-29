@@ -1,9 +1,11 @@
 // The Keeper: the player's little astronaut who flings everything, plus its
 // launcher and the trail its throws leave. Same house style as the critters.
-import { COSMETIC_BY_ID, fullSet, type Look } from '../../meta/cosmetics';
+import { COSMETIC_BY_ID, DEFAULT_AVATAR, HAIR_COLORS, SKIN_TONES, fullSet, type AvatarParts, type Look } from '../../meta/cosmetics';
 import { shade } from './color';
 
 type G = CanvasRenderingContext2D;
+const FACE_WIDTHS = [0.54, 0.49, 0.55, 0.53];
+const FACE_HEIGHTS = [0.48, 0.54, 0.45, 0.5];
 
 const col = (id: string, i: number, fb: string) => COSMETIC_BY_ID[id]?.colors[i] ?? fb;
 
@@ -18,6 +20,9 @@ function suitFill(g: G, c: string, r: number, t: number) {
 }
 
 export interface KeeperPose {
+  expression?: AvatarParts['expression'];
+  /** Progress of a single one-second victory dance. */
+  dance?: number;
   /** -1..1: leaning back while aiming. */
   lean?: number;
   /** 0..1: arms-up cheer. */
@@ -31,6 +36,7 @@ export interface KeeperPose {
 
 /** Draws the Keeper standing with its feet at (x, y). size ≈ total height. */
 export function drawKeeper(g: G, look: Look, x: number, y: number, size: number, t: number, pose: KeeperPose = {}) {
+  if (look.reduceMotion) t = 0.3;
   const r = size * 0.3; // helmet radius
   const lean = pose.lean ?? 0;
   let cheer = pose.cheer ?? 0;
@@ -41,6 +47,12 @@ export function drawKeeper(g: G, look: Look, x: number, y: number, size: number,
   let dy = 0;
   let spin = 0;
   let wave = false;
+  const dance = look.reduceMotion ? 0 : Math.min(1, Math.max(0, pose.dance ?? look.dance ?? 0));
+  if (dance > 0 && dance < 1) {
+    dx = Math.sin(dance * Math.PI * 6) * size * 0.07 * Math.sin(dance * Math.PI);
+    dy = -Math.abs(Math.sin(dance * Math.PI * 3)) * size * 0.09;
+    cheer = 0.65 + Math.sin(dance * Math.PI * 6) * 0.25;
+  }
   switch (em) {
     case 'em_cheer':
       cheer = 0.6 + Math.abs(Math.sin(et * 5)) * 0.4;
@@ -69,7 +81,7 @@ export function drawKeeper(g: G, look: Look, x: number, y: number, size: number,
       wave = em === 'em_flag';
       break;
   }
-  const bob = Math.sin(t * 3) * size * 0.015 - cheer * size * 0.08;
+  const bob = (look.reduceMotion ? 0 : Math.sin(t * 3) * size * 0.015) - cheer * size * 0.08;
   const body = look.suit;
   const main = look.dyeMain ?? col(body, 0, '#6ec8ff');
   const trim = (look.dyeTrim === 'aurora' ? '#e6dcff' : look.dyeTrim) ?? col(body, 1, '#ffffff');
@@ -125,6 +137,22 @@ export function drawKeeper(g: G, look: Look, x: number, y: number, size: number,
   g.beginPath();
   g.arc(0, -size * 0.25, size * 0.035, 0, Math.PI * 2);
   g.fill();
+  if (body === 'suit_meadow' || body === 'suit_cloud' || body === 'suit_coralreef' || body === 'suit_nightgarden') {
+    g.strokeStyle = trim;
+    g.lineWidth = size * 0.025;
+    g.beginPath();
+    const badgeY = -size * 0.4 + Math.sin(t * 2) * size * 0.006;
+    if (body === 'suit_cloud') g.arc(0, badgeY, size * 0.07, Math.PI * 0.15, Math.PI * 0.85);
+    else if (body === 'suit_coralreef') {
+      g.moveTo(-size * 0.065, badgeY);
+      g.quadraticCurveTo(0, badgeY - size * 0.065, size * 0.065, badgeY);
+    } else if (body === 'suit_nightgarden') {
+      g.moveTo(0, badgeY - size * 0.07);
+      g.lineTo(size * 0.045, badgeY);
+      g.lineTo(0, badgeY + size * 0.07);
+    } else g.ellipse(0, badgeY, size * 0.045, size * 0.07, 0.5, 0, Math.PI * 2);
+    g.stroke();
+  }
   // arms (raised when cheering)
   g.strokeStyle = suitFill(g, main, size * 0.3, t);
   g.lineCap = 'round';
@@ -132,7 +160,7 @@ export function drawKeeper(g: G, look: Look, x: number, y: number, size: number,
   for (const sx of [-1, 1]) {
     const up = wave && sx > 0 ? 1 : cheer > 0 ? cheer : sx > 0 ? Math.max(0, lean) * 0.6 : 0;
     const ax = sx * size * (0.28 - up * 0.02) + (wave && sx > 0 ? Math.sin(et * 12) * size * 0.08 : 0);
-    const ay = -size * (0.34 + up * 0.32);
+    const ay = -size * (0.34 + up * 0.32) - ((pose.expression ?? look.expression) === 'shrug' ? size * 0.1 : 0);
     if (em === 'em_flag' && sx > 0) {
       // a little flag on a pole
       g.save();
@@ -172,29 +200,57 @@ export function drawKeeper(g: G, look: Look, x: number, y: number, size: number,
   g.strokeStyle = shade(trim === '#ffffff' ? '#c9d2ea' : trim, -0.15);
   g.lineWidth = size * 0.025;
   g.stroke();
-  // visor with a face
+  // The dark visor keeps today's Keeper silhouette while the face sits inside it.
   g.fillStyle = visor;
   g.beginPath();
   g.ellipse(0, hy + r * 0.08, r * 0.74, r * 0.6, 0, 0, Math.PI * 2);
   g.fill();
-  const lx = Math.cos(pose.look ?? -Math.PI / 2) * r * 0.08;
-  const ly = Math.sin(pose.look ?? -Math.PI / 2) * r * 0.06;
+  const avatar = look.avatar ?? DEFAULT_AVATAR;
+  const expression = pose.expression ?? look.expression ?? (cheer > 0.3 ? 'cheer' : lean > 0.15 ? 'focused' : avatar.expression);
+  const faceW = FACE_WIDTHS[avatar.face] ?? FACE_WIDTHS[0];
+  const faceH = FACE_HEIGHTS[avatar.face] ?? FACE_HEIGHTS[0];
+  g.fillStyle = SKIN_TONES[avatar.skin] ?? SKIN_TONES[DEFAULT_AVATAR.skin];
+  g.beginPath();
+  if (avatar.face === 2) g.roundRect(-r * faceW, hy + r * 0.1 - r * faceH, r * faceW * 2, r * faceH * 2, r * 0.18);
+  else if (avatar.face === 3) {
+    g.moveTo(0, hy + r * (0.1 + faceH));
+    g.bezierCurveTo(-r * 0.75, hy + r * 0.03, -r * 0.5, hy - r * 0.5, 0, hy - r * 0.27);
+    g.bezierCurveTo(r * 0.5, hy - r * 0.5, r * 0.75, hy + r * 0.03, 0, hy + r * (0.1 + faceH));
+  } else g.ellipse(0, hy + r * 0.1, r * faceW, r * faceH, 0, 0, Math.PI * 2);
+  g.fill();
+  drawHair(g, avatar, r, hy);
+  const lx = Math.cos(pose.look ?? -Math.PI / 2) * r * 0.05;
+  const ly = Math.sin(pose.look ?? -Math.PI / 2) * r * 0.04;
   for (const sx of [-1, 1]) {
     g.fillStyle = '#ffffff';
     g.beginPath();
-    g.ellipse(sx * r * 0.28 + lx, hy + r * 0.05 + ly, r * 0.15, cheer > 0.5 ? r * 0.06 : r * 0.19, 0, 0, Math.PI * 2);
+    g.ellipse(
+      sx * r * 0.25 + lx,
+      hy + r * 0.08 + ly,
+      r * (avatar.eyes === 2 ? 0.15 : 0.12),
+      expression === 'cheer' || avatar.eyes === 1 || avatar.eyes === 3 ? r * 0.06 : r * 0.16,
+      0,
+      0,
+      Math.PI * 2,
+    );
     g.fill();
-    if (cheer <= 0.5) {
+    if (expression !== 'cheer' && avatar.eyes !== 1 && avatar.eyes !== 3) {
       g.fillStyle = '#231a33';
       g.beginPath();
-      g.arc(sx * r * 0.28 + lx * 1.4, hy + r * 0.08 + ly * 1.4, r * 0.1, 0, Math.PI * 2);
+      g.arc(sx * r * 0.25 + lx * 1.4, hy + r * 0.09 + ly * 1.4, r * 0.085, 0, Math.PI * 2);
       g.fill();
       g.fillStyle = '#ffffff';
       g.beginPath();
-      g.arc(sx * r * 0.28 + lx * 1.4 - r * 0.04, hy + r * 0.03 + ly * 1.4, r * 0.035, 0, Math.PI * 2);
+      g.arc(sx * r * 0.25 + lx * 1.4 - r * 0.035, hy + r * 0.04 + ly * 1.4, r * 0.03, 0, Math.PI * 2);
       g.fill();
     }
-    g.fillStyle = 'rgba(255,120,160,0.55)';
+    if (avatar.eyes === 4) {
+      g.fillStyle = '#fff';
+      g.beginPath();
+      g.arc(sx * r * 0.25 + lx - r * 0.04, hy + r * 0.02 + ly, r * 0.045, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.fillStyle = 'rgba(185,83,96,0.28)';
     g.beginPath();
     g.ellipse(sx * r * 0.5, hy + r * 0.3, r * 0.1, r * 0.06, 0, 0, Math.PI * 2);
     g.fill();
@@ -202,7 +258,15 @@ export function drawKeeper(g: G, look: Look, x: number, y: number, size: number,
   g.strokeStyle = '#ffffff';
   g.lineWidth = size * 0.02;
   g.beginPath();
-  g.arc(0, hy + r * 0.25, r * (cheer > 0.3 ? 0.16 : 0.1), 0.15 * Math.PI, 0.85 * Math.PI);
+  if (expression === 'surprised') g.arc(0, hy + r * 0.31, r * 0.08, 0, Math.PI * 2);
+  else
+    g.arc(
+      0,
+      hy + r * 0.25,
+      r * (expression === 'cheer' ? 0.17 : 0.1),
+      expression === 'shrug' ? 1.2 * Math.PI : 0.15 * Math.PI,
+      expression === 'shrug' ? 1.8 * Math.PI : 0.85 * Math.PI,
+    );
   g.stroke();
   // visor shine
   g.fillStyle = 'rgba(255,255,255,0.35)';
@@ -213,12 +277,113 @@ export function drawKeeper(g: G, look: Look, x: number, y: number, size: number,
   g.restore();
 }
 
+function drawHair(g: G, avatar: AvatarParts, r: number, hy: number) {
+  if (!avatar.hair) return;
+  g.fillStyle = HAIR_COLORS[avatar.hairColor] ?? HAIR_COLORS[0];
+  g.beginPath();
+  if (avatar.hair === 1 || avatar.hair === 2 || avatar.hair === 7) {
+    g.ellipse(0, hy - r * 0.29, r * 0.53, r * 0.2, 0, Math.PI, Math.PI * 2);
+    g.fill();
+    if (avatar.hair === 2) {
+      g.beginPath();
+      g.ellipse(-r * 0.19, hy - r * 0.16, r * 0.23, r * 0.18, -0.4, 0, Math.PI * 2);
+      g.fill();
+    }
+    if (avatar.hair === 7) {
+      for (let i = -2; i <= 2; i++) {
+        g.beginPath();
+        g.moveTo(i * r * 0.19, hy - r * 0.32);
+        g.lineTo(i * r * 0.22, hy - r * (0.58 + (i % 2) * 0.09));
+        g.lineTo((i + 0.7) * r * 0.18, hy - r * 0.3);
+        g.fill();
+      }
+    }
+  } else if (avatar.hair === 3 || avatar.hair === 4) {
+    for (let i = -2; i <= 2; i++) {
+      g.beginPath();
+      g.arc(i * r * 0.21, hy - r * (0.32 + (i % 2) * 0.05), r * 0.18, 0, Math.PI * 2);
+      g.fill();
+    }
+    if (avatar.hair === 4)
+      for (const side of [-1, 1]) {
+        g.beginPath();
+        g.arc(side * r * 0.57, hy - r * 0.18, r * 0.23, 0, Math.PI * 2);
+        g.fill();
+      }
+  } else {
+    for (const side of [-1, 1]) {
+      g.beginPath();
+      g.ellipse(side * r * 0.45, hy + r * 0.02, r * 0.13, r * 0.35, side * 0.15, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.beginPath();
+    g.ellipse(0, hy - r * 0.33, r * 0.54, r * 0.18, 0, Math.PI, Math.PI * 2);
+    g.fill();
+    if (avatar.hair === 6) {
+      g.strokeStyle = 'rgba(255,255,255,0.3)';
+      g.lineWidth = r * 0.04;
+      for (const side of [-1, 1]) {
+        g.beginPath();
+        g.moveTo(side * r * 0.48, hy - r * 0.18);
+        g.lineTo(side * r * 0.49, hy + r * 0.25);
+        g.stroke();
+      }
+    }
+  }
+}
+
 function drawHat(g: G, id: string, x: number, hy: number, r: number, t: number) {
   const c0 = col(id, 0, '#ffffff');
   const c1 = col(id, 1, '#ffffff');
   const top = hy - r;
   g.save();
   switch (id) {
+    case 'hat_scarf': {
+      g.strokeStyle = c0;
+      g.lineWidth = r * 0.22;
+      g.lineCap = 'round';
+      g.beginPath();
+      g.arc(x, hy + r * 0.8, r * 0.85, 0.05, Math.PI - 0.05);
+      g.stroke();
+      g.beginPath();
+      g.moveTo(x + r * 0.68, hy + r * 0.9);
+      g.quadraticCurveTo(x + r * 1.25 + Math.sin(t * 2) * r * 0.14, hy + r * 1.15, x + r * 1.1, hy + r * 1.5);
+      g.stroke();
+      break;
+    }
+    case 'hat_mooncap':
+      g.fillStyle = c0;
+      g.beginPath();
+      g.ellipse(x, top + r * 0.35, r * 0.76, r * 0.45, 0, Math.PI, Math.PI * 2);
+      g.fill();
+      g.fillStyle = c1;
+      g.beginPath();
+      g.ellipse(x + r * 0.28, top + r * 0.07, r * 0.16, r * 0.18, 0, 0, Math.PI * 2);
+      g.fill();
+      break;
+    case 'hat_reed':
+      g.strokeStyle = c0;
+      g.lineWidth = r * 0.08;
+      for (let i = -2; i <= 2; i++) {
+        g.beginPath();
+        g.moveTo(x + i * r * 0.25, top + r * 0.2);
+        g.quadraticCurveTo(x + i * r * 0.28, top - r * 0.3, x + i * r * 0.21 + Math.sin(t * 2 + i) * r * 0.04, top - r * 0.48);
+        g.stroke();
+      }
+      break;
+    case 'hat_firefly':
+      g.strokeStyle = c1;
+      g.lineWidth = r * 0.08;
+      g.beginPath();
+      g.moveTo(x, top + r * 0.1);
+      g.quadraticCurveTo(x + r * 0.2, top - r * 0.5, x + r * 0.3, top - r * 0.7);
+      g.stroke();
+      g.fillStyle = c0;
+      g.globalAlpha = Math.sin(t * 4) > -0.1 ? 1 : 0.45;
+      g.beginPath();
+      g.arc(x + r * 0.3, top - r * 0.7, r * 0.15, 0, Math.PI * 2);
+      g.fill();
+      break;
     case 'hat_antenna': {
       g.strokeStyle = '#c9d2ea';
       g.lineWidth = r * 0.1;
@@ -473,6 +638,27 @@ export function drawLauncher(g: G, id: string, x: number, y: number, t: number, 
     g.globalAlpha = 1;
   };
   switch (id) {
+    case 'l_bloom':
+    case 'l_moonbeam': {
+      g.strokeStyle = c0;
+      g.lineWidth = 7;
+      g.lineCap = 'round';
+      g.beginPath();
+      g.moveTo(x, y + 44);
+      g.lineTo(x, y + 15);
+      g.lineTo(x - 28, y - 7);
+      g.moveTo(x, y + 15);
+      g.lineTo(x + 28, y - 7);
+      g.stroke();
+      for (const side of [-1, 1]) {
+        g.fillStyle = c1;
+        g.beginPath();
+        g.ellipse(x + side * 28, y - 10 + Math.sin(t * 2 + side) * 2, 9, 5, side * 0.5, 0, Math.PI * 2);
+        g.fill();
+      }
+      forkBand(-28, 28, -7);
+      break;
+    }
     case 'l_twig':
     case 'l_tree':
     case 'l_petal': {

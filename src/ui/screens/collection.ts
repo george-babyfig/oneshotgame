@@ -2,6 +2,7 @@ import { h, btn } from '../dom';
 import type { App } from '../app';
 import { t } from '../../i18n';
 import { unlocked } from '../../meta/unlocks';
+import { menuParticles } from '../motion';
 
 export function showCollection(app: App) {
   const entry = (label: string, action: () => void, enabled = true, reason = '') => {
@@ -14,6 +15,7 @@ export function showCollection(app: App) {
     h(
       'div',
       { class: 'screen page tab-page' },
+      menuParticles(),
       app.topBar(),
       h('div', { class: 'page-title' }, t('Collection')),
       h(

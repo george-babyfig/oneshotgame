@@ -5,12 +5,14 @@ import { haptic } from '../haptics';
 import { levelMeta, TWISTS } from '../../core/levels';
 import { collectDust, galaxyRate, pendingDust, planetRate, vaultHours } from '../../meta/economy';
 import { chapterOf } from '../../meta/progression';
-import { drawGalaxy } from './galaxy';
+import { drawGalaxy } from '../art/galaxy';
+import { effectiveReduceMotion, flyReward, menuParticles } from '../motion';
 import type { App } from '../app';
 import { t, tp } from '../../i18n';
 import { unlocked } from '../../meta/unlocks';
 import { nextUp } from '../../meta/nextup';
 import { STYLES_RELEASE } from '../../meta/cosmetics';
+import { currentLook } from '../../meta/cosmetics';
 
 export function showHome(app: App) {
   const p = app.p;
@@ -44,6 +46,8 @@ export function showHome(app: App) {
     ),
     `dust-btn${full ? ' full' : ''}`,
     () => {
+      const rect = collect.getBoundingClientRect();
+      const from = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
       const d = collectDust(p);
       if (d) {
         sfx.coin();
@@ -52,6 +56,7 @@ export function showHome(app: App) {
         app.save();
       }
       app.showHome(true);
+      if (d) void flyReward(from, 'dust', d);
     },
   );
   collect.disabled = pending <= 0;
@@ -84,6 +89,7 @@ export function showHome(app: App) {
   const el = h(
     'div',
     { class: 'screen home' },
+    menuParticles(),
     app.topBar(false, true),
     h(
       'div',
@@ -118,7 +124,8 @@ export function showHome(app: App) {
     ),
   );
   const view = drawGalaxy(canvas, p.galaxy, {
-    reduceMotion: p.settings.reduceMotion,
+    reduceMotion: effectiveReduceMotion(p),
+    look: currentLook(p),
     onTap: (g) => {
       sfx.click();
       toast(`${g.name} · ${'★'.repeat(g.stars)} · ✨${planetRate(g)}/h`);

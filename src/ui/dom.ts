@@ -1,6 +1,7 @@
 import { sfx } from './audio';
 import { haptic } from './haptics';
 import { t } from '../i18n';
+import { MOTION, popIn, popOut, prefersReducedMotion } from './motion';
 
 type Child = Node | string | number | null | undefined | false | Child[];
 
@@ -32,7 +33,7 @@ export function btn(label: Child, cls: string, onClick: () => void): HTMLButtonE
   b.addEventListener('click', () => {
     if (b.disabled) return;
     sfx.click();
-    haptic.light();
+    if (b.classList.contains('primary')) haptic.light();
     onClick();
   });
   return b;
@@ -75,13 +76,15 @@ export function modal(content: Child[], opts: { cls?: string; dismiss?: boolean;
     if (done) return;
     done = true;
     aborts.delete(abort);
+    void popOut(box);
     scrim.classList.add('out');
     scrim.style.pointerEvents = 'none';
-    setTimeout(() => scrim.remove(), 200);
+    setTimeout(() => scrim.remove(), prefersReducedMotion() ? MOTION.calm : MOTION.popOut);
     opts.onClose?.();
   };
   if (opts.dismiss !== false) scrim.addEventListener('click', (e) => e.target === scrim && close());
   overlay.append(scrim);
+  popIn(box);
   return { el: box, close };
 }
 
@@ -121,9 +124,11 @@ export function confirmBox(text: string, yes: string, no = t('Cancel')): Promise
 export function toast(text: string, kind = '') {
   const el = h('div', { class: `toast ${kind}` }, text);
   toasts.append(el);
+  sfx.toast();
+  haptic.tick();
   while (toasts.children.length > 3) toasts.firstElementChild?.remove();
   setTimeout(() => {
     el.classList.add('out');
-    setTimeout(() => el.remove(), 300);
+    setTimeout(() => el.remove(), prefersReducedMotion() ? MOTION.calm : MOTION.toast);
   }, 2400);
 }

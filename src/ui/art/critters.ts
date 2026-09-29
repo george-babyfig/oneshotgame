@@ -1,6 +1,7 @@
 // "Critters": every creature drawn as vector art in one house style — chubby
 // bodies, big shiny eyes, rosy cheeks — assembled from a small parts kit.
 type G = CanvasRenderingContext2D;
+export type CreaturePose = 'idle' | 'happy' | 'surprised' | 'wave';
 
 type Shape = 'round' | 'tall' | 'long' | 'fish' | 'bird' | 'tiny';
 type Feature =
@@ -206,8 +207,8 @@ function eyes(g: G, x: number, y: number, u: number, k: number, blink: boolean, 
   }
 }
 
-function face(g: G, x: number, y: number, u: number, s: Spec, blink: boolean, sep = 0.17) {
-  eyes(g, x, y, u, s.eye ?? 1, blink, sep);
+function face(g: G, x: number, y: number, u: number, s: Spec, blink: boolean, sep = 0.17, pose: CreaturePose = 'idle') {
+  eyes(g, x, y, u, s.eye ?? 1, blink && pose === 'idle', sep);
   // cheeks
   g.globalAlpha = 0.45;
   ell(g, x - (sep + 0.1) * u, y + 0.12 * u, 0.07 * u, 0.045 * u, '#ff7a9a');
@@ -218,7 +219,13 @@ function face(g: G, x: number, y: number, u: number, s: Spec, blink: boolean, se
     g.lineWidth = 0.035 * u;
     g.lineCap = 'round';
     g.beginPath();
-    g.arc(x, y + 0.1 * u, 0.06 * u, 0.15 * Math.PI, 0.85 * Math.PI);
+    g.arc(
+      x,
+      y + 0.1 * u,
+      (pose === 'happy' ? 0.09 : 0.06) * u,
+      pose === 'surprised' ? 0 : 0.15 * Math.PI,
+      pose === 'surprised' ? Math.PI * 2 : 0.85 * Math.PI,
+    );
     g.stroke();
   }
 }
@@ -228,15 +235,32 @@ function face(g: G, x: number, y: number, u: number, s: Spec, blink: boolean, se
  * (0 = screen up). `size` is roughly its height in px.
  */
 /** `acc` = an accessory worn by a Homeworld resident (see RESIDENT_ACCS). */
-export function drawCreature(g: G, id: string, x: number, y: number, angle: number, size: number, t: number, acc2 = '', ghost = false) {
+export function drawCreature(
+  g: G,
+  id: string,
+  x: number,
+  y: number,
+  angle: number,
+  size: number,
+  t: number,
+  acc2 = '',
+  ghost = false,
+  pose: CreaturePose = 'idle',
+  reduceMotion = false,
+) {
   const s = ghost ? GHOST_SPECS[id] : SPECS[id];
   if (!s) return;
   const u = size;
-  const bob = Math.sin(t * 3);
-  const blink = (t * 0.7 + (id.length % 5) * 0.37) % 4 < 0.12;
+  const clock = reduceMotion ? 0 : t;
+  t = clock;
+  const bob = reduceMotion ? 0 : Math.sin(clock * 3);
+  const blink = !reduceMotion && (clock * 0.7 + (id.length % 5) * 0.37) % 4 < 0.12;
   g.save();
   g.translate(x, y);
-  g.rotate(angle);
+  const wiggle =
+    has(s, 'fishTail') || has(s, 'whaleTail') || has(s, 'tentacles') ? 0.045 : has(s, 'wings') || has(s, 'butterflyWings') ? 0.035 : 0.018;
+  g.rotate(angle + (reduceMotion ? 0 : Math.sin(clock * (pose === 'happy' ? 8 : 2.5)) * wiggle));
+  if (pose === 'happy' && !reduceMotion) g.translate(0, -Math.abs(Math.sin(clock * 8)) * size * 0.07);
   // squash & stretch idle
   g.scale(1 + bob * 0.03, 1 - bob * 0.03);
   if (s.glow) {
@@ -521,11 +545,16 @@ export function drawCreature(g: G, id: string, x: number, y: number, angle: numb
   // face
   if (has(s, 'topEyes')) {
     for (const sx of [-1, 1]) ell(g, hx + sx * 0.2 * u, hy - hr * 0.55, 0.15 * u, 0.15 * u, s.body);
-    face(g, hx, hy - hr * 0.55, u, s, blink, 0.2);
+    face(g, hx, hy - hr * 0.55, u, s, blink, 0.2, pose);
   } else if (s.shape === 'fish') {
-    face(g, hx, hy, u * 0.85, s, blink, 0.12);
+    face(g, hx, hy, u * 0.85, s, blink, 0.12, pose);
   } else {
-    face(g, hx, hy, u, s, blink);
+    face(g, hx, hy, u, s, blink, 0.17, pose);
+  }
+  if (pose === 'wave') {
+    const lift = reduceMotion ? 0.12 : Math.sin(clock * 10) * 0.12;
+    line(g, [bx + b.rx * u * 0.7, by, bx + b.rx * u * 1.1, by - (0.3 + lift) * u], s.body, 0.1 * u);
+    ell(g, bx + b.rx * u * 1.1, by - (0.3 + lift) * u, 0.1 * u, 0.1 * u, s.body);
   }
   if (has(s, 'whiskers')) {
     g.strokeStyle = 'rgba(40,30,50,0.5)';
@@ -571,6 +600,28 @@ export function drawCreature(g: G, id: string, x: number, y: number, angle: numb
   g.restore();
 }
 
+const stillSprites = new Map<string, HTMLCanvasElement>();
+
+/** Reuse static poses on crowded planets instead of rebuilding every path each frame. */
+export function drawStillCreature(g: G, id: string, x: number, y: number, angle: number, size: number, acc = '') {
+  const key = `${id}|${acc}`;
+  let sprite = stillSprites.get(key);
+  if (!sprite) {
+    sprite = document.createElement('canvas');
+    sprite.width = sprite.height = 192;
+    drawCreature(sprite.getContext('2d')!, id, 96, 144, 0, 64, 0, acc, false, 'idle', true);
+    if (stillSprites.size >= 48) stillSprites.delete(stillSprites.keys().next().value!);
+    stillSprites.set(key, sprite);
+  }
+  g.save();
+  g.translate(x, y);
+  g.rotate(angle);
+  const scale = size / 64;
+  g.scale(scale, scale);
+  g.drawImage(sprite, -96, -144);
+  g.restore();
+}
+
 function shadeHex(hex: string) {
   const n = parseInt(hex.slice(1), 16);
   const f = (c: number) => Math.round(c * 0.8);
@@ -578,15 +629,136 @@ function shadeHex(hex: string) {
 }
 
 /** Render a creature to a standalone canvas (for DOM cards like the Lifebook). */
-export function critterCanvas(id: string, px: number, t = 0.4, acc = ''): HTMLCanvasElement {
+export function critterCanvas(id: string, px: number, t = 0.4, acc = '', pose: CreaturePose = 'idle'): HTMLCanvasElement {
   const c = document.createElement('canvas');
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   c.width = c.height = Math.round(px * dpr);
   c.style.width = c.style.height = `${px}px`;
+  c.classList.add('critter-portrait');
   const g = c.getContext('2d')!;
   g.scale(dpr, dpr);
-  drawCreature(g, id, px / 2, px * 0.9, 0, px * 0.62, t, acc);
+  drawCreature(g, id, px / 2, px * 0.9, 0, px * 0.62, t, acc, false, pose);
+  registerPortrait({ canvas: c, id, acc, pose: () => pose });
   return c;
+}
+
+export function critterSilhouetteCanvas(id: string, px: number): HTMLCanvasElement {
+  const canvas = critterCanvas(id, px);
+  removePortrait(canvas);
+  const g = canvas.getContext('2d');
+  if (g) {
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalCompositeOperation = 'source-in';
+    g.fillStyle = '#30254d';
+    g.fillRect(0, 0, canvas.width, canvas.height);
+    g.restore();
+  }
+  return canvas;
+}
+
+export interface CreatureCanvas {
+  canvas: HTMLCanvasElement;
+  id: string;
+  acc?: string;
+  pose?: () => CreaturePose;
+}
+
+interface LivePortrait extends CreatureCanvas {
+  detachedFrames: number;
+  still: boolean;
+}
+
+const portraits = new Map<HTMLCanvasElement, LivePortrait>();
+const visiblePortraits = new Set<HTMLCanvasElement>();
+let portraitObserver: IntersectionObserver | null = null;
+let portraitRaf = 0;
+let lastPortraitFrame = 0;
+
+export function refreshCreatureGalleryMotion() {
+  if (document.hidden || document.documentElement.classList.contains('reduce-motion')) {
+    cancelAnimationFrame(portraitRaf);
+    portraitRaf = 0;
+    return;
+  }
+  if (!portraitRaf && portraits.size) portraitRaf = requestAnimationFrame(portraitFrame);
+}
+
+function removePortrait(canvas: HTMLCanvasElement) {
+  portraits.delete(canvas);
+  visiblePortraits.delete(canvas);
+  portraitObserver?.unobserve(canvas);
+}
+
+function portraitFrame(now: number) {
+  portraitRaf = 0;
+  if (document.hidden) return;
+  if (now - lastPortraitFrame < 40) {
+    refreshCreatureGalleryMotion();
+    return;
+  }
+  lastPortraitFrame = now;
+  let count = 0;
+  for (const [canvas, entry] of portraits) {
+    if (!canvas.isConnected) {
+      if (++entry.detachedFrames > 60) removePortrait(canvas);
+      continue;
+    }
+    entry.detachedFrames = 0;
+    if (visiblePortraits.has(canvas)) count++;
+  }
+  if (count <= 24 && !document.documentElement.classList.contains('reduce-motion')) {
+    for (const [canvas, entry] of portraits) {
+      if (!canvas.isConnected || !visiblePortraits.has(canvas) || entry.still) continue;
+      const g = canvas.getContext('2d');
+      if (!g) continue;
+      const px = parseFloat(canvas.style.width);
+      const dpr = canvas.width / px;
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.clearRect(0, 0, px, px);
+      drawCreature(g, entry.id, px / 2, px * 0.9, 0, px * 0.62, now / 1000, entry.acc ?? '', false, entry.pose?.() ?? 'idle');
+    }
+  }
+  if (portraits.size) refreshCreatureGalleryMotion();
+}
+
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', refreshCreatureGalleryMotion);
+
+function registerPortrait(entry: CreatureCanvas) {
+  if (!portraitObserver && typeof IntersectionObserver !== 'undefined') {
+    portraitObserver = new IntersectionObserver((changes) => {
+      for (const change of changes) {
+        const canvas = change.target as HTMLCanvasElement;
+        if (change.isIntersecting) visiblePortraits.add(canvas);
+        else visiblePortraits.delete(canvas);
+      }
+    });
+  }
+  portraits.set(entry.canvas, { ...entry, detachedFrames: 0, still: false });
+  if (portraitObserver) portraitObserver.observe(entry.canvas);
+  else visiblePortraits.add(entry.canvas);
+  refreshCreatureGalleryMotion();
+}
+
+/** Update poses on a live card; all portraits share one capped loop. */
+export function animateCreatureGallery(entries: CreatureCanvas[], reduceMotion: boolean): () => void {
+  for (const entry of entries) {
+    const live = portraits.get(entry.canvas);
+    if (!live) continue;
+    live.pose = entry.pose;
+    live.acc = entry.acc ?? live.acc;
+    live.still = reduceMotion;
+  }
+  refreshCreatureGalleryMotion();
+  return () => {
+    for (const entry of entries) {
+      const live = portraits.get(entry.canvas);
+      if (live) {
+        live.pose = () => 'idle';
+        live.still = reduceMotion;
+      }
+    }
+  };
 }
 
 /** A quiet reminder of the land a wandering creature likes. */

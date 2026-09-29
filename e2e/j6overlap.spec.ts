@@ -198,7 +198,7 @@ async function instrument(page: Page) {
       if (s.ghosts.length) add('wander-ghosts', true);
       if (s.goalPulse && s.time < s.goalPulse.until && s.goalPulse.sectors.length) add('goal-pulse', true);
       const aiming = !!s.aimFrom && s.pull().len >= 18;
-      const card = aiming && canvasText.some((t) => t.text.includes(s.predictCache?.land ?? '\u0000'));
+      const card = aiming && canvasText.some((t) => t.text.includes(s.predictCache?.title ?? '\u0000'));
       if (card) {
         add('aim-preview', true); // the changed sectors are outlined on the planet
         R.landingCards++;
