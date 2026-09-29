@@ -46,11 +46,14 @@ export async function verifyParentPin(pin: string, hash: string): Promise<boolea
 }
 
 type PinSettings = Profile['settings'] & { parentPin?: string };
+let currentProfile: Profile | null = null;
+export function bindGateProfile(profile: Profile): void {
+  currentProfile = profile;
+}
 
 function activeProfile(): Profile {
-  const app = (window as unknown as { __app?: { p?: Profile } }).__app;
-  if (!app?.p) throw new Error('Profile is unavailable');
-  return app.p;
+  if (!currentProfile) throw new Error('Profile is unavailable');
+  return currentProfile;
 }
 
 function pinOf(p: Profile): string {
@@ -93,7 +96,7 @@ function deviceNumberLang(): NumberWordLang {
 
 function speakPrompt(): void {
   if (typeof window === 'undefined' || typeof SpeechSynthesisUtterance === 'undefined') return;
-  const p = (window as unknown as { __app?: { p?: Profile } }).__app?.p;
+  const p = currentProfile;
   if (!p?.settings.sound || !window.speechSynthesis) return;
   try {
     const utterance = new SpeechSynthesisUtterance(t('Please hand the phone to a grown-up.'));
@@ -107,7 +110,7 @@ function speakPrompt(): void {
 
 export function parentalGate(reason: GateReason = 'buy', rnd = Math.random): Promise<boolean> {
   ledger.count('gate_shown');
-  const profile = (window as unknown as { __app?: { p?: Profile } }).__app?.p;
+  const profile = currentProfile;
   const storedPin = profile ? pinOf(profile) : '';
   let usePin = /^[0-9a-f]{64}$/.test(storedPin) && typeof crypto !== 'undefined' && !!crypto.subtle;
   let clearPinOnPass = false;

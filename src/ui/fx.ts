@@ -1,17 +1,19 @@
-import { BIOMES, KINDS, SPECIES_BY_ID, settle, type Planet } from '../core/world';
-import { stepRound, NOVA_CHARGE, type RoundState } from '../core/round';
+import { BIOMES, KINDS, SPECIES_BY_ID, neededHabitat, settle, type Planet } from '../core/world';
+import { stepRound, novaReady, type RoundState } from '../core/round';
 import { fly, STAR_SLING, type FlightLaunch, type FlightWorld } from '../core/flight';
 import type { RoundModifiers } from '../core/modifiers';
 import { BOSS_HP } from '../core/levels';
 import { renderPlanet } from './art/planet';
-import { drawCreature } from './art/critters';
-import { drawProjectile } from './art/projectiles';
+import { drawCreature, drawWanderGhost } from './art/critters';
+import { drawObjectFeelTrail, drawProjectile } from './art/projectiles';
 import { drawTrail } from './art/keeper';
 import { drawMeteors, drawSeason } from './art/seasons';
 import { sfx } from './audio';
 import { haptic } from './haptics';
 import { t, tp } from '../i18n';
 import * as hud from './hud';
+import * as preview from './preview';
+import { OBJECT_FEEL, advanceFeedback, enqueueFeedback } from './feel';
 
 import type { LevelScene, Shot } from './game';
 
@@ -22,8 +24,8 @@ const CALLOUTS: [number, string, string][] = [
   [12, 'Nice!', '#9fe6ff'],
 ];
 
-export function sparkStart(planet: Planet) {
-  for (const i of [3, 11, 19]) planet.sectors[i].life = Math.max(1, planet.sectors[i].life);
+export function sparkStart(planet: Planet, sectors: number[]) {
+  for (const i of sectors) planet.sectors[i].life = Math.min(3, planet.sectors[i].life + 1);
   settle(planet);
 }
 
@@ -156,8 +158,8 @@ export function confetti(scene: LevelScene) {
   }
 }
 
-export function popup(scene: LevelScene, x: number, y: number, text: string, color: string, size: number, dur = 1.2) {
-  scene.popups.push({ x, y, text, color, size, life: dur, max: dur, vy: -40 });
+export function popup(scene: LevelScene, x: number, y: number, text: string, color: string, size: number, dur = 1.2, priority = 1) {
+  scene.feedback = enqueueFeedback(scene.feedback, { x, y, text, color, size, duration: dur, priority, queuedAt: scene.time * 1000 });
 }
 
 export function draw(scene: LevelScene) {
@@ -184,7 +186,27 @@ export function draw(scene: LevelScene) {
     if (scene.o.season) drawSeason(g, w, H, scene.time, scene.o.season, 0.6, 22);
   }
   if (scene.shake > 0) g.translate((Math.random() - 0.5) * scene.shake, (Math.random() - 0.5) * scene.shake);
+  if (scene.aimFrom) scene.coachEl.classList.remove('show');
+  const overlayCount = () =>
+    Number(scene.popups.length > 0) +
+    Number(scene.ghosts.length > 0) +
+    Number(!!scene.goalPulse?.sectors.length) +
+    Number(!!scene.aimFrom && scene.pull().len >= 18) +
+    Number(scene.novaOn && scene.nova.charge >= scene.nova.threshold && !scene.suppressNovaLabel) +
+    Number(scene.coachEl.classList.contains('show')) +
+    Number(scene.discoverEl.classList.contains('show')) +
+    Number(!!document.querySelector('.life-fly'));
+  scene.suppressNovaLabel = false;
+  if (overlayCount() > 4) scene.suppressNovaLabel = true;
+  if (overlayCount() > 4 && scene.goalPulse) scene.goalPulse = null;
+  if (overlayCount() > 4) scene.popups = [];
   scene.drawPlanet();
+  preview.drawGoalPulse(scene);
+  for (const ghost of scene.ghosts) {
+    const progress = scene.o.reduceMotion ? 1 : Math.min(1, (scene.time - ghost.started) / 0.55);
+    const [x, y] = scene.sectorPoint(ghost.sector, 1.15 + progress * 0.2);
+    drawWanderGhost(g, ghost.species, x, y, scene.R * 0.2, BIOMES[ghost.wants].deco || '●', scene.time, !!scene.o.reduceMotion);
+  }
   for (const r of scene.rings) {
     const k = r.t / r.max;
     g.globalAlpha = (1 - k) * 0.8;
@@ -213,11 +235,20 @@ export function draw(scene: LevelScene) {
   const sh = scene.shot;
   if (sh) {
     drawTrail(g, scene.look.trail, sh.trail, scene.time, KINDS[sh.kind].color);
+    drawObjectFeelTrail(g, sh.kind, sh.trail, !!sh.nova, !!scene.o.reduceMotion);
+    if (sh.nova && sh.trail.length > 1 && !scene.o.reduceMotion) {
+      g.strokeStyle = '#ffe69b';
+      g.lineWidth = 9;
+      g.globalAlpha = 0.55;
+      g.beginPath();
+      sh.trail.forEach((point, index) => (index ? g.lineTo(point.x, point.y) : g.moveTo(point.x, point.y)));
+      g.stroke();
+    }
     g.globalAlpha = 1;
     // draw between physics steps so the shot glides at any refresh rate (render only)
     const px = sh.x + sh.vx * sh.carry;
     const py = sh.y + sh.vy * sh.carry;
-    if (sh.nova) {
+    if (sh.nova && !scene.o.reduceMotion) {
       const gl = g.createRadialGradient(px, py, 4, px, py, 40);
       gl.addColorStop(0, 'rgba(255,230,140,0.9)');
       gl.addColorStop(1, 'rgba(255,230,140,0)');
@@ -240,18 +271,61 @@ export function draw(scene: LevelScene) {
   // popups
   g.textAlign = 'center';
   g.textBaseline = 'middle';
+  const placed: { x: number; y: number; width: number; height: number }[] = [];
+  const canvas = scene.canvas.getBoundingClientRect();
+  const reserved = [
+    ...document.querySelectorAll(
+      '.level .hud-top, .level .life, .level .goals, .level .twist, .level .hint, .level .banners .show, .level .finish:not(.hidden), .level .hud-bottom, .life-fly',
+    ),
+  ]
+    .map((el) => el.getBoundingClientRect())
+    .map((r) => ({ x: r.left - canvas.left, y: r.top - canvas.top, width: r.width, height: r.height }));
+  if (scene.aimFrom && scene.pull().len >= 18) reserved.push(preview.landingCardRect(scene));
+  if (scene.novaOn && scene.nova.charge >= scene.nova.threshold && !scene.suppressNovaLabel && !scene.aimFrom)
+    reserved.push({ x: scene.launch.x - 90, y: scene.launch.y - 80, width: 180, height: 20 });
+  for (const ghost of scene.ghosts) {
+    const [x, y] = scene.sectorPoint(ghost.sector, 1.35);
+    reserved.push({ x: x - 25, y: y - 50, width: 65, height: 55 });
+  }
   for (const p of scene.popups) {
     const k = p.life / p.max;
     g.globalAlpha = Math.min(1, k * 2.5);
     const sc = k > 0.85 ? 1 + (k - 0.85) * 3 : 1;
-    g.font = `700 ${Math.round(p.size * sc)}px Fredoka, ui-rounded, system-ui, sans-serif`;
-    const half = g.measureText(p.text).width / 2 + 8;
-    p.x = Math.min(scene.w - half, Math.max(half, p.x));
+    const fontSize = Math.round(p.size * sc);
+    g.font = `700 ${fontSize}px Fredoka, ui-rounded, system-ui, sans-serif`;
+    const half = Math.min(scene.w / 2 - 8, g.measureText(p.text).width / 2 + 8);
+    const height = fontSize + 14;
+    let position: { x: number; y: number } | null = null;
+    for (const y of [p.y, scene.cy - scene.R * 0.5, scene.cy + scene.R * 0.5, scene.cy, scene.launch.y - 105]) {
+      for (const x of [p.x, scene.w / 2, half + 6, scene.w - half - 6]) {
+        const px = Math.min(scene.w - half - 4, Math.max(half + 4, x));
+        const py = Math.min(scene.h - height / 2 - 12, Math.max(height / 2 + 12, y));
+        const box = { x: px - half, y: py - height / 2, width: half * 2, height };
+        const used = [
+          ...reserved,
+          ...placed.map((r) => ({ x: r.x - r.width, y: r.y - r.height / 2, width: r.width * 2, height: r.height })),
+        ];
+        if (
+          used.every(
+            (r) =>
+              box.x >= r.x + r.width + 4 || box.x + box.width <= r.x - 4 || box.y >= r.y + r.height + 4 || box.y + box.height <= r.y - 4,
+          )
+        ) {
+          position = { x: px, y: py };
+          break;
+        }
+      }
+      if (position) break;
+    }
+    if (!position) continue;
+    p.x = position.x;
+    p.y = position.y;
+    placed.push({ x: p.x, y: p.y, width: half, height });
     g.lineWidth = 5;
     g.strokeStyle = 'rgba(10,6,30,0.85)';
-    g.strokeText(p.text, p.x, p.y);
+    g.strokeText(p.text, p.x, p.y, half * 2 - 12);
     g.fillStyle = p.color;
-    g.fillText(p.text, p.x, p.y);
+    g.fillText(p.text, p.x, p.y, half * 2 - 12);
   }
   g.globalAlpha = 1;
   g.restore();
@@ -274,7 +348,8 @@ export function drawPlanet(scene: LevelScene) {
       const anim = scene.spawnAnim.get(i) ?? 0;
       const pop = anim > 0 ? 1 + Math.sin((anim / 0.9) * Math.PI) * 0.8 : 1;
       const size = scene.R * (sp.rarity === 'common' ? 0.2 : sp.rarity === 'uncommon' ? 0.24 : 0.3) * pop;
-      drawCreature(g, sp.id, x, y, a + Math.PI / 2, size, scene.time + i, scene.o.festAcc);
+      const walk = scene.o.reduceMotion ? 0 : scene.exitK * 0.45;
+      drawCreature(g, sp.id, x + (scene.cx - x) * walk, y + (scene.cy - y) * walk, a + Math.PI / 2, size, scene.time + i, scene.o.festAcc);
     },
   });
 }
@@ -315,7 +390,7 @@ export function update(scene: LevelScene, dt: number) {
     });
     if (path.hit?.kind === 'boss') {
       if (sh.nova) {
-        scene.charge = 0;
+        scene.nova = { charge: 0, threshold: 18, fired: scene.nova.fired + 1, held: false };
         scene.bossHp = Math.max(1, scene.bossHp - 1);
       }
       scene.hitBoss(sh.x, sh.y);
@@ -361,12 +436,20 @@ export function update(scene: LevelScene, dt: number) {
     p.vy *= 0.98;
   }
   scene.particles = scene.particles.filter((p) => p.life > 0);
-  for (const p of scene.popups) {
-    p.life -= dt;
-    p.y += p.vy * dt;
-    p.vy *= 0.96;
-  }
-  scene.popups = scene.popups.filter((p) => p.life > 0);
+  scene.feedback = advanceFeedback(scene.feedback, scene.time * 1000);
+  scene.popups = scene.feedback.active.map((item) => {
+    const elapsed = scene.time - item.startedAt / 1000;
+    return {
+      x: item.x,
+      y: item.y - (scene.o.reduceMotion ? 0 : elapsed * 32),
+      text: item.text,
+      color: item.color,
+      size: item.size,
+      life: Math.max(0, item.duration - elapsed),
+      max: item.duration,
+      vy: 0,
+    };
+  });
   scene.flash = scene.flash.filter((f) => (f.t -= dt) > 0);
   for (const r of scene.rings) r.t += dt;
   scene.rings = scene.rings.filter((r) => r.t < r.max);
@@ -378,10 +461,12 @@ export function update(scene: LevelScene, dt: number) {
 
 export function land(scene: LevelScene, sh: Shot, i: number) {
   scene.shot = null;
-  const beforeCharge = scene.charge;
+  const beforeReady = novaReady(scene.roundState());
+  const oldPlanet = scene.planet;
   const res = stepRound(scene.roundState(), { kind: sh.kind, sector: i, nova: sh.nova }, scene.roundModifiers());
   scene.planet = res.state.planet;
-  scene.charge = res.state.charge;
+  scene.nova = res.state.nova;
+  if (scene.L.n >= 24 && !beforeReady && novaReady(res.state)) hud.showNovaHoldTip(scene);
   scene.bonus = res.state.bonus;
   scene.regionBests = res.state.regionBests;
   scene.arrived = new Set(res.state.arrived);
@@ -389,40 +474,75 @@ export function land(scene: LevelScene, sh: Shot, i: number) {
   const regions = res.after >= res.before ? res.newRegionBests.map((at) => scene.planet.sectors[at].biome) : [];
   // a throw that makes the planet worse earns nothing (M0 churn rule), arrivals included
   const arrivals = res.after >= res.before ? res.firstArrivals.length : 0;
+  if (res.novaGain > 0) {
+    const target = scene.launch;
+    for (let spark = 0; !scene.o.reduceMotion && spark < Math.min(12, res.novaGain); spark++) {
+      const fraction = (spark + 1) / (res.novaGain + 1);
+      const x = sh.x + (target.x - sh.x) * fraction * 0.2;
+      const y = sh.y + (target.y - sh.y) * fraction * 0.2;
+      scene.particles.push({
+        x,
+        y,
+        vx: (target.x - x) * 2,
+        vy: (target.y - y) * 2,
+        life: 0.5,
+        max: 0.5,
+        size: 2.5,
+        color: '#ffe78a',
+        g: 0,
+      });
+    }
+    scene.popup(target.x, target.y - 70, t('+{n} Supernova', { n: res.novaGain }), '#ffe78a', 16, 1, 0);
+  }
   if (bonus) setTimeout(() => scene.popup(sh.x - 34, sh.y + 16, t('🧪 +{n}', { n: bonus }), '#c9a8ff', 16, 1.2), 380);
-  if (sh.nova) {
-    scene.ring(sh.x, sh.y, '#ffd24a', scene.R * 1.6);
-    scene.burst(sh.x, sh.y, '#fff2b8', 50, 9);
-    setTimeout(() => scene.popup(scene.cx, scene.cy - scene.R * 1.5, t('SUPERNOVA!'), '#ffd24a', 32, 1.4), 120);
+  if (res.novaFired) {
+    if (!scene.o.reduceMotion) scene.ring(sh.x, sh.y, '#ffd24a', scene.R * 1.6);
+    scene.burst(sh.x, sh.y, '#fff2b8', scene.o.reduceMotion ? 8 : 50, 9);
+    setTimeout(() => scene.popup(scene.cx, scene.cy - scene.R * 1.5, t('SUPERNOVA!'), '#ffd24a', 32, 1.4, 3), 120);
   } else {
-    if (scene.novaOn && beforeCharge < NOVA_CHARGE && scene.charge >= NOVA_CHARGE) {
+    if (scene.novaOn && !beforeReady && novaReady(res.state)) {
       setTimeout(() => {
-        const L = scene.launch;
-        scene.popup(L.x, L.y - 70, t('Supernova charged!'), '#ffd24a', 20, 1.6);
         sfx.levelUp();
-        scene.showCoachEvent('nova');
+        if (scene.L.n < 24) scene.showCoachEvent('nova');
       }, 700);
     }
   }
-  sfx.impact(sh.kind);
-  haptic.heavy();
+  sfx.objectImpact(sh.kind);
+  haptic.object(sh.kind);
   scene.shake = scene.o.reduceMotion ? 0 : 10;
-  scene.burst(sh.x, sh.y, KINDS[sh.kind].color, 34, 7);
-  scene.ring(sh.x, sh.y, KINDS[sh.kind].color, scene.R * 0.9);
+  scene.burst(sh.x, sh.y, OBJECT_FEEL[sh.kind].burst, scene.o.reduceMotion ? 10 : 34, 7);
+  scene.ring(sh.x, sh.y, OBJECT_FEEL[sh.kind].burst, scene.R * 0.9);
   const delta = res.after - res.before + bonus;
-  scene.chain = delta > 0 ? scene.chain + 1 : 0;
   const quality = delta + res.spawned.length * 6;
   const call = CALLOUTS.find(([min]) => quality >= min);
   if (call) {
-    const text = scene.chain >= 3 ? `${t(call[1])} ×${scene.chain}` : t(call[1]);
     setTimeout(() => {
-      scene.popup(scene.cx, scene.cy + scene.R * 1.45, text, call[2], 34, 1.4);
-      sfx.combo(CALLOUTS.length - CALLOUTS.indexOf(call) + Math.min(scene.chain, 4));
+      scene.popup(scene.cx, scene.cy + scene.R * 1.45, t(call[1]), call[2], 28, 1.4, 0);
+      sfx.combo(CALLOUTS.length - CALLOUTS.indexOf(call));
       haptic.success();
     }, 260);
   }
   scene.score = res.after + scene.bonus;
   if (res.lost.length) scene.showCoachEvent('wander');
+  for (const lost of res.lost) {
+    const wants = neededHabitat(lost.species, scene.planet, lost.sector) ?? oldPlanet.sectors[lost.sector]?.biome;
+    if (!wants) continue;
+    scene.ghosts = scene.ghosts.filter((ghost) => ghost.sector !== lost.sector);
+    scene.ghosts.push({ species: lost.species, sector: lost.sector, wants, started: scene.time, throw: scene.throwsUsed });
+    scene.ghosts = scene.ghosts.slice(-2);
+    const [x, y] = scene.sectorPoint(lost.sector, 1.4);
+    scene.popup(x, y - 18, t('{creature} wandered off', { creature: t(SPECIES_BY_ID[lost.species].name) }), '#cfd0d9', 16, 1.2, 2);
+  }
+  let returnShown = false;
+  for (const returned of res.cameBack) {
+    scene.ghosts = scene.ghosts.filter((ghost) => ghost.species !== returned.species);
+    if (!returnShown) {
+      const [x, y] = scene.sectorPoint(returned.sector, 1.4);
+      scene.popup(x, y - 18, t('{creature} came back!', { creature: t(SPECIES_BY_ID[returned.species].name) }), '#bfffd6', 19, 1.2, 3);
+      window.setTimeout(() => haptic.success(), 180);
+      returnShown = true;
+    }
+  }
   if (res.spawned.length) scene.showCoachEvent('creature');
   if (res.spawned.length) {
     const first = res.spawned[0];
@@ -482,11 +602,13 @@ export function flightWorld(scene: LevelScene, rotation: number): FlightWorld {
 export function roundState(scene: LevelScene): RoundState {
   return {
     planet: scene.planet,
-    charge: scene.charge,
+    charge: scene.nova.charge,
+    nova: { ...scene.nova },
     bonus: scene.bonus,
     regionBests: scene.regionBests,
     arrived: [...scene.arrived],
     novaEnabled: scene.novaOn,
+    queueIndex: scene.qi - 1,
   };
 }
 

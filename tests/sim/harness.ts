@@ -1,11 +1,12 @@
 import { goalProgress, goalsMet, makeLevel, rngFrom, starsEarned, starsFor, type Difficulty, type LevelDef } from '../../src/core/levels';
 import { SECTORS, lifeScore, type Planet } from '../../src/core/world';
 import { NO_MODIFIERS } from '../../src/core/modifiers';
-import { NOVA_CHARGE, ROUND_RULES_V0, roundState, stepRound } from '../../src/core/round';
+import { ROUND_RULES_V0, novaReady, roundState, stepRound, type RoundState } from '../../src/core/round';
 
 export interface BotContext {
   level: LevelDef;
   planet: Planet;
+  state?: RoundState;
   turn: number;
   nova: boolean;
   labLevel: number;
@@ -19,8 +20,8 @@ export interface BotPolicy {
 }
 
 function oneStep(context: BotContext): number {
-  const { level, planet, turn, nova, labLevel } = context;
-  const state = roundState(planet, level.nova);
+  const { level, turn, nova, labLevel } = context;
+  const state = context.state ?? roundState(context.planet, level.nova);
   let best = -Infinity;
   let aim = 0;
   for (let sector = 0; sector < SECTORS; sector++) {
@@ -66,6 +67,7 @@ export interface PlayResult {
   halfStars: number;
   scoreMet: boolean;
   goalsMet: boolean;
+  novas: number;
 }
 
 export function playLevel(level: LevelDef, policy: BotPolicy, random: () => number): PlayResult {
@@ -73,15 +75,18 @@ export function playLevel(level: LevelDef, policy: BotPolicy, random: () => numb
   let halfStars = 0;
   let throws = level.throws;
   let gifts = 0;
+  let novas = 0;
   for (let turn = 0; turn < throws; turn++) {
-    const nova = state.charge >= NOVA_CHARGE;
-    const aim = policy.chooseAim({ level, planet: state.planet, turn, nova, labLevel: policy.labLevel, random });
-    state = stepRound(
+    const nova = novaReady(state);
+    const aim = policy.chooseAim({ level, planet: state.planet, state, turn, nova, labLevel: policy.labLevel, random });
+    const step = stepRound(
       state,
       { kind: level.queue[turn], sector: ((aim % SECTORS) + SECTORS) % SECTORS, nova },
       { ...NO_MODIFIERS, lab: { [level.queue[turn]]: policy.labLevel } },
       ROUND_RULES_V0,
-    ).state;
+    );
+    state = step.state;
+    if (step.novaFired) novas++;
     if (turn + 1 === Math.floor(level.throws / 2)) halfStars = starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level);
     if (level.n <= 3 && turn + 1 === throws && starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level) === 0) {
       if (gifts < 2) {
@@ -98,6 +103,7 @@ export function playLevel(level: LevelDef, policy: BotPolicy, random: () => numb
     halfStars,
     scoreMet: starsFor(score, level.stars) > 0,
     goalsMet: goalsMet(state.planet, level.goals),
+    novas,
   };
 }
 
@@ -111,6 +117,7 @@ export interface PlanetMetrics {
   halfThreeStar: number;
   scoreMet: number;
   goalMetWhenScoreMet: number;
+  novas: number;
 }
 
 export function runPlanet(n: number, policy: BotPolicy, runs: number, salt?: number): PlanetMetrics {
@@ -120,9 +127,11 @@ export function runPlanet(n: number, policy: BotPolicy, runs: number, salt?: num
   let halfThreeStars = 0;
   let scoreMet = 0;
   let goalMetWhenScoreMet = 0;
+  let novas = 0;
   for (let run = 0; run < runs; run++) {
     // The same bot decisions compare an original layout with its shadow seeds.
     const result = playLevel(level, policy, rngFrom(`sim-${policy.name}-${n}-${run}`));
+    novas += result.novas;
     if (result.stars === 0) failures++;
     if (result.stars === 3) threeStars++;
     if (result.halfStars === 3) halfThreeStars++;
@@ -141,6 +150,7 @@ export function runPlanet(n: number, policy: BotPolicy, runs: number, salt?: num
     halfThreeStar: halfThreeStars / runs,
     scoreMet,
     goalMetWhenScoreMet,
+    novas: novas / runs,
   };
 }
 
@@ -161,6 +171,7 @@ export interface BandMetrics {
   fail: number;
   threeStar: number;
   attemptsPerClear: number;
+  novas?: number;
 }
 
 export function summarizeBands(planets: PlanetMetrics[], policy: string): BandMetrics[] {
@@ -180,6 +191,7 @@ export function summarizeBands(planets: PlanetMetrics[], policy: string): BandMe
         fail: failures / totalRuns,
         threeStar: group.reduce((sum, planet) => sum + planet.threeStar * planet.runs, 0) / totalRuns,
         attemptsPerClear: failures === totalRuns ? Infinity : totalRuns / (totalRuns - failures),
+        novas: group.reduce((sum, planet) => sum + planet.novas * planet.runs, 0) / totalRuns,
       });
     }
   }

@@ -4,6 +4,10 @@ import type { Kind, Planet } from '../core/world';
 import { defaultHome, type HomeState } from './homeworld';
 import type { Mail } from './inbox';
 import { UNLOCKS } from './unlocks';
+import { restoreRound, serializeRound, type RoundState } from '../core/round';
+import { ROUND_RULES_V0 } from '../core/round';
+import { LEVEL_SALT, makeLevel } from '../core/levels';
+import type { RoundModifiers } from '../core/modifiers';
 
 export interface GalaxyPlanet {
   n: number;
@@ -26,6 +30,7 @@ export interface Settings {
   music: boolean;
   haptics: boolean;
   reduceMotion: boolean;
+  planetColours: 'classic' | 'clear';
   /** Reminders; off until a grown-up turns them on behind the parental gate. */
   notifications: boolean;
   /** Game Center; off until a grown-up signs in behind the parental gate. */
@@ -41,6 +46,101 @@ export interface Settings {
   /** A digest, never the entered PIN. */
   parentPin: string | null;
   gatePausedUntil: number;
+}
+
+export interface RoundCheckpoint {
+  n: number;
+  seedPrefix?: string;
+  salt?: number;
+  state: RoundState;
+  modifiers: RoundModifiers;
+  throwsLeft: number;
+  throwsUsed: number;
+  throwsTotal: number;
+  qi: number;
+  cur: Kind;
+  next: Kind;
+  score: number;
+  shownScore: number;
+  starsGot: number;
+  rot: number;
+  time: number;
+  timeLeft: number;
+  bossHp: number;
+  shot: {
+    kind: Kind;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    t: number;
+    carry: number;
+    t0: number;
+    rot0: number;
+    trail: { x: number; y: number }[];
+    nova?: boolean;
+  } | null;
+  warmup?: boolean;
+  practiceFirstClear?: boolean;
+  practiceGifts?: number;
+}
+
+function roundFingerprint(n: number, prefix = 'PP', salt?: number): string {
+  const level = makeLevel(n, prefix, { salt });
+  const source = JSON.stringify([level.queue, level.start]);
+  let hash = 2166136261;
+  for (let i = 0; i < source.length; i++) hash = Math.imul(hash ^ source.charCodeAt(i), 16777619);
+  return JSON.stringify([n, prefix, salt ?? (prefix === 'PP' ? (LEVEL_SALT[n] ?? null) : null), ROUND_RULES_V0.version, hash >>> 0]);
+}
+
+/** The core serializer owns rules compatibility; this wrapper keeps scene position. */
+export function saveInterruptedRound(p: Profile, checkpoint: RoundCheckpoint): void {
+  const { state, ...scene } = checkpoint;
+  p.savedRound = JSON.stringify({
+    format: 1,
+    fingerprint: roundFingerprint(checkpoint.n, checkpoint.seedPrefix, checkpoint.salt),
+    round: serializeRound(state),
+    scene,
+  });
+}
+
+export function readInterruptedRound(p: Profile): RoundCheckpoint | null {
+  if (!p.savedRound) return null;
+  try {
+    const saved = JSON.parse(p.savedRound) as { format: number; fingerprint: string; round: string; scene: Omit<RoundCheckpoint, 'state'> };
+    const state = saved.format === 1 && typeof saved.round === 'string' ? restoreRound(saved.round) : null;
+    const s = saved.scene;
+    if (
+      !state ||
+      !s ||
+      !Number.isInteger(s.n) ||
+      s.n < 1 ||
+      s.n > p.level ||
+      !Number.isInteger(s.qi) ||
+      s.qi < 0 ||
+      !Number.isFinite(s.throwsLeft) ||
+      !Number.isFinite(s.throwsUsed) ||
+      !Number.isFinite(s.throwsTotal) ||
+      !Number.isFinite(s.score) ||
+      !Number.isFinite(s.rot) ||
+      !Number.isFinite(s.time) ||
+      typeof s.cur !== 'string' ||
+      typeof s.next !== 'string' ||
+      !s.modifiers ||
+      (s.seedPrefix !== undefined && (!/^[a-z0-9_-]{1,40}$/i.test(s.seedPrefix) || s.seedPrefix.includes('..'))) ||
+      (s.salt !== undefined && !Number.isInteger(s.salt))
+    )
+      throw new Error('Invalid round checkpoint');
+    if (saved.fingerprint !== roundFingerprint(s.n, s.seedPrefix, s.salt)) throw new Error('Level changed');
+    return { ...s, state };
+  } catch {
+    p.savedRound = undefined;
+    return null;
+  }
+}
+
+export function clearInterruptedRound(p: Profile): void {
+  p.savedRound = undefined;
 }
 
 export interface Stats {
@@ -105,6 +205,8 @@ export interface Profile {
   chapters: number[];
   dailyPlanet: { day: string; best: number; stars: number; rewarded: boolean };
   settings: Settings;
+  /** An interrupted campaign round, including its rules version. */
+  savedRound?: string;
   tutorial: boolean;
   meta: { installed: number; lastSeen: number; sessions: number; rated: boolean; starterOffered: boolean; notifAsked: boolean };
   stats: Stats;
@@ -218,6 +320,7 @@ export function defaultProfile(now = Date.now()): Profile {
       music: true,
       haptics: true,
       reduceMotion: false,
+      planetColours: 'classic',
       notifications: false,
       gameCenter: false,
       lang: '',
@@ -230,6 +333,7 @@ export function defaultProfile(now = Date.now()): Profile {
       gatePausedUntil: 0,
     },
     tutorial: false,
+    savedRound: undefined,
     meta: { installed: now, lastSeen: now, sessions: 0, rated: false, starterOffered: false, notifAsked: false },
     stats: {
       throws: 0,

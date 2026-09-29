@@ -1,9 +1,94 @@
 // Procedural planet renderer: smooth terrain, water, props, clouds and lighting.
 import { BIOMES, SECTORS, type Planet, type Sector } from '../../core/world';
+import { landColor, type PlanetPalette } from '../../core/palette';
 import { drawProps } from './props';
 import { shade } from './color';
 
 type G = CanvasRenderingContext2D;
+
+let activePalette: PlanetPalette = 'classic';
+export function setPlanetPalette(palette: PlanetPalette): void {
+  activePalette = palette;
+}
+
+const fullScreenFlashes: number[] = [];
+/** Shared gate for any full-screen flash effect: at most three in one second. */
+export function allowFullScreenFlash(now = performance.now()): boolean {
+  while (fullScreenFlashes.length && now - fullScreenFlashes[0] >= 1000) fullScreenFlashes.shift();
+  if (fullScreenFlashes.length >= 3) return false;
+  fullScreenFlashes.push(now);
+  return true;
+}
+
+type Marker = 'waves' | 'dots' | 'peaks' | 'lines' | 'rings' | 'rays';
+const LAND_MARKERS: Record<Sector['biome'], { shape: Marker; count: number }> = {
+  barren: { shape: 'lines', count: 1 },
+  ocean: { shape: 'waves', count: 1 },
+  reef: { shape: 'waves', count: 2 },
+  icesheet: { shape: 'rays', count: 1 },
+  springs: { shape: 'rings', count: 2 },
+  meadow: { shape: 'dots', count: 2 },
+  forest: { shape: 'peaks', count: 1 },
+  jungle: { shape: 'peaks', count: 2 },
+  mountain: { shape: 'peaks', count: 3 },
+  highland: { shape: 'lines', count: 2 },
+  desert: { shape: 'dots', count: 1 },
+  savanna: { shape: 'lines', count: 3 },
+  tundra: { shape: 'rays', count: 2 },
+  taiga: { shape: 'rays', count: 3 },
+  swamp: { shape: 'rings', count: 1 },
+  marsh: { shape: 'dots', count: 3 },
+  volcano: { shape: 'rings', count: 3 },
+};
+
+function drawLandMarker(g: G, biome: Sector['biome'], x: number, y: number, size: number) {
+  const { shape, count } = LAND_MARKERS[biome];
+  g.save();
+  g.translate(x, y);
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  const path = new Path2D();
+  for (let n = 0; n < count; n++) {
+    const dx = (n - (count - 1) / 2) * size * 0.67;
+    if (shape === 'waves') {
+      path.moveTo(dx - size * 0.28, -size * 0.2);
+      path.quadraticCurveTo(dx, -size * 0.55, dx + size * 0.28, -size * 0.2);
+      path.moveTo(dx - size * 0.28, size * 0.25);
+      path.quadraticCurveTo(dx, -size * 0.1, dx + size * 0.28, size * 0.25);
+    } else if (shape === 'peaks') {
+      path.moveTo(dx - size * 0.3, size * 0.3);
+      path.lineTo(dx, -size * 0.4);
+      path.lineTo(dx + size * 0.3, size * 0.3);
+    } else if (shape === 'dots' || shape === 'rings') {
+      path.moveTo(dx + size * 0.19, 0);
+      path.arc(dx, 0, size * 0.19, 0, Math.PI * 2);
+    } else if (shape === 'rays') {
+      path.moveTo(dx, -size * 0.35);
+      path.lineTo(dx, size * 0.35);
+      path.moveTo(dx - size * 0.3, 0);
+      path.lineTo(dx + size * 0.3, 0);
+    } else {
+      path.moveTo(dx - size * 0.22, -size * 0.3);
+      path.lineTo(dx + size * 0.22, size * 0.3);
+    }
+  }
+  g.strokeStyle = '#17152a';
+  g.lineWidth = Math.max(2, size * 0.28);
+  g.stroke(path);
+  g.strokeStyle = '#ffffff';
+  g.lineWidth = Math.max(1, size * 0.14);
+  g.stroke(path);
+  if (shape === 'dots') {
+    g.fillStyle = '#ffffff';
+    for (let n = 0; n < count; n++) {
+      const dx = (n - (count - 1) / 2) * size * 0.67;
+      g.beginPath();
+      g.arc(dx, 0, size * 0.19, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  g.restore();
+}
 
 /** Surface radius factor for a sector (1 = planet radius). Shared with hit tests. */
 export function surfaceK(s: Sector) {
@@ -86,7 +171,8 @@ export function renderPlanet(g: G, p: Planet, v: PlanetView) {
     const s = p.sectors[i];
     const B = BIOMES[s.biome];
     const a0 = rot + i * STEP;
-    g.fillStyle = B.color;
+    const color = landColor(s.biome, activePalette);
+    g.fillStyle = color;
     g.beginPath();
     g.moveTo(cx, cy);
     g.arc(cx, cy, R * 1.3, a0 - 0.01, a0 + STEP + 0.01);
@@ -95,7 +181,7 @@ export function renderPlanet(g: G, p: Planet, v: PlanetView) {
     if (B.sea) {
       // lighter shallows near the surface
       const r = R * surfaceK(s);
-      g.fillStyle = shade(B.color, 0.25);
+      g.fillStyle = shade(color, 0.25);
       g.beginPath();
       g.arc(cx, cy, r, a0 - 0.01, a0 + STEP + 0.01);
       g.arc(cx, cy, r - R * 0.05, a0 + STEP + 0.01, a0 - 0.01, true);
@@ -162,12 +248,20 @@ export function renderPlanet(g: G, p: Planet, v: PlanetView) {
   g.stroke();
   g.restore();
 
+  if (activePalette === 'clear' && !v.simple && R >= 60) {
+    for (let i = 0; i < SECTORS; i++) {
+      const a = rot + (i + 0.5) * STEP;
+      const r = R * Math.min(0.85, surfaceK(p.sectors[i]) - 0.08);
+      drawLandMarker(g, p.sectors[i].biome, cx + Math.cos(a) * r, cy + Math.sin(a) * r, Math.max(4, R * 0.072));
+    }
+  }
+
   // grassy / sandy lip along the surface
   g.lineWidth = Math.max(1.5, R * 0.03);
   g.lineJoin = 'round';
   for (let i = 0; i < SECTORS; i++) {
     const B = BIOMES[p.sectors[i].biome];
-    g.strokeStyle = shade(B.color, B.sea ? 0.5 : 0.28);
+    g.strokeStyle = shade(landColor(p.sectors[i].biome, activePalette), B.sea ? 0.5 : 0.28);
     g.beginPath();
     for (let k = 0; k <= 6; k++) {
       const a = rot + (i + k / 6) * STEP;

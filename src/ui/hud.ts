@@ -1,6 +1,5 @@
 import { ledger } from '../meta/ledger';
 import { type BiomeId, BIOMES, KINDS, SPECIES_BY_ID, type Kind } from '../core/world';
-import { FINISH_DUST_PER_THROW } from '../meta/tuning';
 import { goalProgress, goalsMet, starsFor, type Goal } from '../core/levels';
 import { h, btn, fmt, modal } from './dom';
 import { icon } from './icons';
@@ -17,6 +16,7 @@ import { COACH_EVENTS, practiceHelp, type CoachEvent } from '../meta/coach';
 import type { Unlock } from '../meta/unlocks';
 
 import type { LevelScene } from './game';
+import { previewStep, novaReady } from '../core/round';
 
 export function buildHud(scene: LevelScene) {
   scene.hudThrows = h('div', { class: 'hud-throws' });
@@ -36,7 +36,7 @@ export function buildHud(scene: LevelScene) {
     scene.swap();
   });
   scene.descEl = h('div', { class: 'obj-desc' });
-  scene.goalsEl = h('div', { class: `goals${scene.L.goals.length ? '' : ' hidden'}` });
+  scene.goalsEl = h('div', { class: `goals${scene.L.goals.length ? '' : ' hidden'}`, style: 'pointer-events:auto' });
   scene.hintEl = h('div', { class: 'hint' }, h('div', { class: 'hint-hand' }, '👆'), h('div', null, t('Pull back & release to fling')));
   const twist = scene.L.twist !== 'none' ? h('div', { class: 'twist' }, scene.twistLabel()) : null;
   scene.finishEl = h(
@@ -78,7 +78,7 @@ export function buildHud(scene: LevelScene) {
       { class: 'hud-bottom' },
       h(
         'div',
-        { class: 'queue' },
+        { class: 'queue sr-only' },
         scene.curEl,
         h('div', { class: 'next-wrap' }, scene.nextEl, h('div', { class: 'swap-lbl' }, t('tap to swap'))),
       ),
@@ -174,7 +174,7 @@ export function checkStars(scene: LevelScene) {
   haptic.success();
   if (got === 3) {
     scene.confetti();
-    scene.popup(scene.cx, scene.cy - scene.R * 1.9, t('★★★ Perfect planet!'), '#ffd84a', 24, 2);
+    scene.popup(scene.cx, scene.cy - scene.R * 1.9, t('★★★ Perfect planet!'), '#ffd84a', 24, 2, 3);
   }
   scene.renderFinish();
   const s = scene.hudStars[got - 1];
@@ -191,6 +191,52 @@ export function goalIcon(scene: LevelScene, g: Goal) {
   return g.type === 'species' ? critterCanvas(g.id, 26) : h('span', { class: 'gi' }, BIOMES[g.id as BiomeId].deco || '⬤');
 }
 
+export function showGoalRecipe(scene: LevelScene, goal: Goal) {
+  if (scene.ended || scene.finishing || scene.exitK > 0) return;
+  const species = goal.type === 'species' ? SPECIES_BY_ID[goal.id] : null;
+  const biome = goal.type === 'biome' ? BIOMES[goal.id as BiomeId] : null;
+  const name = t(species?.name ?? biome!.name);
+  const home = species?.home ?? [];
+  const a = home[0] && t(BIOMES[home[0]].name);
+  const b = home[1] && t(BIOMES[home[1]].name);
+  const c = home[2] && t(BIOMES[home[2]].name);
+  const recipe =
+    c && a && b
+      ? t('{a} between {b} and {c}', { a, b, c })
+      : a && b
+        ? t('{a} next to {b}', { a, b })
+        : t(species?.hint ?? biome?.recipe ?? '');
+  const note = h('p', { class: 'muted' });
+  const sheet = modal([
+    h('div', { class: 'm-title' }, name),
+    h(
+      'div',
+      { class: 'recipe-icons' },
+      ...(home.length ? home : biome ? [biome.id] : []).map((id) => h('span', { title: t(BIOMES[id].name) }, BIOMES[id].deco || '●')),
+    ),
+    h('p', null, recipe),
+    note,
+    btn(t('Show me where'), 'primary wide', () => {
+      const before = goalProgress(scene.planet, goal);
+      const sectors = scene.planet.sectors.flatMap((_, sector) => {
+        const next = previewStep(
+          scene.roundState(),
+          { kind: scene.cur, sector, nova: scene.novaOn && novaReady(scene.roundState()) && !scene.nova.held },
+          scene.roundModifiers(),
+        );
+        return goalProgress(next.state.planet, goal) > before ? [sector] : [];
+      });
+      if (!sectors.length) {
+        note.textContent = t('Try a different object');
+        speak(scene, note.textContent);
+      } else {
+        scene.goalPulse = { sectors, until: scene.time + 3 };
+        sheet.close();
+      }
+    }),
+  ]);
+}
+
 export function renderGoals(scene: LevelScene) {
   if (!scene.L.goals.length) return;
   scene.goalsEl.replaceChildren(
@@ -200,8 +246,15 @@ export function renderGoals(scene: LevelScene) {
       const done = have >= g.count;
       const name = g.type === 'species' ? t(SPECIES_BY_ID[g.id].name) : t(BIOMES[g.id as BiomeId].name);
       return h(
-        'span',
-        { class: `goal${done ? ' done' : ''}`, title: name },
+        'button',
+        {
+          class: `goal${done ? ' done' : ''}`,
+          title: name,
+          type: 'button',
+          'aria-label': t('Goal: {name}', { name }),
+          onclick: () => showGoalRecipe(scene, g),
+          disabled: scene.ended || scene.finishing,
+        },
         scene.goalIcon(g),
         h('b', null, done ? '✓' : `${have}/${g.count}`),
       );
@@ -220,7 +273,7 @@ export function renderGoals(scene: LevelScene) {
     const message = all ? t('All goals complete!') : t('Goal complete!');
     speak(scene, scene.starsGot > previousStars ? `${message} ${tp(scene.starsGot, '{n} star earned', '{n} stars earned')}` : message);
     setTimeout(() => {
-      scene.popup(scene.cx, scene.cy - scene.R * 1.6, all ? t('All goals complete!') : t('Goal complete!'), '#9dffb0', 24, 1.6);
+      scene.popup(scene.cx, scene.cy - scene.R * 1.6, all ? t('All goals complete!') : t('Goal complete!'), '#9dffb0', 24, 1.6, 3);
       sfx.star(all ? 2 : 0);
       haptic.success();
     }, 500);
@@ -239,20 +292,18 @@ export function renderFinish(scene: LevelScene) {
   const show = now > 0 && scene.throwsLeft > 0 && !scene.ended && !scene.finishing;
   scene.finishEl.classList.toggle('hidden', !show);
   scene.finishEl.classList.toggle('hot', now >= 3);
-  (scene.finishEl.lastChild as HTMLElement).textContent = t('+✨{d} for {n} left', {
-    d: scene.throwsLeft * FINISH_DUST_PER_THROW,
-    n: scene.throwsLeft,
-  });
+  (scene.finishEl.lastChild as HTMLElement).textContent = t('Unused throws add stardust');
 }
 
 export function finishEarly(scene: LevelScene) {
   if (scene.shot || scene.ended || scene.finishing || scene.modalOpen || scene.starsNow() === 0) return;
   scene.finishing = true;
+  scene.goalsEl.style.pointerEvents = 'none';
   clearTimeout(scene.endTimer);
   scene.renderFinish();
   const n = scene.throwsLeft;
   sfx.whoosh();
-  for (let k = 0; k < n; k++) {
+  for (let k = 0; !scene.o.reduceMotion && k < Math.min(3, n); k++) {
     setTimeout(
       () => {
         if (scene.ended) return;
@@ -261,15 +312,14 @@ export function finishEarly(scene: LevelScene) {
         const y = scene.cy + Math.sin(a) * scene.R * 1.05;
         scene.burst(x, y, '#ffd76a', 16, 5);
         scene.ring(x, y, '#ffd76a', scene.R * 0.5);
-        scene.popup(x, y - 12, `+✨${FINISH_DUST_PER_THROW}`, '#ffd76a', 18);
-        scene.throwsLeft--;
-        scene.renderHud();
         sfx.coin();
         haptic.tick();
       },
-      120 + k * 160,
+      80 + k * 120,
     );
   }
+  scene.throwsLeft = 0;
+  scene.renderHud();
   const done = () => {
     if (scene.ended) return;
     if (scene.paused) return void setTimeout(done, 300);
@@ -277,7 +327,7 @@ export function finishEarly(scene: LevelScene) {
     scene.leftover = n;
     scene.endModal(scene.starsNow());
   };
-  setTimeout(done, 400 + n * 160);
+  setTimeout(done, 560);
 }
 
 export function swap(scene: LevelScene) {
@@ -302,7 +352,7 @@ export function announce(scene: LevelScene, id: string, at: number, firstArrival
   sfx.creature(rare || isNew);
   haptic.success();
   scene.burst(x, y, rare ? '#ffd84a' : '#ffffff', rare ? 40 : 20, rare ? 7 : 4);
-  scene.popup(x, y - 16, `${t(sp.name)}${isNew ? t(' — NEW!') : ''}`, rare ? '#ffd84a' : '#e0f7ff', rare ? 20 : 16, 2.2);
+  scene.popup(x, y - 16, `${t(sp.name)}${isNew ? t(' — NEW!') : ''}`, rare ? '#ffd84a' : '#e0f7ff', rare ? 20 : 16, 2.2, isNew ? 3 : 2);
   if (isNew) {
     scene.o.seen.add(id);
     scene.o.onNewSpecies(id);
@@ -408,6 +458,18 @@ export function showCoach(scene: LevelScene, k: number) {
   revealCoach(scene);
 }
 
+export function showNovaHoldTip(scene: LevelScene) {
+  if (scene.L.n < 24 || !scene.novaOn || scene.nova.charge < scene.nova.threshold) return;
+  try {
+    if (localStorage.getItem('pp.coach.nova-hold')) return;
+    localStorage.setItem('pp.coach.nova-hold', '1');
+  } catch {
+    // A private session can still show the tip.
+  }
+  scene.coachEl.replaceChildren(h('span', { class: 'coach-ic' }, '✨'), h('span', null, t('Tap the glowing ring to save your Supernova.')));
+  revealCoach(scene);
+}
+
 function revealCoach(scene: LevelScene) {
   const hud = scene.coachEl.closest('.hud');
   const banners = scene.coachEl.parentElement;
@@ -457,7 +519,7 @@ export function introCard(scene: LevelScene, row: Unlock) {
   shownIntros.add(row.id);
   scene.o.onIntro?.(row.id);
   const kind = row.id in KINDS ? (row.id as Kind) : null;
-  const focus = row.id === 'goals' ? scene.goalsEl : row.id === 'supernova' ? scene.curEl : kind ? scene.curEl : null;
+  const focus = row.id === 'goals' ? scene.goalsEl : null;
   scene.paused = true;
   const m = modal(
     [
@@ -470,6 +532,7 @@ export function introCard(scene: LevelScene, row: Unlock) {
           focus.classList.add('coach-focus');
           window.setTimeout(() => focus.classList.remove('coach-focus'), 3000);
         }
+        if (row.id === 'supernova' || kind) scene.focusTarget = { kind: row.id === 'supernova' ? 'ring' : 'queue', until: scene.time + 3 };
       }),
     ],
     { onClose: () => ((scene.paused = false), (scene.modalOpen = null)) },
@@ -525,15 +588,7 @@ export function endModal(scene: LevelScene, stars: number) {
       ),
       h('div', { class: 'end-stars' }, ...[0, 1, 2].map((i) => h('span', { class: i < stars ? 'on' : '' }, '★'))),
       h('div', { class: 'end-score' }, t('{n} life', { n: fmt(scene.score) })),
-      scene.leftover
-        ? h(
-            'p',
-            { class: 'end-need' },
-            tp(scene.leftover, 'Meteor finale: +✨{d} for {n} unused throw', 'Meteor finale: +✨{d} for {n} unused throws', {
-              d: scene.leftover * FINISH_DUST_PER_THROW,
-            }),
-          )
-        : null,
+      scene.leftover ? h('p', { class: 'end-need' }, t('Unused throws became stardust')) : null,
       need > 0 && !scene.leftover && !canCont ? h('p', { class: 'end-need' }, t('Just {n} life short of a star.', { n: fmt(need) })) : null,
       missingEl,
       won || scene.o.competitive || scene.o.timeLimit
@@ -573,6 +628,7 @@ export function endModal(scene: LevelScene, stars: number) {
 export function finish(scene: LevelScene, stars: number) {
   if (scene.ended) return;
   scene.ended = true;
+  scene.goalsEl.style.pointerEvents = 'none';
   if (!scene.o.endless) {
     if (stars === 0) ledger.count('round_failed');
     ledger.count(
@@ -598,16 +654,26 @@ export function finish(scene: LevelScene, stars: number) {
       boss: scene.L.twist === 'boss' && scene.bossHp <= 0,
     });
   if (stars === 0 || scene.o.reduceMotion || scene.o.endless) return send();
-  // the finished planet shrinks and flies up to join your galaxy
+  // The finished planet and its creatures travel home together.
   sfx.whoosh();
   scene.el.querySelector('.hud')?.classList.add('fade-out');
   const t0 = performance.now();
+  const duration = scene.L.n <= 3 ? 2000 : 1500;
+  let sent = false;
+  const finishTally = () => {
+    if (sent) return;
+    sent = true;
+    scene.canvas.removeEventListener('pointerdown', finishTally);
+    cancelAnimationFrame(scene.exitRaf);
+    send();
+  };
+  scene.canvas.addEventListener('pointerdown', finishTally, { once: true });
   const step = (now: number) => {
-    scene.exitK = Math.min(1, (now - t0) / 750);
-    if (Math.random() < 0.8) scene.burst(scene.cx, scene.cy + scene.R, '#ffd76a', 2, 2);
+    scene.exitK = Math.min(1, (now - t0) / duration);
+    if (Math.random() < 0.4) scene.burst(scene.cx, scene.cy + scene.R, '#ffd76a', 2, 2);
     if (scene.destroyed) return;
     if (scene.exitK < 1) scene.exitRaf = requestAnimationFrame(step);
-    else send();
+    else finishTally();
   };
   scene.exitRaf = requestAnimationFrame(step);
 }
@@ -654,7 +720,9 @@ export function pause(scene: LevelScene) {
 }
 
 export function afterShot(scene: LevelScene) {
+  scene.ghosts = scene.ghosts.filter((ghost) => scene.throwsUsed - ghost.throw < 3);
   scene.renderHud();
+  scene.onResolvedThrow?.();
   if (scene.o.endless) return;
   if (scene.over) {
     clearTimeout(scene.endTimer);

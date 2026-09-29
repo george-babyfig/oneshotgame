@@ -23,7 +23,9 @@ import {
   makeLevel,
   type LevelDef,
 } from '../src/core/levels';
-import { SECTORS, clonePlanet, impact, lifeScore, novaCharge, type Kind, type Planet } from '../src/core/world';
+import { SECTORS, lifeScore, type Kind, type Planet } from '../src/core/world';
+import { novaReady, roundState, stepRound } from '../src/core/round';
+import { NO_MODIFIERS } from '../src/core/modifiers';
 import { challengeLevel, dailyLevel, rushLevel, zenLevel } from '../src/meta/modes';
 import { VOYAGE_LEN, voyageBase, voyageLevel } from '../src/meta/voyage';
 
@@ -170,26 +172,24 @@ function modeRows(): Row[] {
  * are the solver's real line of play: best `after` wins, first sector on ties.
  */
 function greedyMoves(start: Planet, queue: Kind[], throws: number, splash = 0, novaEnabled = true) {
-  const p = clonePlanet(start);
+  let state = roundState(start, novaEnabled);
   const moves: [Kind, number, boolean][] = [];
-  let charge = 0;
   for (let t = 0; t < throws; t++) {
     const kind = queue[t];
-    const boost = { nova: novaEnabled && charge >= NOVA_CHARGE };
+    const nova = novaReady(state);
     let best = -1;
     let bestAt = 0;
     for (let i = 0; i < SECTORS; i++) {
-      const r = impact(clonePlanet(p), kind, i, splash, boost);
+      const r = stepRound(state, { kind, sector: i }, { ...NO_MODIFIERS, splash });
       if (r.after > best) {
         best = r.after;
         bestAt = i;
       }
     }
-    const res = impact(p, kind, bestAt, splash, boost);
-    moves.push([kind, bestAt, !!boost.nova]);
-    charge = boost.nova ? 0 : novaEnabled ? Math.min(NOVA_CHARGE, charge + novaCharge(res.changed.length, res.spawned.length)) : 0;
+    state = stepRound(state, { kind, sector: bestAt }, { ...NO_MODIFIERS, splash }).state;
+    moves.push([kind, bestAt, nova]);
   }
-  return { moves, planet: p };
+  return { moves, planet: state.planet };
 }
 
 function greedyRows(): Row[] {

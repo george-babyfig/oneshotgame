@@ -12,7 +12,18 @@ import { LevelScene, type LevelResult, type SceneOpts } from './game';
 import { makeLevel, type LevelDef } from '../core/levels';
 import { modifiersFor, type RoundMode } from '../core/modifiers';
 import { KINDS, type Kind } from '../core/world';
-import { loadProfile, saveProfile, saveProfileChecked, today, type Profile } from '../meta/profile';
+import {
+  clearInterruptedRound,
+  loadProfile,
+  readInterruptedRound,
+  saveInterruptedRound,
+  saveProfile,
+  saveProfileChecked,
+  today,
+  type Profile,
+  type RoundCheckpoint,
+} from '../meta/profile';
+import { setPlanetPalette } from './art/planet';
 import { createIap, type IapEvent, type StorePrice } from '../meta/iap';
 import { PRODUCT_BY_ID, PRODUCT_BY_KEY, SKINS, type BoosterId } from '../meta/config';
 import { clearFails, continueAllowed, countsAsFail, recordFail } from '../meta/continues';
@@ -54,7 +65,7 @@ import { showCollection } from './screens/collection';
 import { showFieldGuide } from './screens/fieldguide';
 import { showPassport } from './screens/passport';
 import { showHomeworld } from './screens/homeworld';
-import { parentalGate } from './flows/gate';
+import { bindGateProfile, parentalGate } from './flows/gate';
 import { contentsSheet } from './flows/contents';
 import { receiptCard } from './flows/receipt';
 import { inboxFlow } from './flows/inbox';
@@ -161,6 +172,7 @@ export class App {
     });
     this.root.addEventListener('pointercancel', () => (swipeX = -1));
     this.p = await loadProfile();
+    bindGateProfile(this.p);
     await loadLedger();
     ledger.count('app_open');
     this.p.meta.sessions++;
@@ -180,6 +192,7 @@ export class App {
     if (Capacitor.isNativePlatform()) {
       StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
       CapApp.addListener('pause', () => {
+        this.checkpointRound(true);
         this.p.meta.lastSeen = Date.now();
         saveProfile(this.p);
         scheduleReminders(this.p);
@@ -200,6 +213,7 @@ export class App {
     }
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) return;
+      this.checkpointRound(true);
       this.p.meta.lastSeen = Date.now();
       saveProfile(this.p);
     });
@@ -220,7 +234,9 @@ export class App {
       })
       .then(() => this.reconcilePurchases())
       .catch(() => {});
-    if (!this.p.tutorial) {
+    const saved = readInterruptedRound(this.p);
+    if (saved) this.startLevel(saved.n, { resume: saved });
+    else if (!this.p.tutorial) {
       if (this.p.meta.sessions === 1) titleBeat(this, () => this.startLevel(1, { tutorial: true }));
       else this.startLevel(1, { tutorial: true });
     } else this.showHome();
@@ -238,6 +254,7 @@ export class App {
     setAudio(this.p.settings.sound, this.p.settings.music);
     setHaptics(this.p.settings.haptics);
     setTextSize(this.p.settings.textSize);
+    setPlanetPalette(this.p.settings.planetColours);
     document.documentElement.classList.toggle('reduce-motion', this.p.settings.reduceMotion);
   }
 
@@ -249,6 +266,41 @@ export class App {
   saveNow() {
     clearTimeout(this.saveTimer);
     return saveProfile(this.p);
+  }
+
+  private checkpointRound(pause = false) {
+    const scene = this.screen === 'level' ? this.scene : null;
+    if (!scene || scene.ended || scene.finishing || scene.o.competitive || scene.o.endless || scene.o.timeLimit) return;
+    saveInterruptedRound(this.p, {
+      n: scene.L.n,
+      seedPrefix: scene.L.seed.match(/^(.*)-(\d+)(?:~-?\d+)?$/)?.[1] ?? 'PP',
+      salt: Number(scene.L.seed.match(/~(-?\d+)$/)?.[1]) || undefined,
+      state: scene.roundState(),
+      modifiers: scene.roundModifiers(),
+      throwsLeft: scene.throwsLeft,
+      throwsUsed: scene.throwsUsed,
+      throwsTotal: scene.throwsTotal,
+      qi: scene.qi,
+      cur: scene.cur,
+      next: scene.next,
+      score: scene.score,
+      shownScore: scene.shownScore,
+      starsGot: scene.starsGot,
+      rot: scene.rot,
+      time: scene.time,
+      timeLeft: scene.timeLeft,
+      bossHp: scene.bossHp,
+      shot: scene.shot,
+      warmup: !!scene.o.practice,
+      practiceFirstClear: !!scene.o.practiceFirstClear,
+      practiceGifts: scene.practiceGifts,
+    });
+    this.saveNow();
+    if (pause) {
+      scene.paused = true;
+      scene.aimFrom = scene.aimTo = null;
+      if (!scene.modalOpen) scene.pause();
+    }
   }
 
   mount(el: HTMLElement, name: ScreenName, teardown: (() => void) | null = null) {
@@ -678,7 +730,11 @@ export class App {
               addTokens(this.p, n);
               return n;
             },
-      onQuit: () => this.showHome(),
+      onQuit: () => {
+        clearInterruptedRound(this.p);
+        this.save();
+        this.showHome();
+      },
       season: seasonOf(new Date(), this.p.settings.hemi),
       festAcc: festivalActive(this.p) ? ensureFestival(this.p).acc : undefined,
       buddy: currentBuddy(this.p, festivalActive(this.p) ? ensureFestival(this.p).acc : undefined),
@@ -701,15 +757,21 @@ export class App {
     };
   }
 
-  startLevel(n: number, o: { tutorial?: boolean; warmup?: boolean; boosters?: Boosters; level?: LevelDef } = {}) {
-    const L = o.level ?? makeLevel(n);
-    this.roundFirstCampaignClear = !o.warmup && n === this.p.level && !this.p.stars[n];
-    const boosters = o.boosters ?? NO_BOOSTERS;
-    if (Object.values(boosters).some(Boolean)) {
+  startLevel(n: number, o: { tutorial?: boolean; warmup?: boolean; boosters?: Boosters; level?: LevelDef; resume?: RoundCheckpoint } = {}) {
+    if (!o.resume && this.p.savedRound) {
+      clearInterruptedRound(this.p);
+      this.save();
+    }
+    const L = o.level ?? makeLevel(n, o.resume?.seedPrefix ?? 'PP', { salt: o.resume?.salt });
+    const warmup = o.resume?.warmup ?? o.warmup;
+    this.roundFirstCampaignClear = o.resume?.practiceFirstClear ?? (!warmup && n === this.p.level && !this.p.stars[n]);
+    const boosters = o.resume?.modifiers.boosters ?? o.boosters ?? NO_BOOSTERS;
+    if (!o.resume && Object.values(boosters).some(Boolean)) {
       ledger.count('boosters_used', Object.values(boosters).filter(Boolean).length);
     }
-    this.p.stats.plays++;
-    const tier = momentumActive(this.p) && !this.p.momentum.paused && !o.warmup ? this.p.momentum.streak : 0;
+    if (!o.resume) this.p.stats.plays++;
+    const tier =
+      o.resume?.modifiers.momentum ?? (momentumActive(this.p) && !this.p.momentum.paused && !warmup ? this.p.momentum.streak : 0);
     const perk = MOMENTUM_PERKS[tier];
     const merged: Boosters = { shower: boosters.shower, spark: boosters.spark || perk.spark, scope: boosters.scope || perk.scope };
     const debut = debutsAt(n).find((entry) => entry.id in KINDS && n > 2 && unlocked(this.p, entry.id));
@@ -732,7 +794,7 @@ export class App {
           this.save();
         },
         momentum: tier,
-        practice: !!o.warmup,
+        practice: !!warmup,
         practiceFirstClear: this.roundFirstCampaignClear,
         coach: COACH[n],
         intro: debut && n === this.p.level ? (debut.id as Kind) : undefined,
@@ -746,13 +808,86 @@ export class App {
       !!o.tutorial || n === 1,
     );
     opts.extraThrows += perk.throws;
+    if (o.resume) {
+      const m = o.resume.modifiers;
+      opts.scopeLevel = m.scopeLevel;
+      opts.splash = m.splash;
+      opts.extraThrows = m.extraThrows;
+      opts.boosters = m.boosters;
+      opts.lab = m.lab;
+      opts.momentum = m.momentum;
+      opts.shower = m.shower;
+      opts.buddy = m.buddy;
+      opts.allowIntro = () => false;
+      opts.coach = undefined;
+      opts.intro = undefined;
+    }
     const scene = new LevelScene(L, opts);
+    if (o.resume) {
+      const s = o.resume;
+      scene.planet = s.state.planet;
+      scene.nova = s.state.nova;
+      scene.bonus = s.state.bonus;
+      scene.regionBests = s.state.regionBests;
+      scene.arrived = new Set(s.state.arrived);
+      scene.throwsLeft = s.throwsLeft;
+      scene.throwsUsed = s.throwsUsed;
+      scene.throwsTotal = s.throwsTotal;
+      scene.qi = s.qi;
+      scene.cur = s.cur;
+      scene.next = s.next;
+      scene.score = s.score;
+      scene.shownScore = s.shownScore;
+      scene.starsGot = s.starsGot;
+      scene.rot = s.rot;
+      scene.time = s.time;
+      scene.timeLeft = s.timeLeft;
+      scene.bossHp = s.bossHp;
+      scene.shot = s.shot;
+      scene.practiceGifts = s.practiceGifts ?? 0;
+      scene.paused = true;
+    }
     this.mount(scene.el, 'level');
     setMusicTheme(chapterTheme(chapterOf(n).n));
     this.scene = scene;
+    scene.onResolvedThrow = () => this.checkpointRound();
+    if (o.resume) {
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          if (this.scene !== scene) return;
+          closeModals();
+          scene.modalOpen = null;
+          const card = modal(
+            [
+              h('div', { class: 'end-title' }, t('Welcome back — your planet is waiting')),
+              btn(t('Resume'), 'primary wide', () => card.close()),
+              btn(t('Leave to galaxy'), 'ghost wide', () => {
+                card.close();
+                scene.ended = true;
+                scene.o.onQuit();
+              }),
+            ],
+            {
+              dismiss: false,
+              onClose: () => {
+                scene.paused = false;
+                scene.modalOpen = null;
+                if (scene.over && !scene.ended) scene.checkEnd();
+              },
+            },
+          );
+          scene.modalOpen = card;
+          scene.renderHud();
+        }),
+      );
+    }
   }
 
   private levelEnded(r: LevelResult) {
+    if (this.p.savedRound) {
+      clearInterruptedRound(this.p);
+      this.save();
+    }
     if (r.throwsUsed === -1) return this.startLevel(r.level.n); // restart: no penalty, same as leaving
     if (!r.won) {
       if (r.level.n >= this.p.level && countsAsFail(r.throwsUsed, r.throwsTotal)) recordFail(this.p, r.level.n);

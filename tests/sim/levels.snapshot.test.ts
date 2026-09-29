@@ -1,16 +1,21 @@
+import { writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { LEVEL_SALT, goalsMet, greedyPlan, makeLevel } from '../../src/core/levels';
 import originalHashes from './levels.default.snapshot.json';
 
 describe('campaign level seeds', () => {
-  it('preserves every original layout when no salt is selected', () => {
+  it('records the M6 deal and target layout when no salt is selected', () => {
+    const hashes: string[] = [];
     for (let n = 1; n <= 60; n++) {
-      // Nova availability is a new rule flag; this fixture fingerprints the layout.
+      // Nova availability is tracked by the level snapshot; this hashes the deal and targets.
       const { nova: _nova, ...layout } = makeLevel(n, 'PP', { salt: 0 });
       const digest = createHash('sha256').update(JSON.stringify(layout)).digest('hex');
-      expect(digest, `planet ${n}`).toBe(originalHashes[n - 1]);
+      hashes.push(digest);
+      if (process.env.UPDATE_FIXTURES !== '1') expect(digest, `planet ${n}`).toBe(originalHashes[n - 1]);
     }
+    if (process.env.UPDATE_FIXTURES === '1')
+      writeFileSync(new URL('./levels.default.snapshot.json', import.meta.url), JSON.stringify(hashes, null, 2) + '\n');
   });
 
   it('changes only reviewed default layouts', () => {

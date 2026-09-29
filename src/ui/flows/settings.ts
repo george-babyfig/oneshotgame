@@ -113,6 +113,18 @@ export function settingsFlow(app: App) {
     }
     app.save();
   });
+  const colours = h(
+    'select',
+    { class: 'lang-select', 'aria-label': t('Planet colours') },
+    h('option', { value: 'classic' }, t('Classic colours')),
+    h('option', { value: 'clear' }, t('Clear colours')),
+  ) as HTMLSelectElement;
+  colours.value = s.planetColours;
+  colours.addEventListener('change', () => {
+    s.planetColours = colours.value === 'clear' ? 'clear' : 'classic';
+    app.applySettings();
+    app.save();
+  });
   const hemi = h(
     'select',
     { class: 'lang-select', 'aria-label': t('Seasons') },
@@ -153,6 +165,7 @@ export function settingsFlow(app: App) {
     tog(t('Reduce motion'), 'reduceMotion'),
     h('label', { class: 'toggle lang' }, t('Language'), lang),
     h('label', { class: 'toggle lang' }, t('Text size'), size),
+    h('label', { class: 'toggle lang' }, t('Planet colours'), colours),
     h('label', { class: 'toggle lang' }, t('Seasons'), hemi),
     btn(t('Field Guide'), 'ghost wide', () => (m.close(), app.showFieldGuide())),
     btn(t('Grown-ups'), 'ghost wide', () => {

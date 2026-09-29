@@ -55,7 +55,7 @@ const CURRENCY = /[$€£¥￥₩₹]|R\$|US\$|\b(?:USD|EUR|GBP|JPY|BRL)\b/;
 /** Price strings straight from the app: the store's localized displays, fallbacks, and Intl formatting of every amount. */
 async function needles(page: Page, loc: LocaleId): Promise<Needles> {
   const out = await page.evaluate(async () => {
-    const { PRODUCTS } = await import('/src/meta/tuning.ts' as string);
+    const { PRODUCTS } = await (window as any).__e2eImport('/src/meta/tuning.ts');
     const a = (window as any).__app;
     const prices = new Set<string>();
     const locales = [navigator.language, 'en-US', 'de-DE', 'fr-FR', 'es-ES', 'pt-BR', 'ja-JP'];
@@ -256,10 +256,10 @@ for (const loc of LOCALES) {
         const a = (window as any).__app;
         a.scene?.modalOpen?.close();
         a.p.gems = 500;
-        const { closeModals } = await import('/src/ui/dom.ts' as string);
+        const { closeModals } = await (window as any).__e2eImport('/src/ui/dom.ts');
         closeModals();
         a.showHome(true);
-        const { awayFlow } = await import('/src/ui/flows/away.ts' as string);
+        const { awayFlow } = await (window as any).__e2eImport('/src/ui/flows/away.ts');
         a.p.meta.lastSeen = Date.now() - 3 * 3600_000;
         awayFlow(a, 3 * 3600_000);
       });
@@ -270,7 +270,7 @@ for (const loc of LOCALES) {
         // nothing to collect after 3 h: try a long absence (the recap card)
         await page.evaluate(async () => {
           const a = (window as any).__app;
-          const { awayFlow } = await import('/src/ui/flows/away.ts' as string);
+          const { awayFlow } = await (window as any).__e2eImport('/src/ui/flows/away.ts');
           awayFlow(a, 8 * 86400_000);
         });
         await expect(away, 'the away card opens').toBeVisible();

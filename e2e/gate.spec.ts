@@ -64,7 +64,7 @@ for (const lang of LANGS) {
         a.p.passport.set = true;
         a.p.meta.sessions = 2;
         a.p.settings.textSize = 'extra-large';
-        const { setTextSize } = await import('/src/ui/flows/settings.ts' as string);
+        const { setTextSize } = await (window as any).__e2eImport('/src/ui/flows/settings.ts');
         setTextSize('extra-large');
         a.save();
         a.showHome(true);

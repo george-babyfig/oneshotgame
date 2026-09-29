@@ -166,6 +166,18 @@ export async function freshInstall(page: Page, opts: { pseudo?: boolean; title?:
     else document.addEventListener('DOMContentLoaded', still);
     // Log every modal (and the first Home view) so journeys can count interruptions.
     const w = window as any;
+    // Import an app module as the SAME instance the app runs: after Vite invalidates a file (e.g. a
+    // translator saving src/locales), the app's imports carry "?t=…" and a bare "/src/…" import would
+    // load a second, unmounted copy. Reuse the URL the page actually loaded.
+    performance.setResourceTimingBufferSize?.(10_000);
+    w.__e2eImport = (path: string) => {
+      const loaded = performance
+        .getEntriesByType('resource')
+        .map((e) => e.name)
+        .filter((n) => new URL(n).pathname === path)
+        .pop();
+      return import(/* @vite-ignore */ loaded ?? path);
+    };
     w.__e2eModals = [];
     w.__e2eHomeAt = null;
     w.__e2eTitle = { shownAt: null, goneAt: null };
@@ -326,7 +338,7 @@ function collectViolations(): Violation[] {
       if (!shown(el)) continue;
       const r = el.getBoundingClientRect();
       // visually hidden screen-reader text (.sr-only live regions) is meant to be 1 px
-      if (el.matches('.sr-only') || (r.width <= 2 && r.height <= 2)) continue;
+      if (el.matches('.sr-only') || el.closest('.sr-only') || (r.width <= 2 && r.height <= 2)) continue;
       const isButton = el.matches('button, [role=button], a[href]');
       const sp = scrollParent(el);
       // 1. nothing outside the viewport (vertical overflow is fine inside a scroller)

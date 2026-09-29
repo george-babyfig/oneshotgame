@@ -113,15 +113,64 @@ export interface KindDef {
   color: string;
   desc: string;
   unlock: number; // level it first appears
+  stats: { element: 'earth' | 'water' | 'life' | 'fire' | 'air' | 'light'; power: number; reach: number; job: string };
 }
 
 export const KINDS: Record<Kind, KindDef> = {
-  rock: { id: 'rock', name: 'Rock', emoji: '🪨', color: '#b8a9c9', desc: 'Raises land', unlock: 1 },
-  ice: { id: 'ice', name: 'Ice Comet', emoji: '☄️', color: '#7fdcff', desc: 'Adds water, cools', unlock: 1 },
-  seed: { id: 'seed', name: 'Seed Pod', emoji: '🌱', color: '#7dff8a', desc: 'Grows life where there is land or water', unlock: 2 },
-  magma: { id: 'magma', name: 'Magma', emoji: '🔥', color: '#ff7a3d', desc: 'Heats up, builds volcanoes, dries water', unlock: 4 },
-  storm: { id: 'storm', name: 'Rain Cloud', emoji: '🌧️', color: '#9fb4ff', desc: 'Light rain over a wide area', unlock: 7 },
-  sun: { id: 'sun', name: 'Sunburst', emoji: '☀️', color: '#ffd84a', desc: 'Warms a wide area and sparks life', unlock: 11 },
+  rock: {
+    id: 'rock',
+    name: 'Rock',
+    emoji: '🪨',
+    color: '#b8a9c9',
+    desc: 'Raises land',
+    unlock: 1,
+    stats: { element: 'earth', power: 2, reach: 1, job: 'Builds tall mountains' },
+  },
+  ice: {
+    id: 'ice',
+    name: 'Ice Comet',
+    emoji: '☄️',
+    color: '#7fdcff',
+    desc: 'Adds water, cools',
+    unlock: 1,
+    stats: { element: 'water', power: 2, reach: 1, job: 'Makes cool water' },
+  },
+  seed: {
+    id: 'seed',
+    name: 'Seed Pod',
+    emoji: '🌱',
+    color: '#7dff8a',
+    desc: 'Grows life where there is land or water',
+    unlock: 2,
+    stats: { element: 'life', power: 2, reach: 1, job: 'Grows strong roots' },
+  },
+  magma: {
+    id: 'magma',
+    name: 'Magma',
+    emoji: '🔥',
+    color: '#ff7a3d',
+    desc: 'Heats up, builds volcanoes, dries water',
+    unlock: 4,
+    stats: { element: 'fire', power: 2, reach: 1, job: 'Builds warm volcanoes' },
+  },
+  storm: {
+    id: 'storm',
+    name: 'Rain Cloud',
+    emoji: '🌧️',
+    color: '#9fb4ff',
+    desc: 'Light rain over a wide area',
+    unlock: 7,
+    stats: { element: 'air', power: 1, reach: 3, job: 'Brings wide rain' },
+  },
+  sun: {
+    id: 'sun',
+    name: 'Sunburst',
+    emoji: '☀️',
+    color: '#ffd84a',
+    desc: 'Warms a wide area and sparks life',
+    unlock: 11,
+    stats: { element: 'light', power: 1, reach: 3, job: 'Brings wide warmth' },
+  },
 };
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -159,9 +208,34 @@ export interface ImpactBoost {
   nova?: boolean;
 }
 
-/** A Supernova adds +1 radius and +1 life everywhere it touches. */
-function applyBoost(p: Planet, at: number, r: number, b: ImpactBoost) {
-  if (b.nova) for (let d = -r; d <= r; d++) touch(p, at + d, (s) => habitable(s) && (s.life += 1));
+/** Repeat the object's main effect across its expanded Supernova reach. */
+function applyBoost(p: Planet, kind: Kind, at: number, splash: number) {
+  const r = Math.min(4, KINDS[kind].stats.reach + splash + 1);
+  for (let d = -r; d <= r; d++)
+    touch(p, at + d, (s) => {
+      switch (kind) {
+        case 'rock':
+          s.land += KINDS.rock.stats.power;
+          break;
+        case 'ice':
+          s.water += KINDS.ice.stats.power;
+          break;
+        case 'seed':
+          if (habitable(s)) s.life += KINDS.seed.stats.power;
+          break;
+        case 'magma':
+          s.heat += KINDS.magma.stats.power;
+          s.land += 1;
+          s.water -= 1;
+          break;
+        case 'storm':
+          s.water += KINDS.storm.stats.power;
+          break;
+        case 'sun':
+          if (habitable(s)) s.life += KINDS.sun.stats.power;
+          break;
+      }
+    });
 }
 
 /**
@@ -208,22 +282,22 @@ export function novaCharge(changed: number, spawned: number, lv = 1) {
 
 /** Mutate sectors for an impact. `splash` = extra neighbour radius (upgrade). */
 function applyKind(p: Planet, kind: Kind, at: number, splash: number) {
-  const r = 1 + splash;
+  const r = KINDS[kind].stats.reach + splash;
   switch (kind) {
     case 'rock':
-      touch(p, at, (s) => (s.land += 2));
+      touch(p, at, (s) => (s.land += KINDS.rock.stats.power));
       for (let d = 1; d <= r; d++) for (const j of [at - d, at + d]) touch(p, j, (s) => (s.land += 1));
       break;
     case 'ice':
       touch(p, at, (s) => {
-        s.water += 2;
+        s.water += KINDS.ice.stats.power;
         s.heat -= 1;
       });
       for (let d = 1; d <= r; d++) for (const j of [at - d, at + d]) touch(p, j, (s) => (s.water += 1));
       break;
     case 'magma':
       touch(p, at, (s) => {
-        s.heat += 2;
+        s.heat += KINDS.magma.stats.power;
         s.land += 1;
         s.water -= 1;
       });
@@ -232,22 +306,22 @@ function applyKind(p: Planet, kind: Kind, at: number, splash: number) {
     case 'seed':
       for (let d = -r; d <= r; d++)
         touch(p, at + d, (s) => {
-          if (habitable(s)) s.life += d === 0 ? 2 : 1;
+          if (habitable(s)) s.life += d === 0 ? KINDS.seed.stats.power : 1;
         });
       break;
     case 'storm':
-      for (let d = -(r + 2); d <= r + 2; d++)
+      for (let d = -r; d <= r; d++)
         touch(p, at + d, (s) => {
-          s.water += 1;
+          s.water += KINDS.storm.stats.power;
           if (s.heat > 0) s.heat -= 1;
           else if (s.heat < 0) s.heat += 1;
         });
       break;
     case 'sun':
-      for (let d = -(r + 2); d <= r + 2; d++)
+      for (let d = -r; d <= r; d++)
         touch(p, at + d, (s) => {
-          s.heat += 1;
-          if (habitable(s)) s.life += 1;
+          s.heat += KINDS.sun.stats.power;
+          if (habitable(s)) s.life += KINDS.sun.stats.power;
         });
       break;
   }
@@ -369,6 +443,17 @@ export const SPECIES: SpeciesDef[] = [
 ];
 
 export const SPECIES_BY_ID: Record<string, SpeciesDef> = Object.fromEntries(SPECIES.map((s) => [s.id, s]));
+
+/** The missing land in a creature's local habitat recipe. */
+export function neededHabitat(id: string, planet: Planet, sector: number): BiomeId | null {
+  const home = SPECIES_BY_ID[id]?.home;
+  if (!home?.length) return null;
+  if (planet.sectors[wrap(sector)].biome !== home[0]) return home[0];
+  const near = [planet.sectors[wrap(sector - 1)].biome, planet.sectors[wrap(sector + 1)].biome];
+  if (home.length === 2) return near.includes(home[1]) ? home[0] : home[1];
+  if (home.length === 3) return home.slice(1).find((biome) => !near.includes(biome)) ?? home[0];
+  return home[0];
+}
 export const RARITY_POINTS: Record<Rarity, number> = { common: 8, uncommon: 20, rare: 45, legendary: 120 };
 
 /** Recompute biomes and spawn/remove creatures. Returns creatures that newly appeared. */
@@ -431,7 +516,7 @@ export function impact(p: Planet, kind: Kind, at: number, splash = 0, boost: Imp
   const prev = p.sectors.map((s) => s.biome);
   const extra = boostRadius(boost);
   applyKind(p, kind, wrap(at), splash + extra);
-  if (boost.nova) applyBoost(p, wrap(at), 1 + splash + extra, boost);
+  if (boost.nova) applyBoost(p, kind, wrap(at), splash);
   const { spawned, lost } = settle(p);
   const changed = p.sectors.map((s, i) => (s.biome !== prev[i] ? i : -1)).filter((i) => i >= 0);
   return { before, after: lifeScore(p), changed, spawned, lost };

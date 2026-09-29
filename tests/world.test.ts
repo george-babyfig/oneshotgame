@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { biomeOf, impact, lifeScore, newPlanet, SPECIES } from '../src/core/world';
+import { biomeOf, impact, lifeScore, neededHabitat, newPlanet, SPECIES } from '../src/core/world';
 import { makeLevel, greedyScore } from '../src/core/levels';
 
 describe('biomes', () => {
@@ -31,6 +31,13 @@ describe('impacts', () => {
   });
   it('species ids are unique', () => {
     expect(new Set(SPECIES.map((s) => s.id)).size).toBe(SPECIES.length);
+  });
+  it('points a wandering neighbour creature toward its missing land', () => {
+    const p = newPlanet((i) => (i === 4 ? { life: 2 } : {}));
+    expect(neededHabitat('otter', p, 4)).toBe('ocean');
+    p.sectors[4].life = 0;
+    p.sectors[4].biome = 'barren';
+    expect(neededHabitat('otter', p, 4)).toBe('forest');
   });
 });
 

@@ -1,4 +1,6 @@
 // All sounds are synthesised with WebAudio — no audio files to ship.
+import type { Kind } from '../core/world';
+import { OBJECT_FEEL } from './feel';
 let ctx: AudioContext | null = null;
 let sfxBus: GainNode | null = null;
 let musicBus: GainNode | null = null;
@@ -106,6 +108,28 @@ export const sfx = {
     if (kind === 'seed') [0, 4, 7].forEach((s, i) => tone(semi(660, s), 0.18, 'triangle', 0.08, i * 0.05));
     if (kind === 'storm') noise(0.8, 0.25, 3000, 0.3);
     if (kind === 'sun') [0, 4, 7, 12].forEach((s, i) => tone(semi(523, s), 0.4, 'triangle', 0.08, i * 0.04));
+  },
+  objectLaunch: (kind: Kind) => {
+    const sound = OBJECT_FEEL[kind].launch;
+    if (sound === 'thud') tone(160, 0.18, 'sine', 0.12, 0, 85);
+    else if (sound === 'chime') tone(880, 0.24, 'sine', 0.07, 0, 1320);
+    else if (sound === 'pop') tone(520, 0.12, 'triangle', 0.1, 0, 740);
+    else if (sound === 'rumble') noise(0.3, 0.18, 300, 0.5, 0, 'lowpass');
+    else if (sound === 'patter') noise(0.24, 0.12, 2600, 0.4);
+    else [0, 7, 12].forEach((step, i) => tone(semi(660, step), 0.15, 'sine', 0.05, i * 0.04));
+  },
+  objectImpact: (kind: Kind) => {
+    const sound = OBJECT_FEEL[kind].impact;
+    if (sound === 'thud') {
+      tone(95, 0.35, 'sine', 0.35, 0, 42);
+      noise(0.3, 0.35, 400, 0.8, 0, 'lowpass');
+    } else if (sound === 'chime') [0, 7, 12].forEach((step, i) => tone(semi(1046, step), 0.4, 'sine', 0.09, i * 0.05));
+    else if (sound === 'pop') tone(420, 0.2, 'triangle', 0.12, 0, 660);
+    else if (sound === 'rumble') {
+      tone(70, 0.45, 'sawtooth', 0.17, 0, 42);
+      noise(0.4, 0.2, 360, 0.5, 0, 'lowpass');
+    } else if (sound === 'patter') [0, 0.07, 0.14].forEach((when) => noise(0.2, 0.13, 2500, 0.6, when));
+    else [0, 4, 7, 12].forEach((step, i) => tone(semi(784, step), 0.22, 'triangle', 0.08, i * 0.04));
   },
   miss: () => tone(400, 0.4, 'sine', 0.08, 0, 120),
   bloom: (step: number) => tone(semi(523, PENTA[Math.min(step, PENTA.length - 1)]), 0.25, 'triangle', 0.1),

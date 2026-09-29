@@ -33,6 +33,9 @@ if (process.env.SIM === '1') {
       }
     }
 
+    const decentActive = runSurvey(POLICIES.decent, runs, 9, 60).planets;
+    const novaAverage = decentActive.reduce((sum, planet) => sum + planet.novas, 0) / decentActive.length;
+    console.log(`Decent Supernovas per planet: ${novaAverage.toFixed(2)}`);
     const current: Baseline = { runs, bands: rows };
     if (process.env.BASELINE === 'write') {
       writeFileSync(baselineFile, JSON.stringify(current, null, 2) + '\n');

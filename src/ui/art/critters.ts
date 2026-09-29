@@ -128,6 +128,23 @@ const SPECS: Record<string, Spec> = {
   },
 };
 
+const grey = (color?: string) => {
+  if (!color || !/^#[0-9a-f]{6}$/i.test(color)) return '#b8b8c2';
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+  const v = Math.round(r * 0.3 + g * 0.59 + b * 0.11)
+    .toString(16)
+    .padStart(2, '0');
+  return `#${v}${v}${v}`;
+};
+const GHOST_SPECS: Record<string, Spec> = Object.fromEntries(
+  Object.entries(SPECS).map(([id, spec]) => [
+    id,
+    { ...spec, body: grey(spec.body), belly: grey(spec.belly), accent: grey(spec.accent), glow: undefined },
+  ]),
+);
+
 const has = (s: Spec, f: Feature) => s.f.includes(f);
 
 function ell(g: G, x: number, y: number, rx: number, ry: number, color: string, rot = 0) {
@@ -211,8 +228,8 @@ function face(g: G, x: number, y: number, u: number, s: Spec, blink: boolean, se
  * (0 = screen up). `size` is roughly its height in px.
  */
 /** `acc` = an accessory worn by a Homeworld resident (see RESIDENT_ACCS). */
-export function drawCreature(g: G, id: string, x: number, y: number, angle: number, size: number, t: number, acc2 = '') {
-  const s = SPECS[id];
+export function drawCreature(g: G, id: string, x: number, y: number, angle: number, size: number, t: number, acc2 = '', ghost = false) {
+  const s = ghost ? GHOST_SPECS[id] : SPECS[id];
   if (!s) return;
   const u = size;
   const bob = Math.sin(t * 3);
@@ -570,6 +587,27 @@ export function critterCanvas(id: string, px: number, t = 0.4, acc = ''): HTMLCa
   g.scale(dpr, dpr);
   drawCreature(g, id, px / 2, px * 0.9, 0, px * 0.62, t, acc);
   return c;
+}
+
+/** A quiet reminder of the land a wandering creature likes. */
+export function drawWanderGhost(g: G, id: string, x: number, y: number, size: number, landIcon: string, time: number, still: boolean) {
+  g.save();
+  g.globalAlpha = 0.62;
+  drawCreature(g, id, x, y, 0, size, still ? 0 : time, '', true);
+  g.globalAlpha = 0.9;
+  g.fillStyle = '#f1f0f5';
+  g.strokeStyle = '#302b43';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.ellipse(x + size * 0.7, y - size * 1.7, size * 0.65, size * 0.5, 0, 0, Math.PI * 2);
+  g.fill();
+  g.stroke();
+  g.fillStyle = '#302b43';
+  g.font = `${Math.max(12, size * 0.65)}px system-ui`;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText(landIcon, x + size * 0.7, y - size * 1.7);
+  g.restore();
 }
 
 export const HAS_ART = (id: string) => id in SPECS;

@@ -4,14 +4,29 @@ import { KINDS, type Kind } from '../../core/world';
 import { projectileCanvas } from '../art/projectiles';
 import { t } from '../../i18n';
 
-export const FACTS: Record<Kind, { element: string; power: number; reach: number; job: string }> = {
-  rock: { element: 'Earth', power: 2, reach: 1, job: 'Builds tall mountains' },
-  ice: { element: 'Water', power: 2, reach: 1, job: 'Makes cool oceans' },
-  seed: { element: 'Life', power: 2, reach: 1, job: 'Grows green life' },
-  magma: { element: 'Fire', power: 2, reach: 1, job: 'Builds warm volcanoes' },
-  storm: { element: 'Air', power: 1, reach: 3, job: 'Rains across lands' },
-  sun: { element: 'Light', power: 1, reach: 3, job: 'Warms wide lands' },
+// The i18n inventory reads these data strings until its key list moves to KindDef.
+export const FACTS = Object.fromEntries(Object.values(KINDS).map((kind) => [kind.id, kind.stats])) as Record<
+  Kind,
+  (typeof KINDS)[Kind]['stats']
+>;
+
+const ELEMENT_ICON: Record<(typeof KINDS)[Kind]['stats']['element'], string> = {
+  earth: '⛰️',
+  water: '💧',
+  life: '🌱',
+  fire: '🔥',
+  air: '☁️',
+  light: '☀️',
 };
+
+function statBar(label: string, icon: string, value: number) {
+  return h(
+    'div',
+    { class: 'guide-stat', 'aria-label': t('{stat} {value} of 3', { stat: label, value }) },
+    h('span', { class: 'guide-stat-label' }, icon, ' ', label),
+    h('span', { class: 'guide-stat-pips', 'aria-hidden': 'true' }, ...[0, 1, 2].map((i) => h('i', { class: i < value ? 'filled' : '' }))),
+  );
+}
 
 export function showFieldGuide(app: App, page: 'basics' | 'objects' | 'creatures' = 'basics') {
   const pageLabel = (id: 'basics' | 'objects' | 'creatures') =>
@@ -38,7 +53,7 @@ export function showFieldGuide(app: App, page: 'basics' | 'objects' | 'creatures
     ...Object.values(KINDS)
       .filter((kind) => kind.unlock <= app.p.level)
       .map((kind) => {
-        const fact = FACTS[kind.id];
+        const { stats } = kind;
         return h(
           'div',
           { class: 'guide-object' },
@@ -47,10 +62,10 @@ export function showFieldGuide(app: App, page: 'basics' | 'objects' | 'creatures
             'div',
             null,
             h('b', null, t(kind.name)),
-            h('small', null, t(fact.element)),
-            h('p', null, t(fact.job)),
-            h('span', null, `${t('Power')} ${'●'.repeat(fact.power)}${'○'.repeat(3 - fact.power)}`),
-            h('span', null, `${t('Reach')} ${'●'.repeat(fact.reach)}${'○'.repeat(3 - fact.reach)}`),
+            h('small', { class: 'guide-element' }, ELEMENT_ICON[stats.element], ' ', t(stats.element)),
+            h('p', null, t(stats.job)),
+            statBar(t('Power'), '✦', stats.power),
+            statBar(t('Reach'), '◎', stats.reach),
           ),
         );
       }),

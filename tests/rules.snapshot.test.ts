@@ -43,10 +43,10 @@ function writeRows(file: string, rows: Row[]) {
   writeFileSync(file, `[\n${rows.map((r) => JSON.stringify(r)).join(',\n')}\n]\n`);
 }
 
-function checkRows(name: string, rows: Row[]) {
+function checkRows(name: string, rows: Row[], frozen = false) {
   const file = join(DIR, name);
   const actual = rows.map((r) => JSON.parse(JSON.stringify(r)) as Row);
-  if (UPDATE) {
+  if (UPDATE && !frozen) {
     writeRows(file, actual);
     return;
   }
@@ -318,19 +318,24 @@ describe('rules snapshot (M2 guard)', () => {
     expect(KIND_IDS).toHaveLength(6);
   });
 
-  it('17 lands × 6 objects impact matrix is unchanged', () => {
+  it('17 lands × 6 objects preserve every ordinary impact', () => {
     const rows = matrixRows();
+    checkRows(
+      'base-impact-matrix.json',
+      rows.filter((row) => !row.id.endsWith('/nova') && !row.id.endsWith('/splash+nova')),
+      true,
+    );
     expect(rows).toHaveLength(CONTEXTS.length * 17 * 6 * VARIANTS.length);
     checkRows('impact-matrix.json', rows);
   });
 
-  it('scripted multi-throw rounds are unchanged', () => {
+  it('scripted multi-throw rounds record the new Supernova rules', () => {
     const rows = sequenceRows();
     expect(rows).toHaveLength(SEQUENCES.length * (SEQ_THROWS + 2));
     checkRows('sequences.json', rows);
   });
 
-  it('biome, Supernova charge and Object Lab tables are unchanged', () => {
+  it('biome, Supernova charge and Object Lab tables are recorded', () => {
     checkRows('tables.json', tableRows());
   });
 

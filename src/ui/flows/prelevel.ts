@@ -13,8 +13,11 @@ import { sparkStart } from '../fx';
 import { ledger } from '../../meta/ledger';
 import { t } from '../../i18n';
 import type { App } from '../app';
+import type { LevelScene } from '../game';
+import { showGoalRecipe } from '../hud';
+import { lifeSparkSectors } from '../../core/round';
 
-export function goalChips(L: LevelDef) {
+export function goalChips(L: LevelDef, scene?: LevelScene) {
   if (!L.goals.length) return null;
   return h(
     'div',
@@ -22,8 +25,8 @@ export function goalChips(L: LevelDef) {
     h('small', null, t('Goals')),
     ...L.goals.map((g) =>
       h(
-        'span',
-        { class: 'goal' },
+        scene ? 'button' : 'span',
+        { class: 'goal', ...(scene ? { type: 'button', onclick: () => showGoalRecipe(scene, g) } : {}) },
         g.type === 'species' ? critterCanvas(g.id, 30) : h('span', { class: 'gi' }, BIOMES[g.id as BiomeId].deco),
         h(
           'b',
@@ -89,7 +92,7 @@ export function preLevel(app: App, n: number) {
       scene.throwsTotal += 3;
       scene.renderHud();
     } else if (id === 'spark') {
-      sparkStart(scene.planet);
+      sparkStart(scene.planet, lifeSparkSectors(scene.L, scene.planet));
       scene.score = scene.shownScore = lifeScore(scene.planet);
       scene.regionBests = scene.planet.sectors.map((sector) => BIOMES[sector.biome].value);
       scene.arrived = new Set(scene.planet.sectors.map((sector) => sector.species).filter((species): species is string => !!species));
@@ -161,7 +164,7 @@ export function preLevel(app: App, n: number) {
             : t('🔥 Hard planet · ×{n} stardust', { n: DIFFICULTY_DUST.hard }),
         ),
     L.twist === 'none' ? h('span') : h('div', { class: 'twist-chip' }, `${t(TWISTS[L.twist].name)}: ${t(TWISTS[L.twist].desc)}`),
-    goalChips(L) ?? h('span'),
+    goalChips(L, scene) ?? h('span'),
     h(
       'div',
       { class: 'targets' },

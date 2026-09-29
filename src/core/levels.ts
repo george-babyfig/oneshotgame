@@ -12,7 +12,7 @@ import {
   type Sector,
 } from './world';
 import { NO_MODIFIERS } from './modifiers';
-import { NOVA_CHARGE, ROUND_RULES_V0, roundState, stepRound, type RoundRules } from './round';
+import { ROUND_RULES_V0, novaReady, roundState, stepRound, type RoundRules } from './round';
 
 export { NOVA_CHARGE } from './round';
 
@@ -188,7 +188,7 @@ function solvePlan(level: SolverLevel, rules: RoundRules, mods: typeof NO_MODIFI
   let state = roundState(level.start, level.nova);
   for (let turn = 0; turn < level.throws; turn++) {
     const kind = level.queue[turn];
-    const nova = level.nova && state.charge >= NOVA_CHARGE;
+    const nova = novaReady(state);
     let best = -1;
     let at = 0;
     for (let sector = 0; sector < SECTORS; sector++) {
@@ -219,12 +219,14 @@ export function rulesForSeed(seed: string): RoundRules {
   return ROUND_RULES_V0;
 }
 
+export const DEAL_WEIGHTS: Record<Kind, number> = { rock: 3.5, ice: 4, seed: 4, magma: 3, storm: 2.5, sun: 1.25 };
+
 /** Difficulty knobs (tuned with a skill-level simulation; see tests/levels.test.ts). */
 export const TUNE = {
   rampLevels: 20,
   f1: [0.42, 0.22],
   f2: [0.66, 0.15],
-  f3: [0.84, 0.09],
+  f3: [0.83, 0.05],
   saw: 0.05,
   bump: { normal: [0, 0, 0], hard: [0.06, 0.04, 0.02], super: [0.09, 0.06, 0.03] } as Record<Difficulty, number[]>,
 };
@@ -293,7 +295,7 @@ function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
   if ((seedPrefix === 'PP' && n >= 10 && n % 10 === 0) || o.boss) twist = 'boss';
   const throws = n === 1 ? 6 : n === 2 ? 8 : Math.min(16, 9 + Math.floor(n / 4));
   // weighted deal: new kinds show up a bit more on their debut level
-  const weights: Record<Kind, number> = { rock: 4, ice: 4, seed: 4, magma: 3, storm: 2, sun: 1.5 };
+  const weights = DEAL_WEIGHTS;
   const queue: Kind[] = [];
   if (n === 1) queue.push('rock', 'ice', 'ice', 'rock', 'ice', 'rock');
   if (n === 2) queue.push('seed', 'ice', 'seed', 'rock', 'seed', 'ice', 'seed', 'rock');

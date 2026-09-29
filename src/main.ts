@@ -23,4 +23,4 @@ function recover(e: unknown) {
 window.addEventListener('error', (e) => recover(e.error ?? e.message));
 window.addEventListener('unhandledrejection', (e) => console.warn('unhandled rejection', e.reason));
 app.init().catch((e) => console.error(e));
-(window as unknown as { __app: App }).__app = app;
+if (import.meta.env.DEV) (window as unknown as { __app: App }).__app = app;

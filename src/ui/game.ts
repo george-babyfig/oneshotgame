@@ -10,7 +10,8 @@ import { roundIntro, type CoachEvent } from '../meta/coach';
 import { UNLOCKS } from '../meta/unlocks';
 import { surfaceK } from './art/planet';
 import { DEFAULT_LOOK, type Look } from '../meta/cosmetics';
-import { NOVA_CHARGE, type RoundState } from '../core/round';
+import { lifeSparkSectors, type RoundState } from '../core/round';
+import { feedbackState, type FeedbackState, type FeedbackItem } from './feel';
 import type { FlightWorld } from '../core/flight';
 import type { RoundModifiers } from '../core/modifiers';
 import type { Season } from '../meta/seasons';
@@ -154,6 +155,11 @@ export class LevelScene {
   qi = 0; // index of the next object to deal
   cur: Kind;
   next: Kind;
+  get upcoming(): Kind[] {
+    return this.o.boosters.scope
+      ? [this.next, ...Array.from({ length: 4 }, (_, i) => this.L.queue[(this.qi + i) % this.L.queue.length])]
+      : [this.next];
+  }
   shot: Shot | null = null;
   aimFrom: { x: number; y: number } | null = null;
   aimTo: { x: number; y: number } | null = null;
@@ -165,8 +171,11 @@ export class LevelScene {
   discoverBusy = false;
   finishing = false;
   leftover = 0;
-  chain = 0;
   popups: Popup[] = [];
+  feedback: FeedbackState<FeedbackItem> = feedbackState();
+  ghosts: { species: string; sector: number; wants: BiomeId; started: number; throw: number }[] = [];
+  goalPulse: { sectors: number[]; until: number } | null = null;
+  nova: RoundState['nova'] = { charge: 0, threshold: 12, fired: 0, held: false };
   shake = 0;
   flash: { i: number; t: number }[] = [];
   spawnAnim = new Map<number, number>(); // sector -> anim time
@@ -205,6 +214,9 @@ export class LevelScene {
   firstCreaturePointsShown = false;
   liveTimer = 0;
   coachTimer = 0;
+  onResolvedThrow?: () => void;
+  suppressNovaLabel = false;
+  focusTarget: { kind: 'ring' | 'queue'; until: number } | null = null;
 
   startedAt = performance.now();
 
@@ -213,7 +225,7 @@ export class LevelScene {
     this.L = level;
     this.o = opts;
     this.planet = clonePlanet(level.start);
-    if (opts.boosters.spark) fx.sparkStart(this.planet);
+    if (opts.boosters.spark) fx.sparkStart(this.planet, lifeSparkSectors(level, this.planet));
     this.regionBests = this.planet.sectors.map((s) => BIOMES[s.biome].value);
     this.arrived = new Set(this.planet.sectors.map((s) => s.species).filter((id): id is string => !!id));
     this.throwsLeft = level.throws + opts.extraThrows + (opts.boosters.shower ? 3 : 0);
@@ -363,6 +375,11 @@ export class LevelScene {
     };
     this.canvas.addEventListener('pointerdown', (e) => {
       if (this.aimPointer !== null || !this.canAim()) return;
+      const point = pos(e);
+      if (preview.queueHit(this, point.x, point.y)) {
+        this.swap();
+        return;
+      }
       this.aimPointer = e.pointerId;
       this.canvas.setPointerCapture(e.pointerId);
       this.aimFrom = pos(e);
@@ -383,9 +400,27 @@ export class LevelScene {
       if (e.pointerId !== this.aimPointer) return;
       this.aimPointer = null;
       if (!this.aimFrom) return;
+      const from = this.aimFrom;
+      this.aimTo = pos(e);
       const p = this.pull();
       this.aimFrom = this.aimTo = null;
-      if (p.len < 18 || !this.canAim()) return; // a tap, or the level ended mid-drag
+      if (!this.canAim()) return;
+      const ringDistance = Math.hypot(from.x - this.launch.x, from.y - this.launch.y);
+      if (
+        p.len < 18 &&
+        this.L.n >= 24 &&
+        this.novaOn &&
+        this.nova.charge >= this.nova.threshold &&
+        ringDistance >= 39 &&
+        ringDistance <= 69 &&
+        !preview.queueHit(this, from.x, from.y)
+      ) {
+        this.nova.held = !this.nova.held;
+        haptic.tick();
+        sfx.click();
+        return;
+      }
+      if (p.len < 18) return;
       this.fire(p.vx, p.vy);
     };
     this.canvas.addEventListener('pointerup', release);
@@ -424,7 +459,7 @@ export class LevelScene {
 
   fire(vx: number, vy: number) {
     const { x, y } = this.launch;
-    const nova = this.novaOn && this.charge >= NOVA_CHARGE;
+    const nova = this.novaOn && this.nova.charge >= this.nova.threshold && (!this.nova.held || this.throwsLeft === 1);
     this.shot = { kind: this.cur, x, y, vx, vy, t: 0, carry: 0, t0: this.time, rot0: this.rot, trail: [], nova };
     if (nova) {
       sfx.combo(6);
@@ -434,8 +469,8 @@ export class LevelScene {
     this.throwsUsed++;
     this.coachEl.classList.remove('show');
     clearTimeout(this.coachTimer);
-    sfx.launch();
-    haptic.medium();
+    sfx.objectLaunch(this.shot.kind);
+    haptic.object(this.shot.kind);
     this.o.onThrow?.(this.shot.kind);
     if (this.hintShown) {
       this.hintShown = false;
@@ -532,8 +567,6 @@ export class LevelScene {
   }
 
   cheerUntil = 0;
-  /** Supernova meter (regions transformed, creatures count double). */
-  charge = 0;
   /** Bonus life from Object Lab perks (on top of the planet's own life). */
   bonus = 0;
   get look(): Look {
@@ -557,8 +590,8 @@ export class LevelScene {
     return fx.confetti(this);
   }
 
-  popup(x: number, y: number, text: string, color: string, size: number, dur = 1.2) {
-    return fx.popup(this, x, y, text, color, size, dur);
+  popup(x: number, y: number, text: string, color: string, size: number, dur = 1.2, priority = 1) {
+    return fx.popup(this, x, y, text, color, size, dur, priority);
   }
 
   sectorPoint(i: number, k: number): [number, number] {
@@ -587,7 +620,7 @@ export class LevelScene {
     return fx.drawPlanet(this);
   }
 
-  predictCache: { key: string; label: string; delta: number; spawn: string } | null = null;
+  predictCache: { key: string; land: string; icon: string; delta: number; lost: string; creature: string; changed: number[] } | null = null;
 
   /** Highlight the landing region and preview what it will become. */
   drawLanding(i: number) {
