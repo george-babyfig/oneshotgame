@@ -199,5 +199,5 @@ measured(
       writeFileSync(process.env.BALANCE_REPORT, JSON.stringify({ pooled, pooledLint, watches, shadowWatch, failures }, null, 2) + '\n');
     expect(failures, failures.join('\n')).toEqual([]);
   },
-  600_000,
+  1_500_000, // the GitHub runner is ~1.5-2x slower than a dev Mac
 );

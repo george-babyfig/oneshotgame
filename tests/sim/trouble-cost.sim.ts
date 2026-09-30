@@ -54,5 +54,5 @@ if (process.env.SIM === '1') {
     expect(result.blind, 'blind Trouble cost ≥5%').toBeGreaterThanOrEqual(0.05);
     expect(result.aware, 'aware Trouble cost ≤8%').toBeLessThanOrEqual(0.08);
     expect(result.max, 'blind max-loadout Trouble cost ≥3%').toBeGreaterThanOrEqual(0.03);
-  }, 120_000);
+  }, 600_000); // slower CI runners
 }
