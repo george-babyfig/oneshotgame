@@ -1,6 +1,6 @@
 # 01: Conversation history
 
-The owner (George, GitHub `george-babyfig`) worked with Claude Code in three sessions: a long first one in the cloud (27–28 September), a short second one in the cloud (28 September evening) that scoped the next big roadmap, and a third one, the first **local** session on the owner's Mac (28–29 September), which built M0–M7. Their messages are quoted as sent, typos included; the notes under each say what happened.
+The owner (George, GitHub `george-babyfig`) worked with Claude Code in three sessions: a long first one in the cloud (27–28 September), a short second one in the cloud (28 September evening) that scoped the next big roadmap, and a third one, the first **local** session on the owner's Mac (28–30 September), which built M0–M8 plus launch prep (sky obstacles, Troubles and the difficulty program, the on-planet aim tag, the rename to Comet Garden, the marketing site and the App Store package). Their messages are quoted as sent, typos included; the notes under each say what happened.
 
 ## Day 1 — 27 September 2026
 
@@ -171,7 +171,7 @@ The owner's other Claude Code sessions (the BabyFig / vectorlabs-site ones) are 
 
 This updated handoff (all docs plus a new PROMPT.md) is the result. The next session runs **locally on the Mac**, with Codex as lead developer, and builds ROADMAP-v2 milestone by milestone.
 
-## Day 2–3: the third session (local), 28–29 September 2026
+## Day 2–3: the third session (local), 28–30 September 2026
 
 The owner started this session from PROMPT.md. It ran **on the Mac** (`uname -s` printed Darwin), so it could use the iOS Simulator, Xcode and Codex.
 
@@ -284,7 +284,68 @@ Through this stretch and the two milestones after it, the owner's only messages 
 - **CI:** `b20ee93` split the Playwright journeys into three parallel jobs, one per browser project (the single job had outgrown its 20-minute limit); `60580b9` made the Showtime frame-time gates run only locally, since CI's shared runners have no GPU.
 - **Owner-facing decision surfaced:** a **"Gentle planets"** setting is being built into Grown-ups in M7.5 — the roadmap relies on it for children who find hazards stressful, and it will ship off by default.
 
-Next is M7.5, Sky obstacles, in progress. See [05-status-and-next.md](05-status-and-next.md).
+### 27. M7.5 built: Sky obstacles and real flight in the sims
+
+- **M7.5** (`609c6e6`): five sky obstacles — Drift Rocks (planet 33), Bubble Moon (41), Magnet Mist (46), Rubble Ring (51, gaps that turn), Tug Star (57) — plus a gusty Solar Wind on Hard planet 55. The aim line now flies the full path for every drawn aim, a red bonk badge warns before any bonk or fizzle, and a release fires exactly what was drawn. The first bonk of each attempt on a teaching planet is a practice bonk (the throw comes back). **Gentle planets** (off by default, in Grown-ups) gives every bonk back and stops Clashes. Obstacles never appear in any mode before their teaching planet. Dense Core retired (owner decision 14: the Swoop launcher gives the same bend as a choice). "Blocked!" became "Bonk!"; the Field Guide gained a Sky tab.
+- **Sims fly for real from here on:** badge-aware casual bots, timed decent/sharp bots, hand-slip noise and learning retries actually fly the shot — angle, power and release-time noise — instead of scoring an outcome blind, so obstacles and aim twists finally count toward difficulty. A Scene Bot plays planets 1–30 and every obstacle's teaching planet through the real scene (390/390 agreement).
+- **A bug the Scene Bot caught mid-build:** its automated throws were going unfired on some obstacle planets. The cause was an intro card left open — `window.__scene`'s dev hooks respect the same `modalOpen` guard a real tap does, so the bot needed to close the card before it could aim. Fixed by having the bot dismiss intro cards first.
+- The owner's only messages through this stretch were "continue".
+
+### 28. M8 built: Troubles, the Buddy and the difficulty program
+
+- **M8** (`d4241a9`): three Troubles in the pure round step — Ember Vent (planet 14), Tanglevine (28), Frost Creep (36) — with firebreaks, settle states, a two-beat forecast strip (icon, shape, "in N") and zero surprise losses. Traits for all 36 creatures, shown in the Lifebook and as round badges. The Buddy helps from planet 18: a chip on Trouble planets, chosen from a friend living on the Homeworld (decision 20), once per planet, off in competitive modes. One help ladder, campaign only: "What happened" facts on every fail card, a tip, 2 extra throws, glowing hint sectors — no price, no "so close". Gentle planets now applies everywhere and makes Troubles fully inert. Rules froze at `RULES_VERSION = 1` (Combos, sky obstacles, Troubles and flight), covering saves and challenge codes.
+- **The difficulty program went through internal phases B–E**, each one re-measuring the curve against 96 bot attempts under two master seeds and re-salting planets to close the gaps, documented in `docs/qa/m8-phase-b-report.md` through `m8-phase-e-report.md`:
+  - **Phase B** wired the Trouble-aware sims and found the curve mostly red: Hard planets were far too hard for a casual player (52–60% fail) while a decent player barely noticed the Troubles at all.
+  - **Phase C** found the SLACK lint test had been measuring the wrong thing (reaching 1 star, the easy kid floor, instead of a decent player's final star count) and, once fixed, found that easing goals to bring Hard's casual fail rate down broke the decent-player floor — goal misses and floor protection pulled in opposite directions on the same planets.
+  - **Phase D** swept individual levers one at a time (goal counts, throw counts, deal timing, Trouble cadence) and could not find a single lever that reached both the casual ceiling and the decent floor on Hard 25+ together. Rather than guess, it wrote the conflict up for the owner.
+  - **Phase E** is where the owner decided, and the bands shipped.
+- **Decision 28, "Kid-first"** (ROADMAP-v2 §10). The owner:
+
+  > "Keep casual Hard fail ≤ 50% by easing Hard goals; accept that careful players find Hard a bit easier (their fail floor drops to ~12%, 3★ band unchanged). Also: decent floor 5% on normal 31-60, Super decent floor 25%. Hard stays a real challenge, never a wall for a 6-year-old."
+
+  Phase E eased Hard and Super Hard goal selection (one shared biome goal instead of two), widened the bands in ROADMAP-v2 §7.5 and FLIGHT.md §4.2 to match, and re-reviewed the salt table for planets 1–60 (the final table lives in `src/core/levels.ts`). Every gated lint flag — WALL, CLIFF, GOAL-TRAP, STACK, BONK-HEAVY, EASY, TRIVIAL, EASY-EARLY, FLAT, SLACK — reached zero on the pooled 1–60 campaign.
+
+- **Decision 29, "Ship, fix generator next"** (ROADMAP-v2 §10). Phase E's hand-reviewed campaign passed every band, but the raw level **generator** — the "shadow" layouts nobody has hand-salted — still ran about 10 points harder for casual play on planets 21–60 (casual fail 25.7% on 21–30, 35.7% on 31–60). The owner chose to ship the reviewed campaign now and treat the shadow layouts as a Watch rather than hold launch on fixing the generator itself. Bringing the generator into band is a to-do for M12.
+- **The goals regression caught by J1, and the new gates.** After the salt work above, running the full Playwright suite (not just the bots) found that `makeLevel(n).goals` was **empty** on every campaign planet 1–13 and on most of Normal 11–20: across phases C–E, salt selection had quietly steered away from goals wherever a goal pushed the fail rate up, because the difficulty bots only ever measure fail/star rates — they never check whether the goal chip is actually on screen. J1's first-session journey does check (`.hud .goals` visible on planet 6, in every language), and that's what caught it. The fix restored planet 6's goal and added two lint gates to the `balance` CI job so the same bug can't come back silently: **GOAL-RAMP** (a chapter's share of goal-bearing planets must stay within 15 points of its target ramp — roughly 30% at planets 7–10, 45% at 11–20, 60% from 21 on) and **TEACH** (every teaching planet — planet 6's goal; 8/13/22/25's Fusion pairs; the Ember Vent, Tanglevine and Frost Creep debuts; each sky obstacle's debut — must still carry its lesson). Both are defined in `tests/sim/lint.ts`.
+- **T0 kit:** `docs/qa/playtest-difficulty.md`, a face-card playtest guide for the owner to run with real children (ages 6–10) after planets 8, 14, 19, 22, 26, 33, 36 and 41.
+
+### 29. The aim tag: back on the planet
+
+> "do exactly that, also I liekd it better when the score showed on the planet itself when aiming it felt more intuitive. Think about how to do that while also keeping the combos and interactions known like friends wandering off"
+
+M6's landing card had moved everything off to the side of the aim path. The owner wanted the score back on the planet itself. **Built** (`fc26e93`): a new `src/ui/aimtag.ts` replaces the landing card with a tag at the predicted landing spot — the signed life change, the new land, who moves in, a gold ring for a Fusion or a red outline for a Dry Spell, Combo beads, settled Troubles, and the faces of any friends who would wander off (each also shown as a ghost on its own sector). The tag moves aside so the aim line and a finger never cover it, and VoiceOver still reads the full words. Two small fixes rode along: planet 1's star tip now sits below the life bar, and the fling hint's hand no longer covers its own words.
+
+> "ok go ahead and push and make sure sim is up to date. DOa QA pass and debug"
+
+Pushed, `sim:baseline` refreshed, and a QA and debug pass followed.
+
+### 30. One last QA pass, then the App Store
+
+> "do one last run of qa checks, then get this ready for app store. I want you to do research on how other games post photos and dev notes/descriptions to the app store and create that so we can post it"
+
+Claude ran the full checks, researched how other casual and kids' games present their App Store pages (captioned screenshots, a press kit, dev notes), and built the whole package (`528bc37`; see [02-changes.md](02-changes.md)): 6-language listings measured against Apple's limits (`store/tools/measure-listings.py`), `store/compliance.md` (age rating, App Privacy, IAP metadata, App Review notes), a step-by-step `store/APP_STORE_CONNECT.md`, 48 captioned screenshots plus a contact sheet, and a 22-second App Preview video with its poster frame. The research moved to `docs/product/store-research.md`.
+
+### 31. The name discovery, and decisions 30–32
+
+Checking the store name against the App Store, Claude found "Pocket Planet" already taken — another developer's app, plus close variants — and asked the owner three questions together via `AskUserQuestion`.
+
+> "Wait what?! Does this game already exist???? Think of some new names and pitch them to me"
+
+Claude pitched four clean, checked options (Comet Garden, Pebble Planet, Critter Comet, Cometwild); the owner picked **Comet Garden** (decision 30).
+
+> "Which one will make us more money?"
+
+— asked in answer to Games → Casual at 4+ versus the Kids Category. Claude recommended Casual 4+ (the bigger audience, and the Kids Category stays available to apply for later); the owner's follow-up answer confirmed it: "Yes, Casual 4+" (decision 31).
+
+> "Make a site as part of the marketing material"
+
+Asked next where the site should be hosted:
+
+> "Just build it for now"
+
+(decision 32).
+
+**Built** (`db1872f`, `528bc37`): every player-facing name now reads **Comet Garden** — the Home logo, title, share texts, the rating prompt, the iOS display name, the web title and the privacy policy in all 6 languages. The bundle ID, product IDs and Game Center IDs keep `pocketplanet` on purpose, so store metadata, saves and Game Center standings don't break. Decision 31 is recorded in `store/compliance.md` (Games → Casual at 4+; the listing avoids "for kids" wording until the Kids Category is applied for separately). Decision 32 produced `site/`: a landing page, support/FAQ, the 6-language privacy policy, a press kit and dev notes — no third-party requests, a self-hosted font, and clearly marked placeholders for the owner's support email, legal name and domain (see `site/README.md` for hosting options).
 
 ## Recurring patterns in how the owner works
 

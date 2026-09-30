@@ -1,6 +1,6 @@
 # 07: Conversation transcript
 
-The readable text of both build sessions: George's messages and Claude's replies, in order. Session 1 (27–28 September) comes first, unchanged; session 2 (28 September, evening) is appended at the end. Tool calls, tool output, images and system messages are left out. Times are UTC. Messages George sent while Claude was mid-task appear at the time they were sent.
+The readable text of all three build sessions: George's messages and Claude's replies, in order. Session 1 (27–28 September) comes first, unchanged; session 2 (28 September, evening) and session 3 (28–30 September, the first local session) are appended after it. Tool calls, tool output, images and system messages are left out. Times are UTC. Messages George sent while Claude was mid-task appear at the time they were sent.
 
 ### **George** · 2026-09-27 01:01
 
@@ -2659,3 +2659,133 @@ ok prepare everything md wise in repo for me, then paste the prompt in here for 
 ### **Claude** · 2026-09-28 20:46
 
 Confirmed that every handoff doc was committed and pushed. I added these last messages to the transcript, then pasted the setup steps and prompt from `docs/handoff/PROMPT.md` into the chat.
+
+---
+
+# Session 3 — the first local session (28–30 September 2026)
+
+The owner pasted the handoff prompt into a new session that confirmed it was running locally (`uname -s` printed Darwin), so it could use the iOS Simulator, Xcode and Codex. This session built M0 through M8 and did launch prep (the aim tag, the rename to Comet Garden, the marketing site and the App Store package). Most of the owner's messages here are short — "continue" is by far the most common — because the session was told not to wait between milestones. Where the owner answered a multiple-choice question Claude asked (`AskUserQuestion`), the choice they picked is quoted verbatim, with a short note of what was actually being decided. Times are UTC. Tool results, system notifications and agent hand-backs are left out.
+
+### **George** · 2026-09-28 20:35
+
+> You are taking over development of Pocket Planet, an original casual iOS game I'm building to ship
+> on the App Store. Two earlier Claude Code sessions (both in the cloud) built everything so far:
+> rounds 1-6, the round 7 music, round 7 research with a Remix spec, and a senior-PM product scope
+> with a milestone roadmap. You are continuing as that same developer: same standards, same
+> conventions, same momentum. This session is meant to run LOCALLY on my Mac, so you can do what the
+> cloud sessions couldn't: run the iOS Simulator, use Xcode, and use Codex.
+>
+> [The prompt continued with: proving the session was local; fetching and checking out the branch;
+> reading every handoff doc, ROADMAP-v2, HOMEWORLD.md and FLIGHT.md in full; checking the toolchain
+> (npm install, format/typecheck/test/build, Xcode, Codex at its full path); launching the game in
+> the Simulator and screenshotting it; then a set of ground rules (never reskin a hit game, kid-safe
+> money only, translate every new string, keep CI green, work like a studio with Codex as lead
+> developer and adversarial reviews, talk in plain language) and an instruction to build ROADMAP-v2
+> from M0, asking only the decisions that were genuinely the owner's, and to update
+> `docs/handoff/` before stopping. The full text is in the PROMPT.md this session started from.]
+
+Confirmed Darwin, pulled the branch, read every doc, found Xcode 26.4.1/Node 25.9/`gh` signed in and Codex's dead Homebrew symlink (used the ChatGPT.app path instead), launched the game in the iPhone 17 Pro Simulator, and started M0.
+
+### **George** · 2026-09-28 21:06
+
+what's on the roadmap? Where can I see the world building aspect we had been workingf on? also add to the roadmap that we need way more animations like pop up on screen effects, more razzle dazzle and pizazz, more custom assets, characters, avatars etc etc
+
+Pointed to ROADMAP-v2.md and the Homeworld work already built, and added **M6.5 Showtime** (animations, celebrations, living characters, avatars) to the roadmap, right after M6.
+
+### **George** · 2026-09-28 21:14
+
+_Asked where the Pocket Planet roadmap project should go, since the Linear workspace only had one team, "Babyfig":_
+
+> "I'll make a new team (Recommended)"
+
+### **George** · 2026-09-28 21:15
+
+_Asked whether to install Playwright (a dev dependency, ~300 MB of test browsers) for M1's automated layout and journey tests:_
+
+> "Yes, install it (Recommended)"
+
+### **George** · 2026-09-28 21:47
+
+_Asked how to fit about 110 roadmap work items into a Linear free plan whose issue limit was already full:_
+
+> "Checklists, no issues (Recommended)"
+
+Created the Linear team **Pocket Planet** and the project **"Pocket Planet — Launch Roadmap"**, with one checklist document per milestone plus an "Owner decisions and to-dos" document, and no issues.
+
+### **George** · 2026-09-29 02:12
+
+continue
+
+Built M1 (measure and guard) and M2 (the round engine and the unlock ladder); see [01-history.md](01-history.md) §16.
+
+### **George** · 2026-09-29 05:37
+
+_Decision 1, asked before M5: retire the gem packs and the Piggy Bank before launch (real money buys looks only), or keep them?_
+
+> "Keep gem packs too"
+
+Kept the 4 gem packs and the Piggy Bank as fixed-price consumables, sold only in the gated Grown-ups area; recorded as decision 1 in ROADMAP-v2 §10.
+
+### **George** · 2026-09-29 21:59
+
+continue
+
+Built M3 through M7 over the following stretch (the first ten minutes, one clear Home with Missions and Wishes, Grown-ups and a fair checkout, reading every throw, Showtime, and Fusions/Clash/Combos), with only "continue" between milestones; see [01-history.md](01-history.md) §20–26. The session's context was compacted partway through and resumed on its own without asking the owner anything further.
+
+### **George** · 2026-09-30 09:42
+
+_Asked which way to lean on a difficulty conflict on Hard planets: unassisted casual players were failing about 61% against a ≤50% target, while careful players were failing about 24% against a ≥25% target, and every lever tried moved both numbers together:_
+
+> "Kid-first (Recommended)"
+
+This is **decision 28**. The chosen option's own description — keep casual Hard fail ≤ 50% by easing Hard goals, accept that careful players find Hard a little easier, a 5% decent floor on Normal 31–60 and a 25% decent floor on Super — became the revised bands in ROADMAP-v2 §7.5 and FLIGHT.md §4.2; see [01-history.md](01-history.md) §28.
+
+### **George** · 2026-09-30 14:24
+
+_Asked how to proceed now that the hand-reviewed campaign (planets 1–60) met every difficulty target, but the raw, unreviewed level generator ("shadow" layouts) still ran about 10 points harder for casual players on 21–60:_
+
+> "Ship, fix generator next (Recommended)"
+
+This is **decision 29**. M8 was committed and pushed; the shadow layouts became a nightly CI Watch rather than a gate, and bringing the generator into band became a tracked to-do for M12.
+
+### **George** · 2026-09-30 14:53
+
+do exactly that, also I liekd it better when the score showed on the planet itself when aiming it felt more intuitive. Think about how to do that while also keeping the combos and interactions known like friends wandering off
+
+Built the on-planet aim tag (`fc26e93`, `src/ui/aimtag.ts`), replacing the M6 landing card; see [01-history.md](01-history.md) §29.
+
+### **George** · 2026-09-30 15:10
+
+ok go ahead and push and make sure sim is up to date. DOa QA pass and debug
+
+Pushed, refreshed `sim:baseline`, and ran a QA and debug pass.
+
+### **George** · 2026-09-30 17:06
+
+do one last run of qa checks, then get this ready for app store. I want you to do research on how other games post photos and dev notes/descriptions to the app store and create that so we can post it
+
+Ran the full checks, researched how other casual and kids' games present their App Store pages, and began building the App Store package.
+
+### **George** · 2026-09-30 17:46
+
+_While preparing the store listing, checking the name "Pocket Planet" against the App Store turned up another developer's app already using it, plus close variants. Claude asked three questions at once: what the store name should be, which category to launch in, and what contact the Support URL should show. The owner's three answers:_
+
+> "Wait what?! Does this game already exist???? Think of some new names and pitch them to me"
+
+> "Which one will make us more money?"
+
+> "Make a site as part of the marketing material"
+
+Pitched four clean, checked name options and re-asked the category question with a concrete recommendation.
+
+### **George** · 2026-09-30 17:49
+
+_The follow-up round: which of four name options, whether to confirm Games → Casual at 4+, and where the site should be hosted:_
+
+> "Comet Garden"
+
+> "Yes, Casual 4+"
+
+> "Just build it for now"
+
+These are **decisions 30, 31 and 32**. Renamed every player-facing string to **Comet Garden** (`db1872f`; the bundle ID, product IDs and Game Center IDs kept `pocketplanet` on purpose), recorded Games → Casual at 4+ in `store/compliance.md`, and built `site/` — a landing page, support/FAQ, a 6-language privacy policy, a press kit and dev notes — leaving hosting, the support email, and the legal name as clearly marked placeholders for the owner. Finished the App Store package (`528bc37`): 6-language listings, `compliance.md`, `APP_STORE_CONNECT.md`, 48 captioned screenshots and an App Preview video, then fixed a broken `alt` attribute on the site (`baddb87`). See [01-history.md](01-history.md) §30–31.

@@ -7,7 +7,7 @@ npm install
 npm run dev            # browser play at http://localhost:5173 (mock purchases); window.__app for debugging
 npm run format         # Prettier (CI runs format:check)
 npm run typecheck
-npm test               # 514 Vitest tests, including i18n coverage for all 5 locales and the frozen snapshots
+npm test               # 586 Vitest tests (2 skipped), including i18n coverage for all 5 locales and the frozen snapshots
 npm run build          # typecheck + production web build to dist/
 npm run music          # record every music theme to WAV + print loudness (needs npm run dev)
 ```
@@ -25,7 +25,7 @@ npm run sim            # every sim, including the level lint (tests/levels.lint.
 
 ```bash
 npm run e2e:install    # once: download Chromium and WebKit
-npm run e2e            # 168 tests: J1, J2, J3, J6 overlap, J7 resume, palette.spec, prices.spec, gate.spec, showtime.spec; Chromium 320x568 and 390x844, WebKit 390x844; 6 languages + pseudo-locale
+npm run e2e            # 201 tests: J1, J2, J3, J6 overlap, J7 resume, palette.spec, prices.spec, gate.spec, showtime.spec, scenebot.spec, sky.spec; Chromium 320x568 and 390x844, WebKit 390x844; 6 languages + pseudo-locale
 npm run e2e:quick      # English only, Chromium 390x844
 ```
 
@@ -35,7 +35,9 @@ In dev, `window.__gate.answer()` returns the parental gate's answer so journeys 
 
 **Frozen snapshots:** if a test says a rules or level snapshot changed and you didn't mean to change the rules, it's a bug. Only for an intended change: `UPDATE_FIXTURES=1 npx vitest run tests/rules.snapshot.test.ts tests/levels.snapshot.test.ts` (see [03-architecture.md](03-architecture.md)).
 
-Before every push, run `format:check`, `typecheck`, `test`, `build`, `e2e` and `sim:quick`. CI runs `verify` (format, typecheck, tests, build, and a grep that fails if `Balance Report`, `__i18n`, `__scene` or `__gate` appear in `dist/`), `sim-quick`, `e2e` (now three parallel jobs, one per browser project, since the suite outgrew a single 20-minute job) and the macOS `ios-build`; `nightly.yml` runs the full sims. The Showtime frame-time gates (`e2e/showtime.spec.ts`) only assert locally — CI's runners have no GPU, so there they just report the numbers.
+Before every push, run `format:check`, `typecheck`, `test`, `build`, `e2e` and `sim:quick` (and the `balance` command below when a difficulty or Trouble change is in play). CI runs `verify` (format, typecheck, tests, build, and a grep that fails if `Balance Report`, `__app`, `__i18n`, `__scene` or `__gate` appear in `dist/`), `sim-quick`, `balance` (M8: the pooled 1–60 curve and two-sided lint, `GOAL-RAMP`/`TEACH` included, 30-minute limit), `e2e` (three parallel jobs, one per browser project, since the suite outgrew a single 20-minute job) and the macOS `ios-build`; `nightly.yml` runs the full sims. The Showtime frame-time gates (`e2e/showtime.spec.ts`) only assert locally — CI's runners have no GPU, so there they just report the numbers.
+
+**Balance** (M8, `balance` CI job): `SIM=1 SIM_BALANCE=1 TROUBLE_RUNS=32 npx vitest run tests/sim/balance.sim.ts tests/sim/trouble-cost.sim.ts` — the pooled 1–60 chapter/tier bands and the two-sided lint (including `GOAL-RAMP` and `TEACH`) under two master seeds × 96 attempts, plus 32 paired Trouble-cost runs. About 8 minutes locally.
 
 ## iOS (on a Mac with Xcode)
 
@@ -50,6 +52,7 @@ xcrun simctl io D986320D-44EE-4552-8BF7-6BAF254B7D52 screenshot /tmp/pp.png   # 
 
 - **Always pass the UDID.** The Pocket Planet Simulator is **iPhone 17 Pro, UDID `D986320D-44EE-4552-8BF7-6BAF254B7D52`**. The owner's other project often has a second Simulator ("BabyFig-iPhone") booted, so `booted` can hit the wrong one. Never touch the BabyFig Simulator.
 - **Taps into the web view** need a press of about 0.25 s; quick taps are often missed.
+- **`xcrun simctl launch` can open the app behind the Home Screen.** The app icon shows it installed fine, but the launched app sometimes doesn't come to the front on its own — tap the icon on the Home Screen instead of trusting the launch to front it.
 - **For precise checks,** use the browser pane with `npm run dev` (`.claude/launch.json` has the config) and `window.__app` / `window.__scene`. Use the Simulator to confirm the real app runs and looks right.
 
 - **Test purchases:** in Xcode, go to Product → Scheme → Edit Scheme → Run → Options → StoreKit Configuration and choose `PocketPlanet.storekit`.
@@ -144,15 +147,17 @@ Run packages in the background, in parallel when their files don't overlap. Keep
 10. **Record:** update the PR #2 description, the milestone's "✅ built" note in ROADMAP-v2 section 8, `BUILT` in `tests/glossary.test.ts` (it lists M0–M7 now; see [05-status-and-next.md](05-status-and-next.md)), and the milestone's Linear document.
 11. **Report:** a short plain-language summary to the owner with what to try in the Simulator.
 
-**Lessons learned (M6–M7):**
+**Lessons learned (M6–M8):**
 
-- **Codex can't run Playwright or a dev server.** Its sandbox can't bind a local port or launch a browser, so the engineering manager (Claude) runs Playwright itself after Codex's packages land, never Codex.
+- **Codex can't run Playwright or a dev server.** Its sandbox can't bind a local port or launch a browser, so the engineering manager (Claude) runs Playwright itself after Codex's packages land, never Codex. This cuts both ways: when Codex **writes** a new Playwright spec (as M7.5's Scene Bot package did for `e2e/scenebot.spec.ts`), the lead still has to be the one to run it and debug it — Codex can't see whether its own spec even passes. M7.5's Scene Bot spec initially reported "no last hit" on every run; the cause was an intro card left open (`window.__scene`'s dev hooks respect the same `modalOpen` guard a real tap does), and only running it locally in the browser surfaced that.
 - **Never `git stash` while a QA agent's Vite server is running.** The dev server hot-reloads, so a stash pulls the old code out from under a server that's still up and the QA agent ends up testing stale behaviour. Stop the server (or let the QA agent finish) before stashing.
 - **Simulator QA with a mid-game save:** generate a profile JSON in a headless browser via `window.__app` against the dev server, then write it straight into the app's own container plist (not the plain domain form, which writes to the wrong place):
   1. Terminate the app in the Simulator first.
   2. Find its container: `xcrun simctl get_app_container <UDID> com.pocketplanet.game data`.
   3. Write the save: `xcrun simctl spawn <UDID> defaults write <container>/Library/Preferences/com.pocketplanet.game CapacitorStorage.pp.profile -string "$(cat profile.json)"`.
-- **Run the full Playwright suite locally after every fix pass, before pushing.** It's what caught a Reduce Motion regression in M6.5/M7 that a narrower check would have missed.
+- **Run the full Playwright suite after every tuning pass, before pushing — not just the sims.** It's what caught a Reduce Motion regression in M6.5/M7 that a narrower check would have missed, and it's what caught M8's goals regression: across the difficulty program's phases B–E, salt-picking had quietly dropped the goal off every planet 1–13 and most of Normal 11–20, because the bots only measure fail/star rates and never check whether the on-screen goal chip is actually there. J1's first-session journey does check for it on planet 6, and that's the run that failed. Two new lint gates (`GOAL-RAMP`, `TEACH` in `tests/sim/lint.ts`) now catch this class of bug inside the sims themselves, but the Playwright run is still what found it first — see [01-history.md](01-history.md) §28.
+- **GitHub's runners are meaningfully slower than the dev Mac — budget for it, don't just copy the local time.** The M8 `balance` job measured about 8 minutes locally but was still getting cancelled at GitHub's 10-minute default; its job limit is now 30 minutes. As a rule of thumb, expect a GitHub Actions runner to take **roughly 1.5–2× as long** as the Mac for a CPU-heavy sim job, and size new CI timeouts with that margin rather than the number you saw locally.
+- **`store/` copy must avoid other games' names, the same as in-game text.** `tests/terms.test.ts` (the M1 originality lint) was widened to scan every `store/*.md` file too, so a listing draft that slips in a hit-game name or term fails CI the same way an in-game string would.
 
 ## Linear
 
