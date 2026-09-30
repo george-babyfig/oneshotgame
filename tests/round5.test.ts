@@ -13,7 +13,8 @@ import {
 } from '../src/meta/festivals';
 import { RESIDENT_ACCS, accAvailable, wearAcc } from '../src/meta/homeworld';
 import { VOYAGE_LEN, VOYAGE_REWARDS, clearStop, ensureVoyage, voyageBase, voyageLevel, voyageUnlocked } from '../src/meta/voyage';
-import { goalProgress } from '../src/core/levels';
+import { OBSTACLES } from '../src/core/sky';
+import { goalProgress, makeLevel } from '../src/core/levels';
 import {
   ALBUM_PAGES,
   MAX_PLACED,
@@ -94,6 +95,23 @@ describe('festivals', () => {
 });
 
 describe('weekly voyage', () => {
+  it('only rolls obstacles already taught in campaign', () => {
+    let checked = 0;
+    for (let week = 1; week <= 20; week++) {
+      const key = `2026-W${String(week).padStart(2, '0')}`;
+      for (let stop = 0; stop < 6; stop++) {
+        const full = voyageLevel(key, 55, stop, 120);
+        if (!full.sky.obstacle) continue;
+        checked++;
+        const cap = OBSTACLES[full.sky.obstacle].debut;
+        const restricted = voyageLevel(key, 55, stop, cap);
+        expect(restricted.sky.obstacle === null || OBSTACLES[restricted.sky.obstacle].debut < cap).toBe(true);
+      }
+    }
+    expect(checked).toBeGreaterThan(0);
+    for (let i = 0; i < 12; i++) expect(makeLevel(60, `MODE-${i}`).sky.obstacle, `uncapped seeded mode ${i}`).toBeNull();
+  });
+
   it('builds 7 feasible stops with goals and a Guardian at the end', () => {
     const base = voyageBase(30);
     for (let i = 0; i < VOYAGE_LEN; i++) {

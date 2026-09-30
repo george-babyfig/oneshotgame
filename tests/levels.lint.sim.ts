@@ -1,5 +1,7 @@
 import { it } from 'vitest';
 import { POLICIES, runPlanet } from './sim/harness';
+import { budgetFor, makeLevel, pressureOf, skyWall } from '../src/core/levels';
+import { OBSTACLES } from '../src/core/sky';
 
 const percentage = (value: number) => `${Math.round(value * 100)}%`;
 
@@ -7,6 +9,17 @@ if (process.env.SIM === '1') {
   it('reports level balance outliers without blocking M1', () => {
     const runs = Number(process.env.LINT_RUNS ?? 24);
     const flags: string[] = [];
+    const structural: string[] = [];
+    for (let n = 1; n <= 120; n++) {
+      const level = makeLevel(n);
+      if (pressureOf(level) > budgetFor(level)) structural.push(`STACK ${n}: pressure ${pressureOf(level)} > ${budgetFor(level)}`);
+      if (skyWall(level)) structural.push(`SKYWALL ${n}`);
+      if (level.sky.obstacle && n > OBSTACLES[level.sky.obstacle].debut && n < OBSTACLES[level.sky.obstacle].debut + 2)
+        structural.push(`STACK ${n}: obstacle reappears too soon after its lesson`);
+    }
+    console.log(`Structural lint: ${structural.length} STACK/SKYWALL flags on planets 1-120`);
+    for (const flag of structural) console.log(`⚠ ${flag}`);
+    if (structural.length) throw new Error(`Structural lint found ${structural.length} STACK/SKYWALL flags`);
     for (let n = 1; n <= 60; n++) {
       const decent = runPlanet(n, POLICIES.decent, runs);
       const sharp = runPlanet(n, POLICIES.sharp, runs);

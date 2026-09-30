@@ -6,6 +6,8 @@ import { t } from '../../i18n';
 import { REACTIONS, REACTION_IDS, type ReactionId } from '../../core/round';
 import { reactionCanvas } from '../art/reactions';
 import { FUSION_IDS } from '../../meta/reactions';
+import { OBSTACLES, type ObstacleId } from '../../core/sky';
+import { skyIconCanvas } from '../art/sky';
 
 // The i18n inventory reads these data strings until its key list moves to KindDef.
 export const FACTS = Object.fromEntries(Object.values(KINDS).map((kind) => [kind.id, kind.stats])) as Record<
@@ -31,7 +33,7 @@ function statBar(label: string, icon: string, value: number) {
   );
 }
 
-type GuidePage = 'basics' | 'objects' | 'reactions' | 'combos' | 'creatures';
+type GuidePage = 'basics' | 'objects' | 'reactions' | 'combos' | 'sky' | 'creatures';
 
 export function reactionForPair(a: Kind, b: Kind): ReactionId | null {
   if (a === b) return null;
@@ -41,6 +43,7 @@ export function reactionForPair(a: Kind, b: Kind): ReactionId | null {
 export function showFieldGuide(app: App, page: GuidePage = 'basics') {
   if (page === 'reactions' && app.p.level < 8) page = 'basics';
   if (page === 'combos' && app.p.level < 26) page = 'basics';
+  if (page === 'sky' && app.p.level < 33 && !app.p.skySeen.length) page = 'basics';
   const pageLabel = (id: GuidePage) =>
     id === 'basics'
       ? t('Basics')
@@ -50,12 +53,22 @@ export function showFieldGuide(app: App, page: GuidePage = 'basics') {
           ? t('Reactions')
           : id === 'combos'
             ? t('Combos')
-            : t('Creatures');
+            : id === 'sky'
+              ? t('Sky')
+              : t('Creatures');
   const pages = h(
     'div',
     { class: 'guide-tabs' },
-    ...(['basics', 'objects', 'reactions', 'combos', 'creatures'] as const)
-      .filter((id) => (id === 'reactions' ? app.p.level >= 8 : id === 'combos' ? app.p.level >= 26 : true))
+    ...(['basics', 'objects', 'reactions', 'combos', 'sky', 'creatures'] as const)
+      .filter((id) =>
+        id === 'reactions'
+          ? app.p.level >= 8
+          : id === 'combos'
+            ? app.p.level >= 26
+            : id === 'sky'
+              ? app.p.level >= 33 || !!app.p.skySeen.length
+              : true,
+      )
       .map((id) => btn(pageLabel(id), `ghost${id === page ? ' on' : ''}`, () => showFieldGuide(app, id))),
   );
   const basics = h(
@@ -174,6 +187,27 @@ export function showFieldGuide(app: App, page: GuidePage = 'basics') {
       }),
     ),
   );
+  const sky = h(
+    'div',
+    { class: 'guide-sky' },
+    h('p', null, t('Twists are in the sky and change your throw. Troubles are on the ground and change the land.')),
+    ...(Object.keys(OBSTACLES) as ObstacleId[]).map((id) => {
+      const seen = app.p.skySeen.includes(id);
+      const obstacle = OBSTACLES[id];
+      return h(
+        'div',
+        { class: `guide-sky-card${seen ? '' : ' unknown'}` },
+        skyIconCanvas(id, 52, !seen, app.p.settings.planetColours === 'clear'),
+        h(
+          'div',
+          null,
+          h('b', null, seen ? t(obstacle.name) : '?'),
+          seen ? h('p', null, t(obstacle.rule)) : null,
+          seen ? h('small', null, t(obstacle.counter)) : null,
+        ),
+      );
+    }),
+  );
   app.mount(
     h(
       'div',
@@ -192,7 +226,9 @@ export function showFieldGuide(app: App, page: GuidePage = 'basics') {
               ? reactions
               : page === 'combos'
                 ? combos
-                : btn(t('Open Lifebook'), 'primary wide', () => app.showLifebook()),
+                : page === 'sky'
+                  ? sky
+                  : btn(t('Open Lifebook'), 'primary wide', () => app.showLifebook()),
       ),
     ),
     'fieldguide',

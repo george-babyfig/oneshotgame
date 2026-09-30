@@ -1,4 +1,6 @@
 import type { Kind } from '../core/world';
+import type { FlightHit } from '../core/flight';
+import { EMPTY_SKY_STATE, type SkyState } from '../core/sky';
 
 export type FeelSound = 'thud' | 'chime' | 'pop' | 'rumble' | 'patter' | 'sparkle';
 export type FeelHaptic = 'light' | 'medium';
@@ -6,6 +8,36 @@ export type TrailStyle = 'stone' | 'crystal' | 'leaf' | 'ember' | 'drop' | 'star
 
 export const REACTION_HAPTIC: Record<'fusion' | 'clash', FeelHaptic> = { fusion: 'medium', clash: 'light' };
 export const COMBO_HAPTIC: FeelHaptic = 'light';
+
+export function needsBonkBadge(hit: FlightHit | null): boolean {
+  return hit?.kind === 'bonk' || hit?.kind === 'fizzle';
+}
+
+export function surpriseBonk(warned: boolean, hit: FlightHit | null): boolean {
+  return needsBonkBadge(hit) && !warned;
+}
+
+export function restoredSkyState(saved?: SkyState): SkyState {
+  return {
+    ...EMPTY_SKY_STATE,
+    brokenRocks: Array.isArray(saved?.brokenRocks)
+      ? saved.brokenRocks.filter((index) => Number.isInteger(index) && index >= 0 && index < 4)
+      : [],
+  };
+}
+
+export function bonkRefund(
+  gentle: boolean,
+  teachingPlanet: boolean,
+  practiceBonkUsed: boolean,
+): { refund: boolean; practiceUsed: boolean } {
+  const practice = teachingPlanet && !practiceBonkUsed;
+  return { refund: gentle || practice, practiceUsed: practiceBonkUsed || practice };
+}
+
+export function rockAfterBonk(state: SkyState, index: number, refunded: boolean): SkyState {
+  return refunded || state.brokenRocks.includes(index) ? state : { ...state, brokenRocks: [...state.brokenRocks, index] };
+}
 
 export const OBJECT_FEEL: Record<Kind, { launch: FeelSound; impact: FeelSound; haptic: FeelHaptic; trail: TrailStyle; burst: string }> = {
   rock: { launch: 'thud', impact: 'thud', haptic: 'medium', trail: 'stone', burst: '#d6c8bb' },

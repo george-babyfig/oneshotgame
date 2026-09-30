@@ -8,6 +8,7 @@ import { projectileCanvas } from './art/projectiles';
 import { sfx } from './audio';
 import { haptic } from './haptics';
 import { t, tp } from '../i18n';
+import { OBSTACLES } from '../core/sky';
 import { rarityName } from './text';
 import { toast } from './dom';
 import { CONTINUE_COST, CONTINUE_THROWS } from '../meta/continues';
@@ -117,9 +118,14 @@ export function twistLabel(scene: LevelScene) {
     frozen: t('🧊 Frozen start'),
     ocean: t('🌊 Water World'),
     wind: t('💨 Solar Wind'),
-    heavy: t('🪐 Dense Core'),
+    heavy: '', // Dense Core retired in M7.5; no planet draws it any more
     wobble: t('🌀 Wobbly Spin'),
     twin: t('🌑🌑 Twin Moons'),
+    rocks: `${OBSTACLES.rocks.icon} ${t(OBSTACLES.rocks.name)}`,
+    bubble: `${OBSTACLES.bubble.icon} ${t(OBSTACLES.bubble.name)}`,
+    mist: `${OBSTACLES.mist.icon} ${t(OBSTACLES.mist.name)}`,
+    ring: `${OBSTACLES.ring.icon} ${t(OBSTACLES.ring.name)}`,
+    tug: `${OBSTACLES.tug.icon} ${t(OBSTACLES.tug.name)}`,
   };
   return map[scene.L.twist] ?? '';
 }

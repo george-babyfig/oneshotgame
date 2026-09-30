@@ -7,11 +7,15 @@ import {
   greedyScore,
   levelMeta,
   makeLevel,
+  pressureOf,
+  budgetFor,
+  skyWall,
   rulesForLevel,
   solve0,
   solve2,
   starsEarned,
 } from '../src/core/levels';
+import { OBSTACLES } from '../src/core/sky';
 import { lifeScore } from '../src/core/world';
 import { roundState, stepRound } from '../src/core/round';
 
@@ -68,8 +72,38 @@ describe('level generator', () => {
         twist: level.twist,
         difficulty: level.difficulty,
         boss: level.twist === 'boss',
+        obstacle: level.sky.obstacle,
       });
     }
+  });
+
+  it('keeps sky obstacles on their ladder and within the pressure budget', () => {
+    const levels = Array.from({ length: 120 }, (_, i) => makeLevel(i + 1));
+    for (const [n, id] of [
+      [33, 'rocks'],
+      [41, 'bubble'],
+      [46, 'mist'],
+      [51, 'ring'],
+      [57, 'tug'],
+    ] as const) {
+      expect(levels[n - 1].difficulty).toBe('normal');
+      expect(levels[n - 1].sky.obstacle).toBe(id);
+      expect(levels[n - 1].queue.slice(0, 3)).toEqual(['rock', 'ice', 'seed']);
+    }
+    expect(levels.slice(0, 30).every((l) => l.sky.obstacle === null)).toBe(true);
+    expect(levels[54].sky.gusty).toBe(true); // reviewed Hard Solar Wind debut
+    expect(levels.filter((l) => l.sky.gusty).map((l) => l.n)).toEqual([55]);
+    expect(levels.every((l) => l.twist !== 'heavy')).toBe(true);
+    expect(levels.every((l) => pressureOf(l) <= budgetFor(l))).toBe(true);
+    const walls = levels.filter(skyWall).map((l) => l.n);
+    expect(walls).toEqual([]);
+    if (process.env.SHOW_SKY === '1')
+      console.log(
+        levels
+          .filter((l) => l.sky.obstacle)
+          .map((l) => `${l.n}:${OBSTACLES[l.sky.obstacle!].name}:${pressureOf(l)}`)
+          .join(', '),
+      );
   });
 
   it('offers frost and ember goals from planet 25', () => {

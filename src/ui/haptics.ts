@@ -15,6 +15,7 @@ const allowed = () => {
 const impactStyle = (feel: FeelHaptic) => (feel === 'medium' ? ImpactStyle.Medium : ImpactStyle.Light);
 
 export const haptic = {
+  sky: () => allowed() && Haptics.impact({ style: ImpactStyle.Light }).catch(() => {}),
   tick: () => allowed() && Haptics.selectionChanged().catch(() => {}),
   light: () => allowed() && Haptics.impact({ style: ImpactStyle.Light }).catch(() => {}),
   medium: () => allowed() && Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {}),

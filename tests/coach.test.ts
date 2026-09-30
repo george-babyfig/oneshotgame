@@ -3,11 +3,13 @@ import { COACH_EVENTS, introWordCount, pendingIntroAfterWin, practiceHelp, round
 import { addIntroLetter, letterOf } from '../src/meta/inbox';
 import { defaultProfile } from '../src/meta/profile';
 import { UNLOCKS } from '../src/meta/unlocks';
+import { OBSTACLES } from '../src/core/sky';
 
 describe('Coach intros', () => {
-  it('keeps every English intro card within twelve words', () => {
+  it('keeps every English intro card within its word budget', () => {
     for (const row of UNLOCKS.filter((entry) => entry.intro)) {
-      expect(introWordCount(row), row.id).toBeLessThanOrEqual(row.id === 'scorch' ? 22 : 12);
+      if (row.id in OBSTACLES) expect(row.intro!.body.split(/\s+/).length, row.id).toBeLessThanOrEqual(25);
+      else expect(introWordCount(row), row.id).toBeLessThanOrEqual(row.id === 'scorch' ? 22 : 12);
     }
   });
 

@@ -15,6 +15,9 @@ import * as hud from './hud';
 import * as preview from './preview';
 import { OBJECT_FEEL, advanceFeedback, enqueueFeedback } from './feel';
 import { drawReactionIcon, reactionColor } from './art/reactions';
+import { drawSkyShape } from './art/sky';
+import { OBSTACLES, gustAt, skyShapesAt } from '../core/sky';
+import { bonkRefund, rockAfterBonk, surpriseBonk } from './feel';
 
 import type { LevelScene, Shot } from './game';
 
@@ -36,13 +39,14 @@ export function drawWind(scene: LevelScene) {
   g.strokeStyle = 'rgba(200,230,255,0.55)';
   g.lineWidth = 2.5;
   g.lineCap = 'round';
-  for (let k = 0; k < 18; k++) {
+  const warning = gustAt(scene.L.sky, scene.time).warning;
+  for (let k = 0; k < (warning ? 32 : 18); k++) {
     const y = ((k * 97) % 100) / 100;
     const speed = 60 + ((k * 37) % 50);
     const x = ((((scene.time * speed * dir + k * 131) % (scene.w + 80)) + scene.w + 80) % (scene.w + 80)) - 40;
     g.beginPath();
     g.moveTo(x, y * scene.h);
-    g.lineTo(x - dir * (18 + (k % 3) * 8), y * scene.h);
+    g.lineTo(x - dir * (warning ? 30 : 18) - (k % 3) * 8, y * scene.h);
     g.stroke();
   }
 }
@@ -251,6 +255,20 @@ export function draw(scene: LevelScene) {
       g.fill();
     }
   if (scene.L.twist === 'wind') scene.drawWind();
+  for (const shape of skyShapesAt(
+    scene.L.sky,
+    scene.skyState,
+    { cx: scene.cx, cy: scene.cy, R: scene.R, width: scene.w, height: scene.h, launcherY: scene.launch.y },
+    scene.time,
+  )) {
+    const wobble =
+      shape.kind === 'rock' ? scene.rockWobbles.find((entry) => entry.index === shape.index && entry.until > scene.time) : undefined;
+    const drawn =
+      wobble && shape.kind === 'rock'
+        ? { ...shape, x: shape.x + Math.sin((wobble.until - scene.time) * 32) * (wobble.until - scene.time) * 9 }
+        : shape;
+    drawSkyShape(g, drawn, !!scene.o.clearPalette, !!scene.o.reduceMotion, scene.time);
+  }
   scene.drawAim();
   // shot
   const sh = scene.shot;
@@ -399,6 +417,12 @@ export function drawPlanet(scene: LevelScene) {
 export function update(scene: LevelScene, dt: number) {
   if (!scene.o.reduceMotion && performance.now() < scene.hitStopUntil) return;
   scene.time += dt;
+  if (scene.L.sky.gusty && !scene.gustTipShown && gustAt(scene.L.sky, scene.time).warning) {
+    scene.gustTipShown = true;
+    scene.popup(scene.cx, scene.cy - scene.R * 1.7, t('A puff of wind!'), '#d7ecff', 16, 1.4);
+    sfx.sky('gust');
+    haptic.sky();
+  }
   if (scene.o.timeLimit && !scene.ended && !scene.modalOpen && scene.timeLeft > 0) {
     scene.timeLeft -= dt;
     scene.renderClock();
@@ -421,8 +445,14 @@ export function update(scene: LevelScene, dt: number) {
   }
   const sh = scene.shot;
   if (sh) {
-    const launch: FlightLaunch = { x: sh.x, y: sh.y, vx: sh.vx, vy: sh.vy, elapsed: sh.t, carry: sh.carry };
+    const launch: FlightLaunch = { x: sh.x, y: sh.y, vx: sh.vx, vy: sh.vy, elapsed: sh.t, carry: sh.carry, bounceCount: sh.bounceCount };
     const path = fly(STAR_SLING, launch, scene.flightWorld(sh.rot0), sh.t0, dt);
+    for (const bounce of path.bounces) {
+      scene.popup(bounce.x, bounce.y - 16, t('Boing!'), '#b9edff', 18);
+      scene.ring(bounce.x, bounce.y, '#b9edff', 25);
+      sfx.sky('boing');
+      haptic.sky();
+    }
     Object.assign(sh, {
       x: path.state.x,
       y: path.state.y,
@@ -430,8 +460,27 @@ export function update(scene: LevelScene, dt: number) {
       vy: path.state.vy,
       t: path.state.elapsed,
       carry: path.state.carry ?? 0,
+      bounceCount: path.state.bounceCount ?? sh.bounceCount ?? 0,
     });
+    if (
+      !scene.mistTipShown &&
+      scene.L.sky.obstacle === 'mist' &&
+      path.points.some((point) =>
+        skyShapesAt(
+          scene.L.sky,
+          scene.skyState,
+          { cx: scene.cx, cy: scene.cy, R: scene.R, width: scene.w, height: scene.h, launcherY: scene.launch.y },
+          sh.t0 + point.elapsed,
+        ).some((shape) => shape.kind === 'mist' && Math.hypot(point.x - shape.x, point.y - shape.y) < shape.r),
+      )
+    ) {
+      scene.mistTipShown = true;
+      scene.popup(sh.x, sh.y - 22, t('The mist gave your shot a wiggle.'), '#d7c8ff', 15);
+      sfx.sky('mist');
+      haptic.sky();
+    }
     if (path.hit?.kind === 'boss') {
+      scene.lastHit = path.hit;
       scene.combo = { links: 0, rest: false, best: scene.combo.best };
       scene.comboIconsCurrent = [];
       if (sh.nova) {
@@ -441,17 +490,49 @@ export function update(scene: LevelScene, dt: number) {
       scene.hitBoss(sh.x, sh.y);
       scene.shot = null;
       scene.afterShot();
-    } else if (path.hit?.kind === 'blocked') {
+    } else if (path.hit?.kind === 'bonk' || path.hit?.kind === 'fizzle') {
+      const hit = path.hit;
+      scene.lastHit = hit;
+      if (sh.warnedBonk !== undefined && surpriseBonk(sh.warnedBonk, hit)) scene.surpriseBonks++;
       scene.combo = { links: 0, rest: false, best: scene.combo.best };
       scene.comboIconsCurrent = [];
-      scene.burst(sh.x, sh.y, '#c9c3d6', 14, 4);
-      scene.popup(sh.x, sh.y - 10, t('Blocked!'), '#fff', 18);
-      sfx.miss();
+      const teaching = scene.L.sky.obstacle !== null && scene.L.n === OBSTACLES[scene.L.sky.obstacle].debut;
+      const firstPractice = teaching && !scene.practiceBonkUsed;
+      const refund = bonkRefund(!!scene.o.gentle, teaching, scene.practiceBonkUsed);
+      scene.practiceBonkUsed = refund.practiceUsed;
+      if (!(refund.refund && hit.kind === 'bonk' && hit.by === 'rock'))
+        scene.burst(sh.x, sh.y, hit.kind === 'fizzle' ? '#d8b1ff' : '#f3d9b5', 22, 4);
+      if (hit.kind === 'bonk' && hit.by === 'rock' && hit.rock !== undefined) {
+        if (refund.refund) scene.rockWobbles.push({ index: hit.rock, until: scene.time + 0.55 });
+        else if (!scene.skyState.brokenRocks.includes(hit.rock)) {
+          scene.skyState = rockAfterBonk(scene.skyState, hit.rock, false);
+          scene.burst(sh.x, sh.y, '#e8e5ee', 22, 5);
+        }
+      }
+      if (refund.refund) {
+        if (Number.isFinite(scene.throwsLeft)) scene.throwsLeft++;
+        scene.throwsUsed--;
+        scene.qi--;
+        scene.next = scene.cur;
+        scene.cur = sh.kind;
+        scene.renderHud();
+      }
+      scene.popup(
+        sh.x,
+        sh.y - 10,
+        firstPractice ? t('Practice bonk! Try again') : hit.kind === 'fizzle' ? t('Fizz!') : t('Bonk!'),
+        '#fff',
+        18,
+      );
+      sfx.sky(hit.kind === 'fizzle' ? 'fizz' : 'bonk');
+      haptic.sky();
       scene.shot = null;
       scene.afterShot();
     } else if (path.hit?.kind === 'land') {
+      scene.lastHit = path.hit;
       scene.land(sh, path.hit.sector);
     } else if (path.hit?.kind === 'miss') {
+      scene.lastHit = path.hit;
       scene.combo = { links: 0, rest: false, best: scene.combo.best };
       scene.comboIconsCurrent = [];
       scene.popup(Math.min(Math.max(sh.x, 60), scene.w - 60), Math.min(Math.max(sh.y, 120), scene.h - 200), t('Missed!'), '#ffb3c1', 20);
@@ -694,6 +775,8 @@ export function flightWorld(scene: LevelScene, rotation: number): FlightWorld {
     height: scene.h,
     launcherY: scene.launch.y,
     bossActive: scene.bossHp > 0,
+    sky: scene.L.sky,
+    skyState: scene.skyState,
   };
 }
 
@@ -723,6 +806,7 @@ export function roundModifiers(scene: LevelScene): RoundModifiers {
     momentum: scene.o.momentum ?? 0,
     buddy: scene.o.buddy ?? null,
     shower: !!scene.o.shower,
+    gentle: !!scene.o.gentle,
   };
 }
 

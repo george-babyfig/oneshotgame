@@ -22,7 +22,7 @@ import { today } from '../../meta/profile';
 import { renderPlanet } from '../art/planet';
 import { drawCreature } from '../art/critters';
 import { SPECIES_BY_ID } from '../../core/world';
-import { goalChips } from '../flows/prelevel';
+import { goalChips, twistChip } from '../flows/prelevel';
 import { NO_BOOSTERS, type App } from '../app';
 import { getLang, t, tp } from '../../i18n';
 import { rulesForLevel } from '../../core/round';
@@ -171,6 +171,7 @@ function stopSheet(app: App, i: number) {
     h('div', { class: 'm-title' }, t(L.name)),
     h('div', { class: 'vthumb' }, thumb(L, 120, false)),
     i === VOYAGE_LEN - 1 ? h('div', { class: 'twist-chip' }, t('☄️ Comet Guardian — hit it 3 times!')) : null,
+    i === VOYAGE_LEN - 1 ? null : twistChip(L, p.settings.planetColours === 'clear'),
     goalChips(L),
     h(
       'div',

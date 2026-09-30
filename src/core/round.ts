@@ -106,10 +106,10 @@ export function novaForThrow(state: RoundState): boolean {
   return state.novaEnabled && state.nova.charge >= state.nova.threshold && (!state.nova.held || state.throwsLeft === 1);
 }
 
-function reactionAt(planet: Planet, kind: Kind, sector: number, rules: RoundRules) {
+function reactionAt(planet: Planet, kind: Kind, sector: number, rules: RoundRules, gentle = false) {
   const at = wrap(sector);
   for (const id of REACTION_IDS) {
-    if (!rules.reactions.includes(id)) continue;
+    if (!rules.reactions.includes(id) || (gentle && REACTIONS[id].kind === 'clash')) continue;
     const lands: Partial<Record<Kind, BiomeId[]>> =
       id === 'steam'
         ? { magma: ['icesheet', 'tundra', 'taiga'], ice: ['volcano', 'desert'] }
@@ -209,7 +209,7 @@ export function stepRound(
   const priorPresent = new Set(priorSpecies.filter((id): id is string => !!id));
   const meter = state.nova ?? { charge: state.charge, threshold: NOVA_CHARGE, fired: 0, held: false };
   const nova = state.novaEnabled && meter.charge >= meter.threshold && (action.nova ?? !meter.held);
-  const reaction = reactionAt(state.planet, action.kind, action.sector, rules);
+  const reaction = reactionAt(state.planet, action.kind, action.sector, rules, mods.gentle);
   const oldCombo = state.combo ?? { links: 0, rest: false, best: 0 };
   const fusion = reaction !== null && REACTIONS[reaction.id].kind === 'fusion';
   const comboEnabled = rules.combo !== false;

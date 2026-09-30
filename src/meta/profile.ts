@@ -1,6 +1,7 @@
 import { loadKey, saveKey } from './storage';
 import type { BoosterId, UpgradeId } from './config';
 import type { Kind, Planet } from '../core/world';
+import type { ObstacleId, SkyState } from '../core/sky';
 import { defaultHome, type HomeState } from './homeworld';
 import type { Mail } from './inbox';
 import { UNLOCKS } from './unlocks';
@@ -48,6 +49,7 @@ export interface Settings {
   /** A digest, never the entered PIN. */
   parentPin: string | null;
   gatePausedUntil: number;
+  gentle: boolean;
 }
 
 export interface RoundCheckpoint {
@@ -91,6 +93,8 @@ export interface RoundCheckpoint {
   warmup?: boolean;
   practiceFirstClear?: boolean;
   practiceGifts?: number;
+  skyState?: SkyState;
+  practiceBonkUsed?: boolean;
 }
 
 function roundFingerprint(n: number, prefix = 'PP', salt?: number): string {
@@ -187,6 +191,8 @@ export interface Profile {
   roadDay: { day: string; earned: number };
   /** Lifebook: every creature ever discovered. */
   seen: string[];
+  skySeen: ObstacleId[];
+  gustSeen: boolean;
   fusionsFound: ReactionId[];
   reactionPairsTried: string[];
   /** Best links and the thirteen Field Guide stamp bits. */
@@ -317,6 +323,8 @@ export function defaultProfile(now = Date.now()): Profile {
     roadPoints: 0,
     roadDay: { day: '', earned: 0 },
     seen: [],
+    skySeen: [],
+    gustSeen: false,
     fusionsFound: [],
     reactionPairsTried: [],
     combo: { best: 0, stamps: 0 },
@@ -356,6 +364,7 @@ export function defaultProfile(now = Date.now()): Profile {
       breakAfterRounds: null,
       parentPin: null,
       gatePausedUntil: 0,
+      gentle: false,
     },
     tutorial: false,
     savedRound: undefined,
@@ -476,6 +485,15 @@ export function migrate(raw: Record<string, unknown>): Profile {
       }
     }
     p.m3Migrated = true;
+  }
+  if (!Object.hasOwn(raw, 'skySeen')) {
+    for (const row of UNLOCKS) {
+      if (['rocks', 'bubble', 'mist', 'ring', 'tug'].includes(row.id) && p.level > row.planet) {
+        p.skySeen.push(row.id as ObstacleId);
+        const key = `coach-${row.id}`;
+        if (!p.mailSeen.includes(key)) p.mailSeen.push(key);
+      }
+    }
   }
   const savedSettings = raw.settings as Record<string, unknown> | undefined;
   if (typeof p.settings.spendingReminder === 'number')

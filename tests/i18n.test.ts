@@ -8,6 +8,7 @@ import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { BIOMES, KINDS, SPECIES } from '../src/core/world';
 import { TWISTS } from '../src/core/levels';
+import { OBSTACLES } from '../src/core/sky';
 import { BOOSTERS, SKINS, UPGRADES } from '../src/meta/config';
 import { PRODUCT_TEXT_KEYS } from '../src/meta/tuning';
 import { HABITATS } from '../src/meta/habitats';
@@ -32,7 +33,7 @@ import { WISH_TEMPLATES } from '../src/meta/wishes';
 import { NEW_FEATURE } from '../src/meta/nextup';
 import { FACTS } from '../src/ui/screens/fieldguide';
 import { REACTIONS } from '../src/core/round';
-import { UNLOCKS } from '../src/meta/unlocks';
+import { GUSTY_WIND_TIP, UNLOCKS } from '../src/meta/unlocks';
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
@@ -60,6 +61,8 @@ export function allKeys(): string[] {
   Object.values(BIOMES).forEach((b) => (add(b.name), add(b.recipe)));
   Object.values(KINDS).forEach((k) => (add(k.name), add(k.desc)));
   Object.values(TWISTS).forEach((x) => (add(x.name), add(x.desc)));
+  Object.values(OBSTACLES).forEach((x) => (add(x.name), add(x.rule), add(x.counter), add(x.intro)));
+  add(GUSTY_WIND_TIP);
   Object.values(REACTIONS).forEach((x) => add(x.name));
   UNLOCKS.forEach((x) => (add(x.intro?.title), add(x.intro?.body)));
   SPECIES.forEach((s) => (add(s.name), !s.home && add(s.hint)));

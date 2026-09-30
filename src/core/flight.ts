@@ -1,6 +1,8 @@
 import { SECTORS } from './world';
+import { EMPTY_SKY_STATE, gustAt, skyShapesAt, type SkyDef, type SkyState } from './sky';
 
 export interface FlightParams {
+  launcher: 'sling';
   gravity: number;
   step: number;
   maxTime: number;
@@ -8,6 +10,7 @@ export interface FlightParams {
 }
 
 export const STAR_SLING: Readonly<FlightParams> = {
+  launcher: 'sling',
   gravity: 5.2e7,
   step: 1 / 240,
   maxTime: 5,
@@ -24,6 +27,7 @@ export interface FlightPoint {
 
 export interface FlightLaunch extends FlightPoint {
   carry?: number;
+  bounceCount?: number;
 }
 
 export interface FlightWorld {
@@ -40,15 +44,22 @@ export interface FlightWorld {
   height: number;
   launcherY: number;
   bossActive?: boolean;
+  sky?: SkyDef;
+  skyState?: SkyState;
 }
 
-export type FlightHit = { kind: 'land'; sector: number } | { kind: 'blocked' | 'boss' | 'miss' };
+export type FlightHit =
+  | { kind: 'land'; sector: number }
+  | { kind: 'bonk'; by: 'moon' | 'rock' | 'ring' | 'bubble'; x: number; y: number; rock?: number }
+  | { kind: 'fizzle'; x: number; y: number }
+  | { kind: 'boss' | 'miss' };
 
 export interface FlightResult {
   points: FlightPoint[];
   state: FlightLaunch;
   hit: FlightHit | null;
   sector: number | null;
+  bounces: { x: number; y: number; elapsed: number }[];
 }
 
 function moonPositions(w: FlightWorld, time: number) {
@@ -82,6 +93,8 @@ function rotationAt(w: FlightWorld, t0: number, elapsed: number) {
 export function fly(params: FlightParams, launch: FlightLaunch, world: FlightWorld, t0: number, dt: number): FlightResult {
   const state = { ...launch, carry: (launch.carry ?? 0) + Math.max(0, dt) };
   const points: FlightPoint[] = [];
+  const bounces: FlightResult['bounces'] = [];
+  let bounceCount = state.bounceCount ?? 0;
   let hit: FlightHit | null = null;
   const step = params.step;
   while (state.carry + 1e-10 >= step && !hit) {
@@ -92,7 +105,30 @@ export function fly(params: FlightParams, launch: FlightLaunch, world: FlightWor
     const r = Math.sqrt(r2);
     const gravity = world.gravity ?? params.gravity;
     const a = (world.twist === 'heavy' ? gravity * 1.45 : gravity) / r2;
-    if (world.twist === 'wind') state.vx += world.wind * step;
+    if (world.twist === 'wind') state.vx += world.wind * (world.sky ? gustAt(world.sky, t0 + state.elapsed).mult : 1) * step;
+    const shapes = world.sky?.obstacle
+      ? skyShapesAt(
+          world.sky,
+          world.skyState ?? EMPTY_SKY_STATE,
+          { cx: world.cx, cy: world.cy, R: world.radius, width: world.width, height: world.height, launcherY: world.launcherY },
+          t0 + state.elapsed,
+        )
+      : [];
+    for (const shape of shapes) {
+      if (shape.kind === 'mist' && Math.hypot(state.x - shape.x, state.y - shape.y) < shape.r) {
+        const { vx, vy } = state;
+        const speed = Math.hypot(vx, vy) || 1;
+        state.vx += (-vy / speed) * 260 * shape.curl * step;
+        state.vy += (vx / speed) * 260 * shape.curl * step;
+      } else if (shape.kind === 'tug') {
+        const tx = shape.x - state.x;
+        const ty = shape.y - state.y;
+        const tr2 = Math.max(tx * tx + ty * ty, 30 * 30);
+        const ta = (((0.3 * gravity) / tr2) * step) / Math.sqrt(tr2);
+        state.vx += tx * ta;
+        state.vy += ty * ta;
+      }
+    }
     state.vx += (dx / r) * a * step;
     state.vy += (dy / r) * a * step;
     state.x += state.vx * step;
@@ -100,9 +136,49 @@ export function fly(params: FlightParams, launch: FlightLaunch, world: FlightWor
     state.elapsed += step;
     points.push({ x: state.x, y: state.y, vx: state.vx, vy: state.vy, elapsed: state.elapsed });
     const time = t0 + state.elapsed;
+    const collisionShapes = world.sky?.obstacle
+      ? skyShapesAt(
+          world.sky,
+          world.skyState ?? EMPTY_SKY_STATE,
+          { cx: world.cx, cy: world.cy, R: world.radius, width: world.width, height: world.height, launcherY: world.launcherY },
+          time,
+        )
+      : [];
     const moon = moonPositions(world, time).find((m) => Math.hypot(state.x - m.x, state.y - m.y) < m.r + 8);
-    if (moon) hit = { kind: world.twist === 'boss' ? 'boss' : 'blocked' };
+    if (moon) hit = world.twist === 'boss' ? { kind: 'boss' } : { kind: 'bonk', by: 'moon', x: state.x, y: state.y };
     else {
+      for (const shape of collisionShapes) {
+        if (shape.kind === 'rock' && Math.hypot(state.x - shape.x, state.y - shape.y) < shape.r + params.collisionPadding)
+          hit = { kind: 'bonk', by: 'rock', x: state.x, y: state.y, rock: shape.index };
+        if (shape.kind === 'tug' && Math.hypot(state.x - shape.x, state.y - shape.y) < shape.coreR)
+          hit = { kind: 'fizzle', x: state.x, y: state.y };
+        if (
+          shape.kind === 'ring' &&
+          Math.abs(Math.hypot(state.x - shape.cx, state.y - shape.cy) - shape.r) < shape.thickness / 2 + params.collisionPadding
+        ) {
+          const angle = ((Math.atan2(state.y - shape.cy, state.x - shape.cx) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+          const inGap = shape.gaps.some((gap) => (angle - gap.start + Math.PI * 2) % (Math.PI * 2) < gap.width);
+          if (!inGap) hit = { kind: 'bonk', by: 'ring', x: state.x, y: state.y };
+        }
+        if (shape.kind === 'bubble' && Math.hypot(state.x - shape.x, state.y - shape.y) < shape.r + params.collisionPadding) {
+          const dist = Math.hypot(state.x - shape.x, state.y - shape.y) || 1;
+          const nx = (state.x - shape.x) / dist;
+          const ny = (state.y - shape.y) / dist;
+          const dot = state.vx * nx + state.vy * ny;
+          if (dot < 0 && bounceCount >= 3) hit = { kind: 'bonk', by: 'bubble', x: state.x, y: state.y };
+          else if (dot < 0) {
+            state.vx = (state.vx - 2 * dot * nx) * 0.9;
+            state.vy = (state.vy - 2 * dot * ny) * 0.9;
+            state.x = shape.x + nx * (shape.r + params.collisionPadding + 0.01);
+            state.y = shape.y + ny * (shape.r + params.collisionPadding + 0.01);
+            points[points.length - 1] = { x: state.x, y: state.y, vx: state.vx, vy: state.vy, elapsed: state.elapsed };
+            bounces.push({ x: state.x, y: state.y, elapsed: state.elapsed });
+            state.bounceCount = ++bounceCount;
+          }
+        }
+        if (hit) break;
+      }
+      if (hit) break;
       const angle = Math.atan2(state.y - world.cy, state.x - world.cx) - rotationAt(world, t0, state.elapsed);
       const turn = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
       const sector = Math.floor(turn / ((Math.PI * 2) / SECTORS)) % SECTORS;
@@ -118,5 +194,19 @@ export function fly(params: FlightParams, launch: FlightLaunch, world: FlightWor
         hit = { kind: 'miss' };
     }
   }
-  return { points, state, hit, sector: hit?.kind === 'land' ? hit.sector : null };
+  return { points, state, hit, sector: hit?.kind === 'land' ? hit.sector : null, bounces };
+}
+
+/** Simulate one launch to contact or the time limit. */
+export function flyFull(params: FlightParams, launch: FlightLaunch, world: FlightWorld, t0: number): FlightResult {
+  return fly(params, launch, world, t0, params.maxTime + params.step);
+}
+
+/** Matches the live scene's resting planet and launcher layout. */
+export function sceneGeometry(width: number, height: number, sizeScale: number) {
+  const cx = width / 2;
+  const cy = height * 0.43;
+  const R = Math.min(width * 0.27, height * 0.17) * sizeScale;
+  const launcherY = height - 150;
+  return { cx, cy, R, width, height, launcherY, launch: { x: cx, y: launcherY } };
 }

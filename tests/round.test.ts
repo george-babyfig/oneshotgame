@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NO_MODIFIERS } from '../src/core/modifiers';
+import { NO_MODIFIERS, modifiersFor } from '../src/core/modifiers';
 import {
   NOVA_CHARGE,
   ROUND_RULES_V0,
@@ -70,6 +70,24 @@ describe('round engine', () => {
     const back = stepRound(state, { kind: 'rock', sector: 0 });
     expect(back.cameBack).toContainEqual({ species: 'goat', sector: 0 });
     expect(back.firstArrivals).not.toContain('goat');
+  });
+
+  it('gentle mode skips Clashes and keeps Fusions', () => {
+    const planet = newPlanet();
+    planet.sectors[0].biome = 'volcano';
+    const rules = { version: 2, reactions: ['scorch', 'steam'] as ('scorch' | 'steam')[], troubles: [], combo: true };
+    const state = roundState(planet);
+    const normal = stepRound(state, { kind: 'sun', sector: 0 }, NO_MODIFIERS, rules);
+    const gentle = stepRound(state, { kind: 'sun', sector: 0 }, { ...NO_MODIFIERS, gentle: true }, rules);
+    expect(normal.reactions.map((r) => r.id)).toContain('scorch');
+    expect(gentle.reactions).toEqual([]);
+    const icy = newPlanet();
+    icy.sectors[0].biome = 'icesheet';
+    expect(
+      stepRound(roundState(icy), { kind: 'magma', sector: 0 }, { ...NO_MODIFIERS, gentle: true }, rules).reactions.map((r) => r.id),
+    ).toContain('steam');
+    for (const mode of ['daily', 'rush', 'challenge'] as const) expect(modifiersFor(mode, { gentle: true }).gentle).toBe(false);
+    expect(modifiersFor('campaign', { gentle: true }).gentle).toBe(true);
   });
 
   it('round-trips the full continuation state and rejects other versions', () => {

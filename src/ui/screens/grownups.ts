@@ -87,6 +87,26 @@ function renderGrownups(app: App) {
     t('Hide paid looks'),
     h('i'),
   );
+  const gentle = h(
+    'div',
+    { class: 'grownups-gentle' },
+    h(
+      'button',
+      {
+        class: `toggle${p.settings.gentle ? ' on' : ''}`,
+        role: 'switch',
+        'aria-checked': String(!!p.settings.gentle),
+        onclick: () => {
+          p.settings.gentle = !p.settings.gentle;
+          app.save();
+          renderGrownups(app);
+        },
+      },
+      t('Gentle planets'),
+      h('i'),
+    ),
+    h('p', { class: 'muted small' }, t("Sky bumps give the throw back and Clashes don't happen. Stars count as normal.")),
+  );
   const sections = [
     p.chapters.length && Date.now() >= quietUntil
       ? h(
@@ -150,6 +170,7 @@ function renderGrownups(app: App) {
       h('h2', null, t('Grown-up settings')),
       ...grownupSettings(app),
       hide,
+      gentle,
       btn(t(p.settings.parentPin ? 'Change parent PIN' : 'Set parent PIN'), 'ghost wide', () => pinDialog(app)),
       p.settings.parentPin
         ? btn(t('Remove parent PIN'), 'ghost wide', async () => {

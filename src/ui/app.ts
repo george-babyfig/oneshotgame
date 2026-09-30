@@ -24,6 +24,8 @@ import {
   type RoundCheckpoint,
 } from '../meta/profile';
 import { setPlanetPalette } from './art/planet';
+import type { SkyState } from '../core/sky';
+import { restoredSkyState } from './feel';
 import { createIap, type IapEvent, type StorePrice } from '../meta/iap';
 import { PRODUCT_BY_ID, PRODUCT_BY_KEY, SKINS, type BoosterId } from '../meta/config';
 import { clearFails, continueAllowed, countsAsFail, recordFail } from '../meta/continues';
@@ -82,7 +84,7 @@ import { sight } from '../meta/lore';
 import { seasonOf, skyEventOn } from '../meta/seasons';
 import { keeperHead } from './art/keeper';
 import { refreshCreatureGalleryMotion } from './art/critters';
-import { debutsAt, unlocked } from '../meta/unlocks';
+import { GUSTY_WIND_TIP, debutsAt, unlocked } from '../meta/unlocks';
 import { roadReady, chestsReady } from '../meta/progression';
 import { letterOf } from '../meta/inbox';
 import { homeBadge } from '../meta/homeworld';
@@ -307,7 +309,11 @@ export class App {
       warmup: !!scene.o.practice,
       practiceFirstClear: !!scene.o.practiceFirstClear,
       practiceGifts: scene.practiceGifts,
-    });
+      skyState: { brokenRocks: [...scene.skyState.brokenRocks] },
+      practiceBonkUsed: scene.practiceBonkUsed,
+      mistTipShown: scene.mistTipShown,
+      gustTipShown: scene.gustTipShown,
+    } as RoundCheckpoint & { skyState: SkyState; practiceBonkUsed: boolean; mistTipShown: boolean; gustTipShown: boolean });
     this.saveNow();
     if (pause) {
       scene.paused = true;
@@ -719,11 +725,27 @@ export class App {
       lab: labLevels(this.p),
       momentum: extra.momentum ?? 0,
       shower: !!skyEventOn(new Date()),
+      gentle: !!this.p.settings.gentle,
     });
+    if (mode === 'remix') mods.gentle = !!this.p.settings.gentle;
     return {
       look,
       mastered: masteryLevel(this.p.mastery[look.launcher] ?? 0) >= MASTERY_STEPS.length,
       ...mods,
+      clearPalette: this.p.settings.planetColours === 'clear',
+      gustTip: this.p.gustSeen ? undefined : GUSTY_WIND_TIP,
+      onGustSeen: () => {
+        if (!this.p.gustSeen) {
+          this.p.gustSeen = true;
+          this.save();
+        }
+      },
+      onSkySeen: (id) => {
+        if (!this.p.skySeen.includes(id)) {
+          this.p.skySeen.push(id);
+          this.save();
+        }
+      },
       glow: skin.glow,
       seen: new Set(this.p.seen),
       tutorial,
@@ -864,6 +886,7 @@ export class App {
       opts.lab = m.lab;
       opts.momentum = m.momentum;
       opts.shower = m.shower;
+      opts.gentle = m.gentle;
       opts.buddy = m.buddy;
       opts.allowIntro = () => false;
       opts.coach = undefined;
@@ -871,7 +894,16 @@ export class App {
     }
     const scene = new LevelScene(L, opts);
     if (o.resume) {
-      const s = o.resume;
+      const s = o.resume as RoundCheckpoint & {
+        skyState?: SkyState;
+        practiceBonkUsed?: boolean;
+        mistTipShown?: boolean;
+        gustTipShown?: boolean;
+      };
+      scene.skyState = restoredSkyState(s.skyState);
+      scene.practiceBonkUsed = !!s.practiceBonkUsed;
+      scene.mistTipShown = !!s.mistTipShown;
+      scene.gustTipShown = !!s.gustTipShown;
       scene.planet = s.state.planet;
       scene.nova = s.state.nova;
       scene.combo = s.state.combo;

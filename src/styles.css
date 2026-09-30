@@ -4217,7 +4217,7 @@ button.lb {
   left: max(8px, env(safe-area-inset-left, 0px));
   right: max(8px, env(safe-area-inset-right, 0px));
   bottom: calc(var(--sb) + 10px);
-  max-height: min(54vh, 360px);
+  height: min(54vh, 360px);
   display: flex;
   flex-direction: column;
   gap: 7px;
@@ -4231,6 +4231,11 @@ button.lb {
     0 12px 35px rgba(0, 0, 0, 0.5);
   text-align: center;
 }
+.level-info-gate {
+  position: absolute;
+  inset: 0;
+  z-index: 16;
+}
 .level-info .m-title {
   font-size: max(16px, calc(20px * var(--text-scale)));
 }
@@ -4240,6 +4245,11 @@ button.lb {
 }
 .level-info .btn {
   flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: auto;
+  box-shadow: 0 0 12px 10px rgba(25, 21, 68, 0.96);
 }
 @media (max-width: 360px) {
   .screen {
@@ -4937,4 +4947,51 @@ button.lb {
   display: flex;
   justify-content: center;
   gap: 5px;
+}
+/* Sky cards keep the rule and counter beside their shape at narrow widths. */
+.sky-prelevel,
+.guide-sky-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sky-prelevel small,
+.guide-sky-card small {
+  display: block;
+  line-height: 1.25;
+}
+
+.guide-sky {
+  display: grid;
+  gap: 10px;
+  padding-bottom: 24px;
+}
+
+.guide-sky-card {
+  min-width: 0;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.guide-sky-card canvas,
+.sky-prelevel canvas {
+  flex: none;
+}
+
+.guide-sky-card p {
+  margin: 3px 0;
+}
+
+.guide-sky-card.unknown {
+  opacity: 0.7;
+}
+
+.guide-tabs .btn {
+  min-height: 44px;
+}
+
+.grownups-gentle .toggle {
+  width: 100%;
 }

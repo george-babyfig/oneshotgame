@@ -11,6 +11,7 @@ describe('round modifiers', () => {
     momentum: 3,
     buddy: { species: 'bunny', acc: 'bow' },
     shower: true,
+    gentle: false,
   };
 
   it.each(['campaign', 'voyage', 'zen'] as const)('%s receives player bonuses', (mode) => {
@@ -19,6 +20,14 @@ describe('round modifiers', () => {
 
   it.each(['daily', 'rush', 'challenge', 'remix'] as const)('%s uses the base loadout', (mode) => {
     expect(modifiersFor(mode, bonuses)).toEqual(NO_MODIFIERS);
+  });
+
+  it('allows Gentle outside competitive modes', () => {
+    expect(modifiersFor('campaign', { gentle: true }).gentle).toBe(true);
+    expect(modifiersFor('voyage', { gentle: true }).gentle).toBe(true);
+    expect(modifiersFor('zen', { gentle: true }).gentle).toBe(true);
+    for (const mode of ['daily', 'rush', 'challenge'] as const) expect(modifiersFor(mode, { gentle: true }).gentle).toBe(false);
+    expect(modifiersFor('remix', { gentle: true }).gentle).toBe(true);
   });
 
   it('returns independent nested objects', () => {

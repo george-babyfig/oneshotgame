@@ -4,14 +4,35 @@ import { drawProjectile } from './art/projectiles';
 import { drawKeeper, drawLauncher } from './art/keeper';
 import { REACTIONS, novaForThrow, previewStep } from '../core/round';
 import { drawReactionIcon, reactionColor } from './art/reactions';
-import { fly, STAR_SLING } from '../core/flight';
+import { flyFull, STAR_SLING } from '../core/flight';
+import { needsBonkBadge } from './feel';
 import { t } from '../i18n';
 import type { LevelScene } from './game';
 
 export const MAX_PULL = 150;
 export const PULL_TO_SPEED = 6.2;
+export interface DrawnAim {
+  vx: number;
+  vy: number;
+  roundTime: number;
+  rotation: number;
+  badge: boolean;
+}
 const SCOPE_STEPS = [16, 28, 44, 90];
-const flightCache = new WeakMap<LevelScene, { key: string; path: ReturnType<typeof fly> }>();
+const flightCache = new WeakMap<LevelScene, { key: string; path: ReturnType<typeof flyFull> }>();
+
+export function predictFlight(scene: LevelScene, vx: number, vy: number) {
+  const key = `${vx}|${vy}|${scene.rot}|${scene.time}|${scene.w}|${scene.h}|${scene.throwsUsed}|${scene.bossHp}|${scene.skyState.brokenRocks.join(',')}`;
+  let cached = flightCache.get(scene);
+  if (cached?.key !== key) {
+    cached = {
+      key,
+      path: flyFull(STAR_SLING, { ...scene.launch, vx, vy, elapsed: 0 }, scene.flightWorld(scene.rot), scene.time),
+    };
+    flightCache.set(scene, cached);
+  }
+  return cached.path;
+}
 
 function outline(scene: LevelScene, i: number, color: string, alpha = 1) {
   const g = scene.g;
@@ -279,6 +300,7 @@ export function drawAim(scene: LevelScene) {
   const L = scene.launch;
   const aiming = !scene.shot && !scene.ended;
   const p = scene.pull();
+  if (!aiming || !scene.aimFrom || p.len < 18) scene.drawnAim = null;
   const ox = aiming && scene.aimFrom ? -p.vx / PULL_TO_SPEED / 3 : 0;
   const oy = aiming && scene.aimFrom ? -p.vy / PULL_TO_SPEED / 3 : 0;
   const kx = L.x - Math.min(96, scene.w * 0.24);
@@ -316,26 +338,13 @@ export function drawAim(scene: LevelScene) {
     drawQueue(scene);
     if (scene.aimFrom && p.len >= 18) {
       const steps = SCOPE_STEPS[scene.o.boosters.scope ? 3 : scene.o.scopeLevel];
-      const key = `${Math.round(p.vx)}|${Math.round(p.vy)}|${Math.round(scene.rot * 100)}|${Math.round(scene.time * 10)}|${scene.w}|${scene.h}`;
-      let cached = flightCache.get(scene);
-      if (cached?.key !== key) {
-        cached = {
-          key,
-          path: fly(
-            STAR_SLING,
-            { x: L.x, y: L.y, vx: p.vx, vy: p.vy, elapsed: 0 },
-            scene.flightWorld(scene.rot),
-            scene.time,
-            STAR_SLING.maxTime + STAR_SLING.step,
-          ),
-        };
-        flightCache.set(scene, cached);
-      }
-      const path = cached.path;
+      const path = predictFlight(scene, p.vx, p.vy);
+      scene.drawnAim = { vx: p.vx, vy: p.vy, roundTime: scene.time, rotation: scene.rot, badge: needsBonkBadge(path.hit) };
       if (path.sector !== null) scene.drawLanding(path.sector);
       else scene.predictCache = null;
       g.fillStyle = '#ffffff';
-      for (let k = 0; k < steps; k++) {
+      const visibleCount = Math.min(steps, Math.ceil(path.points.length / 8));
+      for (let k = 0; k < visibleCount; k++) {
         const s = path.points[Math.min(path.points.length - 1, (k + 1) * 8 - 1)];
         if (!s || s.elapsed > steps / 30) break;
         g.globalAlpha = 0.85 * (1 - k / steps);
@@ -344,20 +353,32 @@ export function drawAim(scene: LevelScene) {
         g.fill();
       }
       g.globalAlpha = 1;
+      const visibleEnd = Math.min(path.points.length, steps * 8);
+      for (const bounce of path.bounces) {
+        if (!path.points.slice(0, visibleEnd).some((point) => Math.abs(point.elapsed - bounce.elapsed) < STAR_SLING.step * 1.5)) continue;
+        drawContactStar(g, bounce.x, bounce.y, '#b9edff', 7);
+      }
+      if (scene.drawnAim.badge) {
+        const contact = path.hit as { x: number; y: number };
+        if (path.points.length <= visibleEnd) drawContactStar(g, contact.x, contact.y, '#ff787d', 9);
+        drawBonkBadge(g, L.x + 40, L.y - 40);
+      }
+      g.globalAlpha = 1;
     }
   }
 }
 
-export function aimAt(scene: LevelScene, sector: number) {
+export function aimAt(scene: LevelScene, sector: number, clearSky = false) {
   const target = ((Math.floor(sector) % SECTORS) + SECTORS) % SECTORS;
   const launch = scene.launch;
   const world = scene.flightWorld(scene.rot);
+  if (clearSky) world.sky = undefined;
   for (const speed of [420, 560, 700, 840, 930]) {
     for (let i = 0; i < 180; i++) {
       const angle = -Math.PI + (i / 179) * Math.PI;
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
-      if (fly(STAR_SLING, { ...launch, vx, vy, elapsed: 0 }, world, scene.time, 5).sector === target) return { vx, vy };
+      if (flyFull(STAR_SLING, { ...launch, vx, vy, elapsed: 0 }, world, scene.time).sector === target) return { vx, vy };
     }
   }
   const angle = scene.rot + (target + 0.5) * ((Math.PI * 2) / SECTORS);
@@ -365,4 +386,41 @@ export function aimAt(scene: LevelScene, sector: number) {
   const dy = scene.cy + Math.sin(angle) * scene.R - launch.y;
   const length = Math.hypot(dx, dy) || 1;
   return { vx: (dx / length) * 700, vy: (dy / length) * 700 };
+}
+
+function drawContactStar(g: CanvasRenderingContext2D, x: number, y: number, color: string, size: number) {
+  g.save();
+  g.fillStyle = color;
+  g.strokeStyle = '#372035';
+  g.lineWidth = 2;
+  g.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const r = i % 2 ? size * 0.48 : size;
+    const px = x + Math.cos(a) * r;
+    const py = y + Math.sin(a) * r;
+    if (!i) g.moveTo(px, py);
+    else g.lineTo(px, py);
+  }
+  g.closePath();
+  g.fill();
+  g.stroke();
+  g.restore();
+}
+
+function drawBonkBadge(g: CanvasRenderingContext2D, x: number, y: number) {
+  g.save();
+  g.fillStyle = '#bd314f';
+  g.strokeStyle = '#fff0e9';
+  g.lineWidth = 2.5;
+  g.beginPath();
+  g.arc(x, y, 15, 0, Math.PI * 2);
+  g.fill();
+  g.stroke();
+  g.fillStyle = '#fff';
+  g.font = '800 18px Fredoka, ui-rounded, system-ui, sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText('!', x, y + 1);
+  g.restore();
 }

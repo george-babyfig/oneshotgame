@@ -64,6 +64,7 @@ export function voyageLevel(week: string, base: number, i: number, taught = base
     goals: true,
     boss: i === VOYAGE_LEN - 1,
     rules: rulesForLevel(Math.min(base + i * 2, taught)),
+    obstacleCap: taught,
   });
   return { ...L, name: portName(week, i) };
 }

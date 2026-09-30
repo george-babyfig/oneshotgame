@@ -1,5 +1,6 @@
 // Today's unlock points. M3 moves the crowded introductions onto the target ladder.
 import { GOALS_FROM } from '../core/levels';
+import { OBSTACLES, type ObstacleId } from '../core/sky';
 import { KINDS, type Kind } from '../core/world';
 import type { Profile } from './profile';
 import { LORE_AT } from './lore';
@@ -49,7 +50,8 @@ export type UnlockId =
   | 'wildflowers'
   | 'glacier'
   | 'combo'
-  | 'scorch';
+  | 'scorch'
+  | ObstacleId;
 
 export interface Unlock {
   id: UnlockId;
@@ -68,6 +70,8 @@ const objectRows: Unlock[] = (Object.values(KINDS) as (typeof KINDS)[Kind][]).ma
   placement: 'round',
   ...(kind.unlock > 2 ? { intro: { title: kind.name, body: kind.desc } } : {}),
 }));
+
+export const GUSTY_WIND_TIP = 'Solar Wind has gentle puffs now. Wait for a calm moment.';
 
 export const UNLOCKS: readonly Unlock[] = [
   ...objectRows,
@@ -104,6 +108,12 @@ export const UNLOCKS: readonly Unlock[] = [
       icon: '🍂',
     },
   },
+  ...(['rocks', 'bubble', 'mist', 'ring', 'tug'] as ObstacleId[]).map((id) => ({
+    id,
+    planet: OBSTACLES[id].debut,
+    placement: 'round' as const,
+    intro: { title: OBSTACLES[id].name, body: OBSTACLES[id].intro, icon: OBSTACLES[id].icon },
+  })),
   { id: 'hard', planet: 15, placement: 'round' },
   { id: 'super_hard', planet: 19, placement: 'round' },
   { id: 'guardian', planet: 10, placement: 'round' },

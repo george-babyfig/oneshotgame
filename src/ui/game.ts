@@ -12,13 +12,15 @@ import { surfaceK } from './art/planet';
 import { DEFAULT_LOOK, type Look } from '../meta/cosmetics';
 import { lifeSparkSectors, novaForThrow, rulesForLevel, type ReactionId, type RoundRules, type RoundState } from '../core/round';
 import { feedbackState, type FeedbackState, type FeedbackItem } from './feel';
-import type { FlightWorld } from '../core/flight';
+import { flyFull, sceneGeometry, STAR_SLING, type FlightHit, type FlightWorld } from '../core/flight';
+import { EMPTY_SKY_STATE, type ObstacleId, type SkyState } from '../core/sky';
 import type { RoundModifiers } from '../core/modifiers';
 import type { Season } from '../meta/seasons';
 import { sfx } from './audio';
 import { haptic } from './haptics';
 import { drawChapterBackdrop } from './art/backdrops';
 import { chapterOf } from '../meta/progression';
+import { needsBonkBadge } from './feel';
 
 export interface SceneOpts {
   rules?: RoundRules;
@@ -50,6 +52,8 @@ export interface SceneOpts {
   momentum?: number;
   /** Opening coach tip (0 = before the first throw). */
   coach?: Record<number, string>;
+  gustTip?: string;
+  onGustSeen?: () => void;
   /** Object introduced on this level (shows an intro card). */
   intro?: Kind;
   allowIntro?: (id: string) => boolean;
@@ -62,6 +66,9 @@ export interface SceneOpts {
   endless?: boolean;
   /** Competitive modes (daily, rush, challenge): no paid continues, no early finish. */
   competitive?: boolean;
+  gentle?: boolean;
+  clearPalette?: boolean;
+  onSkySeen?: (id: ObstacleId) => void;
   /** Called after every landed throw (Zen saves the planet). */
   onPlanet?: (p: Planet) => void;
   /** Label for the win button on the end card. */
@@ -153,6 +160,8 @@ export interface Shot {
   trail: { x: number; y: number }[];
   /** A charged Supernova throw. */
   nova?: boolean;
+  warnedBonk?: boolean;
+  bounceCount?: number;
 }
 
 export class LevelScene {
@@ -175,8 +184,17 @@ export class LevelScene {
       : [this.next];
   }
   shot: Shot | null = null;
+  skyState: SkyState = { ...EMPTY_SKY_STATE, brokenRocks: [] };
+  rockWobbles: { index: number; until: number }[] = [];
+  practiceBonkUsed = false;
+  mistTipShown = false;
+  gustTipShown = false;
+  surpriseBonks = 0;
+  lastHit: FlightHit | null = null;
   aimFrom: { x: number; y: number } | null = null;
   aimTo: { x: number; y: number } | null = null;
+  drawnAim: preview.DrawnAim | null = null;
+  aimGeneration = 0;
   rot = 0;
   time = 0;
   particles: Particle[] = [];
@@ -252,8 +270,10 @@ export class LevelScene {
   constructor(level: LevelDef, opts: SceneOpts) {
     if (!opts.endless) ledger.count('round_started');
     this.L = level;
+    if (level.sky.obstacle) opts.onSkySeen?.(level.sky.obstacle);
     this.chapterNumber = chapterOf(level.n).n;
     this.o = opts;
+    if (level.sky.gusty && opts.gustTip) this.o.coach = { ...opts.coach, 0: opts.gustTip };
     this.planet = clonePlanet(level.start);
     if (opts.boosters.spark) fx.sparkStart(this.planet, lifeSparkSectors(level, this.planet));
     this.regionBests = this.planet.sectors.map((s) => BIOMES[s.biome].value);
@@ -279,8 +299,32 @@ export class LevelScene {
           return scene.w;
         },
         aimAt: (sector) => this.aimAt(sector),
+        aimAtClear: (sector) => preview.aimAt(this, sector, true),
+        drawPreview: (vector) => {
+          this.aimFrom = { x: this.launch.x, y: this.launch.y };
+          this.aimTo = { x: this.launch.x - vector.vx / PULL_TO_SPEED, y: this.launch.y - vector.vy / PULL_TO_SPEED };
+          this.drawnAim = null;
+          this.drawAim();
+          const drawn = this.drawnAim;
+          const clearWorld = { ...this.flightWorld(this.rot), sky: undefined };
+          const clear = flyFull(STAR_SLING, { ...this.launch, ...vector, elapsed: 0 }, clearWorld, this.time);
+          return { drawn, clear, predicted: this.predict(vector.vx, vector.vy) };
+        },
         fire: (vector) => {
-          if (this.canAim()) this.fire(vector.vx, vector.vy);
+          if (this.canAim()) {
+            const drawn =
+              this.drawnAim && Math.hypot(this.drawnAim.vx - vector.vx, this.drawnAim.vy - vector.vy) < 1e-6 ? this.drawnAim : undefined;
+            this.aimFrom = this.aimTo = this.drawnAim = null;
+            this.fire(drawn?.vx ?? vector.vx, drawn?.vy ?? vector.vy, drawn);
+          }
+        },
+        predict: (vx, vy) => this.predict(vx, vy).hit ?? { kind: 'miss' },
+        get lastHit() {
+          return scene.lastHit;
+        },
+        roundTime: () => this.time,
+        get surpriseBonks() {
+          return scene.surpriseBonks;
         },
       };
       window.__scene = this.devHook;
@@ -382,19 +426,19 @@ export class LevelScene {
   resize = () => fx.resize(this);
 
   get cx() {
-    return this.w / 2;
+    return sceneGeometry(this.w, this.h, this.L.size).cx;
   }
   /** 0..1 progress of the "fly to your galaxy" exit animation. */
   exitK = 0;
   get cy() {
     const k = this.exitK * this.exitK;
-    return this.h * 0.43 - k * this.h * 0.5;
+    return sceneGeometry(this.w, this.h, this.L.size).cy - k * this.h * 0.5;
   }
   get R() {
-    return Math.min(this.w * 0.27, this.h * 0.17) * this.L.size * (1 - this.exitK * 0.85);
+    return sceneGeometry(this.w, this.h, this.L.size).R * (1 - this.exitK * 0.85);
   }
   get launch() {
-    return { x: this.w / 2, y: this.h - 150 };
+    return sceneGeometry(this.w, this.h, this.L.size).launch;
   }
   /** Moons that block shots (Moon Guard: one; Twin Moons: two, orbiting opposite ways). */
   get moons() {
@@ -425,9 +469,11 @@ export class LevelScene {
         return;
       }
       this.aimPointer = e.pointerId;
+      this.aimGeneration++;
       this.canvas.setPointerCapture(e.pointerId);
       this.aimFrom = pos(e);
       this.aimTo = pos(e);
+      this.drawnAim = null;
     });
     this.canvas.addEventListener('pointermove', (e) => {
       if (!this.aimFrom || e.pointerId !== this.aimPointer) return;
@@ -445,13 +491,17 @@ export class LevelScene {
       this.aimPointer = null;
       if (!this.aimFrom) return;
       const from = this.aimFrom;
-      this.aimTo = pos(e);
       const p = this.pull();
-      this.aimFrom = this.aimTo = null;
-      if (!this.canAim()) return;
+      const releaseTo = pos(e);
+      const releaseLen = Math.hypot(from.x - releaseTo.x, from.y - releaseTo.y);
+      if (!this.canAim()) {
+        this.aimFrom = this.aimTo = this.drawnAim = null;
+        return;
+      }
       const ringDistance = Math.hypot(from.x - this.launch.x, from.y - this.launch.y);
       if (
         p.len < 18 &&
+        releaseLen < 18 &&
         this.L.n >= 24 &&
         this.novaOn &&
         this.nova.charge >= this.nova.threshold &&
@@ -460,18 +510,35 @@ export class LevelScene {
         !preview.queueHit(this, from.x, from.y)
       ) {
         this.nova.held = !this.nova.held;
+        this.aimFrom = this.aimTo = this.drawnAim = null;
         haptic.tick();
         sfx.click();
         return;
       }
-      if (p.len < 18) return;
-      this.fire(p.vx, p.vy);
+      if (this.drawnAim) {
+        const drawn = this.drawnAim;
+        this.aimFrom = this.aimTo = this.drawnAim = null;
+        this.fire(drawn.vx, drawn.vy, drawn);
+      } else if (releaseLen >= 18) {
+        // A sub-frame fling must display its preview for a frame before it can launch.
+        this.aimTo = releaseTo;
+        const generation = this.aimGeneration;
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            if (this.destroyed || generation !== this.aimGeneration) return;
+            const drawn = this.drawnAim;
+            this.aimFrom = this.aimTo = this.drawnAim = null;
+            if (drawn && this.canAim()) this.fire(drawn.vx, drawn.vy, drawn);
+          }),
+        );
+      } else this.aimFrom = this.aimTo = this.drawnAim = null;
     };
     this.canvas.addEventListener('pointerup', release);
     this.canvas.addEventListener('pointercancel', (e) => {
       if (e.pointerId !== this.aimPointer) return;
       this.aimPointer = null;
-      this.aimFrom = this.aimTo = null;
+      this.aimGeneration++;
+      this.aimFrom = this.aimTo = this.drawnAim = null;
     });
   }
 
@@ -501,11 +568,27 @@ export class LevelScene {
     return preview.aimAt(this, sector);
   }
 
-  fire(vx: number, vy: number) {
+  fire(vx: number, vy: number, drawn?: preview.DrawnAim) {
     this.scoreAtThrow = this.score;
+    this.lastHit = null;
     const { x, y } = this.launch;
     const nova = novaForThrow(this.roundState());
-    this.shot = { kind: this.cur, x, y, vx, vy, t: 0, carry: 0, t0: this.time, rot0: this.rot, trail: [], nova };
+    const warnedBonk = drawn?.badge ?? needsBonkBadge(this.predict(vx, vy).hit);
+    this.shot = {
+      kind: this.cur,
+      x,
+      y,
+      vx,
+      vy,
+      t: 0,
+      carry: 0,
+      t0: drawn?.roundTime ?? this.time,
+      rot0: drawn?.rotation ?? this.rot,
+      trail: [],
+      nova,
+      warnedBonk,
+      bounceCount: 0,
+    };
     if (nova) {
       sfx.combo(6);
       haptic.heavy();
@@ -531,6 +614,10 @@ export class LevelScene {
   // ---------------------------------------------------------------- physics
   flightWorld(rotation: number): FlightWorld {
     return fx.flightWorld(this, rotation);
+  }
+
+  predict(vx: number, vy: number) {
+    return preview.predictFlight(this, vx, vy);
   }
 
   surfaceR(i: number) {
@@ -562,7 +649,11 @@ export class LevelScene {
   }
 
   showCoach(k: number) {
-    return hud.showCoach(this, k);
+    hud.showCoach(this, k);
+    if (k === 0 && this.L.sky.gusty && this.o.gustTip) {
+      this.o.onGustSeen?.();
+      this.o.gustTip = undefined;
+    }
   }
 
   showCoachEvent(event: CoachEvent) {
@@ -655,7 +746,7 @@ export class LevelScene {
     const dt = Math.min(0.033, (now - (this.last || now)) / 1000);
     this.last = now;
     try {
-      if (!this.paused) this.update(dt);
+      if (!this.paused && !this.modalOpen) this.update(dt);
       this.draw();
     } finally {
       if (!this.destroyed) this.raf = requestAnimationFrame(this.frame);
@@ -721,7 +812,17 @@ declare global {
     __scene?: {
       readonly w: number;
       aimAt: (sector: number) => { vx: number; vy: number };
+      aimAtClear: (sector: number) => { vx: number; vy: number };
+      drawPreview: (vector: { vx: number; vy: number }) => {
+        drawn: preview.DrawnAim | null;
+        clear: ReturnType<typeof flyFull>;
+        predicted: ReturnType<LevelScene['predict']>;
+      };
       fire: (vector: { vx: number; vy: number }) => void;
+      predict: (vx: number, vy: number) => { kind: string; sector?: number; by?: string };
+      readonly lastHit: { kind: string; sector?: number; by?: string } | null;
+      roundTime: () => number;
+      readonly surpriseBonks: number;
     };
   }
 }

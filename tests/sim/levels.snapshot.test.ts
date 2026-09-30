@@ -19,7 +19,7 @@ describe('campaign level seeds', () => {
   });
 
   it('changes only reviewed default layouts', () => {
-    expect(LEVEL_SALT).toEqual({ 16: 2, 22: 1, 23: 46, 24: 48, 27: 9, 28: 19, 32: 3, 44: 5, 51: 7 });
+    expect(LEVEL_SALT).toEqual({ 16: 2, 22: 1, 23: 46, 24: 48, 27: 9, 28: 19, 32: 3, 34: 11, 42: 1, 44: 5, 51: 7, 52: 1, 55: 9 });
     for (let n = 1; n <= 60; n++) {
       if (LEVEL_SALT[n]) continue;
       expect(makeLevel(n)).toEqual(makeLevel(n, 'PP', { salt: 0 }));
@@ -29,7 +29,8 @@ describe('campaign level seeds', () => {
       const revised = makeLevel(n);
       expect(revised).toEqual(makeLevel(n, 'PP', { salt }));
       expect(revised).not.toEqual(makeLevel(n, 'PP', { salt: 0 }));
-      expect(revised.difficulty).toBe('normal');
+      expect(revised.difficulty).toBe(n === 55 ? 'hard' : 'normal');
+      if (n === 55) expect(revised.sky.gusty).toBe(true);
       expect(goalsMet(solve2(revised), revised.goals)).toBe(true);
     }
   });

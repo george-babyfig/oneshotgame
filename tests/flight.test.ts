@@ -75,8 +75,8 @@ describe('Star Sling flight', () => {
   });
 
   it('keeps the old moon and Guardian blocks', () => {
-    expect(run('moon', 500, -500, 60)).toBe('blocked');
-    expect(run('twin', -500, -700, 60)).toBe('blocked');
+    expect(run('moon', 500, -500, 60)).toBe('bonk');
+    expect(run('twin', -500, -700, 60)).toBe('bonk');
     expect(run('boss', 400, -500, 60)).toBe('boss');
   });
 });

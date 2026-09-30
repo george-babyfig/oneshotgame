@@ -10,7 +10,7 @@ import { letterStrings } from '../src/meta/inbox';
 import { momentumActive, MOMENTUM_UNLOCK } from '../src/meta/momentum';
 import { defaultProfile, migrate } from '../src/meta/profile';
 import { unlocked as rankUnlocked } from '../src/meta/rank';
-import { UNLOCKS, debutsAt, unlocked } from '../src/meta/unlocks';
+import { GUSTY_WIND_TIP, UNLOCKS, debutsAt, unlocked } from '../src/meta/unlocks';
 import { voyageActive, VOYAGE_UNLOCK_LEVEL } from '../src/meta/voyage';
 
 // M3 must empty this list as it moves today's crowded Home debuts.
@@ -53,6 +53,27 @@ describe('unlock ladder', () => {
       p.level = planet;
       expect(unlocked(p, id as typeof row.id)).toBe(true);
     }
+  });
+
+  it('teaches each sky obstacle once and grandfathers earlier saves', () => {
+    for (const [id, planet] of Object.entries({ rocks: 33, bubble: 41, mist: 46, ring: 51, tug: 57 }) as [
+      'rocks' | 'bubble' | 'mist' | 'ring' | 'tug',
+      number,
+    ][]) {
+      const row = UNLOCKS.find((entry) => entry.id === id)!;
+      expect(row.planet).toBe(planet);
+      expect(row.intro?.body.toLowerCase()).toContain('red bonk badge warns you');
+      expect(row.intro!.body.split(/\s+/).length).toBeLessThanOrEqual(25);
+      const old = defaultProfile();
+      old.level = planet + 1;
+      const migrated = migrate(Object.fromEntries(Object.entries(old).filter(([key]) => key !== 'skySeen')));
+      expect(migrated.skySeen).toContain(id);
+      expect(migrated.mailSeen).toContain(`coach-${id}`);
+    }
+    expect(GUSTY_WIND_TIP).toContain('Solar Wind');
+    expect(defaultProfile().settings.gentle).toBe(false);
+    expect(defaultProfile().skySeen).toEqual([]);
+    expect(defaultProfile().gustSeen).toBe(false);
   });
 
   it('has translations for every intro and letter in all five locales', () => {

@@ -94,6 +94,15 @@ const semi = (base: number, n: number) => base * Math.pow(2, n / 12);
 const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
 
 export const sfx = {
+  sky: (kind: 'bonk' | 'boing' | 'fizz' | 'gust' | 'mist') => {
+    if (kind === 'bonk') tone(260, 0.16, 'sine', 0.055, 0, 175);
+    else if (kind === 'boing') tone(420, 0.23, 'sine', 0.047, 0, 660);
+    else if (kind === 'fizz') {
+      noise(0.2, 0.025, 2200);
+      tone(770, 0.19, 'sine', 0.035, 0, 500);
+    } else if (kind === 'mist') tone(560, 0.24, 'sine', 0.025, 0, 610);
+    else noise(0.23, 0.018, 1300);
+  },
   click: () => tone(880, 0.05, 'triangle', 0.1),
   sheet: () => tone(520, 0.1, 'sine', 0.045, 0, 740),
   toast: () => tone(740, 0.08, 'sine', 0.035, 0, 880),

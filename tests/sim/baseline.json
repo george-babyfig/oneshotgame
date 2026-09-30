@@ -84,10 +84,10 @@
       "policy": "casual",
       "planets": 11,
       "runs": 176,
-      "fail": 0.3806818181818182,
-      "threeStar": 0.05113636363636364,
-      "attemptsPerClear": 1.614678899082569,
-      "novas": 2.3579545454545454
+      "fail": 0.44886363636363635,
+      "threeStar": 0.06818181818181818,
+      "attemptsPerClear": 1.8144329896907216,
+      "novas": 2.3295454545454546
     },
     {
       "band": "31-45",
@@ -95,10 +95,10 @@
       "policy": "casual",
       "planets": 3,
       "runs": 48,
-      "fail": 0.4375,
+      "fail": 0.5416666666666666,
       "threeStar": 0.020833333333333332,
-      "attemptsPerClear": 1.7777777777777777,
-      "novas": 2.3333333333333335
+      "attemptsPerClear": 2.1818181818181817,
+      "novas": 2.4166666666666665
     },
     {
       "band": "31-45",
@@ -117,10 +117,10 @@
       "policy": "casual",
       "planets": 10,
       "runs": 160,
-      "fail": 0.34375,
-      "threeStar": 0.1,
-      "attemptsPerClear": 1.5238095238095237,
-      "novas": 2.425
+      "fail": 0.31875,
+      "threeStar": 0.10625,
+      "attemptsPerClear": 1.4678899082568808,
+      "novas": 2.48125
     },
     {
       "band": "46-60",
@@ -128,10 +128,10 @@
       "policy": "casual",
       "planets": 3,
       "runs": 48,
-      "fail": 0.2708333333333333,
+      "fail": 0.4166666666666667,
       "threeStar": 0.020833333333333332,
-      "attemptsPerClear": 1.3714285714285714,
-      "novas": 2.4583333333333335
+      "attemptsPerClear": 1.7142857142857142,
+      "novas": 2.3541666666666665
     },
     {
       "band": "46-60",
@@ -227,10 +227,10 @@
       "policy": "decent",
       "planets": 11,
       "runs": 176,
-      "fail": 0.17613636363636365,
-      "threeStar": 0.21022727272727273,
-      "attemptsPerClear": 1.2137931034482758,
-      "novas": 2.5795454545454546
+      "fail": 0.2159090909090909,
+      "threeStar": 0.2556818181818182,
+      "attemptsPerClear": 1.2753623188405796,
+      "novas": 2.4829545454545454
     },
     {
       "band": "31-45",
@@ -238,10 +238,10 @@
       "policy": "decent",
       "planets": 3,
       "runs": 48,
-      "fail": 0.3958333333333333,
-      "threeStar": 0.14583333333333334,
-      "attemptsPerClear": 1.6551724137931034,
-      "novas": 2.4375
+      "fail": 0.5208333333333334,
+      "threeStar": 0.10416666666666667,
+      "attemptsPerClear": 2.0869565217391304,
+      "novas": 2.4583333333333335
     },
     {
       "band": "31-45",
@@ -260,10 +260,10 @@
       "policy": "decent",
       "planets": 10,
       "runs": 160,
-      "fail": 0.14375,
-      "threeStar": 0.25,
-      "attemptsPerClear": 1.167883211678832,
-      "novas": 2.58125
+      "fail": 0.11875,
+      "threeStar": 0.275,
+      "attemptsPerClear": 1.1347517730496455,
+      "novas": 2.65625
     },
     {
       "band": "46-60",
@@ -271,10 +271,10 @@
       "policy": "decent",
       "planets": 3,
       "runs": 48,
-      "fail": 0.16666666666666666,
+      "fail": 0.22916666666666666,
       "threeStar": 0.10416666666666667,
-      "attemptsPerClear": 1.2,
-      "novas": 2.4583333333333335
+      "attemptsPerClear": 1.2972972972972974,
+      "novas": 2.375
     },
     {
       "band": "46-60",
@@ -373,7 +373,7 @@
       "fail": 0.022727272727272728,
       "threeStar": 0.7954545454545454,
       "attemptsPerClear": 1.0232558139534884,
-      "novas": 2.835227272727273
+      "novas": 2.75
     },
     {
       "band": "31-45",
@@ -384,7 +384,7 @@
       "fail": 0.125,
       "threeStar": 0.5625,
       "attemptsPerClear": 1.1428571428571428,
-      "novas": 2.7083333333333335
+      "novas": 2.8125
     },
     {
       "band": "31-45",
@@ -403,10 +403,10 @@
       "policy": "sharp",
       "planets": 10,
       "runs": 160,
-      "fail": 0.06875,
-      "threeStar": 0.75625,
-      "attemptsPerClear": 1.0738255033557047,
-      "novas": 2.94375
+      "fail": 0.0625,
+      "threeStar": 0.8,
+      "attemptsPerClear": 1.0666666666666667,
+      "novas": 2.95625
     },
     {
       "band": "46-60",
@@ -414,9 +414,9 @@
       "policy": "sharp",
       "planets": 3,
       "runs": 48,
-      "fail": 0.020833333333333332,
-      "threeStar": 0.6875,
-      "attemptsPerClear": 1.0212765957446808,
+      "fail": 0.041666666666666664,
+      "threeStar": 0.5416666666666666,
+      "attemptsPerClear": 1.0434782608695652,
       "novas": 2.7916666666666665
     },
     {

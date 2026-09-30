@@ -5,6 +5,7 @@
 // Styles and the Star Atlas ≤ 2 taps from Home, the next throw 1 tap from results, and 0 clipped controls
 // at 320×568 on Home and every tab in 6 languages + pseudo.
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
+import { UNLOCKS } from '../src/meta/unlocks';
 import {
   BROWSER_LOCALE,
   OPEN_MODAL,
@@ -186,10 +187,13 @@ test.describe('J2 every tab and screen [en]', () => {
 
   test('the next throw is 1 tap from results; the planet details overlay goes with the first fling', async ({ page }, info) => {
     const guard = watchErrors(page);
+    const next = Array.from({ length: 16 }, (_, i) => 45 - i).find(
+      (n) => !UNLOCKS.some((row) => row.placement === 'round' && row.planet === n && row.intro),
+    )!;
     await freshInstall(page);
-    await midGame(page);
+    await midGame(page, { level: next - 1 });
     await page.locator('.host .btn.play').click();
-    await page.waitForFunction(() => (window as any).__app.scene?.L?.n === 45);
+    await page.waitForFunction((n) => (window as any).__app.scene?.L?.n === n, next - 1);
     await dismissSheets(page);
     await page.evaluate(() => (window as any).__app.scene.finish(3));
     const results = page
@@ -197,10 +201,10 @@ test.describe('J2 every tab and screen [en]', () => {
       .filter({ has: page.locator('.end-stars') })
       .filter({ has: page.locator('.row') });
     await expect(results).toBeVisible();
-    await snap(page, info, guard, 'results-45');
+    await snap(page, info, guard, 'results-before-next');
     // ONE tap
     await results.getByRole('button', { name: 'Next ▶', exact: true }).click();
-    await page.waitForFunction(() => (window as any).__app.scene?.L?.n === 46);
+    await page.waitForFunction((n) => (window as any).__app.scene?.L?.n === n, next);
     await settle(page);
     // nothing to tap between results and the throw: no sheet, and the launcher is ready
     await expect(page.locator(OPEN_MODAL), 'no sheet between results and the next throw').toHaveCount(0);
@@ -211,10 +215,10 @@ test.describe('J2 every tab and screen [en]', () => {
         await new Promise((r) => requestAnimationFrame(r));
       return !!a.scene?.canAim();
     });
-    expect(ready, 'planet 46 accepts a fling right after Next').toBe(true);
+    expect(ready, `planet ${next} accepts a fling right after Next`).toBe(true);
     // the pre-level info is an overlay on the live round
     await expect(page.locator('.level-info'), 'planet details shown as an overlay').toBeVisible();
-    await snap(page, info, guard, 'level-46-info');
+    await snap(page, info, guard, 'level-next-info');
     const used = await page.evaluate(async () => {
       const w = window as any;
       w.__scene.fire(w.__scene.aimAt(0));
@@ -224,6 +228,19 @@ test.describe('J2 every tab and screen [en]', () => {
     expect(used, 'the fling left the launcher').toBe(1);
     await expect(page.locator('.level-info'), 'the first fling dismisses the details').toHaveCount(0);
     expectNoErrors(guard);
+  });
+
+  test('a teaching planet shows one intro and then readies the launcher', async ({ page }) => {
+    const teaching = UNLOCKS.find((row) => row.placement === 'round' && row.intro && row.id === 'mist')!;
+    await freshInstall(page);
+    await midGame(page, { level: teaching.planet });
+    await page.locator('.host .btn.play').click();
+    await page.waitForFunction((n) => (window as any).__app.scene?.L?.n === n, teaching.planet);
+    const intro = page.locator(OPEN_MODAL).filter({ hasText: teaching.intro!.title });
+    await expect(intro).toHaveCount(1);
+    await intro.getByRole('button').last().click();
+    await expect(intro).toHaveCount(0);
+    expect(await page.evaluate(() => (window as any).__app.scene?.canAim())).toBe(true);
   });
 
   test('every tab and screen: Back (button and left-edge swipe) returns to the right place', async ({ page }, info) => {

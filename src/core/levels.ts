@@ -12,6 +12,8 @@ import {
   type Sector,
 } from './world';
 import { NO_MODIFIERS } from './modifiers';
+import { OBSTACLES, skyFor, type ObstacleId, type SkyDef } from './sky';
+import { flyFull, sceneGeometry, STAR_SLING } from './flight';
 import { ROUND_RULES_V0, novaReady, roundState, rulesForLevel, stepRound, type RoundRules } from './round';
 
 export { rulesForLevel } from './round';
@@ -34,7 +36,8 @@ export function rngFrom(seed: string) {
   };
 }
 
-export type Twist = 'none' | 'fast' | 'tiny' | 'moon' | 'hot' | 'frozen' | 'ocean' | 'wind' | 'heavy' | 'wobble' | 'twin' | 'boss';
+export type Twist =
+  'none' | 'fast' | 'tiny' | 'moon' | 'hot' | 'frozen' | 'ocean' | 'wind' | 'heavy' | 'wobble' | 'twin' | 'boss' | ObstacleId;
 
 export const TWISTS: Record<Twist, { name: string; desc: string }> = {
   none: { name: '', desc: '' },
@@ -45,22 +48,28 @@ export const TWISTS: Record<Twist, { name: string; desc: string }> = {
   frozen: { name: 'Snowball', desc: 'Starts frozen solid' },
   ocean: { name: 'Water World', desc: 'Starts covered in ocean' },
   wind: { name: 'Solar Wind', desc: 'A steady wind pushes every throw sideways' },
-  heavy: { name: 'Dense Core', desc: 'Extra-strong gravity bends shots sharply' },
+  heavy: { name: '', desc: '' }, // retired in M7.5 (kept so old seeds still type-check)
   wobble: { name: 'Wobbly Spin', desc: 'The planet speeds up, slows and spins back' },
   twin: { name: 'Twin Moons', desc: 'Two moons orbit in opposite directions' },
   boss: { name: 'Comet Guardian', desc: 'A guardian comet blocks shots — hit it 3 times for a bonus' },
+  rocks: { name: OBSTACLES.rocks.name, desc: OBSTACLES.rocks.rule },
+  bubble: { name: OBSTACLES.bubble.name, desc: OBSTACLES.bubble.rule },
+  mist: { name: OBSTACLES.mist.name, desc: OBSTACLES.mist.rule },
+  ring: { name: OBSTACLES.ring.name, desc: OBSTACLES.ring.rule },
+  tug: { name: OBSTACLES.tug.name, desc: OBSTACLES.tug.rule },
 };
 
 /** Hits needed to defeat a Comet Guardian (every chapter's 10th planet). */
 export const BOSS_HP = 3;
 
 /** Physics twists join the pool as the campaign goes on. */
-function laterTwists(n: number): Twist[] {
+function laterTwists(n: number, obstacleCap = Infinity): Twist[] {
   const out: Twist[] = [];
   if (n >= 12) out.push('wind');
-  if (n >= 16) out.push('heavy');
   if (n >= 20) out.push('wobble');
   if (n >= 24) out.push('twin');
+  for (const [id, def] of Object.entries(OBSTACLES) as [ObstacleId, (typeof OBSTACLES)[ObstacleId]][])
+    if (n >= def.debut + 2 && def.debut < obstacleCap) out.push(id);
   return out;
 }
 
@@ -70,6 +79,7 @@ export interface LevelDef {
   throws: number;
   queue: Kind[]; // deal order (length >= throws + bonus)
   twist: Twist;
+  sky: SkyDef;
   spin: number; // radians per second
   size: number; // planet radius multiplier
   stars: [number, number, number]; // life targets
@@ -119,7 +129,21 @@ export function difficultyOf(n: number, seedPrefix = 'PP'): Difficulty {
 export const DIFFICULTY_DUST: Record<Difficulty, number> = { normal: 1, hard: 2, super: 3 };
 
 /** Reviewed layout substitutions for campaign slots. Zero means the original layout. */
-export const LEVEL_SALT: Partial<Record<number, number>> = { 16: 2, 22: 1, 23: 46, 24: 48, 27: 9, 28: 19, 32: 3, 44: 5, 51: 7 };
+export const LEVEL_SALT: Partial<Record<number, number>> = {
+  16: 2,
+  22: 1,
+  23: 46,
+  24: 48,
+  27: 9,
+  28: 19,
+  32: 3,
+  34: 11,
+  42: 1,
+  44: 5,
+  51: 7,
+  52: 1,
+  55: 9,
+};
 
 const NAMES_A = [
   'Pebble',
@@ -283,21 +307,30 @@ export interface LevelOptions {
   boss?: boolean;
   salt?: number;
   rules?: RoundRules;
+  obstacleCap?: number;
 }
 
 function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
+  const obstacleCap = o.obstacleCap ?? (seedPrefix === 'PP' ? Infinity : 0);
   const salt = o.salt ?? (seedPrefix === 'PP' ? LEVEL_SALT[n] : undefined);
   const seed = `${seedPrefix}-${n}${salt ? `~${salt}` : ''}`;
   const rnd = rngFrom(seed);
   const kinds = availableKinds(n);
   let twist: Twist = 'none';
   if (n >= 5 && n % 5 === 0) {
-    const pool: Twist[] = ['fast', 'tiny', 'moon', 'hot', 'frozen', 'ocean', ...laterTwists(n)];
+    const pool: Twist[] = ['fast', 'tiny', 'moon', 'hot', 'frozen', 'ocean', ...laterTwists(n, obstacleCap)];
     twist = pool[Math.floor(rnd() * pool.length)];
   } else if (n >= 8 && rnd() < 0.25) {
-    const pool: Twist[] = ['fast', 'tiny', 'moon', ...laterTwists(n)];
+    const later = laterTwists(n, obstacleCap);
+    const obstacles = later.filter((t): t is ObstacleId => t in OBSTACLES);
+    const ordinary = ['fast', 'tiny', 'moon', ...later.filter((t) => !(t in OBSTACLES))] as Twist[];
+    const spaced = seedPrefix === 'PP' && [33, 41, 46, 51, 57].some((debut) => Math.abs(n - debut) <= 3) ? [] : obstacles;
+    const pool: Twist[] = [...ordinary, ...spaced.slice(0, ordinary.length)];
     twist = pool[Math.floor(rnd() * pool.length)];
   }
+  const teaching: Partial<Record<number, ObstacleId>> = { 33: 'rocks', 41: 'bubble', 46: 'mist', 51: 'ring', 57: 'tug' };
+  if (seedPrefix === 'PP' && teaching[n]) twist = teaching[n];
+
   // every chapter ends with a Comet Guardian
   if ((seedPrefix === 'PP' && n >= 10 && n % 10 === 0) || o.boss) twist = 'boss';
   const throws = n === 1 ? 6 : n === 2 ? 8 : Math.min(16, 9 + Math.floor(n / 4));
@@ -312,6 +345,7 @@ function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
   if (n === 25) queue.push('rock', 'ice');
   if (n === 32) queue.push('magma', 'sun');
   if (n === 26) queue.push('magma', 'ice', 'storm');
+  if (seedPrefix === 'PP' && teaching[n]) queue.push('rock', 'ice', 'seed');
   const debut = kinds.find((k) => KINDS[k].unlock === n);
   if (debut && n > 2) queue.push(debut);
   while (queue.length < throws + 12) {
@@ -336,15 +370,21 @@ function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
   const spin = (twist === 'fast' ? 0.9 : 0.35 + Math.min(0.3, n * 0.012)) * (rnd() < 0.5 ? 1 : -1);
   const name = `${NAMES_A[Math.floor(rnd() * NAMES_A.length)]} ${NAMES_B[Math.floor(rnd() * NAMES_B.length)]}`;
   const hue = difficulty === 'super' ? 285 : difficulty === 'hard' ? 15 : 200 + Math.floor(rnd() * 110);
-  return { n, seed, throws, queue, twist, spin, size: twist === 'tiny' ? 0.72 : 1, start, name, hue, difficulty };
+  let sky = skyFor(n, twist, seed, difficulty);
+  sky.ringDirection = spin > 0 ? -1 : 1;
+  for (let attempt = 1; attempt <= 32 && skyWall({ sky, size: twist === 'tiny' ? 0.72 : 1, spin, twist }); attempt++) {
+    sky = skyFor(n, twist, `${seed}-sky-${attempt}`, difficulty);
+    sky.ringDirection = spin > 0 ? -1 : 1;
+  }
+  return { n, seed, throws, queue, twist, sky, spin, size: twist === 'tiny' ? 0.72 : 1, start, name, hue, difficulty };
 }
 
-export type LevelMeta = Pick<LevelDef, 'name' | 'hue' | 'twist' | 'difficulty'> & { boss: boolean };
+export type LevelMeta = Pick<LevelDef, 'name' | 'hue' | 'twist' | 'difficulty'> & { boss: boolean; obstacle: ObstacleId | null };
 
 /** Preview metadata without running either solver. */
 export function levelMeta(n: number, seedPrefix = 'PP'): LevelMeta {
-  const { name, hue, twist, difficulty } = levelLayout(n, seedPrefix, {});
-  return { name, hue, twist, difficulty, boss: twist === 'boss' };
+  const { name, hue, twist, difficulty, sky } = levelLayout(n, seedPrefix, {});
+  return { name, hue, twist, difficulty, boss: twist === 'boss', obstacle: sky.obstacle };
 }
 
 const LEVEL_CACHE_LIMIT = 256;
@@ -354,6 +394,14 @@ function copyLevel(level: LevelDef): LevelDef {
   return {
     ...level,
     queue: [...level.queue],
+    sky: {
+      ...level.sky,
+      rockPhase: [...level.sky.rockPhase],
+      rockRows: [...level.sky.rockRows],
+      rockDirection: [...level.sky.rockDirection],
+      rockAngle: [...level.sky.rockAngle],
+      rockSpeed: [...level.sky.rockSpeed],
+    },
     start: clonePlanet(level.start),
     stars: [...level.stars],
     goals: level.goals.map((goal) => ({ ...goal })),
@@ -363,10 +411,13 @@ function copyLevel(level: LevelDef): LevelDef {
 /** `o.goals` / `o.boss` give non-campaign planets (the weekly Voyage) goals and a Comet Guardian. */
 export function makeLevel(n: number, seedPrefix = 'PP', o: LevelOptions = {}): LevelDef {
   const salt = o.salt ?? (seedPrefix === 'PP' ? LEVEL_SALT[n] : undefined);
-  const key = JSON.stringify([n, seedPrefix, !!o.goals, !!o.boss, salt ?? null, o.rules ?? rulesForLevel(n)]);
+  const key = JSON.stringify([n, seedPrefix, !!o.goals, !!o.boss, salt ?? null, o.rules ?? rulesForLevel(n), o.obstacleCap]);
   const cached = levelCache.get(key);
   if (cached) return copyLevel(cached);
-  const level = buildLevel(n, seedPrefix, o);
+  let level = buildLevel(n, seedPrefix, o);
+  for (let attempt = 1; attempt <= 32 && (pressureOf(level) > budgetFor(level) || skyWall(level)); attempt++)
+    level = buildLevel(n, seedPrefix, { ...o, salt: (salt ?? 0) + attempt });
+  if (pressureOf(level) > budgetFor(level) || skyWall(level)) throw new Error(`No safe sky layout for planet ${n}`);
   if (levelCache.size >= LEVEL_CACHE_LIMIT) levelCache.delete(levelCache.keys().next().value!);
   levelCache.set(key, level);
   return copyLevel(level);
@@ -374,7 +425,7 @@ export function makeLevel(n: number, seedPrefix = 'PP', o: LevelOptions = {}): L
 
 function buildLevel(n: number, seedPrefix: string, o: LevelOptions): LevelDef {
   const layout = levelLayout(n, seedPrefix, o);
-  const { seed, throws, queue, twist, spin, size, start, name, hue, difficulty } = layout;
+  const { seed, throws, queue, twist, sky, spin, size, start, name, hue, difficulty } = layout;
   const nova = seedPrefix !== 'PP' || n >= 9;
   const rules = o.rules ?? rulesForSeed(seed);
   const plan = solve2({ ...layout, nova }, rules);
@@ -395,12 +446,14 @@ function buildLevel(n: number, seedPrefix: string, o: LevelOptions): LevelDef {
   if (stars[1] <= stars[0]) stars[1] = stars[0] + 5;
   if (stars[2] <= stars[1]) stars[2] = stars[1] + 5;
   const goals = seedPrefix === 'PP' || o.goals ? pickGoals(n, difficulty, start, plan, blind, rngFrom(`${seed}-goals`)) : [];
+  if ([33, 41, 46, 51, 57].includes(n) && seedPrefix === 'PP') goals.length = Math.min(goals.length, 1);
   return {
     n,
     seed,
     throws,
     queue,
     twist,
+    sky,
     spin,
     size,
     stars,
@@ -418,3 +471,71 @@ export function starsFor(score: number, stars: [number, number, number]): number
 }
 
 export type { Sector };
+
+const twistPressure: Partial<Record<Twist, number>> = {
+  fast: 1,
+  tiny: 1,
+  moon: 1,
+  wind: 1,
+  wobble: 2,
+  twin: 2,
+  hot: 1,
+  frozen: 1,
+  ocean: 1,
+  boss: 1,
+  rocks: 1,
+  bubble: 1,
+  mist: 1,
+  ring: 2,
+  tug: 2,
+};
+export function pressureOf(level: LevelDef): number {
+  return (
+    (level.sky.gusty ? 2 : (twistPressure[level.twist] ?? 0)) +
+    rulesForLevel(level.n).troubles.length * 2 +
+    Math.max(0, level.goals.length - 1)
+  );
+}
+export function budgetFor(level: LevelDef): number {
+  if ([33, 41, 46, 51, 57].includes(level.n) && level.sky.obstacle) return OBSTACLES[level.sky.obstacle].pressure;
+  if (level.difficulty === 'super') return 5;
+  if (level.difficulty === 'hard') return 4;
+  return level.n <= 30 ? 2 : 3;
+}
+
+/** A sky is a wall only if too many direct aims fail for all sampled release times. */
+export function skyWall(level: Pick<LevelDef, 'sky' | 'size' | 'spin' | 'twist'>): boolean {
+  if (!level.sky.obstacle) return false;
+  const geo = sceneGeometry(390, 844, level.size);
+  const surface = Array(SECTORS).fill(geo.R);
+  const world = {
+    ...geo,
+    radius: geo.R,
+    surface,
+    rotation: 0,
+    spin: level.spin,
+    twist: level.twist,
+    wind: level.spin > 0 ? 170 : -170,
+    sky: level.sky,
+  };
+  let blocked = 0;
+  for (let sector = 0; sector < SECTORS; sector++) {
+    let clear = false;
+    const angle = ((sector + 0.5) / SECTORS) * Math.PI * 2;
+    const target = { x: geo.cx + Math.cos(angle) * geo.R, y: geo.cy + Math.sin(angle) * geo.R };
+    const dx = target.x - geo.launch.x;
+    const dy = target.y - geo.launch.y;
+    const len = Math.hypot(dx, dy);
+    const launch = { ...geo.launch, vx: (dx / len) * 700, vy: (dy / len) * 700, elapsed: 0 };
+    if (flyFull(STAR_SLING, launch, { ...world, sky: undefined }, 0).hit?.kind !== 'land') continue;
+    for (let t = 0; t <= 3; t += 0.5) {
+      const result = flyFull(STAR_SLING, launch, world, t);
+      if (result.hit?.kind !== 'bonk' && result.hit?.kind !== 'fizzle') {
+        clear = true;
+        break;
+      }
+    }
+    if (!clear && ++blocked > 4) return true;
+  }
+  return false;
+}

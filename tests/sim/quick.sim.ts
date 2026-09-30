@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { it } from 'vitest';
 import { BANDS, POLICIES, runSurvey, type BandMetrics } from './harness';
 import './reactions.sim';
+import './flight.sim';
 
 interface Baseline {
   runs: number;
@@ -20,7 +21,8 @@ if (process.env.SIM === '1') {
     const start = performance.now();
     const runs = Number(process.env.RUNS ?? 16);
     const policies = [POLICIES.casual, POLICIES.decent, POLICIES.sharp];
-    const rows = policies.flatMap((policy) => runSurvey(policy, runs).bands);
+    const surveys = policies.map((policy) => runSurvey(policy, runs));
+    const rows = surveys.flatMap((survey) => survey.bands);
     const byKey = new Map(rows.map((row) => [key(row), row]));
 
     console.log('Band    Difficulty  Casual fail/3★/attempts  Decent fail/3★/attempts  Sharp fail/3★/attempts');
@@ -38,7 +40,7 @@ if (process.env.SIM === '1') {
       if (sharp && sharp.threeStar > 0.8) throw new Error(`Sharp 3★ on normal planets ${band}: ${percentage(sharp.threeStar)} exceeds 80%`);
     }
 
-    const decentActive = runSurvey(POLICIES.decent, runs, 9, 60).planets;
+    const decentActive = surveys[1].planets.filter((planet) => planet.n >= 9);
     const novaAverage = decentActive.reduce((sum, planet) => sum + planet.novas, 0) / decentActive.length;
     console.log(`Decent Supernovas per planet: ${novaAverage.toFixed(2)}`);
     const current: Baseline = { runs, bands: rows };

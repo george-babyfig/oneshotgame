@@ -16,6 +16,8 @@ import type { App } from '../app';
 import type { LevelScene } from '../game';
 import { showGoalRecipe } from '../hud';
 import { lifeSparkSectors } from '../../core/round';
+import { OBSTACLES } from '../../core/sky';
+import { skyIconCanvas } from '../art/sky';
 
 export function goalChips(L: LevelDef, scene?: LevelScene) {
   if (!L.goals.length) return null;
@@ -38,6 +40,17 @@ export function goalChips(L: LevelDef, scene?: LevelScene) {
   );
 }
 
+export function twistChip(L: LevelDef, clear = false) {
+  if (L.sky.obstacle)
+    return h(
+      'div',
+      { class: 'twist-chip sky-prelevel' },
+      skyIconCanvas(L.sky.obstacle, 42, false, clear),
+      h('span', null, h('b', null, t(OBSTACLES[L.sky.obstacle].name)), h('small', null, t(OBSTACLES[L.sky.obstacle].rule))),
+    );
+  return L.twist === 'none' ? h('span') : h('div', { class: 'twist-chip' }, `${t(TWISTS[L.twist].name)}: ${t(TWISTS[L.twist].desc)}`);
+}
+
 export function preLevel(app: App, n: number) {
   app.startLevel(n);
   const scene = app.scene!;
@@ -49,8 +62,13 @@ export function preLevel(app: App, n: number) {
   const perk = momentumActive(p) ? MOMENTUM_PERKS[p.momentum.streak] : null;
   const free = (id: BoosterId) => (id === 'spark' && !!perk?.spark) || (id === 'scope' && !!perk?.scope);
   const panel = h('div', { class: 'level-info', role: 'group', 'aria-label': t('Planet details') });
+  panel.inert = true;
+  const entranceGate = h('div', { class: 'level-info-gate', 'aria-hidden': 'true' });
   let committed = false;
-  const dismiss = () => panel.remove();
+  const dismiss = () => {
+    entranceGate.remove();
+    panel.remove();
+  };
   const commit = () => {
     if (committed) return;
     committed = true;
@@ -163,7 +181,7 @@ export function preLevel(app: App, n: number) {
             ? t('💀 Super Hard planet · ×{n} stardust', { n: DIFFICULTY_DUST.super })
             : t('🔥 Hard planet · ×{n} stardust', { n: DIFFICULTY_DUST.hard }),
         ),
-    L.twist === 'none' ? h('span') : h('div', { class: 'twist-chip' }, `${t(TWISTS[L.twist].name)}: ${t(TWISTS[L.twist].desc)}`),
+    twistChip(L, p.settings.planetColours === 'clear'),
     goalChips(L, scene) ?? h('span'),
     h(
       'div',
@@ -188,5 +206,10 @@ export function preLevel(app: App, n: number) {
     row,
     btn(t('Got it'), 'primary wide', dismiss),
   );
-  scene.el.append(panel);
+  scene.el.append(panel, entranceGate);
+  // Font loading and the entrance can finish without moving a live tap target.
+  window.setTimeout(() => {
+    entranceGate.remove();
+    if (panel.isConnected) panel.inert = false;
+  }, 300);
 }
