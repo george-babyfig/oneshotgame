@@ -953,8 +953,8 @@ describe('glossary: each noun is translated the same way everywhere', () => {
     return longer.map((s) => new RegExp(escapeRe(s), 'giu'));
   };
 
-  /** Never a glossary noun: {placeholders} and the game's own name ("Pocket" / "Planet" on the title screen). */
-  const NOT_NOUNS = [/\{\w+\}/g, /Pocket Planet/giu, /^\W*(?:Pocket|Planet)\W*$/gu];
+  /** Never a glossary noun: {placeholders} and the game's own name ("Comet" / "Garden" on the title screen). */
+  const NOT_NOUNS = [/\{\w+\}/g, /Comet Garden/giu, /^\W*(?:Comet|Garden)\W*$/gu];
 
   const mismatches = (n: Noun): string[] => {
     const tr = resolveTr(n);

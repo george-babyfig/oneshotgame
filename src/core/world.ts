@@ -1,4 +1,4 @@
-// Pocket Planet — world simulation. Pure logic, no DOM.
+// Comet Garden — world simulation. Pure logic, no DOM.
 // A planet is a ring of sectors. Flung objects change a sector (and splash its
 // neighbours); each sector's numbers decide its biome; biome neighbourhoods
 // spawn creatures. "Life" (score) = biome values + creature points.

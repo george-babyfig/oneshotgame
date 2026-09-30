@@ -66,7 +66,7 @@ export function titleBeat(app: App, start: () => void) {
   const scene = h(
     'div',
     { class: 'screen first-title', onclick: finish },
-    h('h1', null, t('Pocket Planet')),
+    h('h1', null, t('Comet Garden')),
     canvas,
     h('p', { class: 'first-purpose' }, t('Grow lands · Welcome creatures · Build your Homeworld')),
     btn(t('Tap to start'), 'primary wide', finish),

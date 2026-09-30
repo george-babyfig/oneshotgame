@@ -1,6 +1,6 @@
-# App Store listing — Pocket Planet (Español (Latinoamérica))
+# App Store listing — Comet Garden (Español (Latinoamérica))
 
-**Name:** Pocket Planet
+**Name:** Comet Garden
 **Subtitle (30):** Crea un planeta lleno de vida
 
 ## Promotional text (170)

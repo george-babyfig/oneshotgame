@@ -1,6 +1,6 @@
-# App Store listing — Pocket Planet
+# App Store listing — Comet Garden
 
-**Name:** Pocket Planet
+**Name:** Comet Garden
 **Subtitle (30):** Fling, grow & discover critters
 **Category:** Games → Casual (secondary: Simulation)
 **Age rating:** 4+ (no ads, no chat, no user-generated content, no gambling, no random paid rewards)

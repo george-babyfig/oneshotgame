@@ -3,7 +3,7 @@
 import { t, tp } from '../i18n';
 import { unlocked } from './unlocks';
 
-export const GAME_NAME = 'Pocket Planet';
+export const GAME_NAME = 'Comet Garden';
 export const VERSION = '1.0.0';
 
 export const PIGGY_PER_WIN = 4;

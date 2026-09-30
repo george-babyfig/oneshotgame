@@ -38,7 +38,7 @@ const waitPlanet = (page: Page, n: number) => page.waitForFunction((k) => (windo
 async function expectKidSafe(page: Page, loc: LocaleId, where: string) {
   const text = await pageText(page);
   expect.soft(text, `${where}: no price text`).not.toMatch(/[$€£¥]|US\$|R\$/);
-  for (const key of ['OFFER', 'Want a nudge?', 'Rate Pocket Planet', 'To rate the game, please answer:', 'Ask a grown-up']) {
+  for (const key of ['OFFER', 'Want a nudge?', 'Rate Comet Garden', 'To rate the game, please answer:', 'Ask a grown-up']) {
     expect.soft(text.includes(tr(loc, key)), `${where}: "${tr(loc, key)}" must not appear`).toBe(false);
   }
   const gemButtons = await page.$$eval('button', (bs) =>

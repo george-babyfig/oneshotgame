@@ -69,7 +69,7 @@ export function renderPostcard(planet: Planet, info: PostcardInfo): HTMLCanvasEl
   }
   g.font = '700 46px Fredoka, ui-rounded, system-ui, sans-serif';
   g.fillStyle = '#5ef2b0';
-  g.fillText('Pocket Planet', W / 2, 1270);
+  g.fillText('Comet Garden', W / 2, 1270);
   return c;
 }
 
@@ -88,7 +88,7 @@ export async function shareCanvas(canvas: HTMLCanvasElement, text: string, name 
         data: dataUrl.split(',')[1],
         directory: Directory.Cache,
       });
-      await Share.share({ title: 'Pocket Planet', text, files: [file.uri] });
+      await Share.share({ title: 'Comet Garden', text, files: [file.uri] });
       return;
     }
     // build the file synchronously so the share keeps the tap's user activation

@@ -285,7 +285,7 @@ export function levelResults(app: App, r: LevelResult) {
                 stars: r.stars,
                 glow: app.skinGlow(),
               },
-              t('I grew {score} life on {name} in Pocket Planet! 🪐', { score: r.score, name: r.level.name }),
+              t('I grew {score} life on {name} in Comet Garden! ☄️', { score: r.score, name: r.level.name }),
             ),
           ),
       h(

@@ -237,7 +237,7 @@ export function grownupSettings(app: App): HTMLElement[] {
       })
     : null;
   const rate = Capacitor.isNativePlatform()
-    ? btn(t('Rate Pocket Planet'), 'ghost wide', async () => {
+    ? btn(t('Rate Comet Garden'), 'ghost wide', async () => {
         if (!(await parentalGate('rate'))) return;
         try {
           await InAppReview.requestReview();

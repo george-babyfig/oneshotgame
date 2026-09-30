@@ -359,7 +359,7 @@ function renderPassportImage(app: App): HTMLCanvasElement {
   badges.forEach((a, i) => g.fillText(badgeEmoji(a.id), W / 2 + (i - (badges.length - 1) / 2) * 140, 1150));
   g.fillStyle = '#5ef2b0';
   g.font = font(700, 48);
-  g.fillText('Pocket Planet', W / 2, 1250);
+  g.fillText('Comet Garden', W / 2, 1250);
   return c;
 }
 
@@ -368,7 +368,7 @@ function sharePassport(app: App) {
   sfx.click();
   shareCanvas(
     renderPassportImage(app),
-    t('{name} · {stars}★ · {n} creatures found in Pocket Planet 🪐', { name: passportName(p), stars: totalStars(p), n: p.seen.length }),
+    t('{name} · {stars}★ · {n} creatures found in Comet Garden ☄️', { name: passportName(p), stars: totalStars(p), n: p.seen.length }),
     'planet-passport',
   );
 }

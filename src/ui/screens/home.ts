@@ -94,7 +94,7 @@ export function showHome(app: App) {
     h(
       'div',
       { class: 'home-body' },
-      h('div', { class: 'title' }, h('span', null, t('Pocket')), h('span', null, t('Planet'))),
+      h('div', { class: 'title' }, h('span', null, 'Comet'), h('span', null, 'Garden')),
       h(
         'div',
         { class: 'galaxy-wrap' },

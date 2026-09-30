@@ -1,6 +1,6 @@
 # Game Center setup
 
-Pocket Planet ships its own small Game Center plugin (`ios/App/App/GameCenterPlugin.swift`), registered by `MainViewController.swift`. The Game Center entitlement is in `ios/App/App/App.entitlements`. On the web and on Android every call does nothing.
+Comet Garden ships its own small Game Center plugin (`ios/App/App/GameCenterPlugin.swift`), registered by `MainViewController.swift`. The Game Center entitlement is in `ios/App/App/App.entitlements`. On the web and on Android every call does nothing.
 
 ## In Xcode
 

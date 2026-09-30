@@ -11,7 +11,7 @@ import { RING_COST } from './tuning';
 import { BUILD_TIME } from './tuning';
 import { BUILDINGS } from './tuning';
 import { earn, spend } from './wallet';
-// Homeworld: the passive side of Pocket Planet. A planet of your own that grows
+// Homeworld: the passive side of Comet Garden. A planet of your own that grows
 // in rings; build and upgrade structures on its plots, invite creatures from
 // your Lifebook to live there, and send them on expeditions.
 //

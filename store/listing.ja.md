@@ -1,6 +1,6 @@
-# App Store listing — Pocket Planet (日本語)
+# App Store listing — Comet Garden (日本語)
 
-**Name:** Pocket Planet
+**Name:** Comet Garden
 **Subtitle (30):** 投げて、育てて、いきもの発見！
 
 ## Promotional text (170)

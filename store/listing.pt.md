@@ -1,6 +1,6 @@
-# App Store listing — Pocket Planet (Português (Brasil))
+# App Store listing — Comet Garden (Português (Brasil))
 
-**Name:** Pocket Planet
+**Name:** Comet Garden
 **Subtitle (30):** Lance, cultive e descubra vida
 
 ## Promotional text (170)

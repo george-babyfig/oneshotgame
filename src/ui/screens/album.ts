@@ -133,7 +133,7 @@ function renderPage(app: App, pi: number, W: number): HTMLCanvasElement {
   g.fillStyle = 'rgba(0,0,0,0.35)';
   g.font = `700 ${Math.round(W * 0.03)}px Fredoka, system-ui, sans-serif`;
   g.textAlign = 'right';
-  g.fillText('Pocket Planet', W - W * 0.03, H - W * 0.03);
+  g.fillText('Comet Garden', W - W * 0.03, H - W * 0.03);
   return c;
 }
 
@@ -372,7 +372,7 @@ function scrapbook(app: App) {
     h('div', { class: 'sec-title' }, t('Your stickers'), h('small', { class: 'muted' }, ` · ${t('tap to add')}`)),
     tray,
     btn(t('Share this page'), 'gem wide', () =>
-      shareCanvas(renderPage(app, pageNo, 1080), t('My sticker scrapbook in Pocket Planet 🪐'), 'pocket-planet-scrapbook'),
+      shareCanvas(renderPage(app, pageNo, 1080), t('My sticker scrapbook in Comet Garden ☄️'), 'pocket-planet-scrapbook'),
     ),
   ];
 }

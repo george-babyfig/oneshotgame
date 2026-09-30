@@ -134,11 +134,11 @@ export function planetStrip(p: Planet, cells = 8) {
 }
 
 export function dailyShareText(day: string, stars: number, score: number, planet: Planet) {
-  return `Pocket Planet #${dailyNumber(day)} ${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}\n${planetStrip(planet)}\n🌱 ${t('{n} life', { n: score })}`;
+  return `Comet Garden #${dailyNumber(day)} ${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}\n${planetStrip(planet)}\n🌱 ${t('{n} life', { n: score })}`;
 }
 
 export function challengeShareText(code: string, score: number, planet: Planet) {
-  return `${t('🪐 I grew {n} life on a Pocket Planet!', { n: score })}\n${planetStrip(planet)}\n${t('Can you beat me? Open Pocket Planet → Modes → Challenge and enter code {code}', { code })}`;
+  return `${t('☄️ I grew {n} life in Comet Garden!', { n: score })}\n${planetStrip(planet)}\n${t('Can you beat me? Open Comet Garden → Modes → Challenge and enter code {code}', { code })}`;
 }
 
 // ------------------------------------------------------------------ rewards

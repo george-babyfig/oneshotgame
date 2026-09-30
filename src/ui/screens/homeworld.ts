@@ -1003,7 +1003,7 @@ function expeditionSheet(app: App, after: () => void) {
         btn(t('📮 Share postcard'), 'ghost', () =>
           shareCanvas(
             expeditionCard(got.species, planet?.name ?? t('deep space'), planet?.colors ?? [], passportName(p), 1080),
-            t('{name} sent a postcard from {planet} 🪐 #PocketPlanet', { name: t(sp.name), planet: planet?.name ?? t('deep space') }),
+            t('{name} sent a postcard from {planet} 🪐 #CometGarden', { name: t(sp.name), planet: planet?.name ?? t('deep space') }),
             'expedition-postcard',
           ),
         ),
@@ -1124,7 +1124,7 @@ function expeditionCard(species: string, planetName: string, colors: string[], f
   g.fillText(t('Greetings from {planet}!', { planet: planetName }), W / 2, H * 0.1, W * 0.9);
   g.fillStyle = '#c9c2ff';
   g.font = `500 ${Math.round(W * 0.05)}px Fredoka, ui-rounded, system-ui, sans-serif`;
-  g.fillText(t('to {name} · Pocket Planet', { name: from }), W / 2, H * 0.95, W * 0.9);
+  g.fillText(t('to {name} · Comet Garden', { name: from }), W / 2, H * 0.95, W * 0.9);
   return c;
 }
 
@@ -1277,7 +1277,7 @@ function renderPhoto(app: App, src: HTMLCanvasElement, frame: Frame): HTMLCanvas
   );
   g.font = font(700, 34);
   g.fillStyle = frame === 'polaroid' ? '#3fae6a' : '#5ef2b0';
-  g.fillText('Pocket Planet', W / 2, H - 40);
+  g.fillText('Comet Garden', W / 2, H - 40);
   return c;
 }
 
@@ -1325,7 +1325,7 @@ function photoMode(app: App, src: HTMLCanvasElement) {
     frames,
     btn(t('📤 Share photo'), 'primary wide', () =>
       // use the live canvas (the screen may have re-rendered while this sheet was open)
-      shareCanvas(renderPhoto(app, liveCanvas(src), frame), t('My Homeworld in Pocket Planet 🪐'), 'homeworld-photo'),
+      shareCanvas(renderPhoto(app, liveCanvas(src), frame), t('My Homeworld in Comet Garden ☄️'), 'homeworld-photo'),
     ),
   ]);
 }

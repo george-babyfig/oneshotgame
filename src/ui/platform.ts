@@ -19,7 +19,7 @@ export async function scheduleReminders(p: Profile) {
     if (perm.display !== 'granted') return;
     const list = planReminders({ now: Date.now(), vaultFullAt: p.galaxy.length ? vaultFullAt(p) : null }).map((item) => ({
       id: item.id,
-      title: item.kind === 'vault' ? t('Your stardust vault is full ✨') : t('Pocket Planet'),
+      title: item.kind === 'vault' ? t('Your stardust vault is full ✨') : t('Comet Garden'),
       body: item.kind === 'vault' ? t('Your planets have been busy.') : t('Your planets have been growing while you were away.'),
       schedule: { at: new Date(item.at) },
     }));

@@ -1,6 +1,6 @@
-# App Store listing — Pocket Planet (Deutsch)
+# App Store listing — Comet Garden (Deutsch)
 
-**Name:** Pocket Planet
+**Name:** Comet Garden
 **Subtitle (30):** Werfen, wachsen, Tiere finden
 
 ## Promotional text (170)
