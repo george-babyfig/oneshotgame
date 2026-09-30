@@ -40,7 +40,7 @@ import type { App } from '../app';
 import { t } from '../../i18n';
 import { DYES, applyDye, ownsDye, unlockDye } from '../../meta/dyes';
 import { MAT_EMOJI, type Mat } from '../../meta/constellations';
-import { BUDDY_AT, buddyAccs, buddyEligible, currentBuddy, setBuddy, setBuddyAcc } from '../../meta/buddy';
+import { buddyAccs, buddyEligible, currentBuddy, setBuddy, setBuddyAcc } from '../../meta/buddy';
 import { ensureFestival, festivalActive } from '../../meta/festivals';
 import { RESIDENT_ACCS } from '../../meta/homeworld';
 import { SPECIES_BY_ID } from '../../core/world';
@@ -263,11 +263,7 @@ function buddyPanel(app: App) {
   return h(
     'div',
     { class: 'buddy-panel' },
-    h(
-      'p',
-      { class: 'muted' },
-      t('See a creature {n} times on your planets to befriend it. Your buddy cheers you on in every level.', { n: BUDDY_AT }),
-    ),
+    h('p', { class: 'muted' }, t('Choose a friend living on your Homeworld. Your Buddy cheers you on and can help with Troubles.')),
     h(
       'div',
       { class: 'ws-grid' },

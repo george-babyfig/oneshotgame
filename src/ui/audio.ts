@@ -94,6 +94,11 @@ const semi = (base: number, n: number) => base * Math.pow(2, n / 12);
 const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
 
 export const sfx = {
+  trouble: (kind: 'act' | 'blocked' | 'settled' | 'spread') => {
+    if (kind === 'settled') [0, 4, 7].forEach((step, i) => tone(semi(659, step), 0.2, 'sine', 0.04, i * 0.06));
+    else if (kind === 'blocked') tone(580, 0.16, 'sine', 0.04, 0, 760);
+    else tone(320, 0.17, 'sine', 0.035, 0, 260);
+  },
   sky: (kind: 'bonk' | 'boing' | 'fizz' | 'gust' | 'mist') => {
     if (kind === 'bonk') tone(260, 0.16, 'sine', 0.055, 0, 175);
     else if (kind === 'boing') tone(420, 0.23, 'sine', 0.047, 0, 660);

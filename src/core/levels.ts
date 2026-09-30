@@ -15,6 +15,7 @@ import { NO_MODIFIERS } from './modifiers';
 import { OBSTACLES, skyFor, type ObstacleId, type SkyDef } from './sky';
 import { flyFull, sceneGeometry, STAR_SLING } from './flight';
 import { ROUND_RULES_V0, novaReady, roundState, rulesForLevel, stepRound, type RoundRules } from './round';
+import { TROUBLES, forecastTroubles, type TroubleId } from './troubles';
 
 export { rulesForLevel } from './round';
 
@@ -90,6 +91,7 @@ export interface LevelDef {
   nova: boolean;
   /** Extra goals that must be met (with at least 1★) to win. */
   goals: Goal[];
+  troubles: { id: TroubleId; source: number }[];
 }
 
 /** A level goal: have N regions of a land type, or a creature living on the planet. */
@@ -110,7 +112,20 @@ export function goalsMet(p: Planet, goals: Goal[]) {
 
 /** Stars actually earned: goals must be met for any star to count. */
 export function starsEarned(p: Planet, score: number, L: Pick<LevelDef, 'stars' | 'goals'>) {
-  return goalsMet(p, L.goals) ? starsFor(score, L.stars) : 0;
+  if (!goalsMet(p, L.goals)) return 0;
+  const stars = starsFor(score, L.stars);
+  if (stars < 3 || !('n' in L)) return stars;
+  if (L.n === 1) {
+    const adjacent = p.sectors.some(
+      (sector, index) =>
+        (sector.biome === 'ocean' && p.sectors[(index + 1) % SECTORS].biome === 'mountain') ||
+        (sector.biome === 'mountain' && p.sectors[(index + 1) % SECTORS].biome === 'ocean'),
+    );
+    if (!adjacent) return 2;
+  }
+  const start = (L as Partial<LevelDef>).start;
+  if (L.n === 3 && start && !p.speciesFound.some((id) => !start.speciesFound.includes(id))) return 2;
+  return stars;
 }
 
 /** The first campaign level with goals. */
@@ -130,19 +145,60 @@ export const DIFFICULTY_DUST: Record<Difficulty, number> = { normal: 1, hard: 2,
 
 /** Reviewed layout substitutions for campaign slots. Zero means the original layout. */
 export const LEVEL_SALT: Partial<Record<number, number>> = {
+  1: 3,
+  2: 118,
+  4: 1,
+  5: 2,
+  6: 1,
+  7: 75,
+  8: 5,
+  9: 35,
+  10: 33,
+  11: 25,
+  12: 18,
+  13: 8,
+  14: 43,
+  15: 100,
   16: 2,
-  22: 1,
-  23: 46,
-  24: 48,
-  27: 9,
-  28: 19,
-  32: 3,
-  34: 11,
-  42: 1,
-  44: 5,
-  51: 7,
+  17: 11,
+  18: 26,
+  19: 1,
+  20: 42,
+  21: 6,
+  22: 11,
+  23: 339,
+  24: 21,
+  25: 79,
+  27: 17,
+  28: 6,
+  29: 98,
+  30: 15,
+  31: 11,
+  32: 1,
+  34: 35,
+  35: 37,
+  36: 49,
+  38: 20,
+  39: 60,
+  40: 17,
+  41: 3,
+  42: 49,
+  43: 14,
+  44: 16,
+  45: 109,
+  47: 2,
+  48: 11,
+  49: 118,
+  50: 23,
+  51: 6,
   52: 1,
+  53: 23,
+  54: 10,
   55: 9,
+  56: 29,
+  58: 10,
+  59: 59,
+  60: 4,
 };
 
 const NAMES_A = [
@@ -203,7 +259,7 @@ export function greedyPlan(start: Planet, queue: Kind[], throws: number, splash 
   return solvePlan({ start, queue, throws, nova }, rules, splash ? { ...NO_MODIFIERS, splash } : NO_MODIFIERS);
 }
 
-type SolverLevel = Pick<LevelDef, 'start' | 'queue' | 'throws' | 'nova'> & Partial<Pick<LevelDef, 'n'>>;
+type SolverLevel = Pick<LevelDef, 'start' | 'queue' | 'throws' | 'nova'> & Partial<Pick<LevelDef, 'n' | 'troubles' | 'difficulty'>>;
 
 /** Today's perfect-aim, immediate-life choice, with automatic Supernovas. */
 export function solve2(level: SolverLevel, rules: RoundRules = rulesForLevel(level.n ?? 1)): Planet {
@@ -211,16 +267,30 @@ export function solve2(level: SolverLevel, rules: RoundRules = rulesForLevel(lev
 }
 
 function solvePlan(level: SolverLevel, rules: RoundRules, mods: typeof NO_MODIFIERS, choiceRules = rules): Planet {
-  let state = roundState(level.start, level.nova);
+  let state = roundState(level.start, level.nova, level.troubles, level.difficulty === 'hard' || level.difficulty === 'super');
+  const queue = level.n === 2 && choiceRules !== ROUND_RULES_V0 ? [level.queue[1], level.queue[0], ...level.queue.slice(2)] : level.queue;
   for (let turn = 0; turn < level.throws; turn++) {
-    const kind = level.queue[turn];
+    const kind = queue[turn];
     const nova = novaReady(state);
     let best = -1;
     let at = 0;
     for (let sector = 0; sector < SECTORS; sector++) {
-      const trial = stepRound(state, { kind, sector, nova }, mods, choiceRules);
-      if (trial.after > best) {
-        best = trial.after;
+      const trial = stepRound(
+        choiceRules === ROUND_RULES_V0 ? { ...state, troubles: [] } : state,
+        { kind, sector, nova },
+        mods,
+        choiceRules,
+      );
+      // Aware play also values the next forecast beat, so it can cool a source early.
+      const nextBeat = choiceRules === ROUND_RULES_V0 ? undefined : forecastTroubles(trial.state, mods)[0];
+      const risk =
+        nextBeat?.inThrows === 1 && nextBeat.sector !== null && !nextBeat.blockedBy
+          ? (trial.state.planet.sectors[nextBeat.sector].species ? 12 : 0) + (nextBeat.id === 'vine' ? 8 : 3)
+          : 0;
+      const value =
+        trial.after + (choiceRules === ROUND_RULES_V0 ? 0 : trial.troubleEvents.filter((e) => e.kind === 'settled').length * 12 - risk);
+      if (value > best) {
+        best = value;
         at = sector;
       }
     }
@@ -245,12 +315,13 @@ export const DEAL_WEIGHTS: Record<Kind, number> = { rock: 3.5, ice: 4, seed: 4.5
 
 /** Difficulty knobs (tuned with a skill-level simulation; see tests/levels.test.ts). */
 export const TUNE = {
-  rampLevels: 20,
-  f1: [0.42, 0.17],
-  f2: [0.66, 0.15],
-  f3: [0.845, 0.05],
+  rampLevels: 30,
+  f1: [0.4, 0.24],
+  f2: [0.68, 0.13],
+  f3: [0.88, 0.05],
   saw: 0.05,
-  bump: { normal: [0, 0, 0], hard: [0.06, 0.04, 0.02], super: [0.09, 0.06, 0.03] } as Record<Difficulty, number[]>,
+  // Difficulty comes from forecast Troubles and sky placement, not larger star targets.
+  bump: { normal: [0, 0, 0], hard: [0, 0, 0], super: [0, 0, 0] } as Record<Difficulty, number[]>,
 };
 
 /**
@@ -260,7 +331,8 @@ export const TUNE = {
  */
 function pickGoals(n: number, difficulty: Difficulty, start: Planet, plan: Planet, blind: Planet, rnd: () => number): Goal[] {
   if (n < GOALS_FROM) return [];
-  const want = difficulty === 'super' ? 2 : difficulty === 'hard' ? 1 : rnd() < 0.6 ? 1 : 0;
+  const goalRate = n <= 10 ? 0.3 : n <= 20 ? 0.45 : 0.6;
+  const want = difficulty === 'super' ? 2 : difficulty === 'hard' ? 1 : rnd() < goalRate ? 1 : 0;
   if (!want) return [];
   const count = (p: Planet, id: string) => p.sectors.filter((s) => s.biome === id).length;
   const biomes = [...new Set(plan.sectors.map((s) => s.biome))]
@@ -274,23 +346,29 @@ function pickGoals(n: number, difficulty: Difficulty, start: Planet, plan: Plane
   const out: Goal[] = [];
   const takeSpecies = () => {
     if (!species.length) return;
-    // prefer the rarest creature on harder planets, any on normal ones
-    const id = difficulty === 'super' ? species[0] : species[Math.floor(rnd() * species.length)];
+    // A common creature has several achievable recipes in the dealt queue.
+    const id = species[species.length - 1];
     out.push({ type: 'species', id, count: 1 });
   };
   const takeBiome = () => {
     if (!biomes.length) return;
-    const b = biomes.splice(Math.floor(rnd() * biomes.length), 1)[0];
-    const k = difficulty === 'super' ? 0.8 : 0.7;
+    // Later Hard goals name a land the deal can build by several paths.
+    const index =
+      difficulty === 'hard' && n >= 25
+        ? biomes.reduce((best, b, i) => (b.have - b.from > biomes[best].have - biomes[best].from ? i : best), 0)
+        : Math.floor(rnd() * biomes.length);
+    const b = biomes.splice(index, 1)[0];
+    const k = difficulty === 'super' ? 0.65 : difficulty === 'hard' && n >= 25 ? 0.4 : difficulty === 'hard' ? 0.65 : 0.55;
     out.push({ type: 'biome', id: b.id, count: Math.max(b.from + 1, Math.round(b.have * k)) });
   };
-  if (want >= 2) {
+  if (difficulty === 'hard' && n >= 25) takeBiome();
+  else if (want >= 2) {
     takeSpecies();
     takeBiome();
-  } else if (rnd() < 0.5) takeSpecies();
+  } else if (rnd() < (difficulty === 'hard' ? 0.3 : 0.15)) takeSpecies();
   else takeBiome();
   if (!out.length) takeBiome();
-  if (n >= 25 && rnd() < 0.15) {
+  if (n >= 25 && difficulty !== 'hard' && rnd() < 0.15) {
     const source = ['tundra', 'icesheet', 'taiga', 'volcano', 'desert', 'savanna'] as const;
     const eligible = source.filter((id) => Math.min(count(plan, id), count(blind, id)) > count(start, id));
     if (eligible.length) {
@@ -330,6 +408,7 @@ function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
   }
   const teaching: Partial<Record<number, ObstacleId>> = { 33: 'rocks', 41: 'bubble', 46: 'mist', 51: 'ring', 57: 'tug' };
   if (seedPrefix === 'PP' && teaching[n]) twist = teaching[n];
+  if (seedPrefix === 'PP' && [14, 16, 18, 28, 36].includes(n)) twist = 'none';
 
   // every chapter ends with a Comet Guardian
   if ((seedPrefix === 'PP' && n >= 10 && n % 10 === 0) || o.boss) twist = 'boss';
@@ -338,13 +417,17 @@ function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
   const weights = DEAL_WEIGHTS;
   const queue: Kind[] = [];
   if (n === 1) queue.push('rock', 'ice', 'ice', 'rock', 'ice', 'rock');
-  if (n === 2) queue.push('seed', 'ice', 'seed', 'rock', 'seed', 'ice', 'seed', 'rock');
+  if (n === 2) queue.push('ice', 'rock', 'seed', 'rock', 'seed', 'ice', 'seed', 'rock');
   if (n === 8) queue.push('magma', 'ice');
   if (n === 13) queue.push('seed', 'storm');
   if (n === 22) queue.push('seed', 'sun');
   if (n === 25) queue.push('rock', 'ice');
   if (n === 32) queue.push('magma', 'sun');
   if (n === 26) queue.push('magma', 'ice', 'storm');
+  if (seedPrefix === 'PP' && n === 14) queue.push('seed', 'ice', 'storm');
+  if (seedPrefix === 'PP' && [16, 18].includes(n)) queue.push('seed', 'ice', 'storm');
+  if (seedPrefix === 'PP' && n === 28) queue.push('seed', 'magma', 'seed');
+  if (seedPrefix === 'PP' && n === 36) queue.push('seed', 'magma', 'sun');
   if (seedPrefix === 'PP' && teaching[n]) queue.push('rock', 'ice', 'seed');
   const debut = kinds.find((k) => KINDS[k].unlock === n);
   if (debut && n > 2) queue.push(debut);
@@ -359,14 +442,64 @@ function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
       }
     }
   }
+  const difficulty = difficultyOf(n, seedPrefix);
+  const troubleRnd = rngFrom(`${seed}-troubles`);
+  const campaignEligible = seedPrefix === 'PP' && n >= 14 && ![15, 19, 22, 26, 32, 33, 34, 37, 41, 46, 51, 57].includes(n);
+  const otherTaught = (o.rules?.troubles ?? []).filter((id) => TROUBLES[id].debut <= n);
+  const otherEligible = seedPrefix !== 'PP' && twist !== 'boss' && !/^(ZEN|RUSH|REMIX)/.test(seedPrefix) && otherTaught.length > 0;
+  const eligible = campaignEligible || otherEligible;
+  const guaranteed = [14, 16, 18, 28, 36].includes(n) || (difficulty !== 'normal' && n >= 20);
+  const haveTrouble =
+    eligible &&
+    (seedPrefix.startsWith('DAY-') || (seedPrefix === 'PP' ? guaranteed || (n >= 16 && troubleRnd() < 0.3) : troubleRnd() < 0.3));
+  // Place one foundation throw before an early Sunburst on quiet campaign
+  // planets. Keep Trouble deals intact so their taught counter stays timely.
+  if (seedPrefix === 'PP' && n >= 44 && !haveTrouble) {
+    const earlySun = queue.slice(0, throws).findIndex((kind) => kind === 'sun');
+    const midpoint = Math.ceil(throws / 2);
+    const lateRock = queue.slice(midpoint, throws).findIndex((kind) => kind === 'rock');
+    if (earlySun >= 0 && lateRock >= 0) {
+      const rock = midpoint + lateRock;
+      [queue[earlySun], queue[rock]] = [queue[rock], queue[earlySun]];
+    }
+  }
+  const taught = seedPrefix === 'PP' ? (Object.keys(TROUBLES) as TroubleId[]).filter((id) => TROUBLES[id].debut <= n) : otherTaught;
+  const choose = (): TroubleId => taught[Math.floor(troubleRnd() * taught.length)];
+  const troubles: { id: TroubleId; source: number }[] = haveTrouble
+    ? [
+        {
+          id:
+            seedPrefix === 'PP' && [14, 16, 18].includes(n)
+              ? 'vent'
+              : seedPrefix === 'PP' && n === 28
+                ? 'vine'
+                : seedPrefix === 'PP' && n === 36
+                  ? 'frost'
+                  : choose(),
+          source: seedPrefix === 'PP' && [14, 16, 18, 28, 36].includes(n) ? 10 : Math.floor(troubleRnd() * SECTORS),
+        },
+      ]
+    : [];
+  if (haveTrouble && difficulty === 'super' && n >= 40 && troubleRnd() < 0.5)
+    troubles.push({ id: choose(), source: (troubles[0].source + 9 + Math.floor(troubleRnd() * 7)) % SECTORS });
+  if (twist in OBSTACLES && troubles.length && n < OBSTACLES[twist as ObstacleId].debut + 10) twist = 'none';
+  const afterHard = seedPrefix === 'PP' && n > 1 && (difficultyOf(n - 1) === 'hard' || difficultyOf(n - 1) === 'super');
+  const budget = difficulty === 'super' ? 5 : difficulty === 'hard' ? 4 : (n <= 30 ? 2 : 3) - Number(afterHard);
+  if ((twistPressure[twist] ?? 0) + troubles.length * 2 + (troubles.length && n >= 25 ? 1 : 0) > budget) twist = 'none';
   const start = startFor(twist, rnd);
+  if (seedPrefix === 'PP' && [14, 16, 18, 28, 36].includes(n)) {
+    const lesson = start.sectors[11];
+    lesson.land = 1;
+    lesson.water = 0;
+    lesson.life = [14, 16, 18].includes(n) ? 2 : 1;
+    lesson.heat = n === 28 ? 2 : n === 36 ? 1 : 0;
+  }
   if (n === 8 || n === 26) {
     start.sectors[12].water = 3;
     start.sectors[12].heat = -2;
   }
   if (n === 26) start.sectors[18].life = 1;
   settle(start); // creatures that already fit the starting planet are there from the start
-  const difficulty = difficultyOf(n, seedPrefix);
   const spin = (twist === 'fast' ? 0.9 : 0.35 + Math.min(0.3, n * 0.012)) * (rnd() < 0.5 ? 1 : -1);
   const name = `${NAMES_A[Math.floor(rnd() * NAMES_A.length)]} ${NAMES_B[Math.floor(rnd() * NAMES_B.length)]}`;
   const hue = difficulty === 'super' ? 285 : difficulty === 'hard' ? 15 : 200 + Math.floor(rnd() * 110);
@@ -376,7 +509,7 @@ function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
     sky = skyFor(n, twist, `${seed}-sky-${attempt}`, difficulty);
     sky.ringDirection = spin > 0 ? -1 : 1;
   }
-  return { n, seed, throws, queue, twist, sky, spin, size: twist === 'tiny' ? 0.72 : 1, start, name, hue, difficulty };
+  return { n, seed, throws, queue, twist, sky, spin, size: twist === 'tiny' ? 0.72 : 1, start, name, hue, difficulty, troubles };
 }
 
 export type LevelMeta = Pick<LevelDef, 'name' | 'hue' | 'twist' | 'difficulty'> & { boss: boolean; obstacle: ObstacleId | null };
@@ -405,6 +538,7 @@ function copyLevel(level: LevelDef): LevelDef {
     start: clonePlanet(level.start),
     stars: [...level.stars],
     goals: level.goals.map((goal) => ({ ...goal })),
+    troubles: level.troubles.map((trouble) => ({ ...trouble })),
   };
 }
 
@@ -425,7 +559,7 @@ export function makeLevel(n: number, seedPrefix = 'PP', o: LevelOptions = {}): L
 
 function buildLevel(n: number, seedPrefix: string, o: LevelOptions): LevelDef {
   const layout = levelLayout(n, seedPrefix, o);
-  const { seed, throws, queue, twist, sky, spin, size, start, name, hue, difficulty } = layout;
+  const { seed, throws, queue, twist, sky, spin, size, start, name, hue, difficulty, troubles } = layout;
   const nova = seedPrefix !== 'PP' || n >= 9;
   const rules = o.rules ?? rulesForSeed(seed);
   const plan = solve2({ ...layout, nova }, rules);
@@ -434,19 +568,79 @@ function buildLevel(n: number, seedPrefix: string, o: LevelOptions): LevelDef {
   const base = lifeScore(start);
   // Star targets as a share of the greedy optimum: gentle for the first chapter,
   // then a sawtooth inside every chapter (easier after a chest, harder near the end).
-  const ease = Math.min(1, (n - 1) / TUNE.rampLevels);
+  const progress = Math.max(0, Math.min(1, (n - 1) / (TUNE.rampLevels - 1)));
+  const ease = progress * progress * (3 - 2 * progress);
   const saw = seedPrefix === 'PP' ? ((n - 1) % 10) / 9 : 0.5;
   const bump = TUNE.bump[difficulty];
-  const f1 = TUNE.f1[0] + TUNE.f1[1] * ease + TUNE.saw * saw + bump[0];
-  const f2 = TUNE.f2[0] + TUNE.f2[1] * ease + TUNE.saw * 0.7 * saw + bump[1];
+  const breather = seedPrefix === 'PP' && n > 1 && (difficultyOf(n - 1) === 'hard' || difficultyOf(n - 1) === 'super') ? 0.02 : 0;
+  const obstacleLesson = seedPrefix === 'PP' && [33, 41, 46, 51, 57].includes(n);
+  const teachingFloor = n === 41 ? 0.35 : n === 46 ? 0.25 : n === 57 ? 0.3 : obstacleLesson ? 0.2 : 0;
+  const chapterOneStar =
+    seedPrefix === 'PP' && !obstacleLesson
+      ? n >= 46
+        ? 0.04
+        : n >= 31
+          ? 0.02
+          : n >= 11 && n <= 20
+            ? difficulty === 'normal'
+              ? 0.08
+              : 0.04
+            : 0
+      : 0;
+  const f1 = TUNE.f1[0] + TUNE.f1[1] * ease + TUNE.saw * saw + bump[0] + chapterOneStar - breather - teachingFloor;
+  const f2 = TUNE.f2[0] + TUNE.f2[1] * ease + TUNE.saw * 0.7 * saw + bump[1] - breather - (obstacleLesson ? 0.08 : 0);
   // The middle chapter needs a small lift to keep sharp clears inside its ceiling.
-  const f3 = Math.min(0.97, TUNE.f3[0] + TUNE.f3[1] * ease + bump[2] + (n >= 31 && n <= 45 ? 0.004 : 0));
+  const f3 = Math.min(
+    0.97,
+    TUNE.f3[0] + TUNE.f3[1] * ease + bump[2] - (seedPrefix === 'PP' && n >= 21 ? 0.02 : 0) - breather - (obstacleLesson ? 0.05 : 0),
+  );
   const t = (f: number) => Math.max(base + 5, Math.round((base + (best - base) * f) / 5) * 5);
   const stars: [number, number, number] = [Math.min(t(f1), Math.floor(lifeScore(blind) / 5) * 5), t(f2), t(f3)];
+  if (seedPrefix === 'PP' && n === 15) stars[0] += 25;
+  if (seedPrefix === 'PP' && n === 20) stars[0] += 35;
+  if (seedPrefix === 'PP' && n === 23) stars[0] += 15;
+  if (seedPrefix === 'PP' && n === 10) stars[0] += 30;
+  if (seedPrefix === 'PP' && n === 11) stars[0] += 10;
+  if (seedPrefix === 'PP' && n === 14) stars[0] += 35;
+  if (seedPrefix === 'PP' && n === 18) stars[0] += 20;
+  if (seedPrefix === 'PP' && n === 24) stars[0] += 20;
+  if (seedPrefix === 'PP' && n === 28) stars[0] -= 20;
+  if (seedPrefix === 'PP' && n === 25) stars[0] += 40;
+  if (seedPrefix === 'PP' && n === 34) stars[0] += 10;
+  if (seedPrefix === 'PP' && n === 35) stars[0] += 10;
+  if (seedPrefix === 'PP' && n === 39) stars[0] += 20;
+  if (seedPrefix === 'PP' && n === 49) stars[0] += 30;
+  if (seedPrefix === 'PP' && (n === 55 || n === 60)) stars[0] += 5;
+  // Keep three stars readable for casual play after the midgame ramp without
+  // changing the one-star floor or the number of throws.
+  if (seedPrefix === 'PP' && difficulty === 'normal' && n >= 31 && n <= 60) stars[2] -= n <= 45 ? 10 : 5;
+  if (seedPrefix === 'PP' && difficulty === 'normal' && n >= 11 && n <= 20) stars[2] -= 5;
+  if (seedPrefix === 'PP' && n === 9) stars[2] += 20;
+  if (seedPrefix === 'PP' && n === 3) stars[2] -= 10;
+  if (seedPrefix === 'PP' && n === 6) stars[2] += 15;
+  if (seedPrefix === 'PP' && n === 7) stars[2] += 5;
+  if (seedPrefix === 'PP' && n === 12) stars[2] += 25;
+  if (seedPrefix === 'PP' && n === 13) stars[2] += 20;
+  if (seedPrefix === 'PP' && n === 16) stars[0] += 10;
+  if (seedPrefix === 'PP' && n === 18) stars[0] += 5;
+  if (seedPrefix === 'PP' && n === 10) stars[2] += 10;
+  if (seedPrefix === 'PP' && n === 14) stars[2] += 15;
+  if (seedPrefix === 'PP' && n === 18) stars[2] += 10;
+  if (seedPrefix === 'PP' && (n === 13 || n === 17)) stars[2] -= 5;
+  if (seedPrefix === 'PP' && n === 23) stars[2] -= 10;
+  if (seedPrefix === 'PP' && n === 24) stars[2] -= 5;
+  if (seedPrefix === 'PP' && n === 28) stars[2] -= 15;
   if (stars[1] <= stars[0]) stars[1] = stars[0] + 5;
   if (stars[2] <= stars[1]) stars[2] = stars[1] + 5;
   const goals = seedPrefix === 'PP' || o.goals ? pickGoals(n, difficulty, start, plan, blind, rngFrom(`${seed}-goals`)) : [];
-  if ([33, 41, 46, 51, 57].includes(n) && seedPrefix === 'PP') goals.length = Math.min(goals.length, 1);
+  // The first goal is one Highland, supported by Rock Pebble in the opening deal.
+  if (seedPrefix === 'PP' && n === 6) goals.splice(0, goals.length, { type: 'biome', id: 'highland', count: 1 });
+  if (seedPrefix === 'PP' && n === 7) goals.splice(0, goals.length, { type: 'biome', id: 'ocean', count: 1 });
+  if (seedPrefix === 'PP' && n === 12) goals.splice(0, goals.length, { type: 'biome', id: 'highland', count: 1 });
+  // The Vent lesson asks for one more ocean sector than the start; both solvers
+  // make several, so this stays a readable goal without trapping careful play.
+  if (seedPrefix === 'PP' && n === 14) goals.splice(0, goals.length, { type: 'biome', id: 'ocean', count: 3 });
+  if ([16, 18, 33, 41, 46, 51, 57].includes(n) && seedPrefix === 'PP') goals.length = 0;
   return {
     n,
     seed,
@@ -463,6 +657,7 @@ function buildLevel(n: number, seedPrefix: string, o: LevelOptions): LevelDef {
     difficulty,
     nova,
     goals,
+    troubles,
   };
 }
 
@@ -490,17 +685,17 @@ const twistPressure: Partial<Record<Twist, number>> = {
   tug: 2,
 };
 export function pressureOf(level: LevelDef): number {
-  return (
-    (level.sky.gusty ? 2 : (twistPressure[level.twist] ?? 0)) +
-    rulesForLevel(level.n).troubles.length * 2 +
-    Math.max(0, level.goals.length - 1)
-  );
+  return (level.sky.gusty ? 2 : (twistPressure[level.twist] ?? 0)) + level.troubles.length * 2 + Math.max(0, level.goals.length - 1);
 }
 export function budgetFor(level: LevelDef): number {
+  if (level.seed.startsWith('PP-') && [16, 18].includes(level.n)) return 2;
   if ([33, 41, 46, 51, 57].includes(level.n) && level.sky.obstacle) return OBSTACLES[level.sky.obstacle].pressure;
   if (level.difficulty === 'super') return 5;
   if (level.difficulty === 'hard') return 4;
-  return level.n <= 30 ? 2 : 3;
+  const normal = level.n <= 30 ? 2 : 3;
+  return level.seed.startsWith('PP-') && level.n > 1 && (difficultyOf(level.n - 1) === 'hard' || difficultyOf(level.n - 1) === 'super')
+    ? normal - 1
+    : normal;
 }
 
 /** A sky is a wall only if too many direct aims fail for all sampled release times. */

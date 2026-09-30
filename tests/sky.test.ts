@@ -15,23 +15,23 @@ describe('seeded sky', () => {
   });
 
   it('uses the specified starting sizes and seeded paths', () => {
-    expect(shapes('rocks')).toHaveLength(3);
+    expect(shapes('rocks')).toHaveLength(2);
     expect(shapes('rocks')[0]).toMatchObject({ r: geo.R * 0.1 });
-    expect(shapes('bubble')[0]).toMatchObject({ r: geo.R * 0.36, moonR: geo.R * 0.28 });
-    expect(shapes('mist')[0]).toMatchObject({ r: geo.R * 0.7 });
+    expect(shapes('bubble')[0]).toMatchObject({ r: geo.R * 0.28, moonR: geo.R * 0.22 });
+    expect(shapes('mist')[0]).toMatchObject({ r: geo.R * 0.55 });
     expect(shapes('ring')[0]).toMatchObject({ r: geo.R * 1.6, thickness: geo.R * 0.1 });
     const frozenRing = shapes('ring', 1.25)[0];
     if (frozenRing.kind !== 'ring') throw Error('expected ring');
-    expect(frozenRing.gaps[0].width).toBeCloseTo((90 * Math.PI) / 180, 6);
-    expect(skyFor(51, 'ring', 'PP-51', 'normal').ringWidth).toBe(160);
-    expect(skyFor(60, 'ring', 'PP-60', 'hard').ringWidth).toBe(130);
+    expect(frozenRing.gaps[0].width).toBeCloseTo((120 * Math.PI) / 180, 6);
+    expect(skyFor(51, 'ring', 'PP-51', 'normal').ringWidth).toBe(179);
+    expect(skyFor(60, 'ring', 'PP-60', 'hard').ringWidth).toBe(145);
     expect(frozenRing.gaps[0].start).toBeGreaterThan(0);
-    expect(shapes('tug')[0]).toMatchObject({ coreR: 10 });
+    expect(shapes('tug')[0]).toMatchObject({ coreR: 6 });
     const ring = skyFor(60, 'ring', 'PP-60', 'normal');
     ring.ringDirection = 1;
     expect(skyShapesAt(ring, EMPTY_SKY_STATE, geo, 1)).not.toEqual(skyShapesAt(ring, EMPTY_SKY_STATE, geo, 0));
     const hard = skyShapesAt(skyFor(60, 'rocks', 'PP-60', 'hard'), EMPTY_SKY_STATE, geo, 0);
-    expect(hard).toHaveLength(4);
+    expect(hard).toHaveLength(3);
     expect(shapes('rocks', 1)).not.toEqual(shapes('rocks', 0));
     const firstGap = skyShapesAt(ring, EMPTY_SKY_STATE, geo, 0)[0];
     const turnedGap = skyShapesAt(ring, EMPTY_SKY_STATE, geo, 2)[0];
@@ -49,7 +49,7 @@ describe('seeded sky', () => {
       if (!later || later.kind !== 'rock') throw Error('rock missing');
       expect(later.y).not.toBe(start[i].y);
       expect(Math.abs(def.rockAngle[i])).toBeGreaterThanOrEqual((15 * Math.PI) / 180);
-      expect(def.rockSpeed[i]).toBeGreaterThanOrEqual(0.18);
+      expect(def.rockSpeed[i]).toBeGreaterThanOrEqual(0.12);
     }
     for (const time of [0, 20, 60, 100])
       for (const shape of skyShapesAt(def, EMPTY_SKY_STATE, geo, time)) {
@@ -95,7 +95,7 @@ describe('seeded sky', () => {
 
   it('removes only broken rocks for the rest of the round', () => {
     const def = skyFor(60, 'rocks', 'PP-60', 'normal');
-    expect(skyShapesAt(def, { brokenRocks: [1] }, geo, 0).map((s) => s.kind === 'rock' && s.index)).toEqual([0, 2]);
+    expect(skyShapesAt(def, { brokenRocks: [1] }, geo, 0).map((s) => s.kind === 'rock' && s.index)).toEqual([0]);
   });
 
   it('doubles gusts for 0.6 seconds and warns for the preceding 0.5 seconds', () => {

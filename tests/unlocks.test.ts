@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { GOALS_FROM } from '../src/core/levels';
 import { KINDS, type Kind } from '../src/core/world';
-import { buddyEligible, BUDDY_AT } from '../src/meta/buddy';
+import { buddyEligible } from '../src/meta/buddy';
 import { eventActive, EVENT_UNLOCK_LEVEL } from '../src/meta/events';
 import { festivalActive, FESTIVAL_UNLOCK_LEVEL } from '../src/meta/festivals';
 import { homeUnlocked, HOME_UNLOCK_LEVEL } from '../src/meta/homeworld';
@@ -122,7 +122,10 @@ describe('unlock ladder', () => {
         expect(unlocked(p, 'star_calendar')).toBe(level >= 21);
         expect(unlocked(p, 'passport_setup')).toBe(p.stats.wins >= 1);
         expect(unlocked(p, 'buddy')).toBe(false);
-        p.sightings.bunny = BUDDY_AT;
+        p.sightings.bunny = 5;
+        expect(unlocked(p, 'buddy')).toBe(false);
+        expect(buddyEligible(p).includes('bunny')).toBe(false);
+        p.home.residents.push({ species: 'bunny', fp: 0, lastReq: 0, rewarded: 0 });
         expect(unlocked(p, 'buddy')).toBe(level >= 18);
         expect(buddyEligible(p).includes('bunny')).toBe(level >= 18);
       }

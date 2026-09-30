@@ -1,7 +1,7 @@
 // Lifebook: every creature (discovered or not) plus the recipe for every land.
 import { h, modal } from '../dom';
 import { sfx } from '../audio';
-import { SPECIES, BIOMES, type Rarity, type SpeciesDef } from '../../core/world';
+import { SPECIES, BIOMES, TRAITS, traitOf, type Rarity, type SpeciesDef } from '../../core/world';
 import { GEMS_PER_NEW_SPECIES } from '../../meta/config';
 import type { App } from '../app';
 import { btn, toast } from '../dom';
@@ -17,6 +17,7 @@ import type { Profile } from '../../meta/profile';
 import { STICKERS, albumReady, ownedStickers } from '../../meta/stickers';
 import { icon } from '../icons';
 import { effectiveReduceMotion } from '../motion';
+import { traitBadge } from '../art/traits';
 
 const ORDER: Rarity[] = ['common', 'uncommon', 'rare', 'legendary'];
 
@@ -35,6 +36,7 @@ function card(p: Profile, s: SpeciesDef, got: boolean) {
       h('div', { class: 'm-sub' }, rarityName(s.rarity)),
       h('div', { class: 'm-title' }, got ? t(s.name) : t('Undiscovered')),
       h('p', { class: 'muted' }, t('Lives: {hint}', { hint: speciesHint(s) })),
+      got && traitOf(s.id) ? h('div', { class: 'lore' }, traitBadge(traitOf(s.id)!), h('p', null, t(TRAITS[traitOf(s.id)!].rule))) : null,
       got
         ? h(
             'div',
@@ -89,6 +91,7 @@ export function showLifebook(app: App) {
             },
             h('div', { class: 'lbe' }, portrait),
             h('div', { class: 'lbn' }, got ? t(s.name) : '???'),
+            got && traitOf(s.id) ? traitBadge(traitOf(s.id)!, true) : null,
             h('div', { class: 'lbh' }, speciesHint(s)),
           );
         }),

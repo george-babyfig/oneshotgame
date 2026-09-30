@@ -1,7 +1,6 @@
 name: Nightly sims
 
-# The slow simulations: the full difficulty sim, the level lint and the 90-day
-# economy sim. They are Watch-only for now and print their reports to the log.
+# Full shadow-seed curve, 61-120 watches, 90-day Daily and 12-week Voyage pre-flight.
 on:
   schedule:
     - cron: '0 6 * * *'
@@ -18,5 +17,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run sim
-      - run: SIM=1 SIM_NIGHTLY=1 npx vitest run tests/sim/flying-nightly.sim.ts --disableConsoleIntercept
+      - name: Full M8 curve and two-sided lint (10/30 shadow seeds; 61-120 watches)
+        run: SIM_NIGHTLY=1 npm run sim
+      - if: always()
+        run: SIM=1 SIM_NIGHTLY=1 npx vitest run tests/sim/flying-nightly.sim.ts --disableConsoleIntercept
+      - name: Calendar pre-flight (90 Daily Planets, 12 Voyage weeks)
+        if: always()
+        run: SIM=1 SIM_NIGHTLY=1 npx vitest run tests/sim/calendar-preflight.sim.ts --disableConsoleIntercept

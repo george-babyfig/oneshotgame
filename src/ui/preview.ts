@@ -21,6 +21,8 @@ export interface DrawnAim {
 const SCOPE_STEPS = [16, 28, 44, 90];
 const flightCache = new WeakMap<LevelScene, { key: string; path: ReturnType<typeof flyFull> }>();
 
+export const safeTroubleText = () => t('Safe!');
+
 export function predictFlight(scene: LevelScene, vx: number, vy: number) {
   const key = `${vx}|${vy}|${scene.rot}|${scene.time}|${scene.w}|${scene.h}|${scene.throwsUsed}|${scene.bossHp}|${scene.skyState.brokenRocks.join(',')}`;
   let cached = flightCache.get(scene);
@@ -55,7 +57,7 @@ export function drawGoalPulse(scene: LevelScene) {
 }
 
 export function drawLanding(scene: LevelScene, i: number) {
-  const key = `${i}|${scene.cur}|${scene.throwsUsed}|${scene.nova.charge}|${scene.nova.held}|${scene.combo.links}|${scene.combo.rest}`;
+  const key = `${i}|${scene.cur}|${scene.throwsUsed}|${scene.nova.charge}|${scene.nova.held}|${scene.combo.links}|${scene.combo.rest}|${scene.o.buddy?.species ?? ''}|${scene.roundModifiers().buddyShield ?? ''}|${scene.troubles.map((v) => `${v.id}:${v.nextIn}:${v.settled}`).join(',')}`;
   if (scene.predictCache?.key !== key) {
     const state = scene.roundState();
     const res = previewStep(state, { kind: scene.cur, sector: i, nova: novaForThrow(state) }, scene.roundModifiers(), scene.rules);
@@ -66,10 +68,28 @@ export function drawLanding(scene: LevelScene, i: number) {
     scene.predictCache = {
       key,
       title: `${after.deco || '●'} ${t(after.name)}${life ? ` · ${t('{n} life', { n: `${life > 0 ? '+' : ''}${life}` })}` : ''}${creature ? ` · ${t('{creature} moves in', { creature })}` : ''}`,
-      lost: lost ? t('{creature} wanders off', { creature: t(SPECIES_BY_ID[lost.species].name) }) : '',
+      lost:
+        res.lost.length > 1
+          ? t('{n} friends wander off', { n: res.lost.length })
+          : lost
+            ? t('{creature} wanders off', { creature: t(SPECIES_BY_ID[lost.species].name) })
+            : '',
       reaction: res.reactions[0]?.id,
       comboStep: res.combo.step,
       comboEnd: !!res.combo.ended && scene.combo.links > 0 && res.combo.links === 0,
+      trouble: res.troubleEvents[0]
+        ? res.troubleEvents[0].kind === 'settled'
+          ? res.troubleEvents[0].id === 'vent'
+            ? t('Vent cooled!')
+            : t('{name} settled!', { name: t(res.troubleEvents[0].id === 'vine' ? 'Tanglevine' : 'Frost Creep') })
+          : res.troubleEvents[0].kind === 'blocked'
+            ? safeTroubleText()
+            : t('{name} reaches this land', {
+                name: t(
+                  res.troubleEvents[0].id === 'vent' ? 'Ember Vent' : res.troubleEvents[0].id === 'vine' ? 'Tanglevine' : 'Frost Creep',
+                ),
+              })
+        : '',
       changed: res.changed,
     };
   }
@@ -92,7 +112,7 @@ export function drawLanding(scene: LevelScene, i: number) {
   g.textBaseline = 'middle';
   g.font = `700 ${Math.round(13 * scale)}px Fredoka, ui-rounded, system-ui, sans-serif`;
   g.fillStyle = '#ffffff';
-  const secondRow = !!pc.reaction || !!pc.lost || pc.comboEnd;
+  const secondRow = !!pc.reaction || !!pc.lost || pc.comboEnd || !!pc.trouble;
   g.fillText(pc.title, x + width / 2, y + (secondRow ? 17 : height / 2), width - 12);
   const thirdRow = landingNeedsThirdRow(scene, width);
   if (pc.reaction) {
@@ -153,6 +173,12 @@ export function drawLanding(scene: LevelScene, i: number) {
       g.stroke();
     }
   }
+  if (pc.trouble) {
+    g.font = `700 ${Math.round(12 * scale)}px Fredoka, ui-rounded, system-ui, sans-serif`;
+    g.fillStyle = '#bdf4d0';
+    g.textAlign = 'center';
+    g.fillText(pc.trouble, x + width / 2, y + (pc.reaction || pc.lost || pc.comboEnd ? (thirdRow ? 94 : 68) : 43), width - 16);
+  }
   g.restore();
 }
 
@@ -170,14 +196,27 @@ export function landingCardRect(scene: LevelScene) {
   const goalsBottom = (scene.goalsEl.getBoundingClientRect().bottom - canvas.top) * scale;
   const bannerBottom = scene.el.querySelector('.banners .show')?.getBoundingClientRect().bottom ?? canvas.top;
   const twistBottom = scene.el.querySelector('.twist')?.getBoundingClientRect().bottom ?? canvas.top;
-  const top = Math.max(150, goalsBottom + 8, (bannerBottom - canvas.top) * scale + 8, (twistBottom - canvas.top) * scale + 8);
+  const forecastBottom = ((scene.forecastEl?.getBoundingClientRect().bottom ?? canvas.top) - canvas.top) * scale;
+  const top = Math.max(
+    150,
+    goalsBottom + 8,
+    forecastBottom + 8,
+    (bannerBottom - canvas.top) * scale + 8,
+    (twistBottom - canvas.top) * scale + 8,
+  );
   const width = Math.min(scene.w - 24, 276);
   const height =
-    scene.predictCache && (scene.predictCache.lost || scene.predictCache.reaction || scene.predictCache.comboEnd)
+    scene.predictCache?.trouble && (scene.predictCache.lost || scene.predictCache.reaction || scene.predictCache.comboEnd)
       ? landingNeedsThirdRow(scene, width)
-        ? 88
-        : 62
-      : 34;
+        ? 112
+        : 88
+      : scene.predictCache?.trouble
+        ? 62
+        : scene.predictCache && (scene.predictCache.lost || scene.predictCache.reaction || scene.predictCache.comboEnd)
+          ? landingNeedsThirdRow(scene, width)
+            ? 88
+            : 62
+          : 34;
   return { x: (scene.w - width) / 2, y: top, width, height };
 }
 

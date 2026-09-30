@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { NO_MODIFIERS } from '../src/core/modifiers';
-import { roundState } from '../src/core/round';
+import { roundState, stepRound } from '../src/core/round';
 import { newPlanet } from '../src/core/world';
+import { restoreSceneTroubles } from '../src/ui/app';
 import {
   clearInterruptedRound,
   defaultProfile,
@@ -45,6 +46,42 @@ function checkpoint(): RoundCheckpoint {
 }
 
 describe('interrupted campaign rounds', () => {
+  it('restores a mid-round vent clock, a used Buddy shield, and a settled source into the scene', () => {
+    const p = defaultProfile(0);
+    p.level = 18;
+    const c = checkpoint();
+    c.n = 18;
+    const planet = newPlanet((i) => (i === 11 ? { land: 1, life: 2 } : {}));
+    let state = roundState(planet, true, [
+      { id: 'vent', source: 10 },
+      { id: 'vent', source: 18 },
+    ]);
+    state.troubles[0].nextIn = 1;
+    state = stepRound(state, { kind: 'rock', sector: 0, outcome: 'miss' }, { ...NO_MODIFIERS, buddyShield: 'fireproof' }).state;
+    expect(state.buddyShieldUsed).toBe(true);
+    state.troubles[0].nextIn = 1;
+    state = stepRound(state, { kind: 'rock', sector: 0, outcome: 'miss' }, { ...NO_MODIFIERS, buddyShield: 'fireproof' }).state;
+    state = stepRound(state, { kind: 'ice', sector: 18 }).state;
+    expect(state.troubles[0].settled).toBe(false);
+    expect(state.troubles[1].settled).toBe(true);
+    c.state = state;
+    saveInterruptedRound(p, c);
+    const restored = readInterruptedRound(p)!.state;
+    const scene = { troubles: [], buddyShieldUsed: false, calmUsed: false } as Pick<
+      import('../src/ui/game').LevelScene,
+      'troubles' | 'buddyShieldUsed' | 'calmUsed'
+    >;
+    restoreSceneTroubles(scene, restored);
+    expect(scene.troubles).toEqual(state.troubles);
+    expect(scene.buddyShieldUsed).toBe(true);
+    expect(
+      stepRound(
+        { ...restored, troubles: scene.troubles, buddyShieldUsed: scene.buddyShieldUsed },
+        { kind: 'rock', sector: 0, outcome: 'miss' },
+        { ...NO_MODIFIERS, buddyShield: 'fireproof' },
+      ).state.troubles[0].nextIn,
+    ).toBe(1);
+  });
   it('survives a profile migration with the same planet, throws, score, and queue', () => {
     const p = defaultProfile(0);
     p.level = 3;

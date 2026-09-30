@@ -4995,3 +4995,33 @@ button.lb {
 .grownups-gentle .toggle {
   width: 100%;
 }
+.grownups-gentle {
+  min-width: 0;
+  width: 100%;
+}
+.grownups-gentle p {
+  padding: 0 14px;
+}
+.buddy-chip > canvas,
+.buddy-chip > .trait-badge {
+  flex: none;
+}
+.buddy-chip-copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.buddy-chip-copy small {
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.buddy-chip .trait-badge,
+.trait-badge > span:first-child {
+  white-space: nowrap;
+}
+.end .btn,
+.trouble-beat {
+  min-height: 44px;
+}

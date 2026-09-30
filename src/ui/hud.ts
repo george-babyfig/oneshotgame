@@ -1,6 +1,6 @@
 import { ledger } from '../meta/ledger';
 import { type BiomeId, BIOMES, KINDS, SPECIES_BY_ID, type Kind } from '../core/world';
-import { goalProgress, goalsMet, starsFor, type Goal } from '../core/levels';
+import { goalProgress, goalsMet, starsEarned, type Goal } from '../core/levels';
 import { h, btn, fmt, modal } from './dom';
 import { icon } from './icons';
 import { critterCanvas } from './art/critters';
@@ -13,15 +13,29 @@ import { rarityName } from './text';
 import { toast } from './dom';
 import { CONTINUE_COST, CONTINUE_THROWS } from '../meta/continues';
 import { waysToEarnGems } from './flows/earn';
-import { COACH_EVENTS, practiceHelp, type CoachEvent } from '../meta/coach';
+import { COACH_EVENTS, introAlreadySeen, practiceHelp, type CoachEvent } from '../meta/coach';
 import type { Unlock } from '../meta/unlocks';
 
 import type { LevelScene } from './game';
 import { previewStep, novaReady, REACTIONS, type ReactionId, type RoundRules } from '../core/round';
 import { reactionCanvas, reactionPair } from './art/reactions';
 import { celebrate } from './celebrate';
+import { forecastTroubles, TROUBLES } from '../core/troubles';
 
 const roundDiscoveries = new WeakMap<LevelScene, string[]>();
+
+export function bannerTopFor(hudTop: number, goalsBottom: number, forecastBottom: number, twistBottom: number): number {
+  return Math.max(112, Math.max(goalsBottom, forecastBottom, twistBottom) - hudTop + 8);
+}
+
+export function forecastBeatText(icon: string, shape: string, inThrows: number): string {
+  return `${icon} ${shape} ${t('in {n}', { n: inThrows })}`;
+}
+
+export function forecastInThrows(inThrows: number): string {
+  const count = tp(inThrows, '+{n} throw', '+{n} throws').replace('+', '');
+  return t('in {n}', { n: count });
+}
 
 export const showBestCombo = (best: number, rules: RoundRules) => rules.combo !== false && best > 0;
 
@@ -57,6 +71,7 @@ export function buildHud(scene: LevelScene) {
   });
   scene.descEl = h('div', { class: 'obj-desc' });
   scene.goalsEl = h('div', { class: `goals${scene.L.goals.length ? '' : ' hidden'}`, style: 'pointer-events:auto' });
+  scene.forecastEl = h('div', { class: 'trouble-forecast', style: 'display:flex;gap:5px;justify-content:center;pointer-events:auto' });
   scene.hintEl = h('div', { class: 'hint' }, h('div', { class: 'hint-hand' }, '👆'), h('div', null, t('Pull back & release to fling')));
   const twist = scene.L.twist !== 'none' ? h('div', { class: 'twist' }, scene.twistLabel()) : null;
   scene.finishEl = h(
@@ -89,6 +104,7 @@ export function buildHud(scene: LevelScene) {
     ),
     h('div', { class: 'life' }, bar, scene.hudScore),
     scene.goalsEl,
+    scene.forecastEl,
     twist,
     h('div', { class: 'banners' }, scene.coachEl, scene.discoverEl),
     scene.liveEl,
@@ -135,6 +151,7 @@ export function barMax(scene: LevelScene) {
 }
 
 export function renderHud(scene: LevelScene) {
+  renderForecast(scene);
   if (scene.o.timeLimit) {
     scene.renderClock();
   } else if (scene.o.endless) {
@@ -153,6 +170,30 @@ export function renderHud(scene: LevelScene) {
   scene.renderScore();
   scene.renderGoals();
   scene.renderFinish();
+}
+
+/** Two upcoming Trouble beats, with number, icon and a distinct target shape. */
+export function renderForecast(scene: LevelScene) {
+  const beats = forecastTroubles(scene.roundState(), scene.roundModifiers());
+  const counterIcons = { vent: '☄️ 🌧️', vine: '🔥', frost: '🔥 ☀️' } as const;
+  scene.forecastEl.replaceChildren(
+    ...beats.map((beat) => {
+      const def = TROUBLES[beat.id];
+      const shape = beat.sector === null ? '✓' : beat.blockedBy ? '▣' : beat.id === 'vent' ? '◆' : beat.id === 'vine' ? '▲' : '●';
+      const label = `${t(def.name)} · ${forecastInThrows(beat.inThrows)} · ${beat.sector === null ? t('settled next') : t('the marked land')}`;
+      return h(
+        'button',
+        {
+          class: 'trouble-beat',
+          type: 'button',
+          'aria-label': label,
+          style: 'border:1px solid #c6e9d3;border-radius:9px;background:#172a38;color:#fff;padding:3px 8px;font:700 12px Fredoka,system-ui',
+          onclick: () => scene.popup(scene.cx, scene.cy - scene.R * 1.45, `${t(def.rule)} ${counterIcons[beat.id]}`, '#bdf4d0', 15, 2.4, 2),
+        },
+        forecastBeatText(def.icon, shape, beat.inThrows),
+      );
+    }),
+  );
 }
 
 export function heat(scene: LevelScene, delta: number) {
@@ -216,7 +257,7 @@ export function checkStars(scene: LevelScene) {
 }
 
 export function starsNow(scene: LevelScene, score = scene.score) {
-  return goalsMet(scene.planet, scene.L.goals) ? starsFor(score, scene.L.stars) : 0;
+  return starsEarned(scene.planet, score, scene.L);
 }
 
 export function goalIcon(scene: LevelScene, g: Goal) {
@@ -495,11 +536,12 @@ export function showFusionDiscovery(scene: LevelScene, id?: ReactionId) {
   const hud = scene.discoverEl.closest('.hud');
   const banners = scene.discoverEl.parentElement;
   if (hud && banners) {
-    const bottom = Math.max(
+    banners.style.top = `${bannerTopFor(
+      hud.getBoundingClientRect().top,
       scene.goalsEl.getBoundingClientRect().bottom,
+      scene.forecastEl.getBoundingClientRect().bottom,
       scene.el.querySelector('.twist')?.getBoundingClientRect().bottom ?? 0,
-    );
-    banners.style.top = `${Math.max(112, bottom - hud.getBoundingClientRect().top + 8)}px`;
+    )}px`;
   }
   scene.discoverEl.className = `discover show ${def.kind === 'fusion' ? 'fusion-discover' : 'clash-discover'}`;
   scene.discoverEl.replaceChildren(
@@ -569,8 +611,13 @@ export function showNovaHoldTip(scene: LevelScene) {
 function revealCoach(scene: LevelScene) {
   const hud = scene.coachEl.closest('.hud');
   const banners = scene.coachEl.parentElement;
-  if (hud && banners && scene.L.goals.length) {
-    banners.style.top = `${Math.max(112, scene.goalsEl.getBoundingClientRect().bottom - hud.getBoundingClientRect().top + 8)}px`;
+  if (hud && banners) {
+    banners.style.top = `${bannerTopFor(
+      hud.getBoundingClientRect().top,
+      scene.goalsEl.getBoundingClientRect().bottom,
+      scene.forecastEl.getBoundingClientRect().bottom,
+      scene.el.querySelector('.twist')?.getBoundingClientRect().bottom ?? 0,
+    )}px`;
   }
   scene.coachEl.classList.add('show');
   clearTimeout(scene.coachTimer);
@@ -598,7 +645,7 @@ export function showCoachEvent(scene: LevelScene, event: CoachEvent) {
 const shownIntros = new Set<string>();
 
 export function introCard(scene: LevelScene, row: Unlock) {
-  if (!row.intro || shownIntros.has(row.id)) return;
+  if (!row.intro) return false;
   let seen: string[] = [];
   try {
     const saved = JSON.parse(localStorage.getItem('pp.coach.intros') ?? '[]') as unknown;
@@ -606,7 +653,7 @@ export function introCard(scene: LevelScene, row: Unlock) {
   } catch {
     // A private session still shows each card once in memory.
   }
-  if (seen.includes(row.id) || (scene.o.allowIntro && !scene.o.allowIntro(row.id))) return;
+  if (introAlreadySeen(row.id, seen, shownIntros) || (scene.o.allowIntro && !scene.o.allowIntro(row.id))) return false;
   try {
     localStorage.setItem('pp.coach.intros', JSON.stringify([...seen, row.id]));
   } catch {
@@ -619,7 +666,11 @@ export function introCard(scene: LevelScene, row: Unlock) {
   scene.paused = true;
   const m = modal(
     [
-      h('div', { class: 'intro-art' }, kind ? projectileCanvas(kind, 110) : h('span', null, row.id === 'goals' ? '★' : '✨')),
+      h(
+        'div',
+        { class: 'intro-art' },
+        kind ? projectileCanvas(kind, 110) : h('span', null, row.intro.icon ?? (row.id === 'goals' ? '★' : '✨')),
+      ),
       h('div', { class: 'm-title' }, t(row.intro.title)),
       h('p', null, t(row.intro.body)),
       btn(t('Show me'), 'primary wide', () => {
@@ -629,12 +680,15 @@ export function introCard(scene: LevelScene, row: Unlock) {
           window.setTimeout(() => focus.classList.remove('coach-focus'), 3000);
         }
         if (row.id === 'supernova' || kind) scene.focusTarget = { kind: row.id === 'supernova' ? 'ring' : 'queue', until: scene.time + 3 };
+        const trouble = scene.troubles.find((entry) => entry.id === row.id);
+        if (trouble) scene.goalPulse = { sectors: [trouble.source], until: scene.time + 3 };
       }),
     ],
     { onClose: () => ((scene.paused = false), (scene.modalOpen = null)) },
   );
   scene.modalOpen = m;
   sfx.levelUp();
+  return true;
 }
 
 export function endModal(scene: LevelScene, stars: number) {

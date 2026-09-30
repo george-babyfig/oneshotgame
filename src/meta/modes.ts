@@ -2,12 +2,26 @@ import { DAILY_REWARD, RUSH_REWARD, CHALLENGE_REWARD } from './tuning';
 import { earn } from './wallet';
 // Level builders and scoring for the extra modes: Daily Planet, Meteor Rush,
 // Zen Garden and Challenge a Friend. All seeded, so no server is needed.
-import { greedyScore, makeLevel, rngFrom, type LevelDef } from '../core/levels';
+import {
+  budgetFor,
+  goalsMet,
+  greedyScore,
+  makeLevel,
+  pressureOf,
+  rngFrom,
+  skyWall,
+  solve0,
+  solve2,
+  starsFor,
+  type LevelDef,
+} from '../core/levels';
 import { rulesForLevel } from '../core/round';
+import { TROUBLES, type TroubleId } from '../core/troubles';
 import { BIOMES, clonePlanet, lifeScore, settle, type Planet } from '../core/world';
 import { dayGap, type Profile } from './profile';
 import { t } from '../i18n';
 import { addRoadPoints } from './roadpoints';
+import { RULES_VERSION } from '../core/rules-version';
 
 export const DAILY_EPOCH = '2026-01-01';
 export const RUSH_SECONDS = 60;
@@ -19,7 +33,33 @@ export function dailyNumber(day: string) {
 
 export function dailyLevel(day: string, taught = 16): LevelDef {
   const L = makeLevel(16, `DAY-${day}`, { rules: rulesForLevel(Math.min(16, taught)) });
+  const available = (Object.keys(TROUBLES) as TroubleId[]).filter((id) => TROUBLES[id].debut <= taught);
+  if (L.troubles.length && available.length) {
+    const first = Math.floor(rngFrom(`DAY-${day}-weather`)() * available.length);
+    for (let offset = 0; offset < available.length; offset++) {
+      const id = available[(first + offset) % available.length];
+      const candidate = { ...L, troubles: L.troubles.map((trouble) => ({ ...trouble, id })) };
+      if (dailyPreflight(candidate)) return candidate;
+    }
+  }
   return L;
+}
+
+export function dailyPreflight(level: LevelDef): boolean {
+  if (pressureOf(level) > budgetFor(level) || skyWall(level)) return false;
+  for (const solve of [solve0, solve2]) {
+    const planet = solve(level);
+    if (!goalsMet(planet, level.goals) || starsFor(lifeScore(planet), level.stars) < 1) return false;
+  }
+  return true;
+}
+
+/** The card announces only a day whose seeded Trouble passes the same floor used by calendar pre-flight. */
+export function dailyWeatherReport(day: string, taught = 16): string | null {
+  const level = dailyLevel(day, taught);
+  const trouble = level.troubles[0];
+  if (!trouble || !dailyPreflight(level)) return null;
+  return TROUBLES[trouble.id].name;
 }
 
 /** Meteor Rush: same generator, but star targets assume ~22 throws in 60 seconds. */
@@ -52,8 +92,8 @@ export function newChallengeSeed(rnd = Math.random) {
 
 /** Code = seed + the sender's score, with a check letter so typos are caught. */
 export function encodeChallenge(seed: string, score: number) {
-  const body = `${seed}${score.toString(36).toUpperCase()}`;
-  return `${seed}-${score.toString(36).toUpperCase()}${checkChar(body)}`;
+  const body = `${RULES_VERSION}${seed}${score.toString(36).toUpperCase()}`;
+  return `${RULES_VERSION}-${seed}-${score.toString(36).toUpperCase()}${checkChar(body)}`;
 }
 
 function checkChar(body: string) {
@@ -67,10 +107,10 @@ export function decodeChallenge(code: string): { seed: string; score: number } |
     .trim()
     .toUpperCase()
     .replace(/\s+/g, '')
-    .match(/^([2-9A-HJKMNP-Z]{5})-?([0-9A-Z]+)([2-9A-HJKMNP-Z])$/);
+    .match(/^([0-9]+)-([2-9A-HJKMNP-Z]{5})-([0-9A-Z]+)([2-9A-HJKMNP-Z])$/);
   if (!m) return null;
-  const [, seed, sc, chk] = m;
-  if (checkChar(`${seed}${sc}`) !== chk) return null;
+  const [, version, seed, sc, chk] = m;
+  if (Number(version) !== RULES_VERSION || checkChar(`${version}${seed}${sc}`) !== chk) return null;
   const score = parseInt(sc, 36);
   if (!Number.isFinite(score) || score < 0 || score > 100000) return null;
   return { seed, score };

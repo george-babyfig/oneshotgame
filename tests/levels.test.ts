@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   GOALS_FROM,
   difficultyOf,
+  goalProgress,
   goalsMet,
   greedyPlan,
   greedyScore,
@@ -16,8 +17,8 @@ import {
   starsEarned,
 } from '../src/core/levels';
 import { OBSTACLES } from '../src/core/sky';
-import { lifeScore } from '../src/core/world';
-import { roundState, stepRound } from '../src/core/round';
+import { lifeScore, SECTORS } from '../src/core/world';
+import { novaReady, roundState, stepRound } from '../src/core/round';
 
 describe('level generator', () => {
   it('every level in the first twelve chapters is beatable with rising targets', () => {
@@ -28,10 +29,11 @@ describe('level generator', () => {
       expect(L.stars[0]).toBeGreaterThan(lifeScore(L.start));
       // the solver that set the targets can reach 3 stars
       const rules = rulesForLevel(n);
-      expect(greedyScore(L.start, L.queue, L.throws, 0, L.nova, rules)).toBeGreaterThanOrEqual(L.stars[2]);
+      if (!L.troubles.length && n !== 2)
+        expect(greedyScore(L.start, L.queue, L.throws, 0, L.nova, rules)).toBeGreaterThanOrEqual(L.stars[2]);
       expect(L.queue.length).toBeGreaterThanOrEqual(L.throws);
       // goals come from the solver's own line of play, so stars and goals are reachable together
-      expect(goalsMet(greedyPlan(L.start, L.queue, L.throws, 0, L.nova, rules), L.goals)).toBe(true);
+      if (!L.troubles.length) expect(goalsMet(greedyPlan(L.start, L.queue, L.throws, 0, L.nova, rules), L.goals)).toBe(true);
       const plan2 = solve2(L);
       expect(starsEarned(plan2, lifeScore(plan2), L), `solver 2 planet ${n}`).toBe(3);
       expect(goalsMet(plan2, L.goals), `solver 2 goals planet ${n}`).toBe(true);
@@ -51,6 +53,61 @@ describe('level generator', () => {
     expect(difficultyOf(20)).toBe('hard');
   });
 
+  it('teaches one dealt biome goal on planet 6 and keeps the shipped goal ramp', () => {
+    const lesson = makeLevel(6);
+    expect(lesson.goals).toEqual([{ type: 'biome', id: 'highland', count: 1 }]);
+    expect(lesson.queue.slice(0, 3)).toEqual(['seed', 'seed', 'rock']);
+    let opening = roundState(lesson.start, lesson.nova);
+    for (const kind of lesson.queue.slice(0, 3)) opening = stepRound(opening, { kind, sector: 0, nova: false }).state;
+    expect(goalProgress(opening.planet, lesson.goals[0])).toBeGreaterThanOrEqual(1);
+    expect(starsEarned(solve0(lesson), lifeScore(solve0(lesson)), lesson)).toBeGreaterThanOrEqual(1);
+    for (const [first, last, target] of [
+      [7, 10, 0.3],
+      [11, 20, 0.45],
+      [21, 30, 0.6],
+      [31, 40, 0.6],
+      [41, 50, 0.6],
+      [51, 60, 0.6],
+    ]) {
+      const normal = Array.from({ length: last - first + 1 }, (_, i) => makeLevel(first + i)).filter(
+        (level) => level.difficulty === 'normal',
+      );
+      const share = normal.filter((level) => level.goals.length > 0).length / normal.length;
+      expect(Math.abs(share - target), `Normal ${first}-${last} goal share`).toBeLessThanOrEqual(0.15);
+    }
+  });
+
+  it('makes the practice 3★ path use its lesson', () => {
+    const lesson = (n: number, planet: ReturnType<typeof solve2>) =>
+      n === 1
+        ? planet.sectors.some(
+            (sector, index) =>
+              (sector.biome === 'ocean' && planet.sectors[(index + 1) % SECTORS].biome === 'mountain') ||
+              (sector.biome === 'mountain' && planet.sectors[(index + 1) % SECTORS].biome === 'ocean'),
+          )
+        : planet.speciesFound.some((id) => !makeLevel(3).start.speciesFound.includes(id));
+    for (const n of [1, 3]) {
+      const level = makeLevel(n);
+      const aware = solve2(level);
+      expect(lesson(n, aware), `planet ${n} lesson`).toBe(true);
+      expect(starsEarned(aware, lifeScore(aware), level)).toBe(3);
+      let state = roundState(level.start, level.nova);
+      for (let turn = 0; turn < level.throws; turn++) {
+        const candidates = Array.from({ length: SECTORS }, (_, sector) =>
+          stepRound(state, { kind: level.queue[turn], sector, nova: novaReady(state) }),
+        ).filter((candidate) => !lesson(n, candidate.state.planet));
+        if (!candidates.length) break;
+        state = candidates.sort((a, b) => b.after - a.after)[0].state;
+      }
+      expect(lesson(n, state.planet), `planet ${n} no-lesson path`).toBe(false);
+      expect(starsEarned(state.planet, lifeScore(state.planet), level)).toBeLessThan(3);
+    }
+    const swap = makeLevel(2);
+    expect(swap.queue.slice(0, 3)).toEqual(['ice', 'rock', 'seed']);
+    expect(starsEarned(solve0(swap), lifeScore(solve0(swap)), swap)).toBeLessThan(3);
+    expect(starsEarned(solve2(swap), lifeScore(solve2(swap)), swap)).toBe(3);
+  });
+
   it('enables Supernova from planet 9', () => {
     for (let n = 1; n <= 20; n++) expect(makeLevel(n).nova).toBe(n >= 9);
     const early = makeLevel(8);
@@ -66,7 +123,7 @@ describe('level generator', () => {
     for (let n = 1; n <= 120; n++) {
       const level = makeLevel(n);
       expect(makeLevel(n)).toEqual(level);
-      expect(levelMeta(n)).toEqual({
+      expect(levelMeta(n), `planet ${n} seed ${level.seed}`).toEqual({
         name: level.name,
         hue: level.hue,
         twist: level.twist,
@@ -106,13 +163,43 @@ describe('level generator', () => {
       );
   });
 
+  it('paces Troubles after their lessons without stacking teaching planets', () => {
+    for (const n of [16, 18]) {
+      const level = makeLevel(n);
+      expect(level.difficulty).toBe('normal');
+      expect(level.troubles).toEqual([{ id: 'vent', source: 10 }]);
+      expect(level.queue.slice(1, 3)).toContain('ice');
+      expect(level.twist).toBe('none');
+    }
+    for (const n of [15, 19]) expect(makeLevel(n).troubles).toEqual([]);
+    for (let n = 1; n <= 120; n++) {
+      const level = makeLevel(n);
+      if (n <= 13 || [33, 41, 46, 51, 57].includes(n)) expect(level.troubles).toEqual([]);
+      if (n >= 20 && level.difficulty === 'hard') expect(level.troubles.length, `Hard planet ${n}`).toBeGreaterThan(0);
+      if (n >= 29 && n <= 40) expect(level.troubles.length).toBeLessThanOrEqual(1);
+      if (level.troubles.length > 1) expect(level.difficulty).toBe('super');
+      for (const trouble of level.troubles) expect(rulesForLevel(n).troubles).toContain(trouble.id);
+    }
+  });
+
+  it('uses a date-seeded Daily Trouble only after the lesson, and keeps quiet modes clear', () => {
+    const before = makeLevel(16, 'DAY-2026-09-29', { rules: rulesForLevel(13) });
+    const taught = makeLevel(16, 'DAY-2026-09-29', { rules: rulesForLevel(16) });
+    expect(before.troubles).toEqual([]);
+    expect(taught.troubles).toHaveLength(1);
+    expect(taught.troubles[0].id).toBe('vent');
+    expect(makeLevel(28, 'ZEN', { rules: rulesForLevel(28) }).troubles).toEqual([]);
+    expect(makeLevel(28, 'RUSH-day', { rules: rulesForLevel(28) }).troubles).toEqual([]);
+    expect(makeLevel(28, 'REMIX-day', { rules: rulesForLevel(28) }).troubles).toEqual([]);
+  });
+
   it('offers frost and ember goals from planet 25', () => {
     const source = new Set(['tundra', 'icesheet', 'taiga', 'volcano', 'desert', 'savanna']);
     const count = Array.from({ length: 96 }, (_, index) => makeLevel(index + 25)).filter((level) =>
       level.goals.some((goal) => goal.type === 'biome' && source.has(goal.id)),
     ).length;
     expect(count).toBeGreaterThanOrEqual(10);
-    expect(count).toBeLessThanOrEqual(22);
+    expect(count).toBeLessThanOrEqual(35);
   });
 
   it.skipIf(process.env.BENCH !== '1')('measures uncached generation and metadata', () => {

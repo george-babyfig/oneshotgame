@@ -15,6 +15,7 @@ import {
   challengeShareText,
   dailyLevel,
   dailyNumber,
+  dailyWeatherReport,
   dailyShareText,
   decodeChallenge,
   encodeChallenge,
@@ -50,11 +51,12 @@ export function modesBadge(app: App) {
 export function modesFlow(app: App) {
   const p = app.p;
   const d = p.dailyPlanet;
+  const weather = dailyWeatherReport(today(), p.level);
   const sub: Record<Mode, string> = {
     daily:
       d.day === today() && d.rewarded
         ? t('Done today · best {n} {stars}', { n: fmt(d.best), stars: '★'.repeat(d.stars) })
-        : t('#{n} · 💎 up to {gems}', { n: dailyNumber(today()), gems: 20 }),
+        : `${t('#{n} · 💎 up to {gems}', { n: dailyNumber(today()), gems: 20 })}${weather ? ` · ${t('Weather Report: {name}', { name: t(weather) })}` : ''}`,
     rush: p.stats.rushBest ? t('Best {n} life', { n: fmt(p.stats.rushBest) }) : t('Earn stardust'),
     zen: p.zen ? t('Your garden is waiting') : t('Start a new garden'),
     challenge: t('{n} played', { n: p.challengeLog.length }),

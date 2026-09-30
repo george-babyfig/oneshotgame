@@ -449,6 +449,43 @@ export const SPECIES: SpeciesDef[] = [
 
 export const SPECIES_BY_ID: Record<string, SpeciesDef> = Object.fromEntries(SPECIES.map((s) => [s.id, s]));
 
+export type TraitId = 'fireproof' | 'swimmer' | 'weedproof' | 'frostproof' | 'calm';
+
+export const TRAITS: Record<TraitId, { name: string; rule: string; icon: string }> = {
+  fireproof: { name: 'Fireproof', rule: 'Fire and Dry Spell cannot dry its home.', icon: '🛡️' },
+  swimmer: { name: 'Swimmer', rule: 'Its home counts as water and stops fire and weeds.', icon: '🌊' },
+  weedproof: { name: 'Weedproof', rule: 'Weeds cannot tangle its home.', icon: '🍃' },
+  frostproof: { name: 'Frostproof', rule: 'Frost Creep stops at its home.', icon: '🧣' },
+  calm: { name: 'Calm', rule: 'The first Trouble waits one more throw.', icon: '✨' },
+};
+
+const TRAIT_BY_HOME: Partial<Record<BiomeId, TraitId>> = {
+  volcano: 'fireproof',
+  desert: 'fireproof',
+  savanna: 'fireproof',
+  springs: 'fireproof',
+  ocean: 'swimmer',
+  reef: 'swimmer',
+  marsh: 'swimmer',
+  swamp: 'swimmer',
+  forest: 'weedproof',
+  jungle: 'weedproof',
+  meadow: 'weedproof',
+  highland: 'weedproof',
+  tundra: 'frostproof',
+  taiga: 'frostproof',
+  icesheet: 'frostproof',
+  mountain: 'frostproof',
+};
+
+/** A creature's first recipe land is its home; planet-wide legendaries are Calm. */
+export function traitOf(species: string): TraitId | null {
+  const creature = SPECIES_BY_ID[species];
+  if (!creature) return null;
+  if (creature.rarity === 'legendary') return 'calm';
+  return creature.home?.[0] ? (TRAIT_BY_HOME[creature.home[0]] ?? null) : null;
+}
+
 /** The missing land in a creature's local habitat recipe. */
 export function neededHabitat(id: string, planet: Planet, sector: number): BiomeId | null {
   const home = SPECIES_BY_ID[id]?.home;

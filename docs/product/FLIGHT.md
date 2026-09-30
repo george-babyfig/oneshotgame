@@ -437,19 +437,19 @@ Normal planets. Fail % is out of all attempts; 3-star % is out of all attempts; 
 | Chapter 1 (4-10)       | 5-12%       | 20-35%    | 1 / 2           | 2-8%        | 40-55%          | 1 / 2           | 0-4%       | 60-75%   | 1 / 1          |
 | Chapter 2 (11-20)      | 10-20%      | 18-30%    | 1 / 3           | 5-12%       | 40-55%          | 1 / 2           | 0-5%       | 62-78%   | 1 / 1          |
 | Chapter 3 (21-30)      | 14-22%      | 15-28%    | 1 / 3           | 7-15%       | 40-55%          | 1 / 2           | 0-6%       | 62-80%   | 1 / 2          |
-| Chapters 4-6 (31-60)   | 16-25%      | 15-28%    | 1 / 4           | 8-18%       | 40-55%          | 1 / 2           | 2-8%       | 65-80%   | 1 / 2          |
+| Chapters 4-6 (31-60)   | 16-25%      | 15-28%    | 1 / 4           | 5-18%       | 40-55%          | 1 / 2           | 2-8%       | 65-80%   | 1 / 2          |
 | Chapters 7-12 (61-120) | 16-25%      | 15-28%    | 1 / 4           | 8-18%       | 40-55%          | 1 / 2           | 2-8%       | 65-80%   | 1 / 2          |
 
 The decent-aware 3-star band is flat at 40-55% on purpose: 3 stars should always mean "you read this planet", from chapter 1 on. What rises is the fail rate for casual play, slowly, and the kinds of thinking a planet asks for (new objects, Fusions, Troubles, obstacles, launchers, Combos). From planet 61 the numbers plateau and novelty carries the interest.
 
 **Hard and Super Hard**
 
-| Tier                                | Casual fail | Decent fail | Decent 3★ | Sharp fail | Notes                                                                                  |
-| ----------------------------------- | ----------- | ----------- | --------- | ---------- | -------------------------------------------------------------------------------------- |
-| First Hard planets (15, 20)         | ≤ 40%       | 18-32%      | 25-45%    | 3-12%      | They ease in: "Hard" is a new idea at 15                                               |
-| Hard (25 and up)                    | ≤ 50%       | 25-45%      | 25-45%    | 5-20%      | ROADMAP-v2's gate; the pressure comes from Troubles and obstacles, not bigger targets  |
-| Super Hard (19 and up, every 9th)   | ≤ 70%       | 35-60%      | 15-35%    | 15-35%     | Narrowed from 30-70%; casual players are carried by the help ladder (p90 ≤ 5 attempts) |
-| Comet Guardian planets (every 10th) | as Normal   | as Normal   | as Normal | as Normal  | The Guardian stays optional; its planet sits at the chapter's normal band              |
+| Tier                                | Casual fail | Decent fail | Decent 3★ | Sharp fail | Notes                                                                     |
+| ----------------------------------- | ----------- | ----------- | --------- | ---------- | ------------------------------------------------------------------------- |
+| First Hard planets (15, 20)         | ≤ 40%       | 18-32%      | 25-45%    | 3-12%      | They ease in: "Hard" is a new idea at 15                                  |
+| Hard (25 and up)                    | ≤ 50%       | 12-45%      | 25-45%    | 5-20%      | Kid-first goal tuning; Troubles and obstacles keep their cadence          |
+| Super Hard (19 and up, every 9th)   | ≤ 70%       | 25-60%      | 15-35%    | 15-35%     | Casual players are carried by the help ladder (p90 ≤ 5 attempts)          |
+| Comet Guardian planets (every 10th) | as Normal   | as Normal   | as Normal | as Normal  | The Guardian stays optional; its planet sits at the chapter's normal band |
 
 ### 4.3 The practice planets (1-3): can't fail, but still earned
 
@@ -475,9 +475,11 @@ The level lint (`tests/levels.lint.sim.ts`, ROADMAP-v2 7.4) gains flags on both 
 | TRIVIAL       | too easy | Decent-aware 3-star at or above 90% (existing, now from planet 4, not 21)                                                                                                                         |
 | EASY-EARLY    | too easy | On planets 1-20: decent-aware 3-star more than 10 points above its band, or sharp 3-star at or above 90%, or casual 3-star above 45%                                                              |
 | FLAT          | too easy | The decision is a read-off: on the median throw, 5 or more sectors are within 90% of the best (today 5.4 [CG]), or the aware best equals the blind best on more than 95% of throws from planet 20 |
-| SLACK         | too easy | Decent wins with 40% or more of its throws left on average                                                                                                                                        |
+| SLACK         | too easy | Decent reaches its final star count (3★ when it finishes with 3★) with 40% or more of its throws left on average among clears                                                                     |
 
 Both sides are gates from M8 for planets 1-60 and watches for 61-120 until the lint has run on them for one release.
+
+SLACK measures when the final star count was first reached, even though the round plays every throw and awards stars only at the end. The old 1★ crossing measured the deliberately easy kid floor and flagged 39 planets; it did not show whether skilled play had excess throws. The denominator includes any practice gifts actually used.
 
 ### 4.5 Folding in launchers, obstacles, Troubles and Combos without stacking walls
 
@@ -533,6 +535,7 @@ Never tuned to fix difficulty: bot aim noise, the flight physics, launcher stats
 
 - **Chapter curves** are measured on shadow seeds: at least 10 shadows per Normal slot and 30 per Hard or Super Hard slot (ROADMAP-v2 7.4), so a curve reflects the design, not one lucky seed.
 - **Per-planet flags** use the real campaign seeds.
+- **Until the generator is brought into band (owner decision 29, 30 September 2026; a pre-launch item in M12)**, the shadow checks are a Watch printed by every balance run; the reviewed campaign layouts and the Daily/Voyage pre-flight are the gates.
 - **Retries** are modelled (up to 8 attempts, noise -10% per retry), so "attempts per clear" means something.
 - **Sim runs through real flight** from M7.5 (2.5), so aim twists and obstacles finally count. Expect casual fail to rise a few points on twist planets when this lands; the M8 retune absorbs it.
 - The baseline moves only through an explicit `npm run sim:baseline` commit, with the before-and-after table in the commit message.

@@ -9,6 +9,7 @@ import { HABITATS, habitatsReady } from '../src/meta/habitats';
 import {
   challengeLevel,
   dailyLevel,
+  dailyWeatherReport,
   decodeChallenge,
   encodeChallenge,
   planetStrip,
@@ -83,6 +84,8 @@ describe('rank & habitats', () => {
 describe('modes', () => {
   it('challenge codes round-trip and reject typos', () => {
     const code = encodeChallenge('K7Q2M', 215);
+    expect(code).toMatch(/^1-/);
+    expect(decodeChallenge(code.replace(/^1-/, '2-'))).toBeNull();
     expect(decodeChallenge(code)).toEqual({ seed: 'K7Q2M', score: 215 });
     expect(decodeChallenge(code.toLowerCase())).toEqual({ seed: 'K7Q2M', score: 215 });
     expect(decodeChallenge(code.slice(0, -1) + (code.endsWith('Z') ? 'Y' : 'Z'))).toBeNull();
@@ -92,10 +95,21 @@ describe('modes', () => {
   it('seeded levels are identical for everyone', () => {
     expect(JSON.stringify(dailyLevel('2026-05-05'))).toBe(JSON.stringify(dailyLevel('2026-05-05')));
     expect(dailyLevel('2026-05-05').seed).not.toBe(dailyLevel('2026-05-06').seed);
+    const weather = { vent: 'Ember Vent', vine: 'Tanglevine', frost: 'Frost Creep' } as const;
+    expect(dailyWeatherReport('2026-09-29', 60)).toBe(weather[dailyLevel('2026-09-29', 60).troubles[0].id]);
+    expect(dailyWeatherReport('2026-09-29', 13)).toBeNull();
     expect(challengeLevel('ABCDE').stars).toEqual(challengeLevel('ABCDE').stars);
     const r = rushLevel('X');
     expect(r.stars[0]).toBeLessThan(r.stars[2]);
     expect(planetStrip(r.start)).toMatch(/.+/);
+  });
+
+  it('seeds Daily weather across every taught Trouble without teaching one early', () => {
+    const days = Array.from({ length: 60 }, (_, i) => new Date(Date.UTC(2026, 9, i + 1)).toISOString().slice(0, 10));
+    const byCap = (cap: number) => new Set(days.map((day) => dailyLevel(day, cap).troubles[0]?.id));
+    expect(byCap(16)).toEqual(new Set(['vent']));
+    expect(byCap(28)).toEqual(new Set(['vent', 'vine']));
+    expect(byCap(36)).toEqual(new Set(['vent', 'vine', 'frost']));
   });
 
   it('daily rewards once per day; challenges pay for a win', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { biomeOf, impact, lifeScore, neededHabitat, newPlanet, SPECIES } from '../src/core/world';
+import { biomeOf, impact, lifeScore, neededHabitat, newPlanet, SPECIES, traitOf } from '../src/core/world';
 import { makeLevel, solve2 } from '../src/core/levels';
 import { rulesForLevel } from '../src/core/round';
 
@@ -32,6 +32,12 @@ describe('impacts', () => {
   });
   it('species ids are unique', () => {
     expect(new Set(SPECIES.map((s) => s.id)).size).toBe(SPECIES.length);
+  });
+  it('uses a creature’s primary home land for its trait', () => {
+    expect(traitOf('otter')).toBe('weedproof');
+    expect(traitOf('turtle')).toBe('fireproof');
+    expect(traitOf('leviathan')).toBe('calm');
+    expect(traitOf('missing')).toBeNull();
   });
   it('points a wandering neighbour creature toward its missing land', () => {
     const p = newPlanet((i) => (i === 4 ? { life: 2 } : {}));

@@ -15,6 +15,10 @@ const allowed = () => {
 const impactStyle = (feel: FeelHaptic) => (feel === 'medium' ? ImpactStyle.Medium : ImpactStyle.Light);
 
 export const haptic = {
+  trouble: (kind: 'act' | 'blocked' | 'settled' | 'spread') => {
+    if (!allowed()) return;
+    Haptics.impact({ style: kind === 'settled' ? ImpactStyle.Medium : ImpactStyle.Light }).catch(() => {});
+  },
   sky: () => allowed() && Haptics.impact({ style: ImpactStyle.Light }).catch(() => {}),
   tick: () => allowed() && Haptics.selectionChanged().catch(() => {}),
   light: () => allowed() && Haptics.impact({ style: ImpactStyle.Light }).catch(() => {}),

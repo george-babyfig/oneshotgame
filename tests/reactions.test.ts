@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { makeLevel, rulesForLevel } from '../src/core/levels';
 import { REACTIONS, ROUND_RULES_V0, novaReady, previewStep, roundState, stepRound, type ReactionId } from '../src/core/round';
-import { SECTORS, newPlanet, settle, type Kind, type Planet } from '../src/core/world';
+import { SECTORS, newPlanet, settle, traitOf, type Kind, type Planet } from '../src/core/world';
 import { dailyLevel, rushLevel, challengeLevel, zenLevel } from '../src/meta/modes';
 import { voyageLevel } from '../src/meta/voyage';
 
@@ -114,8 +114,14 @@ describe('reactions', () => {
     const clash = fired(planet, 'sun', 7, 32);
     expect(clash.state.planet.sectors[7].life).toBe(base.state.planet.sectors[7].life);
     for (const sector of [5, 6, 8, 9]) {
-      expect(clash.state.planet.sectors[sector].life).toBe(Math.max(0, base.state.planet.sectors[sector].life - 1));
-      expect(clash.state.planet.sectors[sector].heat).toBe(Math.min(3, base.state.planet.sectors[sector].heat + 1));
+      const resident = planet.sectors[sector].species;
+      const fireproof = resident !== null && traitOf(resident) === 'fireproof';
+      expect(clash.state.planet.sectors[sector].life).toBe(
+        fireproof ? base.state.planet.sectors[sector].life : Math.max(0, base.state.planet.sectors[sector].life - 1),
+      );
+      expect(clash.state.planet.sectors[sector].heat).toBe(
+        fireproof ? base.state.planet.sectors[sector].heat : Math.min(3, base.state.planet.sectors[sector].heat + 1),
+      );
     }
   });
 

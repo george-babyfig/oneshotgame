@@ -6,11 +6,13 @@ import { defaultHome, type HomeState } from './homeworld';
 import type { Mail } from './inbox';
 import { UNLOCKS } from './unlocks';
 import { restoreRound, serializeRound, type RoundState } from '../core/round';
-import { ROUND_RULES_V0 } from '../core/round';
 import { LEVEL_SALT, makeLevel } from '../core/levels';
 import type { RoundModifiers } from '../core/modifiers';
 import { DEFAULT_AVATAR, type AvatarParts } from './cosmetics';
 import type { ReactionId } from '../core/round';
+import { RULES_VERSION } from '../core/rules-version';
+import { STAR_SLING } from '../core/flight';
+import { rulesForLevel } from '../core/round';
 
 export interface GalaxyPlanet {
   n: number;
@@ -99,10 +101,21 @@ export interface RoundCheckpoint {
 
 function roundFingerprint(n: number, prefix = 'PP', salt?: number): string {
   const level = makeLevel(n, prefix, { salt });
-  const source = JSON.stringify([level.queue, level.start]);
+  const source = JSON.stringify([
+    level.queue,
+    level.start,
+    level.sky,
+    level.spin,
+    level.size,
+    level.stars,
+    level.goals,
+    level.troubles,
+    rulesForLevel(n),
+    STAR_SLING,
+  ]);
   let hash = 2166136261;
   for (let i = 0; i < source.length; i++) hash = Math.imul(hash ^ source.charCodeAt(i), 16777619);
-  return JSON.stringify([n, prefix, salt ?? (prefix === 'PP' ? (LEVEL_SALT[n] ?? null) : null), ROUND_RULES_V0.version, hash >>> 0]);
+  return JSON.stringify([n, prefix, salt ?? (prefix === 'PP' ? (LEVEL_SALT[n] ?? null) : null), RULES_VERSION, hash >>> 0]);
 }
 
 /** The core serializer owns rules compatibility; this wrapper keeps scene position. */

@@ -2,7 +2,7 @@
 import { h, btn, fmt, modal, toast } from '../dom';
 import { sfx } from '../audio';
 import { DIFFICULTY_DUST, TWISTS, type LevelDef } from '../../core/levels';
-import { BIOMES, KINDS, SPECIES_BY_ID, lifeScore, type BiomeId } from '../../core/world';
+import { BIOMES, KINDS, SPECIES_BY_ID, traitOf, lifeScore, type BiomeId, type TraitId } from '../../core/world';
 import { BOOSTERS, type BoosterId } from '../../meta/config';
 import { spendDust } from '../../meta/economy';
 import { chapterOf } from '../../meta/progression';
@@ -18,6 +18,9 @@ import { showGoalRecipe } from '../hud';
 import { lifeSparkSectors } from '../../core/round';
 import { OBSTACLES } from '../../core/sky';
 import { skyIconCanvas } from '../art/sky';
+import { buddyChipAvailable, buddyEligible, buddyShieldFor, nextPlanetBuddy, planetBuddyFor } from '../../meta/buddy';
+import { traitBadge } from '../art/traits';
+import { haptic } from '../haptics';
 
 export function goalChips(L: LevelDef, scene?: LevelScene) {
   if (!L.goals.length) return null;
@@ -56,6 +59,7 @@ export function preLevel(app: App, n: number) {
   const scene = app.scene!;
   const p = app.p;
   const L = scene.L;
+  const buddyChip = preLevelBuddyChip(app, scene, L);
   const chosen = { shower: false, spark: false, scope: false };
   const fromInventory = { shower: false, spark: false, scope: false };
   const explained = new Set<BoosterId>();
@@ -182,6 +186,7 @@ export function preLevel(app: App, n: number) {
             : t('🔥 Hard planet · ×{n} stardust', { n: DIFFICULTY_DUST.hard }),
         ),
     twistChip(L, p.settings.planetColours === 'clear'),
+    buddyChip ?? h('span'),
     goalChips(L, scene) ?? h('span'),
     h(
       'div',
@@ -212,4 +217,54 @@ export function preLevel(app: App, n: number) {
     entranceGate.remove();
     if (panel.isConnected) panel.inert = false;
   }, 300);
+}
+
+/** The suggested resident helps this planet; Styles keeps the saved Buddy. */
+export function syncPlanetBuddy(scene: LevelScene, species: string, acc: string, shield: TraitId | null) {
+  scene.o.buddy = { species, acc };
+  (scene.o as typeof scene.o & { buddyShield?: TraitId | null }).buddyShield = shield;
+  scene.predictCache = null;
+  scene.renderHud();
+}
+
+function preLevelBuddyChip(app: App, scene: LevelScene, level: LevelDef): HTMLElement | null {
+  const friends = buddyEligible(app.p);
+  if (!buddyChipAvailable(app.p, level.n, level.troubles, !!scene.o.gentle)) return null;
+  const troubles = level.troubles;
+  const first = planetBuddyFor(app.p, troubles);
+  if (!first) return null;
+  let selected = first;
+  const chip = h('button', {
+    class: 'twist-chip buddy-chip',
+    type: 'button',
+    style: 'width:100%;text-align:left;display:flex;align-items:center;gap:8px;min-height:48px',
+  });
+  const update = () => {
+    const id = selected;
+    const creature = SPECIES_BY_ID[id];
+    const trait = traitOf(id);
+    syncPlanetBuddy(scene, id, app.p.buddy.acc ?? scene.o.festAcc ?? '', buddyShieldFor(app.p, 'campaign', level.n, id));
+    chip.replaceChildren(
+      critterCanvas(id, 34),
+      h('span', { class: 'buddy-chip-copy' }, h('b', null, t('Buddy')), h('small', null, buddyHelpLine(trait, t(creature.name)))),
+      trait ? traitBadge(trait, true) : h('span'),
+    );
+    chip.setAttribute('aria-label', t('Your Buddy {name}. Tap to choose a friend.', { name: t(creature.name) }));
+  };
+  chip.addEventListener('click', () => {
+    selected = nextPlanetBuddy(selected, friends);
+    sfx.click();
+    haptic.light();
+    update();
+  });
+  update();
+  return chip;
+}
+
+function buddyHelpLine(trait: ReturnType<typeof traitOf>, name: string): string {
+  if (trait === 'fireproof') return t('Your Buddy {name} keeps fire off its home.', { name });
+  if (trait === 'swimmer') return t('Your Buddy {name} keeps fire and weeds off its home.', { name });
+  if (trait === 'weedproof') return t('Your Buddy {name} keeps weeds off its home.', { name });
+  if (trait === 'frostproof') return t('Your Buddy {name} keeps frost off its home.', { name });
+  return t('Your Buddy {name} makes the first Trouble wait 1 throw.', { name });
 }

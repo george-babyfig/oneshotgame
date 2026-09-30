@@ -3,12 +3,21 @@ import { REACTIONS, REACTION_IDS } from '../src/core/round';
 import { reactionForPair } from '../src/ui/screens/fieldguide';
 import { reactionColor } from '../src/ui/art/reactions';
 import { advanceFeedback, enqueueFeedback, feedbackState } from '../src/ui/feel';
-import { landingCardRect } from '../src/ui/preview';
+import { landingCardRect, safeTroubleText } from '../src/ui/preview';
 import type { LevelScene } from '../src/ui/game';
-import { showBestCombo, starMarkerPositions } from '../src/ui/hud';
+import { bannerTopFor, forecastBeatText, forecastInThrows, showBestCombo, starMarkerPositions } from '../src/ui/hud';
 import { rulesForLevel } from '../src/core/round';
+import { troubleTargetShape } from '../src/ui/art/troubles';
 
 describe('fusion UI data', () => {
+  it('reads Trouble beats without a beat index', () => {
+    expect(forecastBeatText('♨️', '◆', 3)).toBe('♨️ ◆ in 3');
+    expect(forecastInThrows(1)).toBe('in 1 throw');
+    expect(forecastInThrows(2)).toBe('in 2 throws');
+    expect(safeTroubleText()).toBe('Safe!');
+    expect(['vent', 'vine', 'frost'].map((id) => troubleTargetShape(id as 'vent' | 'vine' | 'frost', false))).toEqual(['◆', '▲', '●']);
+    expect(troubleTargetShape('vent', true)).toBe('▣');
+  });
   it('separates crowded life targets without changing their values', () => {
     const positions = starMarkerPositions([315, 390, 405], 454, 200, 23);
     expect(positions[1] - positions[0]).toBeGreaterThanOrEqual(23);
@@ -20,7 +29,7 @@ describe('fusion UI data', () => {
     expect(showBestCombo(2, rulesForLevel(25))).toBe(false);
     expect(showBestCombo(2, rulesForLevel(26))).toBe(true);
   });
-  it.each([320, 390])('keeps the warning card below the modifier at %i px', (width) => {
+  it.each([320, 390])('keeps the landing card below the forecast and modifier at %i px', (width) => {
     const scale = 0.86;
     const box = (bottom: number) => ({ bottom: bottom * scale });
     const scene = {
@@ -28,6 +37,7 @@ describe('fusion UI data', () => {
       h: width === 320 ? 568 : 844,
       canvas: { getBoundingClientRect: () => ({ top: 0, height: (width === 320 ? 568 : 844) * scale }) },
       goalsEl: { getBoundingClientRect: () => box(170) },
+      forecastEl: { getBoundingClientRect: () => box(242) },
       el: {
         querySelector: (selector: string) =>
           selector === '.twist' || selector === '.banners .show'
@@ -39,10 +49,11 @@ describe('fusion UI data', () => {
       previewTextScale: 1,
     } as unknown as LevelScene;
     const rect = landingCardRect(scene);
-    expect(rect.y).toBeCloseTo(228, 5);
+    expect(rect.y).toBeCloseTo(250, 5);
     expect(rect.height).toBe(88);
     expect(rect.x).toBeGreaterThanOrEqual(0);
     expect(rect.x + rect.width).toBeLessThanOrEqual(width);
+    expect(bannerTopFor(0, 170, 242, 205)).toBe(250);
   });
   it('maps the chart symmetrically to every launch reaction', () => {
     for (const id of REACTION_IDS) {

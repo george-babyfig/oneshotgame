@@ -1,5 +1,5 @@
-import { BIOMES, KINDS, SPECIES_BY_ID, neededHabitat, settle, wrap, type Planet } from '../core/world';
-import { stepRound, novaReady, REACTIONS, REACTION_IDS, type RoundState } from '../core/round';
+import { BIOMES, KINDS, SPECIES_BY_ID, TRAITS, traitOf, neededHabitat, settle, wrap, type Planet, type TraitId } from '../core/world';
+import { stepRound, previewStep, novaForThrow, novaReady, REACTIONS, REACTION_IDS, type RoundState, type StepResult } from '../core/round';
 import { fly, STAR_SLING, type FlightLaunch, type FlightWorld } from '../core/flight';
 import type { RoundModifiers } from '../core/modifiers';
 import { BOSS_HP } from '../core/levels';
@@ -18,8 +18,42 @@ import { drawReactionIcon, reactionColor } from './art/reactions';
 import { drawSkyShape } from './art/sky';
 import { OBSTACLES, gustAt, skyShapesAt } from '../core/sky';
 import { bonkRefund, rockAfterBonk, surpriseBonk } from './feel';
+import { drawShieldPuff, drawTraitBadge } from './art/traits';
 
 import type { LevelScene, Shot } from './game';
+import type { TroubleEvent } from '../core/troubles';
+import { drawTroubles } from './art/troubles';
+import { forecastTroubles } from '../core/troubles';
+import { troubleFeel } from './feel';
+
+function logFlightHit(scene: LevelScene, hit: { kind: 'bonk'; by: 'moon' | 'rock' | 'ring' | 'bubble' } | { kind: 'fizzle' | 'miss' }) {
+  scene.roundLog.bonks.push(hit.kind === 'bonk' ? hit.by : hit.kind === 'fizzle' ? 'mist' : 'miss');
+}
+
+function logRoundStep(
+  scene: LevelScene,
+  res: { troubleEvents: TroubleEvent[]; reactions: { id: import('../core/round').ReactionId }[]; lost: { species: string }[] },
+) {
+  scene.roundLog.troubles.push(...res.troubleEvents);
+  scene.roundLog.reactions.push(...res.reactions.map((event) => event.id));
+  scene.roundLog.wandered.push(...res.lost.map((event) => event.species));
+}
+
+function drawHintPulse(scene: LevelScene) {
+  if (!scene.o.hintSectors?.length) return;
+  const g = scene.g;
+  g.save();
+  g.strokeStyle = '#fff4a8';
+  g.lineWidth = 3;
+  g.globalAlpha = scene.o.reduceMotion ? 0.85 : 0.45 + 0.35 * Math.sin(scene.time * 3) ** 2;
+  for (const sector of scene.o.hintSectors) {
+    const [x, y] = scene.sectorPoint(sector, 0.93);
+    g.beginPath();
+    g.arc(x, y, scene.R * (scene.o.reduceMotion ? 0.105 : 0.105 + 0.025 * Math.sin(scene.time * 3)), 0, Math.PI * 2);
+    g.stroke();
+  }
+  g.restore();
+}
 
 const CALLOUTS: [number, string, string][] = [
   [50, 'Paradise!', '#ff8fe0'],
@@ -370,6 +404,49 @@ export function draw(scene: LevelScene) {
   g.restore();
 }
 
+const traitPuffs = new WeakMap<LevelScene, { sector: number; started: number }[]>();
+
+function drawTraitPuffs(scene: LevelScene) {
+  const active = (traitPuffs.get(scene) ?? []).filter((puff) => scene.time - puff.started < 0.9);
+  traitPuffs.set(scene, active);
+  for (const puff of active) {
+    const [x, y] = scene.sectorPoint(puff.sector, 1.18);
+    drawShieldPuff(scene.g, x, y, scene.o.reduceMotion ? 0 : (scene.time - puff.started) / 0.9);
+  }
+}
+
+function drawRoundTraitBadges(scene: LevelScene) {
+  if (scene.o.gentle || !scene.troubles.some((trouble) => !trouble.settled)) return;
+  for (let i = 0; i < scene.planet.sectors.length; i++) {
+    const species = scene.planet.sectors[i].species;
+    const trait = species ? traitOf(species) : null;
+    if (!trait) continue;
+    const protectedByTrait = scene.troubles.some(
+      (trouble) =>
+        !trouble.settled &&
+        (trouble.id === 'vent'
+          ? trait === 'fireproof' || trait === 'swimmer'
+          : trouble.id === 'vine'
+            ? trait === 'weedproof' || trait === 'swimmer'
+            : trait === 'frostproof'),
+    );
+    if (!protectedByTrait) continue;
+    const [x, y] = scene.sectorPoint(i, 1.38);
+    drawTraitBadge(scene.g, x, y, trait, 17);
+  }
+}
+
+/** Called only for a named trait block from the pure Trouble event list. */
+function showTraitBlocks(scene: LevelScene, events: unknown[]) {
+  for (const event of events) {
+    if (!event || typeof event !== 'object') continue;
+    const block = event as { kind?: string; sector?: number; by?: string };
+    if (block.kind !== 'blocked' || !Number.isInteger(block.sector) || !(block.by && block.by in TRAITS)) continue;
+    const sector = block.sector!;
+    traitPuffs.set(scene, [...(traitPuffs.get(scene) ?? []), { sector, started: scene.time }]);
+  }
+}
+
 export function drawPlanet(scene: LevelScene) {
   const lifeK = scene.o.endless ? 0.6 : Math.min(1, scene.score / scene.L.stars[2]);
   let creatureCount = 0;
@@ -412,6 +489,98 @@ export function drawPlanet(scene: LevelScene) {
       );
     },
   });
+  const pull = scene.pull();
+  const aimedSector = !scene.shot && scene.aimFrom && pull.len >= 18 ? preview.predictFlight(scene, pull.vx, pull.vy).sector : null;
+  const aimedStep =
+    aimedSector === null
+      ? null
+      : previewStep(
+          scene.roundState(),
+          { kind: scene.cur, sector: aimedSector, nova: novaForThrow(scene.roundState()) },
+          scene.roundModifiers(),
+          scene.rules,
+        );
+  drawTroubles(
+    scene.g,
+    scene.planet,
+    scene.o.gentle ? [] : scene.troubles,
+    scene.cx,
+    scene.cy,
+    scene.R,
+    scene.rot,
+    scene.time,
+    !!scene.o.reduceMotion,
+    aimedStep?.state.planet ?? scene.planet,
+    aimedStep?.troubleEvents,
+    forecastTroubles(scene.roundState(), scene.roundModifiers()),
+  );
+  drawRoundTraitBadges(scene);
+  drawTraitPuffs(scene);
+  drawHintPulse(scene);
+}
+
+/** P1 Trouble feedback, kept separate from the round log writer. */
+function showTroubleEffects(scene: LevelScene, events: TroubleEvent[]) {
+  for (const event of events) {
+    const [x, y] = scene.sectorPoint(event.sector, 1.22);
+    const feel = troubleFeel(event);
+    if (event.kind === 'settled') {
+      scene.popup(
+        x,
+        y - 20,
+        event.id === 'vent' ? t('Vent cooled!') : t('{name} settled!', { name: t(event.id === 'vine' ? 'Tanglevine' : 'Frost Creep') }),
+        feel.color,
+        19,
+        1.4,
+        3,
+      );
+      if (!scene.o.reduceMotion) scene.ring(x, y, feel.color, 42);
+    } else if (event.kind === 'blocked') {
+      scene.popup(x, y - 18, preview.safeTroubleText(), feel.color, 15, 1, 2);
+    } else {
+      scene.popup(
+        x,
+        y - 18,
+        event.id === 'vine' ? t('A vine reached this land') : event.id === 'frost' ? t('A cool breeze') : t('Warm breeze from the vent'),
+        feel.color,
+        15,
+        1,
+        2,
+      );
+    }
+    sfx.trouble(event.kind);
+    haptic.trouble(event.kind);
+    if (!scene.o.reduceMotion) scene.burst(x, y, feel.color, event.kind === 'settled' ? 18 : 8, 3);
+  }
+}
+
+function applyTroubleState(scene: LevelScene, res: Pick<StepResult, 'state' | 'troubleEvents'>) {
+  scene.troubles = res.state.troubles;
+  scene.buddyShieldUsed = !!res.state.buddyShieldUsed;
+  scene.calmUsed = !!res.state.calmUsed;
+  showTroubleEffects(scene, res.troubleEvents);
+}
+
+/** P1 cadence for a spent throw that never landed. */
+function tickTroublesAfterMiss(scene: LevelScene, sh: Shot) {
+  if (!scene.troubles.some((trouble) => !trouble.settled)) return;
+  const res = stepRound(
+    { ...scene.roundState(), throwsLeft: Number.isFinite(scene.throwsLeft) ? scene.throwsLeft + 1 : scene.throwsLeft },
+    { kind: sh.kind, sector: 0, outcome: 'miss' },
+    scene.roundModifiers(),
+    scene.rules,
+  );
+  logRoundStep(scene, res);
+  scene.planet = res.state.planet;
+  applyTroubleState(scene, res);
+  scene.nova = res.state.nova;
+  scene.score = res.after + scene.bonus;
+  scene.predictCache = null;
+  for (const lost of res.lost) {
+    const [x, y] = scene.sectorPoint(lost.sector, 1.4);
+    scene.popup(x, y - 18, t('{creature} wandered off', { creature: t(SPECIES_BY_ID[lost.species].name) }), '#cfd0d9', 16, 1.2, 2);
+  }
+  scene.renderHud();
 }
 
 export function update(scene: LevelScene, dt: number) {
@@ -488,10 +657,12 @@ export function update(scene: LevelScene, dt: number) {
         scene.bossHp = Math.max(1, scene.bossHp - 1);
       }
       scene.hitBoss(sh.x, sh.y);
+      tickTroublesAfterMiss(scene, sh);
       scene.shot = null;
       scene.afterShot();
     } else if (path.hit?.kind === 'bonk' || path.hit?.kind === 'fizzle') {
       const hit = path.hit;
+      logFlightHit(scene, hit);
       scene.lastHit = hit;
       if (sh.warnedBonk !== undefined && surpriseBonk(sh.warnedBonk, hit)) scene.surpriseBonks++;
       scene.combo = { links: 0, rest: false, best: scene.combo.best };
@@ -517,6 +688,7 @@ export function update(scene: LevelScene, dt: number) {
         scene.cur = sh.kind;
         scene.renderHud();
       }
+      if (!refund.refund) tickTroublesAfterMiss(scene, sh);
       scene.popup(
         sh.x,
         sh.y - 10,
@@ -532,9 +704,11 @@ export function update(scene: LevelScene, dt: number) {
       scene.lastHit = path.hit;
       scene.land(sh, path.hit.sector);
     } else if (path.hit?.kind === 'miss') {
+      logFlightHit(scene, { kind: 'miss' });
       scene.lastHit = path.hit;
       scene.combo = { links: 0, rest: false, best: scene.combo.best };
       scene.comboIconsCurrent = [];
+      tickTroublesAfterMiss(scene, sh);
       scene.popup(Math.min(Math.max(sh.x, 60), scene.w - 60), Math.min(Math.max(sh.y, 120), scene.h - 200), t('Missed!'), '#ffb3c1', 20);
       sfx.miss();
       scene.shot = null;
@@ -600,10 +774,13 @@ export function land(scene: LevelScene, sh: Shot, i: number) {
     scene.roundModifiers(),
     scene.rules,
   );
+  showTraitBlocks(scene, res.troubleEvents);
+  logRoundStep(scene, res);
   scene.planet = res.state.planet;
   scene.nova = res.state.nova;
   scene.combo = res.state.combo;
   scene.comboCharge = res.state.comboCharge;
+  applyTroubleState(scene, res);
   scene.predictCache = null;
   const reaction = res.reactions[0];
   for (const offset of [-1, 0, 1]) {
@@ -793,6 +970,9 @@ export function roundState(scene: LevelScene): RoundState {
     arrived: [...scene.arrived],
     novaEnabled: scene.novaOn,
     queueIndex: scene.qi - 1,
+    troubles: scene.troubles,
+    buddyShieldUsed: scene.buddyShieldUsed,
+    calmUsed: scene.calmUsed,
   };
 }
 
@@ -805,6 +985,7 @@ export function roundModifiers(scene: LevelScene): RoundModifiers {
     boosters: scene.o.boosters,
     momentum: scene.o.momentum ?? 0,
     buddy: scene.o.buddy ?? null,
+    buddyShield: (scene.o as typeof scene.o & { buddyShield?: TraitId | null }).buddyShield ?? null,
     shower: !!scene.o.shower,
     gentle: !!scene.o.gentle,
   };

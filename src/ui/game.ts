@@ -10,7 +10,15 @@ import { roundIntro, type CoachEvent } from '../meta/coach';
 import { UNLOCKS } from '../meta/unlocks';
 import { surfaceK } from './art/planet';
 import { DEFAULT_LOOK, type Look } from '../meta/cosmetics';
-import { lifeSparkSectors, novaForThrow, rulesForLevel, type ReactionId, type RoundRules, type RoundState } from '../core/round';
+import {
+  lifeSparkSectors,
+  novaForThrow,
+  roundState,
+  rulesForLevel,
+  type ReactionId,
+  type RoundRules,
+  type RoundState,
+} from '../core/round';
 import { feedbackState, type FeedbackState, type FeedbackItem } from './feel';
 import { flyFull, sceneGeometry, STAR_SLING, type FlightHit, type FlightWorld } from '../core/flight';
 import { EMPTY_SKY_STATE, type ObstacleId, type SkyState } from '../core/sky';
@@ -21,6 +29,34 @@ import { haptic } from './haptics';
 import { drawChapterBackdrop } from './art/backdrops';
 import { chapterOf } from '../meta/progression';
 import { needsBonkBadge } from './feel';
+import type { TroubleState } from '../core/troubles';
+import { emptyRoundLog, type HelpRung, type RoundEventLog } from '../meta/help';
+import { helpEndModal } from './flows/results';
+import { PRACTICE_GIFT_LINE } from '../meta/coach';
+import { t } from '../i18n';
+
+export function shouldShowRoundIntro(id: string, gentle: boolean): boolean {
+  return !gentle || !['vent', 'vine', 'frost', 'traits_intro', 'buddy'].includes(id);
+}
+
+export function roundIntroCandidates(
+  planet: number,
+  objectId: string | undefined,
+  gentle: boolean,
+  troubleVisible: boolean,
+  buddyVisible: boolean,
+) {
+  return [
+    roundIntro(planet, objectId),
+    ...UNLOCKS.filter((row) => ['traits_intro', 'buddy'].includes(row.id) && row.planet <= planet),
+  ].filter(
+    (row): row is (typeof UNLOCKS)[number] =>
+      !!row &&
+      shouldShowRoundIntro(row.id, gentle) &&
+      (row.id !== 'traits_intro' || troubleVisible) &&
+      (row.id !== 'buddy' || buddyVisible),
+  );
+}
 
 export interface SceneOpts {
   rules?: RoundRules;
@@ -76,6 +112,8 @@ export interface SceneOpts {
   gems: () => number;
   spendGems: (n: number) => boolean;
   continueOk?: (won: boolean) => boolean;
+  helpForFail?: (throwsUsed: number, throwsTotal: number) => HelpRung[];
+  hintSectors?: number[];
   onContinue?: () => void;
   onNewSpecies: (id: string) => void;
   onSpecies?: (id: string) => void;
@@ -211,6 +249,11 @@ export class LevelScene {
   nova: RoundState['nova'] = { charge: 0, threshold: 12, fired: 0, held: false };
   combo: RoundState['combo'] = { links: 0, rest: false, best: 0 };
   comboCharge = 0;
+  // P1 Trouble clock and shield survive each scene throw.
+  troubles: TroubleState[] = [];
+  buddyShieldUsed = false;
+  calmUsed = false;
+  forecastEl!: HTMLElement;
   reactionsSeen = new Set<ReactionId>();
   reactionEvents: ReactionId[] = [];
   landedKinds: (Kind | null)[] = Array(SECTORS).fill(null);
@@ -258,6 +301,7 @@ export class LevelScene {
   liveEl!: HTMLElement;
   coachEvents = new Set<CoachEvent>();
   practiceGifts = 0;
+  roundLog: RoundEventLog = emptyRoundLog();
   firstCreaturePointsShown = false;
   liveTimer = 0;
   coachTimer = 0;
@@ -275,6 +319,8 @@ export class LevelScene {
     this.o = opts;
     if (level.sky.gusty && opts.gustTip) this.o.coach = { ...opts.coach, 0: opts.gustTip };
     this.planet = clonePlanet(level.start);
+    // P1 seeds only the Trouble state here; the round step owns every action.
+    this.troubles = roundState(this.planet, level.nova, level.troubles, level.difficulty !== 'normal').troubles;
     if (opts.boosters.spark) fx.sparkStart(this.planet, lifeSparkSectors(level, this.planet));
     this.regionBests = this.planet.sectors.map((s) => BIOMES[s.biome].value);
     this.arrived = new Set(this.planet.sectors.map((s) => s.species).filter((id): id is string => !!id));
@@ -334,12 +380,13 @@ export class LevelScene {
       this.resize();
       this.renderHud();
       this.showCoach(0);
-      const intro = opts.intro
-        ? roundIntro(level.n, opts.intro)
-        : !opts.competitive && !opts.endless && !opts.timeLimit
-          ? roundIntro(level.n)
-          : undefined;
-      if (intro) this.introCard(intro.id);
+      const candidates =
+        opts.intro || (!opts.competitive && !opts.endless && !opts.timeLimit)
+          ? roundIntroCandidates(level.n, opts.intro, !!opts.gentle, level.troubles.length > 0, level.troubles.length > 0 && !!opts.buddy)
+          : [];
+      for (const row of candidates) {
+        if (this.introCard(row.id)) break;
+      }
       this.raf = requestAnimationFrame(this.frame);
     });
     window.addEventListener('resize', this.resize);
@@ -600,6 +647,7 @@ export class LevelScene {
     sfx.objectLaunch(this.shot.kind);
     haptic.object(this.shot.kind);
     this.o.onThrow?.(this.shot.kind);
+    if (this.throwsUsed === 1 && this.L.n === 1) this.showCoach(1);
     if (this.hintShown) {
       this.hintShown = false;
       this.hintEl.remove();
@@ -663,6 +711,7 @@ export class LevelScene {
   introCard(id: string) {
     const row = UNLOCKS.find((x) => x.id === id && x.intro);
     if (row) return hud.introCard(this, row);
+    return false;
   }
 
   endTimer = 0;
@@ -672,10 +721,20 @@ export class LevelScene {
   }
 
   checkEnd() {
-    return hud.checkEnd(this);
+    const before = this.practiceGifts;
+    const result = hud.checkEnd(this);
+    if (this.L.n <= 3 && this.practiceGifts > before) {
+      const line = t(PRACTICE_GIFT_LINE);
+      const label = this.coachEl.querySelector('span:last-child');
+      if (label) label.textContent = line;
+      hud.speak(this, line);
+    }
+    return result;
   }
 
   endModal(stars: number) {
+    const rungs = stars === 0 ? (this.o.helpForFail?.(this.throwsUsed, this.throwsTotal) ?? []) : [];
+    if (rungs.length) return helpEndModal(this, rungs);
     return hud.endModal(this, stars);
   }
 
@@ -769,6 +828,7 @@ export class LevelScene {
     reaction?: ReactionId;
     comboStep: number;
     comboEnd: boolean;
+    trouble: string;
     changed: number[];
   } | null = null;
   previewTextScale = 0;

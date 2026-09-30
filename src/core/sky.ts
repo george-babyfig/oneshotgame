@@ -100,7 +100,7 @@ export function skyFor(n: number, twist: Twist, seed: string, difficulty: LevelD
   const rng = rand(hash);
   const rockRng = rand(hash ^ 0x5a5a7c31);
   const obstacle: ObstacleId | null = twist in OBSTACLES ? (twist as ObstacleId) : null;
-  const ringWidth = n === 51 && twist === 'ring' ? 160 : difficulty === 'normal' ? 90 : 130;
+  const ringWidth = n === 51 && twist === 'ring' ? 179 : difficulty === 'normal' ? 120 : 145;
   const rockPhase: number[] = [];
   const rockRows: number[] = [];
   for (let i = 0; i < 4; i++) rng(); // preserve the other obstacle seeds
@@ -124,12 +124,12 @@ export function skyFor(n: number, twist: Twist, seed: string, difficulty: LevelD
     rockRows,
     rockDirection: [0, 1, 2, 3].map(() => (rng() < 0.5 ? -1 : 1)),
     rockAngle: [0, 1, 2, 3].map(() => (((15 + 45 * rockRng()) * Math.PI) / 180) * (rockRng() < 0.5 ? -1 : 1)),
-    rockSpeed: [0, 1, 2, 3].map(() => 0.18 + 0.14 * rockRng()),
+    rockSpeed: [0, 1, 2, 3].map(() => 0.12 + 0.1 * rockRng()),
     mistAngle: Math.PI * (0.1 + 0.8 * rng()),
-    mistDistance: 1.6 + 0.8 * rng(),
+    mistDistance: 2 + 0.8 * rng(),
     mistCurl: rng() < 0.5 ? -1 : 1,
     tugAngle: Math.PI * (0.16 + 0.68 * rng()),
-    tugDistance: 1.8 + 0.8 * rng(),
+    tugDistance: 3.4 + 0.4 * rng(),
     ringPhase: Math.PI / 2 - (ringWidth * Math.PI) / 360 + (rng() - 0.5) * 0.16,
     ringDirection: -1,
     ringWidth,
@@ -145,7 +145,7 @@ export function skyShapesAt(
   const { cx, cy, R, width, height, launcherY } = geo;
   switch (def.obstacle) {
     case 'rocks': {
-      const count = def.hard ? 4 : 3;
+      const count = def.hard ? 3 : 2;
       const spanX = width + 0.24 * R;
       const spanY = height + 0.24 * R;
       const top = cy + 0.7 * R;
@@ -167,10 +167,10 @@ export function skyShapesAt(
     }
     case 'bubble': {
       const a = t * 0.8;
-      const radius = 0.36 * R;
-      const d = Math.min(2.05 * R, width / 2 - radius - 8);
+      const radius = 0.28 * R;
+      const d = Math.min(2.25 * R, width / 2 - radius - 8);
       const dy = Math.max(1.3 * R, Math.min(d, launcherY - cy - 0.28 * R - 50));
-      return [{ kind: 'bubble', x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * dy, r: radius, moonR: 0.28 * R }];
+      return [{ kind: 'bubble', x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * dy, r: radius, moonR: 0.22 * R }];
     }
     case 'mist': {
       const a = def.mistAngle;
@@ -179,7 +179,7 @@ export function skyShapesAt(
           kind: 'mist',
           x: cx + Math.cos(a) * def.mistDistance * R + Math.cos(t * 0.3) * 0.2 * R,
           y: cy + Math.sin(a) * def.mistDistance * R + Math.sin(t * 0.3) * 0.2 * R,
-          r: 0.7 * R,
+          r: 0.55 * R,
           curl: def.mistCurl,
         },
       ];
@@ -201,7 +201,7 @@ export function skyShapesAt(
     case 'tug': {
       const a =
         Math.abs(Math.cos(def.tugAngle)) < 0.4 ? (def.tugAngle < Math.PI / 2 ? Math.acos(0.4) : Math.PI - Math.acos(0.4)) : def.tugAngle;
-      return [{ kind: 'tug', x: cx + Math.cos(a) * def.tugDistance * R, y: cy + Math.sin(a) * def.tugDistance * R, coreR: 10 }];
+      return [{ kind: 'tug', x: cx + Math.cos(a) * def.tugDistance * R, y: cy + Math.sin(a) * def.tugDistance * R, coreR: 6 }];
     }
     default:
       return [];

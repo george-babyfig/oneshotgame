@@ -1,4 +1,5 @@
 import type { Kind } from './world';
+import type { TraitId } from './world';
 
 export type RoundMode = 'campaign' | 'voyage' | 'zen' | 'daily' | 'rush' | 'challenge' | 'remix';
 
@@ -12,6 +13,7 @@ export interface RoundModifiers {
   buddy: { species: string; acc: string } | null;
   shower: boolean;
   gentle: boolean;
+  buddyShield: TraitId | null;
 }
 
 export const NO_MODIFIERS: RoundModifiers = {
@@ -24,12 +26,13 @@ export const NO_MODIFIERS: RoundModifiers = {
   buddy: null,
   shower: false,
   gentle: false,
+  buddyShield: null,
 };
 
 /** Score modes share a base loadout; all other modes can use earned help. */
 export function modifiersFor(mode: RoundMode, profileBonuses: Partial<RoundModifiers> = {}): RoundModifiers {
   if (mode === 'daily' || mode === 'rush' || mode === 'challenge' || mode === 'remix') {
-    return { ...NO_MODIFIERS, gentle: mode === 'remix' && !!profileBonuses.gentle, lab: {}, boosters: { ...NO_MODIFIERS.boosters } };
+    return { ...NO_MODIFIERS, gentle: !!profileBonuses.gentle, lab: {}, boosters: { ...NO_MODIFIERS.boosters } };
   }
   return {
     ...NO_MODIFIERS,

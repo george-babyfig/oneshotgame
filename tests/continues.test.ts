@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultProfile } from '../src/meta/profile';
+import { helpAtFailCount } from '../src/meta/help';
 import {
   CONTINUE_COST,
   CONTINUE_FROM_PLANET,
@@ -28,6 +29,12 @@ describe('campaign continues', () => {
     expect(continueAllowed({ ...base, used: 2 })).toBe(false);
     for (const mode of ['tutorial', 'voyage', 'daily', 'rush', 'challenge', 'zen', 'remix'] as PlayMode[])
       expect(continueAllowed({ ...base, mode })).toBe(false);
+  });
+
+  it('remains secondary to the free second-fail tip', () => {
+    expect(helpAtFailCount(2).at(-1)).toBe('tip');
+    expect(continueAllowed({ mode: 'campaign', planet: 11, won: false, failsBefore: 1, used: 0 })).toBe(true);
+    expect(continueAllowed({ mode: 'campaign', planet: 10, won: false, failsBefore: 1, used: 0 })).toBe(false);
   });
 
   it('counts only rounds that used at least half their throws', () => {

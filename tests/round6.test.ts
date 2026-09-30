@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultProfile } from '../src/meta/profile';
-import { BUDDY_AT, buddyAccs, buddyEligible, currentBuddy, setBuddy, setBuddyAcc } from '../src/meta/buddy';
+import { buddyAccs, buddyEligible, currentBuddy, setBuddy, setBuddyAcc } from '../src/meta/buddy';
 import { ensureWishes } from '../src/meta/wishes';
 import { FESTIVAL_UNLOCK_LEVEL } from '../src/meta/festivals';
 import { checkMail } from '../src/meta/inbox';
@@ -11,7 +11,7 @@ describe('buddy', () => {
     const p = defaultProfile();
     expect(buddyEligible(p)).toEqual([]);
     expect(setBuddy(p, 'bunny')).toBe(false);
-    p.sightings.bunny = BUDDY_AT;
+    p.home.residents.push({ species: 'bunny', fp: 0, lastReq: 0, rewarded: 0 });
     expect(buddyEligible(p)).toEqual([]);
     p.level = 18;
     expect(buddyEligible(p)).toEqual(['bunny']);
@@ -25,7 +25,7 @@ describe('buddy', () => {
     setBuddyAcc(p, null);
     expect(currentBuddy(p, 'acorn')).toEqual({ species: 'bunny', acc: 'acorn' }); // festival costume
     setBuddy(p, null);
-    expect(currentBuddy(p)).toBeNull();
+    expect(currentBuddy(p)).toEqual({ species: 'bunny', acc: '' }); // suggested from residents
   });
 });
 
@@ -45,7 +45,7 @@ describe('round 6 tie-ins', () => {
     const p = defaultProfile();
     p.tutorial = true;
     p.level = FESTIVAL_UNLOCK_LEVEL;
-    p.sightings.otter = BUDDY_AT;
+    p.home.residents.push({ species: 'otter', fp: 0, lastReq: 0, rewarded: 0 });
     const now = new Date(2026, 9, 3);
     checkMail(p, now);
     const kinds = p.mail.map((m) => m.kind);

@@ -30,6 +30,97 @@ import { rarityName } from '../text';
 import { recordCombo, recordReaction } from '../../meta/reactions';
 import { REACTIONS, rulesForLevel, type ReactionId } from '../../core/round';
 import { reactionCanvas, reactionPair } from '../art/reactions';
+import { CONTINUE_COST, CONTINUE_THROWS } from '../../meta/continues';
+import { ledger } from '../../meta/ledger';
+import { failureFacts, giftFromBuddy, tipFor, type HelpRung } from '../../meta/help';
+import { goalProgress } from '../../core/levels';
+import { waysToEarnGems } from './earn';
+import { toast } from '../dom';
+import type { LevelScene } from '../game';
+
+const rungKey = (rung: HelpRung) =>
+  (
+    ({
+      whatHappened: 'what_happened',
+      tip: 'tip',
+      buddyThrows: 'buddy_throws',
+      hintTry: 'hint_try',
+    }) as const
+  )[rung];
+
+/** Campaign help owns the fail card; the paid continue keeps its existing eligibility and price. */
+export function helpEndModal(scene: LevelScene, rungs: HelpRung[]) {
+  const rung = rungs.at(-1)!;
+  const key = rungKey(rung);
+  ledger.count(`help_${key}_shown`);
+  scene.roundLog.missedGoals = scene.L.goals.filter((goal) => goalProgress(scene.planet, goal) < goal.count);
+  const facts = failureFacts(scene.roundLog);
+  const buddyGift = giftFromBuddy(!!scene.o.buddy);
+  const canContinue = scene.leftover === 0 && !!scene.o.continueOk?.(false);
+  const retry = () => {
+    ledger.count(`help_${key}_used`);
+    ledger.count('help_used');
+    card.close();
+    scene.modalOpen = null;
+    scene.finish(0);
+  };
+  const continueRound = () => {
+    if (!scene.o.continueOk?.(false)) return;
+    if (!scene.o.spendGems(CONTINUE_COST)) {
+      sfx.error();
+      toast(t('Not enough gems yet'), 'bad');
+      return;
+    }
+    card.close();
+    scene.modalOpen = null;
+    ledger.count('continues_bought');
+    scene.o.onContinue?.();
+    scene.throwsLeft += CONTINUE_THROWS;
+    scene.throwsTotal += CONTINUE_THROWS;
+    sfx.gem();
+    haptic.success();
+    scene.renderHud();
+  };
+  const helpTitle =
+    rung === 'tip'
+      ? t('A little tip')
+      : rung === 'buddyThrows'
+        ? buddyGift
+          ? t('A gift from your Buddy')
+          : t('A gift from the Keeper')
+        : t('Show me where');
+  const content = [
+    ...facts.map((fact) => h('p', { class: 'end-need' }, fact)),
+    ...(rung === 'whatHappened'
+      ? []
+      : [
+          h('div', { class: 'm-title' }, helpTitle),
+          h(
+            'p',
+            { class: 'end-need' },
+            rung === 'tip'
+              ? tipFor(scene.L)
+              : rung === 'buddyThrows'
+                ? buddyGift
+                  ? t('Your Buddy brings 2 extra throws for this attempt.')
+                  : t('Here, try these! 2 extra throws for this attempt.')
+                : t('Three places will glow on your next try.'),
+          ),
+        ]),
+  ];
+  const card = modal(
+    [
+      h('div', { class: 'end-title lost' }, t('Out of throws')),
+      h('div', { class: 'm-sub' }, t('What happened')),
+      ...content,
+      btn(t('Try again'), 'primary wide', retry),
+      canContinue ? btn(t('+5 throws · 💎{n}', { n: CONTINUE_COST }), 'ghost small', continueRound) : null,
+      canContinue && scene.o.gems() < CONTINUE_COST ? btn(t('Ways to earn gems'), 'ghost small', () => waysToEarnGems()) : null,
+    ],
+    { dismiss: false, cls: 'end help-card' },
+  );
+  scene.modalOpen = card;
+}
 
 export function levelResults(app: App, r: LevelResult) {
   const p = app.p;

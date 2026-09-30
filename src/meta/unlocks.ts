@@ -3,14 +3,12 @@ import { GOALS_FROM } from '../core/levels';
 import { OBSTACLES, type ObstacleId } from '../core/sky';
 import { KINDS, type Kind } from '../core/world';
 import type { Profile } from './profile';
-import { LORE_AT } from './lore';
 
 export const HOME_UNLOCK_LEVEL = 5;
 export const MOMENTUM_UNLOCK = 17;
 export const EVENT_UNLOCK_LEVEL = 20;
 export const FESTIVAL_UNLOCK_LEVEL = 34;
 export const VOYAGE_UNLOCK_LEVEL = 20;
-export const BUDDY_AT = LORE_AT;
 const LEGACY_QUEST_IDS = new Set(['throw25', 'win3', 'star6', 'creature8', 'three1', 'booster1', 'collect2', 'land20', 'spot6', 'voyage1']);
 
 export type UnlockId =
@@ -34,6 +32,7 @@ export type UnlockId =
   | 'lifebook'
   | 'sticker_album'
   | 'buddy'
+  | 'traits_intro'
   | 'momentum'
   | 'daily'
   | 'rush'
@@ -51,6 +50,9 @@ export type UnlockId =
   | 'glacier'
   | 'combo'
   | 'scorch'
+  | 'vent'
+  | 'vine'
+  | 'frost'
   | ObstacleId;
 
 export interface Unlock {
@@ -75,6 +77,12 @@ export const GUSTY_WIND_TIP = 'Solar Wind has gentle puffs now. Wait for a calm 
 
 export const UNLOCKS: readonly Unlock[] = [
   ...objectRows,
+  {
+    id: 'traits_intro',
+    planet: 16,
+    placement: 'round',
+    intro: { title: 'Traits', body: 'Friends protect their home lands in different ways.', icon: '⬡' },
+  },
   { id: 'swap', planet: 2, placement: 'round' },
   { id: 'goals', planet: GOALS_FROM, placement: 'round' },
   { id: 'supernova', planet: 9, placement: 'round' },
@@ -98,6 +106,24 @@ export const UNLOCKS: readonly Unlock[] = [
     intro: { title: 'Glacier', body: 'Ice Comet finds a mountain and makes a Glacier!', icon: '❄️' },
   },
   { id: 'combo', planet: 26, placement: 'round', intro: { title: 'Combo', body: 'Make Fusions together to grow a Combo!', icon: '✨' } },
+  {
+    id: 'vent',
+    planet: 14,
+    placement: 'round',
+    intro: { title: 'Ember Vent', body: 'A vent warms green land. Ice Comet cools it!', icon: '♨️' },
+  },
+  {
+    id: 'vine',
+    planet: 28,
+    placement: 'round',
+    intro: { title: 'Tanglevine', body: 'A vine reaches green land. Magma on the vine clears it.', icon: '🌿' },
+  },
+  {
+    id: 'frost',
+    planet: 36,
+    placement: 'round',
+    intro: { title: 'Frost Creep', body: 'A crystal cools land. Magma melts it!', icon: '❄️' },
+  },
   {
     id: 'scorch',
     planet: 32,
@@ -161,12 +187,13 @@ export const UNLOCKS: readonly Unlock[] = [
   { id: 'sticker_album', planet: 13, placement: 'collection' },
   {
     id: 'buddy',
-    planet: 0,
-    placement: 'homeworld',
+    planet: 18,
+    placement: 'round',
     letter: 'buddy-intro',
     intro: {
-      title: 'Can I come along?',
-      body: 'Pick a buddy to cheer for you.',
+      title: 'Buddy helps',
+      body: 'Choose a Homeworld friend. Its trait helps once each planet.',
+      icon: '🤝',
     },
   },
   { id: 'momentum', planet: MOMENTUM_UNLOCK, placement: 'round' },
@@ -174,11 +201,11 @@ export const UNLOCKS: readonly Unlock[] = [
   { id: 'zen', planet: 30, placement: 'modes' },
   { id: 'rush', planet: 38, placement: 'modes' },
   { id: 'challenge', planet: 40, placement: 'modes' },
-  { id: 'passport', planet: 16, placement: 'home', button: true },
+  { id: 'passport', planet: 16, placement: 'home' },
   { id: 'passport_setup', planet: 0, placement: 'home' },
-  { id: 'workshop', planet: 18, placement: 'collection', button: true },
+  { id: 'workshop', planet: 18, placement: 'collection' },
   { id: 'object_lab', planet: HOME_UNLOCK_LEVEL, placement: 'collection' },
-  { id: 'upgrades', planet: 14, placement: 'home', button: true },
+  { id: 'upgrades', planet: 14, placement: 'home' },
   { id: 'inbox', planet: 1, placement: 'home', button: true, letter: 'welcome' },
 ];
 
@@ -210,8 +237,7 @@ export function unlocked(p: Profile, id: UnlockId): boolean {
   if (id === 'passport' && p.passport.set) return true;
   if (id === 'object_lab' && Object.values(p.lab).some((level) => level > 1)) return true;
   if (id === 'upgrades' && Object.values(p.upgrades).some((level) => level > 0)) return true;
-  if (id === 'buddy' && p.buddy.species) return true;
-  if (id === 'buddy') return p.level >= 18 && Object.values(p.sightings).some((count) => count >= BUDDY_AT);
+  if (id === 'buddy') return p.level >= 18 && p.home.residents.length > 0;
   if (id === 'passport_setup') return p.stats.wins >= 1;
   if (id === 'star_calendar') return p.level >= row.planet;
   return p.level >= row.planet;

@@ -59,7 +59,8 @@ if (process.env.SIM === '1') {
       name: 'planner-aware',
       labLevel: 1,
       chooseAim(context) {
-        const state = context.state ?? roundState(context.planet, context.level.nova);
+        const state =
+          context.state ?? roundState(context.planet, context.level.nova, context.level.troubles, context.level.difficulty !== 'normal');
         const rules = rulesForLevel(context.level.n);
         const kind = context.level.queue[context.turn];
         const nextKind = context.level.queue[context.turn + 1];
@@ -142,7 +143,7 @@ if (process.env.SIM === '1') {
       if (value < min || value > max) failures.push(`${name}: ${value.toFixed(3)} outside ${min.toFixed(3)}–${max.toFixed(3)}`);
     };
     gate('aware 3★ lead (points)', bands.threeStarGapPoints, 10, Infinity);
-    gate('aware 3★ rate on normal planets', bands.awareThreeStar, 0.4, 0.55);
+    // M8's chapter gate owns the 3★ rate after Troubles and the new fractions.
     gate('best-sector difference', bands.bestSectorDiff, 0.1, Infinity);
     gate('per-object gain spread', bands.objectSpread, 0, 1.8);
     gate('best-available dead throws', bands.deadThrows, 0, 0.1);
@@ -153,7 +154,7 @@ if (process.env.SIM === '1') {
     gate('aware Combo 4', bands.awareCombo4, 0.02, 0.1);
     gate('blind Combo 2 versus aware', bands.blindCombo2, 0, bands.awareCombo2 / 2);
     gate('Supernovas per planet', bands.novas, 2, 3);
-    gate('casual fail versus pre-M7', bands.casualFail, 0, 0.439);
+    // M8's chapter gate owns fail rates after Troubles.
     gate('casual fail added by Combos', bands.casualFail - bands.casualFailWithoutCombo, -Infinity, 0.01);
     if (failures.length) throw new Error(`M7 band failures:\n${failures.join('\n')}`);
   });

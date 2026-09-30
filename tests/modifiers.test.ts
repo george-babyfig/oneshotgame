@@ -12,6 +12,7 @@ describe('round modifiers', () => {
     buddy: { species: 'bunny', acc: 'bow' },
     shower: true,
     gentle: false,
+    buddyShield: null,
   };
 
   it.each(['campaign', 'voyage', 'zen'] as const)('%s receives player bonuses', (mode) => {
@@ -22,11 +23,11 @@ describe('round modifiers', () => {
     expect(modifiersFor(mode, bonuses)).toEqual(NO_MODIFIERS);
   });
 
-  it('allows Gentle outside competitive modes', () => {
+  it("keeps the parent's Gentle setting in every mode", () => {
     expect(modifiersFor('campaign', { gentle: true }).gentle).toBe(true);
     expect(modifiersFor('voyage', { gentle: true }).gentle).toBe(true);
     expect(modifiersFor('zen', { gentle: true }).gentle).toBe(true);
-    for (const mode of ['daily', 'rush', 'challenge'] as const) expect(modifiersFor(mode, { gentle: true }).gentle).toBe(false);
+    for (const mode of ['daily', 'rush', 'challenge'] as const) expect(modifiersFor(mode, { gentle: true }).gentle).toBe(true);
     expect(modifiersFor('remix', { gentle: true }).gentle).toBe(true);
   });
 

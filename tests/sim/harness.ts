@@ -1,11 +1,21 @@
 import { goalProgress, goalsMet, makeLevel, rngFrom, starsEarned, starsFor, type Difficulty, type LevelDef } from '../../src/core/levels';
-import { SECTORS, lifeScore, type Planet } from '../../src/core/world';
+import { SECTORS, clonePlanet, lifeScore, settle, type Planet, type TraitId } from '../../src/core/world';
 import { NO_MODIFIERS } from '../../src/core/modifiers';
-import { ROUND_RULES_V0, novaReady, roundState, rulesForLevel, stepRound, type RoundRules, type RoundState } from '../../src/core/round';
+import {
+  ROUND_RULES_V0,
+  lifeSparkSectors,
+  novaReady,
+  roundState,
+  rulesForLevel,
+  stepRound,
+  type RoundRules,
+  type RoundState,
+} from '../../src/core/round';
 import { emptySkyState, findPull, flightWorld, flyPull, isBonk, noise, PHONES, seedHint, seedPulls, type Phone, type Pull } from './flying';
 import { OBSTACLES } from '../../src/core/sky';
 import { bonkRefund, rockAfterBonk } from '../../src/ui/feel';
 import { fly, STAR_SLING, type FlightWorld, type FlightHit } from '../../src/core/flight';
+import { forecastTroubles } from '../../src/core/troubles';
 
 export interface BotContext {
   level: LevelDef;
@@ -17,6 +27,8 @@ export interface BotContext {
   random: () => number;
   blindBest?: number;
   awareBest?: number;
+  retry?: number;
+  modifiers?: typeof NO_MODIFIERS;
 }
 
 export interface BotPolicy {
@@ -27,14 +39,27 @@ export interface BotPolicy {
 
 export function oneStep(context: BotContext, rules: RoundRules = ROUND_RULES_V0, gainOut?: { best: number }): number {
   const { level, turn, nova, labLevel } = context;
-  const state = context.state ?? roundState(context.planet, level.nova);
+  const state = context.state ?? roundState(context.planet, level.nova, level.troubles, level.difficulty !== 'normal');
   let best = -Infinity;
   let aim = 0;
   for (let sector = 0; sector < SECTORS; sector++) {
-    const result = stepRound(state, { kind: level.queue[turn], sector, nova }, NO_MODIFIERS, rules);
+    const result = stepRound(
+      rules === ROUND_RULES_V0 ? { ...state, troubles: [] } : state,
+      { kind: level.queue[turn], sector, nova },
+      context.modifiers ?? NO_MODIFIERS,
+      rules,
+    );
     if (gainOut) gainOut.best = Math.max(gainOut.best, result.after - result.before);
     const value =
       result.after +
+      (rules === ROUND_RULES_V0 ? 0 : result.troubleEvents.filter((event) => event.kind === 'settled').length * 12) -
+      (rules === ROUND_RULES_V0
+        ? 0
+        : forecastTroubles(result.state, context.modifiers ?? NO_MODIFIERS).some(
+              (beat) => beat.inThrows === 1 && beat.sector !== null && !beat.blockedBy && result.state.planet.sectors[beat.sector].species,
+            )
+          ? 12
+          : 0) +
       (labLevel >= 2 ? result.changed.length * 2 : 0) +
       (labLevel >= 4 ? result.spawned.length * 6 : 0) +
       (labLevel >= 5 ? 3 : 0) +
@@ -53,11 +78,12 @@ function aimingPolicy(name: string, aimError: number, randomShare: number, labLe
     labLevel,
     chooseAim(context) {
       const { random } = context;
-      if (random() < randomShare) return Math.floor(random() * SECTORS);
+      const learning = Math.pow(0.9, context.retry ?? 0);
+      if (random() < randomShare * learning) return Math.floor(random() * SECTORS);
       let aim = aware
         ? (context.awareBest ?? oneStep(context, rulesForLevel(context.level.n)))
         : (context.blindBest ?? oneStep(context, ROUND_RULES_V0));
-      if (random() < aimError) aim += random() < 0.5 ? -1 : 1;
+      if (random() < aimError * learning) aim += random() < 0.5 ? -1 : 1;
       return aim;
     },
   };
@@ -66,7 +92,7 @@ function aimingPolicy(name: string, aimError: number, randomShare: number, labLe
 // More policies can supply their own chooseAim without changing the runner.
 export const POLICIES = {
   casual: aimingPolicy('casual', 0.4, 0.3, 1),
-  decent: aimingPolicy('decent', 0.25, 0.1, 1),
+  decent: aimingPolicy('decent', 0.25, 0.1, 1, true),
   'decent-blind': aimingPolicy('decent-blind', 0.25, 0.1, 1),
   'decent-aware': aimingPolicy('decent-aware', 0.25, 0.1, 1, true),
   sharp: aimingPolicy('sharp', 0.1, 0, 1, true),
@@ -91,6 +117,8 @@ export interface PlayResult {
   gainByKind: Partial<Record<(typeof levelKinds)[number], { gain: number; throws: number }>>;
   deadByKind: Partial<Record<(typeof levelKinds)[number], number>>;
   choiceDifferences: number;
+  firstClearLeft: number;
+  finalStarLeft: number;
   flight?: { bonks: number; fizzles: number; misses: number; surpriseBonks: number; noiseBonks: number; roundTime: number; waits: number };
 }
 
@@ -114,10 +142,32 @@ export function playLevel(
   random: () => number,
   rules = rulesForLevel(level.n),
   flight?: { phone: Phone; timed?: boolean; badgeAware?: boolean; retry?: number },
+  retry = 0,
+  maxLoadout = false,
 ): PlayResult {
-  let state = roundState(level.start, level.nova);
+  if (level.n === 2) {
+    const chance = policy.name === 'sharp' ? 1 : policy.name === 'casual' ? 0.4 : policy.name === 'decent-blind' ? 0 : 0.7;
+    if (random() < chance) level = { ...level, queue: [level.queue[1], level.queue[0], ...level.queue.slice(2)] };
+  }
+  const start = clonePlanet(level.start);
+  if (maxLoadout) {
+    for (const sector of lifeSparkSectors(level, start)) start.sectors[sector].life = Math.min(3, start.sectors[sector].life + 1);
+    settle(start);
+  }
+  let state = roundState(start, level.nova, level.troubles, level.difficulty !== 'normal');
+  const shield: TraitId | null =
+    level.troubles[0]?.id === 'vent'
+      ? 'fireproof'
+      : level.troubles[0]?.id === 'vine'
+        ? 'weedproof'
+        : level.troubles[0]?.id === 'frost'
+          ? 'frostproof'
+          : null;
+  const modifiers = maxLoadout
+    ? { ...NO_MODIFIERS, splash: 1, momentum: 3, buddyShield: shield, boosters: { shower: true, spark: true, scope: true } }
+    : NO_MODIFIERS;
   let halfStars = 0;
-  let throws = level.throws;
+  let throws = level.throws + (maxLoadout ? 5 : 0);
   let gifts = 0;
   let novas = 0;
   let fusion = 0;
@@ -126,6 +176,8 @@ export function playLevel(
   let deadThrows = 0;
   let bestDeadThrows = 0;
   let choiceDifferences = 0;
+  let firstClearLeft = -1;
+  const starHistory: number[] = [];
   const gainByKind: PlayResult['gainByKind'] = {};
   const deadByKind: PlayResult['deadByKind'] = {};
   let skyState = emptySkyState();
@@ -133,6 +185,7 @@ export function playLevel(
   let practiceBonkUsed = false;
   let priorPull: Pull | undefined;
   let priorSector = -1;
+  retry = flight?.retry ?? retry;
   const noiseScale = policy.name === 'casual' ? [4, 6, 0.25, 3] : policy.name === 'sharp' ? [1, 2, 0.05, 5] : [2.5, 4, 0.15, 4];
   const seeded = flight
     ? (() => {
@@ -142,10 +195,10 @@ export function playLevel(
     : undefined;
   for (let turn = 0; turn < throws; turn++) {
     const nova = novaReady(state);
-    const blindBest = oneStep({ level, planet: state.planet, state, turn, nova, labLevel: policy.labLevel, random });
+    const blindBest = oneStep({ level, planet: state.planet, state, turn, nova, labLevel: policy.labLevel, random, modifiers });
     const bestGain = { best: -Infinity };
     const awareBest = oneStep(
-      { level, planet: state.planet, state, turn, nova, labLevel: policy.labLevel, random },
+      { level, planet: state.planet, state, turn, nova, labLevel: policy.labLevel, random, modifiers },
       rulesForLevel(level.n),
       bestGain,
     );
@@ -161,6 +214,8 @@ export function playLevel(
       random,
       blindBest,
       awareBest,
+      retry,
+      modifiers,
     });
     let sector = ((aim % SECTORS) + SECTORS) % SECTORS;
     if (flight) {
@@ -254,6 +309,7 @@ export function playLevel(
           continue;
         }
         if (turn + 1 === Math.floor(level.throws / 2)) halfStars = starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level);
+        starHistory.push(starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level));
         continue;
       }
       sector = actual.hit.sector;
@@ -261,7 +317,7 @@ export function playLevel(
     const step = stepRound(
       state,
       { kind: level.queue[turn], sector, nova },
-      { ...NO_MODIFIERS, lab: { [level.queue[turn]]: policy.labLevel } },
+      { ...modifiers, lab: { [level.queue[turn]]: policy.labLevel } },
       rules,
     );
     state = step.state;
@@ -279,6 +335,9 @@ export function playLevel(
     kindGain.throws++;
     gainByKind[level.queue[turn]] = kindGain;
     if (step.novaFired) novas++;
+    if (firstClearLeft < 0 && starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level) > 0)
+      firstClearLeft = Math.max(0, throws - turn - 1);
+    starHistory.push(starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level));
     if (turn + 1 === Math.floor(level.throws / 2)) halfStars = starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level);
     if (level.n <= 3 && turn + 1 === throws && starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level) === 0) {
       if (gifts < 2) {
@@ -290,10 +349,12 @@ export function playLevel(
     }
   }
   const score = lifeScore(state.planet) + state.bonus;
+  const finalStars = starsEarned(state.planet, score, level);
+  const finalStarTurn = finalStars > 0 ? starHistory.findIndex((count) => count >= finalStars) : -1;
   return {
     score,
     frostSectors: state.planet.sectors.filter((sector) => ['tundra', 'icesheet', 'taiga'].includes(sector.biome)).length,
-    stars: starsEarned(state.planet, score, level),
+    stars: finalStars,
     halfStars,
     scoreMet: starsFor(score, level.stars) > 0,
     goalsMet: goalsMet(state.planet, level.goals),
@@ -308,6 +369,8 @@ export function playLevel(
     gainByKind,
     deadByKind,
     choiceDifferences,
+    firstClearLeft,
+    finalStarLeft: finalStarTurn < 0 ? -1 : Math.max(0, throws - finalStarTurn - 1),
     flight: flight ? flightStats : undefined,
   };
 }
@@ -322,6 +385,10 @@ export interface PlanetMetrics {
   halfThreeStar: number;
   scoreMet: number;
   goalMetWhenScoreMet: number;
+  attemptsMedian: number;
+  attemptsP90: number;
+  slack: number;
+  choiceDifferenceRate: number;
   novas: number;
   flight?: {
     bonks: number;
@@ -340,6 +407,7 @@ export function runPlanet(
   runs: number,
   salt?: number,
   flight?: { phone?: Phone; timed?: boolean; badgeAware?: boolean },
+  masterSeed = 'default',
 ): PlanetMetrics {
   const level = makeLevel(n, 'PP', salt === undefined ? {} : { salt });
   let failures = 0;
@@ -349,13 +417,17 @@ export function runPlanet(
   let goalMetWhenScoreMet = 0;
   let novas = 0;
   let retryCount = 0;
+  const attempts: number[] = [];
+  let slackTotal = 0;
+  let clears = 0;
+  let choiceDifferences = 0;
   const flightTotals = { bonks: 0, fizzles: 0, misses: 0, surpriseBonks: 0, noiseBonks: 0, roundTimes: [] as number[], waits: 0 };
   for (let run = 0; run < runs; run++) {
     // The same bot decisions compare an original layout with its shadow seeds.
     const result = playLevel(
       level,
       policy,
-      rngFrom(`sim-${policy.name}-${n}-${run}`),
+      rngFrom(`sim-${masterSeed === 'default' ? '' : `${masterSeed}-`}${policy.name}-${n}-${run}`),
       rulesForLevel(level.n),
       flight
         ? {
@@ -365,8 +437,18 @@ export function runPlanet(
             retry: retryCount,
           }
         : undefined,
+      retryCount,
     );
-    if (flight) retryCount = result.stars === 0 ? Math.min(8, retryCount + 1) : 0;
+    if (result.stars === 0) retryCount = Math.min(7, retryCount + 1);
+    else {
+      attempts.push(retryCount + 1);
+      retryCount = 0;
+    }
+    if (result.finalStarLeft >= 0) {
+      slackTotal += result.finalStarLeft / Math.max(1, result.totalThrows);
+      clears++;
+    }
+    choiceDifferences += result.choiceDifferences;
     if (result.flight) {
       flightTotals.bonks += result.flight.bonks;
       flightTotals.fizzles += result.flight.fizzles;
@@ -395,9 +477,19 @@ export function runPlanet(
     halfThreeStar: halfThreeStars / runs,
     scoreMet,
     goalMetWhenScoreMet,
+    attemptsMedian: percentile(attempts, 0.5),
+    attemptsP90: percentile(attempts, 0.9),
+    slack: clears ? slackTotal / clears : 0,
+    choiceDifferenceRate: choiceDifferences / Math.max(1, runs * level.throws),
     novas: novas / runs,
     flight: flight ? flightTotals : undefined,
   };
+}
+
+function percentile(values: number[], fraction: number): number {
+  if (!values.length) return 9;
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.ceil(fraction * sorted.length) - 1];
 }
 
 export const BANDS = [

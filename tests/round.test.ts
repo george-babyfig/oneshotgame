@@ -86,7 +86,7 @@ describe('round engine', () => {
     expect(
       stepRound(roundState(icy), { kind: 'magma', sector: 0 }, { ...NO_MODIFIERS, gentle: true }, rules).reactions.map((r) => r.id),
     ).toContain('steam');
-    for (const mode of ['daily', 'rush', 'challenge'] as const) expect(modifiersFor(mode, { gentle: true }).gentle).toBe(false);
+    for (const mode of ['daily', 'rush', 'challenge'] as const) expect(modifiersFor(mode, { gentle: true }).gentle).toBe(true);
     expect(modifiersFor('campaign', { gentle: true }).gentle).toBe(true);
   });
 
@@ -99,10 +99,14 @@ describe('round engine', () => {
     state.guardianHp = 2;
     state.nova.held = true;
     const restored = restoreRound(serializeRound(state));
+    expect(JSON.parse(serializeRound(state)).rulesVersion).toBe(1);
     expect(restored).toEqual(state);
     expect(stepRound(restored!, { kind: 'seed', sector: 4 })).toEqual(stepRound(state, { kind: 'seed', sector: 4 }));
     expect(restoreRound('{"version":2,"state":{}}')).toBeNull();
     expect(restoreRound('broken')).toBeNull();
+    const changedRules = JSON.parse(serializeRound(state));
+    changedRules.rulesVersion++;
+    expect(restoreRound(JSON.stringify(changedRules))).toBeNull();
   });
 
   it('restores a version 1 round with a fresh Combo', () => {

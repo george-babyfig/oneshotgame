@@ -29,6 +29,7 @@ import { restoredSkyState } from './feel';
 import { createIap, type IapEvent, type StorePrice } from '../meta/iap';
 import { PRODUCT_BY_ID, PRODUCT_BY_KEY, SKINS, type BoosterId } from '../meta/config';
 import { clearFails, continueAllowed, countsAsFail, recordFail } from '../meta/continues';
+import { firstTargets, helpAtFailCount, helpFor, helpThrowsForAttempt } from '../meta/help';
 import { discoverSpecies, grantProduct, refundQuietUntil, revokeProduct, spendGems } from '../meta/economy';
 import { chapterOf } from '../meta/progression';
 import { ensureWishes } from '../meta/wishes';
@@ -72,7 +73,7 @@ import { contentsSheet } from './flows/contents';
 import { receiptCard } from './flows/receipt';
 import { inboxFlow } from './flows/inbox';
 import { showSky } from './screens/sky';
-import { currentBuddy } from '../meta/buddy';
+import { buddyShieldFor, currentBuddy } from '../meta/buddy';
 import { showVoyage } from './screens/voyage';
 import { showAlbum } from './screens/album';
 import { festivalFlow } from './flows/festival';
@@ -91,6 +92,13 @@ import { homeBadge } from '../meta/homeworld';
 import { wishClaimable } from '../meta/wishes';
 import { countUp, effectiveReduceMotion, screenTransition } from './motion';
 import { recordCombo, recordReaction } from '../meta/reactions';
+import type { RoundState } from '../core/round';
+
+export function restoreSceneTroubles(scene: Pick<LevelScene, 'troubles' | 'buddyShieldUsed' | 'calmUsed'>, state: RoundState): void {
+  scene.troubles = state.troubles ?? [];
+  scene.buddyShieldUsed = !!state.buddyShieldUsed;
+  scene.calmUsed = !!state.calmUsed;
+}
 
 export type ScreenName =
   | 'home'
@@ -304,6 +312,7 @@ export class App {
       comboIconsCurrent: scene.comboIconsCurrent,
       comboIconsBest: scene.comboIconsBest,
       reactionEvents: scene.reactionEvents,
+      roundLog: scene.roundLog,
       reactionsSeen: [...scene.reactionsSeen],
       comboEvents: scene.comboEvents,
       warmup: !!scene.o.practice,
@@ -313,7 +322,13 @@ export class App {
       practiceBonkUsed: scene.practiceBonkUsed,
       mistTipShown: scene.mistTipShown,
       gustTipShown: scene.gustTipShown,
-    } as RoundCheckpoint & { skyState: SkyState; practiceBonkUsed: boolean; mistTipShown: boolean; gustTipShown: boolean });
+    } as RoundCheckpoint & {
+      roundLog: typeof scene.roundLog;
+      skyState: SkyState;
+      practiceBonkUsed: boolean;
+      mistTipShown: boolean;
+      gustTipShown: boolean;
+    });
     this.saveNow();
     if (pause) {
       scene.paused = true;
@@ -726,6 +741,7 @@ export class App {
       momentum: extra.momentum ?? 0,
       shower: !!skyEventOn(new Date()),
       gentle: !!this.p.settings.gentle,
+      ...{ buddyShield: buddyShieldFor(this.p, mode === 'tutorial' ? 'campaign' : mode, this.p.level) },
     });
     if (mode === 'remix') mods.gentle = !!this.p.settings.gentle;
     return {
@@ -823,6 +839,7 @@ export class App {
       lab: mods.lab,
       momentum: mods.momentum,
       shower: mods.shower,
+      ...{ buddyShield: mods.buddyShield },
     };
   }
 
@@ -876,7 +893,20 @@ export class App {
       merged,
       !!o.tutorial || n === 1,
     );
+    (opts as typeof opts & { buddyShield?: ReturnType<typeof buddyShieldFor> }).buddyShield = buddyShieldFor(this.p, 'campaign', n);
     opts.extraThrows += perk.throws;
+    const help = helpFor(this.p, n, o.tutorial || n === 1 ? 'daily' : 'campaign');
+    opts.helpForFail = (used, total) =>
+      !o.tutorial && n > 1 && n === this.p.level && countsAsFail(used, total) ? helpAtFailCount((this.p.fails[n] ?? 0) + 1) : [];
+    const giftThrows = helpThrowsForAttempt(this.p, n, o.tutorial || n === 1 ? 'daily' : 'campaign');
+    if (!o.resume && giftThrows) {
+      opts.extraThrows += giftThrows;
+      ledger.count('help_buddy_throws_used');
+    }
+    if (help.includes('hintTry')) {
+      opts.hintSectors = firstTargets(L);
+      if (!o.resume) ledger.count('help_hint_try_used');
+    }
     if (o.resume) {
       const m = o.resume.modifiers;
       opts.scopeLevel = m.scopeLevel;
@@ -888,6 +918,8 @@ export class App {
       opts.shower = m.shower;
       opts.gentle = m.gentle;
       opts.buddy = m.buddy;
+      (opts as typeof opts & { buddyShield?: ReturnType<typeof buddyShieldFor> }).buddyShield =
+        (m as typeof m & { buddyShield?: ReturnType<typeof buddyShieldFor> }).buddyShield ?? null;
       opts.allowIntro = () => false;
       opts.coach = undefined;
       opts.intro = undefined;
@@ -895,6 +927,7 @@ export class App {
     const scene = new LevelScene(L, opts);
     if (o.resume) {
       const s = o.resume as RoundCheckpoint & {
+        roundLog?: typeof scene.roundLog;
         skyState?: SkyState;
         practiceBonkUsed?: boolean;
         mistTipShown?: boolean;
@@ -905,12 +938,21 @@ export class App {
       scene.mistTipShown = !!s.mistTipShown;
       scene.gustTipShown = !!s.gustTipShown;
       scene.planet = s.state.planet;
+      restoreSceneTroubles(scene, s.state);
       scene.nova = s.state.nova;
       scene.combo = s.state.combo;
       scene.comboCharge = s.state.comboCharge;
       scene.comboIconsCurrent = s.comboIconsCurrent ?? [];
       scene.comboIconsBest = s.comboIconsBest ?? [];
       scene.reactionEvents = s.reactionEvents ?? [];
+      if (
+        s.roundLog &&
+        Array.isArray(s.roundLog.troubles) &&
+        Array.isArray(s.roundLog.reactions) &&
+        Array.isArray(s.roundLog.bonks) &&
+        Array.isArray(s.roundLog.wandered)
+      )
+        scene.roundLog = s.roundLog;
       scene.reactionsSeen = new Set(s.reactionsSeen ?? scene.reactionEvents);
       scene.comboEvents = s.comboEvents ?? [];
       scene.bonus = s.state.bonus;

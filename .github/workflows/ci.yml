@@ -23,8 +23,8 @@ jobs:
       - name: Reject dev tools in production bundle
         run: '! grep -rqE "Balance Report|__app|__i18n|__scene|__gate" dist/'
 
-  # Difficulty survey (casual/decent/sharp on planets 1-60). Watch only in M1:
-  # it prints drift against tests/sim/baseline.json but never fails the build.
+  # M8 quick difficulty and two-sided lint gates on planets 1-60.
+  # The full shadow-seed curve and 61-120 watches run nightly.
   sim-quick:
     runs-on: ubuntu-latest
     steps:
@@ -35,6 +35,19 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run sim:quick
+
+  # Stable M8 curve and two-sided lint gates; runs beside the e2e matrix.
+  balance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: SIM=1 SIM_BALANCE=1 TROUBLE_RUNS=32 npx vitest run tests/sim/balance.sim.ts tests/sim/trouble-cost.sim.ts
 
   # Playwright journeys (J1-J7, prices, gate, overlap, showtime) — one job per browser
   # project so the three run in parallel and each stays well inside its time limit.

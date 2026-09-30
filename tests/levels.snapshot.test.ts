@@ -78,6 +78,7 @@ const LEVEL_KEYS = [
   'stars',
   'start',
   'throws',
+  'troubles',
   'twist',
 ];
 const PLANET_KEYS = ['sectors', 'speciesFound'];
@@ -105,6 +106,7 @@ function levelRow(id: string, L: LevelDef): Row {
     throws: L.throws,
     stars: L.stars,
     goals: L.goals.map((g) => [g.type, g.id, g.count]),
+    troubles: L.troubles.map((trouble) => [trouble.id, trouble.source]),
     queue: L.queue.join(' '),
     start: planetRow(L.start),
   };

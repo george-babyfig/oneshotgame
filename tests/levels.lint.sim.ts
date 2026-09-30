@@ -1,35 +1,30 @@
 import { it } from 'vitest';
-import { POLICIES, runPlanet } from './sim/harness';
-import { budgetFor, makeLevel, pressureOf, skyWall } from '../src/core/levels';
-import { OBSTACLES } from '../src/core/sky';
-
-const percentage = (value: number) => `${Math.round(value * 100)}%`;
+import { POLICIES, runSurvey } from './sim/harness';
+import { lintCampaign, type LintFlag } from './sim/lint';
 
 if (process.env.SIM === '1') {
-  it('reports level balance outliers without blocking M1', () => {
-    const runs = Number(process.env.LINT_RUNS ?? 24);
-    const flags: string[] = [];
-    const structural: string[] = [];
-    for (let n = 1; n <= 120; n++) {
-      const level = makeLevel(n);
-      if (pressureOf(level) > budgetFor(level)) structural.push(`STACK ${n}: pressure ${pressureOf(level)} > ${budgetFor(level)}`);
-      if (skyWall(level)) structural.push(`SKYWALL ${n}`);
-      if (level.sky.obstacle && n > OBSTACLES[level.sky.obstacle].debut && n < OBSTACLES[level.sky.obstacle].debut + 2)
-        structural.push(`STACK ${n}: obstacle reappears too soon after its lesson`);
-    }
-    console.log(`Structural lint: ${structural.length} STACK/SKYWALL flags on planets 1-120`);
-    for (const flag of structural) console.log(`⚠ ${flag}`);
-    if (structural.length) throw new Error(`Structural lint found ${structural.length} STACK/SKYWALL flags`);
-    for (let n = 1; n <= 60; n++) {
-      const decent = runPlanet(n, POLICIES.decent, runs);
-      const sharp = runPlanet(n, POLICIES.sharp, runs);
-      if (decent.difficulty === 'normal' && decent.fail > 0.6) flags.push(`WALL ${n}: decent fail ${percentage(decent.fail)}`);
-      if (n >= 11 && decent.threeStar > 0.9) flags.push(`EASY ${n}: decent 3★ ${percentage(decent.threeStar)}`);
-      if (sharp.halfThreeStar > 0) flags.push(`TRIVIAL ${n}: sharp 3★ by half throws ${percentage(sharp.halfThreeStar)}`);
-      if (decent.scoreMet > 0 && decent.goalMetWhenScoreMet / decent.scoreMet < 0.2)
-        flags.push(`GOAL-TRAP ${n}: goal met on ${decent.goalMetWhenScoreMet}/${decent.scoreMet} score-reaching runs`);
-    }
-    console.log(`Level lint (Watch, ${runs} runs): ${flags.length} flags`);
-    for (const flag of flags) console.log(`⚠ ${flag}`);
-  });
+  it(
+    'reports both sides of the level curve on campaign seeds',
+    () => {
+      const runs = Number(process.env.LINT_RUNS ?? 24);
+      const last = process.env.SIM_NIGHTLY === '1' ? 120 : 60;
+      const [casual, decent, sharp] = [POLICIES.casual, POLICIES.decent, POLICIES.sharp].map((policy) => runSurvey(policy, runs, 1, last));
+      const issues = lintCampaign(casual.planets, decent.planets, sharp.planets, last);
+      for (const range of [
+        [1, 60],
+        [61, 120],
+      ] as const) {
+        if (range[0] > last) continue;
+        const scoped = issues.filter((issue) => issue.planet >= range[0] && issue.planet <= range[1]);
+        const counts = Object.fromEntries(
+          (['WALL', 'CLIFF', 'GOAL-TRAP', 'STACK', 'BONK-HEAVY', 'EASY', 'TRIVIAL', 'EASY-EARLY', 'FLAT', 'SLACK'] as LintFlag[]).map(
+            (flag) => [flag, scoped.filter((issue) => issue.flag === flag).length],
+          ),
+        );
+        console.log(`Level lint ${range[0]}-${range[1]} (${runs} runs/planet/policy): ${JSON.stringify(counts)}`);
+        for (const issue of scoped) console.log(`${issue.flag} planet ${issue.planet}: ${issue.detail}. Fix: ${issue.fix}`);
+      }
+    },
+    60 * 60_000,
+  );
 }

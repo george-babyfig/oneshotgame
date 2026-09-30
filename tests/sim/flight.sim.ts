@@ -1,7 +1,8 @@
 import { expect, it } from 'vitest';
 import { makeLevel } from '../../src/core/levels';
 import { OBSTACLES, type ObstacleId } from '../../src/core/sky';
-import { POLICIES, runPlanet, type PlanetMetrics } from './harness';
+import { POLICIES, oneStep, runPlanet, type PlanetMetrics } from './harness';
+import { ROUND_RULES_V0 } from '../../src/core/round';
 
 const median = (values: number[]) => {
   const sorted = [...values].sort((a, b) => a - b);
@@ -26,8 +27,9 @@ export function flyingSurvey(first = 1, last = 60, runs = 8) {
   const casualUntimed = obstacles.map((n) => runPlanet(n, POLICIES.casual, runs, undefined, { timed: false, badgeAware: false }));
   let surprise = 0;
   for (const group of [...rows.values(), casualUntimed]) for (const row of group) surprise += row.flight?.surpriseBonks ?? 0;
-  console.log('Flying bots (bonks + fizzles / round; M8 bands are Watch)');
+  console.log('Flying bots (bonks + fizzles / round; M8 obstacle gates)');
   console.log('Obstacle       planets casual  casual-untimed decent sharp teach noise-bonks median 31-60');
+  const failures: string[] = [];
   for (const obstacle of Object.keys(OBSTACLES) as ObstacleId[]) {
     const levels = obstacles.filter((n) => makeLevel(n).sky.obstacle === obstacle);
     const group = (name: string) => (rows.get(name) ?? []).filter((r) => levels.includes(r.n));
@@ -44,6 +46,20 @@ export function flyingSurvey(first = 1, last = 60, runs = 8) {
       .filter((r) => r.n >= 31 && r.n <= 60)
       .flatMap((r) => r.flight?.roundTimes ?? []);
     const decentRows = group('decent');
+    for (const n of levels) {
+      const c = group('casual').find((row) => row.n === n)!;
+      const dec = decentRows.find((row) => row.n === n)!;
+      const casualBonks = ((c.flight?.bonks ?? 0) + (c.flight?.fizzles ?? 0)) / c.runs;
+      const decentBonks = ((dec.flight?.bonks ?? 0) + (dec.flight?.fizzles ?? 0)) / dec.runs;
+      const limit = n === OBSTACLES[obstacle].debut ? 1 : 1.5;
+      if (casualBonks > limit) failures.push(`planet ${n} casual bonks ${casualBonks.toFixed(2)} > ${limit}`);
+      if (decentBonks > 0.8) failures.push(`planet ${n} decent bonks ${decentBonks.toFixed(2)} > 0.8`);
+      if (c.fail > 0.33 || dec.fail > 0.26)
+        failures.push(`planet ${n} obstacle fail casual/decent ${Math.round(c.fail * 100)}%/${Math.round(dec.fail * 100)}% > 33%/26%`);
+      const floor: typeof POLICIES.casual = { name: 'casual', labLevel: 1, chooseAim: (context) => oneStep(context, ROUND_RULES_V0) };
+      const floorRow = runPlanet(n, floor, runs, undefined, { timed: false, badgeAware: true });
+      if (floorRow.fail > 0.1) failures.push(`planet ${n} Solver 0 with casual flight fails ${Math.round(floorRow.fail * 100)}% > 10%`);
+    }
     const wait =
       decentRows.reduce((sum, row) => sum + (row.flight?.waits ?? 0), 0) /
       Math.max(
@@ -63,7 +79,10 @@ export function flyingSurvey(first = 1, last = 60, runs = 8) {
   }
   const obstacleTimes = rows.get('decent')?.flatMap((r) => (r.n >= 31 && r.n <= 60 ? (r.flight?.roundTimes ?? []) : [])) ?? [];
   console.log(`All obstacles: ${obstacles.join(', ')}; median round ${median(obstacleTimes).toFixed(1)}s; surprise bonks ${surprise}`);
+  const time = median(obstacleTimes);
+  if (time < 60 || time > 100) failures.push(`obstacle median round ${time.toFixed(1)}s outside 60-100s`);
   expect(surprise, 'M7.5 surprise bonks').toBe(0);
+  expect(failures, `M8 obstacle bands:\n${failures.join('\n')}`).toEqual([]);
   return { obstacles, rows, casualUntimed, surprise };
 }
 

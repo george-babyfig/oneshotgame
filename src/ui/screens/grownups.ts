@@ -105,7 +105,7 @@ function renderGrownups(app: App) {
       t('Gentle planets'),
       h('i'),
     ),
-    h('p', { class: 'muted small' }, t("Sky bumps give the throw back and Clashes don't happen. Stars count as normal.")),
+    h('p', { class: 'muted small' }, t('Sky bumps give the throw back, and Troubles and Clashes rest. Stars count as normal.')),
   );
   const sections = [
     p.chapters.length && Date.now() >= quietUntil

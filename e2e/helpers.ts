@@ -3,6 +3,7 @@
 import { expect, type Page, type TestInfo } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { earlierRoundIntroIds } from '../src/meta/coach';
 
 // ------------------------------------------------------------------ locales
 
@@ -469,8 +470,10 @@ export interface MidGameOpts {
  * then the profile moved to `level`, a returning session, the Passport named. Lands on Play, quietly.
  */
 export async function midGame(page: Page, opts: MidGameOpts = {}) {
+  const level = opts.level ?? 45;
+  const earlierRoundIntros = earlierRoundIntroIds(level);
   await page.evaluate(
-    async ({ level, claimables }) => {
+    async ({ level, claimables, earlierRoundIntros }) => {
       const a = (window as any).__app;
       a.p.settings.reduceMotion = true;
       for (let n = 1; n <= 5; n++) {
@@ -482,6 +485,9 @@ export async function midGame(page: Page, opts: MidGameOpts = {}) {
       const p = a.p;
       p.tutorial = true;
       p.level = level;
+      for (const id of earlierRoundIntros) if (!p.mailSeen.includes(`coach-${id}`)) p.mailSeen.push(`coach-${id}`);
+      const savedIntros = JSON.parse(localStorage.getItem('pp.coach.intros') ?? '[]') as string[];
+      localStorage.setItem('pp.coach.intros', JSON.stringify([...new Set([...savedIntros, ...earlierRoundIntros])]));
       p.passport.set = true;
       p.meta.sessions = 3;
       p.dust = 5000;
@@ -499,7 +505,7 @@ export async function midGame(page: Page, opts: MidGameOpts = {}) {
       a.save();
       a.selectTab('home');
     },
-    { level: opts.level ?? 45, claimables: !!opts.claimables },
+    { level, claimables: !!opts.claimables, earlierRoundIntros },
   );
   await waitScreen(page, 'home');
   await settle(page);

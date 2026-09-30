@@ -162,7 +162,7 @@ const RULES: Rule[] = [
       from: '{c}',
       face: '{c}',
       title: 'Can I come along?',
-      body: 'I have seen you on so many planets. Could I be your buddy? Pick me in Styles and I will cheer for every throw.',
+      body: 'I love my Homeworld home. Pick me in Styles and I can help with Troubles on your planets.',
     }),
   },
   {
