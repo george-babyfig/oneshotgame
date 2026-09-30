@@ -1,59 +1,71 @@
-# App Store listing — Comet Garden (Español (Latinoamérica))
+# Comet Garden — App Store listing (Español, es-MX)
 
-**Name:** Comet Garden
-**Subtitle (30):** Crea un planeta lleno de vida
+**App name (30):** Comet Garden
+**Subtitle (30):** Lanza cometas, cultiva mundos
+**Primary category:** Games → Casual · **Secondary:** Games → Simulation (set once; same for every language)
+**Age rating:** 4+ (same as en-US)
+**Price:** same as en-US (not part of the localized text)
 
 ## Promotional text (170)
 
-¡Nuevo! Planeta del Día, Lluvia de Meteoros, Jardín Zen y desafíos entre amigos. ¡Y visitantes que te dejan regalos mientras no estás!
+Lanza cometas y haz crecer un mundito donde se mudan criaturas tiernas. Mezcla Fusiones, encadena Combos y crea tu Planeta Hogar. Sin anuncios; solo compran los adultos.
 
-## Description
+## Description (4,000)
 
-Lanza rocas, cometas de hielo, magma y semillas a un pequeño planeta que gira… ¡y míralo cobrar vida!
+Lanza un cometa, mira cómo florece un mundo diminuto y dales la bienvenida a las criaturas que llegan a vivir en él.
 
-La gravedad curva cada lanzamiento, así que apuntar es parte de la diversión. La roca eleva montañas, el hielo llena océanos, el magma forma volcanes y las semillas hacen crecer bosques. Junta los terrenos correctos y llegarán bichitos adorables: nutrias donde el bosque se encuentra con el océano, tortugas obsidiana donde los volcanes tocan el mar y maravillas legendarias para los planetas más audaces.
+LANZA Y HAZ CRECER
+• Jala, apunta y suelta: la gravedad curva cada lanzamiento alrededor del planeta
+• Las Rocas levantan montañas, los Cometas de Hielo llenan océanos, las Vainas de Semillas hacen crecer praderas y bosques, el Magma forma volcanes, y las Nubes de Lluvia y los Estallidos Solares ayudan a que todo prospere
+• Antes de que sueltes, el planeta te muestra qué hará tu lanzamiento: tierra nueva, quién se muda y quién podría irse a pasear
 
-IDEAL PARA UN RATITO LIBRE
-• Niveles de un minuto que terminas en cualquier sala de espera
-• Gana hasta 3 estrellas por planeta y vuelve a jugar para lograr la puntuación perfecta
-• Planetas Difíciles y Súper Difíciles para un verdadero reto
+CONOCE A LAS CRIATURAS
+• 36 criaturas por descubrir, cada una con su hogar favorito: nutrias donde el bosque se junta con el mar, tritones en volcanes tibios, búhos en pinos nevados
+• Cada criatura trae un rasgo que protege su hogar
+• Guárdalas todas en tu Libro de la Vida, desde las más comunes hasta leyendas raras
 
-UNA GALAXIA QUE CRECE CONTIGO
-• Cada planeta terminado se suma a tu galaxia y genera polvo estelar mientras no estás
-• Los bichitos visitan tu galaxia y te dejan regalos y recuerdos
-• Usa tu polvo estelar en mejoras permanentes
+MEZCLA, ENCADENA Y PLANEA
+• Fusiones: dos lanzamientos que trabajan juntos, como el hielo y el magma, que forman Vapor
+• Combos: lanzamientos ingeniosos, uno tras otro, hacen crecer una cadena de poder extra
+• Supernova: cárgala y lanza un tiro supergrande
+• Lee el cielo: Rocas Errantes, una Luna Burbuja y un Anillo de Guijarros que gira; calcula bien el momento de cada lanzamiento
 
-¡TANTO POR DESCUBRIR!
-• 36 bichitos para coleccionar en tu Libro de la Vida, de comunes a legendarios
-• Conjuntos de hábitat, capítulos con cofres del tesoro y el Camino Estelar
-• Misiones diarias, un regalo diario y Rangos de Explorador
+TU PROPIO PLANETA HOGAR
+• Invita a los amigos que conozcas a vivir en tu Planeta Hogar
+• Elige un Compañero que te ayude cuando aparezca un Problema en un planeta
+• Crea a tu Guardián: cara, tono de piel, pelo y conjuntos
 
 JUEGA A TU MANERA
-• Planeta del Día: todos reciben el mismo mundo cada día; comparte tu resultado
-• Lluvia de Meteoros: 60 segundos de lanzamientos ilimitados
-• Jardín Zen: sin objetivos ni reloj, un mundo solo para ti
-• Desafía a un amigo: envía un código y descubran quién hace crecer más vida
+• Más de 100 planetas que suben de dificultad poco a poco, con 1 a 3 estrellas en cada uno
+• Una escalera de ayuda cuando un planeta se complica: qué pasó, un consejo y una ayudita extra
+• Planeta del Día, Viaje Semanal, Lluvia de Meteoros, Jardín Zen y desafíos entre amigos
+• Juega en English, Español, Français, Deutsch, Português (Brasil) o 日本語
 
-Justo y amigable: sin anuncios, sin vidas ni temporizadores de energía, sin cajas de botín y sin rastreo. Las compras opcionales siempre muestran exactamente lo que recibes.
+PARA LOS ADULTOS
+• Sin anuncios. Sin vidas ni temporizadores de energía. Sin recompensas pagadas al azar.
+• Las compras opcionales se venden solo en la Zona de padres, protegida con un control parental, y siempre muestran exactamente lo que recibes
+• Ajuste de Planetas tranquilos, resumen del tiempo de juego y un recordatorio de descanso opcional
+• Datos no recopilados: el juego guarda el progreso en este dispositivo
 
-## Keywords (100)
+¿Preguntas o ideas? Visita la página de soporte que aparece abajo. ¡Que disfrutes lanzando!
 
-planeta,casual,relajante,idle,lindo,animales,coleccionar,gravedad,espacio,zen,sin internet,puzle
+## Keywords (100 bytes, es-MX)
+
+espacio,planeta,asteroide,meteorito,galaxia,tierno,criatura,animales,física,volcán,relajante,zen
+
+_Native terms: tierno (cute), relajante (relaxing), física (physics games), zen (calm; also the Jardín Zen mode). cometa, mundo, lanzar and cultivar are left out because the subtitle already has them. terraformar and océano were cut to fit 100 bytes._
+
+## Support / marketing / privacy
+
+- Support URL: https://<your-site>/support.html (site files in `site/`; same URL for every language)
+- Marketing URL: https://<your-site>/
+- Privacy policy URL: https://<your-site>/privacy.html (the page includes a Spanish section)
+- Copyright: 2026 <owner legal name>
 
 ## What's New
 
-¡Nuestro primer lanzamiento! Gracias por jugar.
+Not shown for version 1.0 (Apple has no "What's New" on a first release). From 1.0.1, translate the English notes from `store/whats-new-template.md`; sign-off suggestion: "¡Que disfrutes lanzando! — el equipo de Comet Garden".
 
-## In-app purchases
+## Lengths
 
-See listing.md
-
-## Review notes
-
-See listing.md
-
-## Screenshots
-
-See listing.md
-
-Character counts: subtitle 29, promo 134, keywords 96
+Subtitle 29/30 chars · Promotional text 169/170 chars · Description 2,386/4,000 chars · Keywords 98/100 bytes (UTF-8). Measured with python3 on the exact text to paste (len() in characters; blank lines in the description counted).

@@ -1214,7 +1214,6 @@
   "The shop opens after the first chapter chest.": "最初のチャプターの宝箱の後、ショップが開きます。",
   "This code contains a summary of play and purchases from this device. Copy it if you want to share it with the tester team.": "このコードには、このデバイスのプレイと購入の要約が含まれています。テスターチームと共有したい場合はコピーしてください。",
   "This is a reminder, not a purchase limit. Check Screen Time for limits.": "これは通知であり、購入制限ではありません。制限についてはスクリーンタイムを確認してください。",
-  "This week: {rounds} rounds and {minutes} minutes": "今週：{rounds}ラウンドと{minutes}分",
   "To open Grown-ups, please answer:": "「おうちの方へ」を開くには、こたえてね：",
   "Try on": "試着",
   "Used up when spent": "使うと消える",
@@ -1491,5 +1490,10 @@
   "in {n}": "あと{n}",
   "It dries the land and hurts the planet. Watch for the red outline on the planet.": "土地がかわいて、星がよわってしまうよ。わくせいの赤いふちに気をつけてね。",
   "Magma or Sunburst on hot, dry land may cause Dry Spell. It hurts the planet. Watch the red outline!": "あつくてかわいた土地にマグマやおひさまボールが当たると、ひでりになることがあるよ。星がよわってしまうから、赤いふちに気をつけてね！",
-  "Watch the planet: it shows what your throw will do.": "わくせいを見てね。投げたらどうなるか教えてくれるよ。"
+  "Watch the planet: it shows what your throw will do.": "わくせいを見てね。投げたらどうなるか教えてくれるよ。",
+  "This week: {rounds} and {minutes}": "今週：{rounds}と{minutes}",
+  "{n} round": "{n}ラウンド",
+  "{n} rounds": "{n}ラウンド",
+  "{n} minute": "{n}分",
+  "{n} minutes": "{n}分"
 }

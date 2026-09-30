@@ -1214,7 +1214,6 @@
   "The shop opens after the first chapter chest.": "La boutique ouvre après le premier coffre de chapitre.",
   "This code contains a summary of play and purchases from this device. Copy it if you want to share it with the tester team.": "Ce code contient un résumé du jeu et des achats de cet appareil. Copie-le si tu veux le partager avec l'équipe de test.",
   "This is a reminder, not a purchase limit. Check Screen Time for limits.": "C'est un rappel, pas une limite d'achat. Vérifiez Temps d'écran pour les limites.",
-  "This week: {rounds} rounds and {minutes} minutes": "Cette semaine : {rounds} parties et {minutes} minutes",
   "To open Grown-ups, please answer:": "Pour ouvrir Adultes, réponds s'il te plaît :",
   "Try on": "Essayer",
   "Used up when spent": "Utilisé quand dépensé",
@@ -1491,5 +1490,10 @@
   "in {n}": "dans {n}",
   "It dries the land and hurts the planet. Watch for the red outline on the planet.": "Elle assèche la terre et abîme la planète. Regarde le contour rouge sur la planète !",
   "Magma or Sunburst on hot, dry land may cause Dry Spell. It hurts the planet. Watch the red outline!": "Magma ou Éclat solaire sur une terre chaude et sèche peut causer une Sécheresse. Elle abîme la planète. Regarde le contour rouge !",
-  "Watch the planet: it shows what your throw will do.": "Regarde la planète : elle montre ce que ton lancer va faire."
+  "Watch the planet: it shows what your throw will do.": "Regarde la planète : elle montre ce que ton lancer va faire.",
+  "This week: {rounds} and {minutes}": "Cette semaine : {rounds} et {minutes}",
+  "{n} round": "{n} partie",
+  "{n} rounds": "{n} parties",
+  "{n} minute": "{n} minute",
+  "{n} minutes": "{n} minutes"
 }

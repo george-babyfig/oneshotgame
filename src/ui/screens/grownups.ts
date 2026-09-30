@@ -1,5 +1,5 @@
 import { h, btn, modal, confirmBox, toast } from '../dom';
-import { getLang, t } from '../../i18n';
+import { getLang, t, tp } from '../../i18n';
 import { deviceCurrency, formatCurrency } from '../../meta/currency';
 import { COSMETIC_BY_ID } from '../../meta/cosmetics';
 import { PRODUCTS, PRODUCT_BY_KEY } from '../../meta/tuning';
@@ -161,7 +161,14 @@ function renderGrownups(app: App) {
       'section',
       { class: 'grownups-section' },
       h('h2', null, t('Play time')),
-      h('p', null, t('This week: {rounds} rounds and {minutes} minutes', time)),
+      h(
+        'p',
+        null,
+        t('This week: {rounds} and {minutes}', {
+          rounds: tp(time.rounds, '{n} round', '{n} rounds'),
+          minutes: tp(time.minutes, '{n} minute', '{n} minutes'),
+        }),
+      ),
       h('label', null, t('Suggest a break'), breaks),
     ),
     h(
