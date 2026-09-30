@@ -3,12 +3,12 @@
 //
 // A mid-game player (planet 30 reached) plays planet 24 (a goal, the Supernova). Twenty throws go through
 // the dev hooks `window.__scene.aimAt(sector)` / `fire(vector)` across different sectors. Before each throw
-// the aim is held for a moment so the landing card (and its row 2, "… wanders off") is drawn; after each
+// the aim is held for a moment so the aim tag (including wander-off faces) is drawn; after each
 // landing every frame is sampled until the feedback settles.
 //
 // What is measured, and how (nothing is exposed for the test beyond the M6 dev hooks):
 // - Canvas text: the scene's 2D context `fillText` is wrapped, so every string drawn on the planet (the
-//   popup queue, the landing card rows, the Supernova ring label, ghost bubbles) is captured with its real
+//   popup queue, the aim tag symbols, the Supernova ring label, ghost bubbles) is captured with its real
 //   box (measureText bounding box × the current transform), per frame.
 // - DOM text: every visible text node on the page (HUD labels, goal chips, coach tips, the new-creature
 //   banner, the "+N life" pip, toasts), as tight line boxes from Range.getClientRects.
@@ -18,7 +18,7 @@
 //   src/ui/feel.ts): at most 2 on screen, and consecutive popups start ≥ 250 ms apart (scene time and wall
 //   time). The removed "×N" chain must never be drawn.
 // - Overlay types: there is no counter in the scene, so the types are derived per frame from its state:
-//   popups, wander-off ghosts, the "Show me where" goal pulse, the aim preview (landing card + outlined
+//   popups, wander-off ghosts, the "Show me where" goal pulse, the aim preview (aim tag + outlined
 //   sectors), the Supernova ring label, a coach tip, the new-creature banner, the "+N life" pip.
 import { expect, test, type Page } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
@@ -54,8 +54,8 @@ interface Report {
   maxPlanetTypes: number;
   planetTypesAtMax: string[];
   overlayTypesSeen: string[];
-  landingCards: number;
-  landingRow2: number;
+  aimTags: number;
+  aimTagsWithLoss: number;
   textsSeen: number;
 }
 
@@ -80,8 +80,8 @@ async function instrument(page: Page) {
       maxPlanetTypes: 0,
       planetTypesAtMax: [],
       overlayTypesSeen: new Set<string>(),
-      landingCards: 0,
-      landingRow2: 0,
+      aimTags: 0,
+      aimTagsWithLoss: 0,
       textsSeen: 0,
       throw: 0,
       phase: 'aim',
@@ -198,11 +198,11 @@ async function instrument(page: Page) {
       if (s.ghosts.length) add('wander-ghosts', true);
       if (s.goalPulse && s.time < s.goalPulse.until && s.goalPulse.sectors.length) add('goal-pulse', true);
       const aiming = !!s.aimFrom && s.pull().len >= 18;
-      const card = aiming && canvasText.some((t) => t.text.includes(s.predictCache?.title ?? '\u0000'));
-      if (card) {
-        add('aim-preview', true); // the changed sectors are outlined on the planet
-        R.landingCards++;
-        if (s.predictCache?.lost) R.landingRow2++;
+      const tag = aiming && !!s.predictCache?.facts && !!s.aimTagPosition;
+      if (tag) {
+        add('aim tag', true); // the changed sectors are outlined on the planet
+        R.aimTags++;
+        if (s.predictCache?.facts.lost.length) R.aimTagsWithLoss++;
       }
       const nova = canvasText.find((t) => /SUPERNOVA READY|Supernova held/.test(t.text));
       if (nova) add('nova-label', hits(nova.box));
@@ -300,7 +300,7 @@ test.describe('M6 overlap capture [en]', () => {
         return s.canAim();
       });
       const sector = sectorFor(k);
-      // hold the aim so the landing card and outlined sectors are drawn
+      // hold the aim so the aim tag and outlined sectors are drawn
       const v = await page.evaluate(
         ({ sector, k }) => {
           const w = window as any;
@@ -360,8 +360,8 @@ test.describe('M6 overlap capture [en]', () => {
         maxPlanetTypes: R.maxPlanetTypes,
         planetTypesAtMax: R.planetTypesAtMax,
         overlayTypesSeen: [...R.overlayTypesSeen],
-        landingCards: R.landingCards,
-        landingRow2: R.landingRow2,
+        aimTags: R.aimTags,
+        aimTagsWithLoss: R.aimTagsWithLoss,
         textsSeen: R.textsSeen,
       };
     });
@@ -392,7 +392,7 @@ test.describe('M6 overlap capture [en]', () => {
         anywhereAtMax: r.overlayTypesAtMax,
         seen: r.overlayTypesSeen,
       },
-      landingCard: { framesDrawn: r.landingCards, framesWithRow2: r.landingRow2 },
+      aimTag: { framesDrawn: r.aimTags, framesWithLoss: r.aimTagsWithLoss },
       maxTextBoxesInAFrame: r.textsSeen,
     };
     const reportFile = info.outputPath('overlap-report.json');
@@ -402,11 +402,11 @@ test.describe('M6 overlap capture [en]', () => {
     await page.screenshot({ path: file });
     await info.attach('after-20-throws', { path: file, contentType: 'image/png' });
     console.log(
-      `[M6 overlap ${info.project.name}] ${r.frames} frames, ${r.overlaps.filter((o) => !o.moving).length} overlapping text pairs (+${r.overlaps.filter((o) => o.moving).length} crossings by the flying life pip), popups max ${r.maxPopupsDrawn} on screen (${starts.length} started, min gap ${Math.round(minScene)} ms scene / ${Math.round(minWall)} ms wall), overlay types on the planet max ${r.maxPlanetTypes} [${r.planetTypesAtMax.join(', ')}] (anywhere ${r.maxOverlayTypes} [${r.overlayTypesAtMax.join(', ')}]), landing card in ${r.landingCards} frames (row 2 in ${r.landingRow2})`,
+      `[M6 overlap ${info.project.name}] ${r.frames} frames, ${r.overlaps.filter((o) => !o.moving).length} overlapping text pairs (+${r.overlaps.filter((o) => o.moving).length} crossings by the flying life pip), popups max ${r.maxPopupsDrawn} on screen (${starts.length} started, min gap ${Math.round(minScene)} ms scene / ${Math.round(minWall)} ms wall), overlay types on the planet max ${r.maxPlanetTypes} [${r.planetTypesAtMax.join(', ')}] (anywhere ${r.maxOverlayTypes} [${r.overlayTypesAtMax.join(', ')}]), aim tag in ${r.aimTags} frames (losses in ${r.aimTagsWithLoss})`,
     );
 
     expect(r.frames, 'frames sampled').toBeGreaterThan(THROWS * 30);
-    expect(r.landingCards, 'the landing card was drawn while aiming').toBeGreaterThan(0);
+    expect(r.aimTags, 'the aim tag was drawn while aiming').toBeGreaterThan(0);
     const still = r.overlaps.filter((o) => !o.moving);
     if (r.overlaps.length > still.length)
       info.annotations.push({

@@ -1,12 +1,23 @@
-import { BIOMES, KINDS, SECTORS, SPECIES_BY_ID } from '../core/world';
-import { drawCreature } from './art/critters';
+import { KINDS, SECTORS } from '../core/world';
+import { drawCreature, drawWanderGhost } from './art/critters';
 import { drawProjectile } from './art/projectiles';
 import { drawKeeper, drawLauncher } from './art/keeper';
-import { REACTIONS, novaForThrow, previewStep } from '../core/round';
-import { drawReactionIcon, reactionColor } from './art/reactions';
+import { novaForThrow, previewStep } from '../core/round';
 import { flyFull, STAR_SLING } from '../core/flight';
 import { needsBonkBadge } from './feel';
 import { t } from '../i18n';
+import {
+  aimTagFacts,
+  aimTagRing,
+  aimTagSize,
+  aimTagSummary,
+  aimTagSymbols,
+  intersects,
+  placeAimTag,
+  segmentNearRect,
+  type Rect,
+} from './aimtag';
+import { speak } from './hud';
 import type { LevelScene } from './game';
 
 export const MAX_PULL = 150;
@@ -56,181 +67,141 @@ export function drawGoalPulse(scene: LevelScene) {
   for (const sector of scene.goalPulse.sectors) outline(scene, sector, '#ffe78e', alpha);
 }
 
-export function drawLanding(scene: LevelScene, i: number) {
+export function aimTagReserved(scene: LevelScene, path?: ReturnType<typeof flyFull>): Rect[] {
+  const canvas = scene.canvas.getBoundingClientRect();
+  const sx = scene.w / canvas.width;
+  const sy = scene.h / canvas.height;
+  const selectors =
+    '.level .hud-top, .level .life, .level .goals, .level .forecast, .level .twist, .level .hint, .level .banners .show, .level .finish:not(.hidden), .level .hud-bottom';
+  const elements = [...scene.el.querySelectorAll(selectors)];
+  if (scene.forecastEl && !elements.includes(scene.forecastEl)) elements.push(scene.forecastEl);
+  const zones = elements.map((el) => {
+    const r = el.getBoundingClientRect();
+    return { x: (r.left - canvas.left) * sx, y: (r.top - canvas.top) * sy, width: r.width * sx, height: r.height * sy };
+  });
+  zones.push({ x: scene.launch.x - 65, y: scene.launch.y - 65, width: 130, height: 130 });
+  if (scene.aimTo) zones.push({ x: scene.aimTo.x - 40, y: scene.aimTo.y - 40, width: 80, height: 80 });
+  const count = scene.upcoming.length;
+  for (let k = 0; k < count; k++) {
+    const x = scene.launch.x + (count === 1 ? 88 : 90 + (k % 2) * 34);
+    const y = scene.launch.y + (count === 1 ? -56 : -74 + Math.floor(k / 2) * 34);
+    zones.push({ x: x - 28, y: y - 28, width: 56, height: 56 });
+  }
+  if (path) {
+    const steps = SCOPE_STEPS[scene.o.boosters.scope ? 3 : scene.o.scopeLevel];
+    const visibleCount = Math.min(steps, Math.ceil(path.points.length / 8));
+    for (let k = 0; k < visibleCount; k++) {
+      const point = path.points[Math.min(path.points.length - 1, (k + 1) * 8 - 1)];
+      if (!point || point.elapsed > steps / 30) break;
+      zones.push({ x: point.x - 4, y: point.y - 4, width: 8, height: 8 });
+    }
+  }
+  return zones;
+}
+
+export function aimTagRect(scene: LevelScene, i: number, path?: ReturnType<typeof flyFull>): Rect | null {
+  const [x, y] = scene.sectorPoint(i, 1.34);
+  const points = path?.points;
+  const last = points && points.length > 1 ? ([points[points.length - 2], points[points.length - 1]] as const) : null;
+  const size = aimTagSize(scene.predictCache!.facts, scene.w);
+  const placement = placeAimTag(
+    { x, y },
+    { x: scene.cx, y: scene.cy },
+    size,
+    { width: scene.w, height: scene.h },
+    aimTagReserved(scene, path),
+    last
+      ? [
+          { x: last[0].x, y: last[0].y },
+          { x: last[1].x, y: last[1].y },
+        ]
+      : null,
+  );
+  if (!placement) {
+    scene.aimTagPosition = null;
+    return null;
+  }
+  const target = placement.rect;
+  const previous = scene.aimTagPosition;
+  if (scene.o.reduceMotion || !previous) {
+    scene.aimTagPosition = { x: target.x, y: target.y };
+  } else {
+    const eased = {
+      x: Math.max(6, Math.min(scene.w - size.width - 6, previous.x + (target.x - previous.x) * 0.24)),
+      y: Math.max(6, Math.min(scene.h - size.height - 6, previous.y + (target.y - previous.y) * 0.24)),
+    };
+    const moving = { ...eased, ...size };
+    const safe =
+      aimTagReserved(scene, path).every((zone) => !intersects(moving, zone, 5)) && (!last || !segmentNearRect(last[0], last[1], moving, 9));
+    scene.aimTagPosition = safe ? eased : { x: target.x, y: target.y };
+  }
+  return { ...scene.aimTagPosition, ...size };
+}
+
+/** The full-flight prediction is unchanged; only its compact drawing follows the landing sector. */
+export function drawLanding(scene: LevelScene, i: number, path?: ReturnType<typeof flyFull>) {
   const key = `${i}|${scene.cur}|${scene.throwsUsed}|${scene.nova.charge}|${scene.nova.held}|${scene.combo.links}|${scene.combo.rest}|${scene.o.buddy?.species ?? ''}|${scene.roundModifiers().buddyShield ?? ''}|${scene.troubles.map((v) => `${v.id}:${v.nextIn}:${v.settled}`).join(',')}`;
   if (scene.predictCache?.key !== key) {
     const state = scene.roundState();
     const res = previewStep(state, { kind: scene.cur, sector: i, nova: novaForThrow(state) }, scene.roundModifiers(), scene.rules);
-    const after = BIOMES[res.state.planet.sectors[i].biome];
-    const lost = res.lost[0];
-    const life = res.after - res.before + res.labBonus;
-    const creature = res.spawned[0] ? t(SPECIES_BY_ID[res.spawned[0].id].name) : '';
-    scene.predictCache = {
-      key,
-      title: `${after.deco || '●'} ${t(after.name)}${life ? ` · ${t('{n} life', { n: `${life > 0 ? '+' : ''}${life}` })}` : ''}${creature ? ` · ${t('{creature} moves in', { creature })}` : ''}`,
-      lost:
-        res.lost.length > 1
-          ? t('{n} friends wander off', { n: res.lost.length })
-          : lost
-            ? t('{creature} wanders off', { creature: t(SPECIES_BY_ID[lost.species].name) })
-            : '',
-      reaction: res.reactions[0]?.id,
-      comboStep: res.combo.step,
-      comboEnd: !!res.combo.ended && scene.combo.links > 0 && res.combo.links === 0,
-      trouble: res.troubleEvents[0]
-        ? res.troubleEvents[0].kind === 'settled'
-          ? res.troubleEvents[0].id === 'vent'
-            ? t('Vent cooled!')
-            : t('{name} settled!', { name: t(res.troubleEvents[0].id === 'vine' ? 'Tanglevine' : 'Frost Creep') })
-          : res.troubleEvents[0].kind === 'blocked'
-            ? safeTroubleText()
-            : t('{name} reaches this land', {
-                name: t(
-                  res.troubleEvents[0].id === 'vent' ? 'Ember Vent' : res.troubleEvents[0].id === 'vine' ? 'Tanglevine' : 'Frost Creep',
-                ),
-              })
-        : '',
-      changed: res.changed,
-    };
+    const land = res.state.planet.sectors[i].biome;
+    const facts = aimTagFacts(res, land);
+    const title = aimTagSummary(facts);
+    scene.predictCache = { key, title, facts, changed: res.changed };
+    if (scene.liveEl) speak(scene, title);
   }
-  const pc = scene.predictCache;
-  for (const sector of pc.changed) outline(scene, sector, '#ffffff', scene.o.reduceMotion ? 0.9 : 0.65 + Math.sin(scene.time * 8) * 0.2);
+  const { facts, changed } = scene.predictCache;
+  for (const sector of changed) outline(scene, sector, '#ffffff', scene.o.reduceMotion ? 0.9 : 0.65 + Math.sin(scene.time * 8) * 0.2);
   const g = scene.g;
-  const { x, y, width, height } = landingCardRect(scene);
+  for (const lost of facts.lost) {
+    const [gx, gy] = scene.sectorPoint(lost.sector, 1.18);
+    drawWanderGhost(g, lost.species, gx, gy, scene.R * 0.16, '↗', scene.time, !!scene.o.reduceMotion);
+  }
+  const rect = aimTagRect(scene, i, path);
+  if (!rect) return;
+  const { x, y, width, height } = rect;
   const scale =
     scene.previewTextScale ||
     (scene.previewTextScale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--text-scale')) || 1);
   g.save();
-  g.fillStyle = 'rgba(10,6,30,0.9)';
-  g.strokeStyle = '#d3d0ed';
-  g.lineWidth = 1.5;
+  g.fillStyle = 'rgba(10,6,30,0.94)';
+  const ring = aimTagRing(facts);
+  g.strokeStyle = ring === 'gold' || ring === 'double-gold' ? '#ffe38a' : ring === 'red' ? '#ff8187' : '#d3d0ed';
+  g.lineWidth = ring === 'plain' ? 1.5 : 3;
   g.beginPath();
-  g.roundRect(x, y, width, height, 12);
+  g.roundRect(x, y, width, height, 15);
   g.fill();
   g.stroke();
+  if (ring === 'double-gold') {
+    g.lineWidth = 2;
+    g.beginPath();
+    g.roundRect(x + 5, y + 5, width - 10, height - 10, 11);
+    g.stroke();
+  }
   g.textAlign = 'center';
   g.textBaseline = 'middle';
-  g.font = `700 ${Math.round(13 * scale)}px Fredoka, ui-rounded, system-ui, sans-serif`;
-  g.fillStyle = '#ffffff';
-  const secondRow = !!pc.reaction || !!pc.lost || pc.comboEnd || !!pc.trouble;
-  g.fillText(pc.title, x + width / 2, y + (secondRow ? 17 : height / 2), width - 12);
-  const thirdRow = landingNeedsThirdRow(scene, width);
-  if (pc.reaction) {
-    const def = REACTIONS[pc.reaction];
-    const chipY = y + 43;
-    g.font = `700 ${Math.round(12 * scale)}px Fredoka, ui-rounded, system-ui, sans-serif`;
-    const chipW = Math.min(width - 16, Math.max(76, g.measureText(t(def.name)).width + 48));
-    const chipX = x + ((pc.lost || pc.comboEnd) && !thirdRow ? 8 : (width - chipW) / 2);
-    g.fillStyle = def.kind === 'fusion' ? '#5b4317' : '#672e38';
-    g.strokeStyle = reactionColor(pc.reaction);
-    g.lineWidth = 1.5;
-    g.beginPath();
-    g.roundRect(chipX, chipY - 12, chipW, 24, 12);
-    g.fill();
-    g.stroke();
-    drawReactionIcon(g, pc.reaction, chipX + 15, chipY, 18);
-    g.fillStyle = '#fff';
-    g.font = `700 ${Math.round(12 * scale)}px Fredoka, ui-rounded, system-ui, sans-serif`;
-    g.textAlign = 'left';
-    g.fillText(t(def.name), chipX + 29, chipY, chipW - 56);
-    if (pc.comboStep >= 2) {
-      g.fillStyle = '#ffe38a';
+  if (facts.delta) {
+    g.font = `800 ${Math.round(25 * scale)}px Fredoka, ui-rounded, system-ui, sans-serif`;
+    g.fillStyle = facts.delta > 0 ? '#a5ef9e' : '#ff8d95';
+    g.fillText(`${facts.delta > 0 ? '+' : '−'}${Math.abs(facts.delta)}`, x + width / 2, y + 20, width - 12);
+  }
+  const icons = aimTagSymbols(facts);
+  const iconY = y + (facts.delta ? 45 : height / 2);
+  g.font = `700 ${Math.round(18 * scale)}px system-ui`;
+  for (let row = 0; row < Math.ceil(icons.length / 5); row++) {
+    const shown = icons.slice(row * 5, row * 5 + 5);
+    const gap = Math.min(21, (width - 12) / shown.length);
+    shown.forEach((icon, n) => g.fillText(icon, x + width / 2 + (n - (shown.length - 1) / 2) * gap, iconY + row * 18, gap + 3));
+  }
+  if (facts.comboBeads) {
+    g.fillStyle = '#ffe38a';
+    for (let n = 0; n < facts.comboBeads; n++) {
       g.beginPath();
-      g.arc(chipX + chipW - 13, chipY, 3.5, 0, Math.PI * 2);
-      g.fill();
-    }
-    if (pc.comboStep >= 4) {
-      g.fillStyle = '#a5ef9e';
-      g.beginPath();
-      g.ellipse(chipX + chipW - 26, chipY - 1, 5, 2.5, -0.6, 0, Math.PI * 2);
+      g.arc(x + width / 2 + (n - (facts.comboBeads - 1) / 2) * 11, y + height - 5, 2.8, 0, Math.PI * 2);
       g.fill();
     }
   }
-  if (pc.lost || pc.comboEnd) {
-    g.font = `700 ${Math.round(12 * scale)}px Fredoka, ui-rounded, system-ui, sans-serif`;
-    g.fillStyle = '#c5c5d2';
-    g.textAlign = 'center';
-    const label = pc.lost || t('Combo ends');
-    if (pc.reaction && !thirdRow) {
-      const chipW = Math.min(width - 16, Math.max(76, g.measureText(t(REACTIONS[pc.reaction].name)).width + 48));
-      const left = x + 8 + chipW + 10;
-      const available = x + width - 8 - left;
-      g.textAlign = 'left';
-      g.fillText(fitWarning(g, label, available), left, y + 43, available);
-    } else {
-      g.textAlign = 'center';
-      const available = width - (pc.comboEnd ? 52 : 16);
-      g.fillText(fitWarning(g, label, available), x + width / 2 + (pc.comboEnd ? 10 : 0), y + (thirdRow ? 68 : 43), available);
-    }
-    if (pc.comboEnd && (thirdRow || !pc.reaction)) {
-      g.strokeStyle = '#a5a5b6';
-      g.lineWidth = 2;
-      g.beginPath();
-      const markY = y + (thirdRow ? 68 : 43);
-      g.arc(x + 18, markY, 4, 0, Math.PI * 2);
-      g.moveTo(x + 12, markY + 6);
-      g.lineTo(x + 24, markY - 6);
-      g.stroke();
-    }
-  }
-  if (pc.trouble) {
-    g.font = `700 ${Math.round(12 * scale)}px Fredoka, ui-rounded, system-ui, sans-serif`;
-    g.fillStyle = '#bdf4d0';
-    g.textAlign = 'center';
-    g.fillText(pc.trouble, x + width / 2, y + (pc.reaction || pc.lost || pc.comboEnd ? (thirdRow ? 94 : 68) : 43), width - 16);
-  }
   g.restore();
-}
-
-/** Canvas maxWidth may compress a long translation; shorten only after the 85% limit. */
-function fitWarning(g: CanvasRenderingContext2D, label: string, width: number): string {
-  if (g.measureText(label).width <= width / 0.85) return label;
-  const letters = Array.from(label);
-  while (letters.length && g.measureText(`${letters.join('')}…`).width > width) letters.pop();
-  return `${letters.join('')}…`;
-}
-
-export function landingCardRect(scene: LevelScene) {
-  const canvas = scene.canvas.getBoundingClientRect();
-  const scale = scene.h / canvas.height;
-  const goalsBottom = (scene.goalsEl.getBoundingClientRect().bottom - canvas.top) * scale;
-  const bannerBottom = scene.el.querySelector('.banners .show')?.getBoundingClientRect().bottom ?? canvas.top;
-  const twistBottom = scene.el.querySelector('.twist')?.getBoundingClientRect().bottom ?? canvas.top;
-  const forecastBottom = ((scene.forecastEl?.getBoundingClientRect().bottom ?? canvas.top) - canvas.top) * scale;
-  const top = Math.max(
-    150,
-    goalsBottom + 8,
-    forecastBottom + 8,
-    (bannerBottom - canvas.top) * scale + 8,
-    (twistBottom - canvas.top) * scale + 8,
-  );
-  const width = Math.min(scene.w - 24, 276);
-  const height =
-    scene.predictCache?.trouble && (scene.predictCache.lost || scene.predictCache.reaction || scene.predictCache.comboEnd)
-      ? landingNeedsThirdRow(scene, width)
-        ? 112
-        : 88
-      : scene.predictCache?.trouble
-        ? 62
-        : scene.predictCache && (scene.predictCache.lost || scene.predictCache.reaction || scene.predictCache.comboEnd)
-          ? landingNeedsThirdRow(scene, width)
-            ? 88
-            : 62
-          : 34;
-  return { x: (scene.w - width) / 2, y: top, width, height };
-}
-
-function landingNeedsThirdRow(scene: LevelScene, width: number): boolean {
-  const pc = scene.predictCache;
-  if (!pc?.reaction || (!pc.lost && !pc.comboEnd)) return false;
-  const g = scene.g;
-  const scale = scene.previewTextScale || 1;
-  g.save();
-  g.font = `700 ${Math.round(12 * scale)}px Fredoka, ui-rounded, system-ui, sans-serif`;
-  const chipW = Math.min(width - 16, Math.max(76, g.measureText(t(REACTIONS[pc.reaction].name)).width + 48));
-  const textW = g.measureText(pc.lost || t('Combo ends')).width;
-  g.restore();
-  return width - 26 - chipW < textW * 0.85;
 }
 
 export function drawNovaMeter(scene: LevelScene, x: number, y: number, aiming: boolean) {
@@ -379,8 +350,10 @@ export function drawAim(scene: LevelScene) {
       const steps = SCOPE_STEPS[scene.o.boosters.scope ? 3 : scene.o.scopeLevel];
       const path = predictFlight(scene, p.vx, p.vy);
       scene.drawnAim = { vx: p.vx, vy: p.vy, roundTime: scene.time, rotation: scene.rot, badge: needsBonkBadge(path.hit) };
-      if (path.sector !== null) scene.drawLanding(path.sector);
-      else scene.predictCache = null;
+      if (path.sector === null) {
+        scene.predictCache = null;
+        scene.aimTagPosition = null;
+      }
       g.fillStyle = '#ffffff';
       const visibleCount = Math.min(steps, Math.ceil(path.points.length / 8));
       for (let k = 0; k < visibleCount; k++) {
@@ -402,6 +375,7 @@ export function drawAim(scene: LevelScene) {
         if (path.points.length <= visibleEnd) drawContactStar(g, contact.x, contact.y, '#ff787d', 9);
         drawBonkBadge(g, L.x + 40, L.y - 40);
       }
+      if (path.sector !== null) scene.drawLanding(path.sector, path);
       g.globalAlpha = 1;
     }
   }

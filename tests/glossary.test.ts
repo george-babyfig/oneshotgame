@@ -534,6 +534,13 @@ const trs = (m: Partial<Record<Lang, string>>): Partial<Record<Lang, RegExp>> =>
   Object.fromEntries(Object.entries(m).map(([l, s]) => [l, l === 'ja' ? new RegExp(escapeRe(s!), 'u') : w(s!)]));
 
 export const RETIRED: Retired[] = [
+  // M8 carries this M8.1 rendering rename because the milestone list has no M8.1 entry.
+  {
+    word: 'landing card',
+    retiredIn: 'M8',
+    allow: [/Watch the landing card for a friend moving in\./iu],
+    note: 'M8 records the M8.1 rename because there is no M8.1 milestone. The old locale key is retained until translations can be edited.',
+  },
   // M0 (built): the kid-safe trust update removed these.
   { word: 'So close!', retiredIn: 'M0', match: /so close/iu },
   { word: '×2 collect', retiredIn: 'M0', match: /×\s*2 for|collect ×\s*2|double collect/iu },

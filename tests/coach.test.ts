@@ -18,6 +18,7 @@ import { OBSTACLES } from '../src/core/sky';
 describe('Coach intros', () => {
   it('keeps the J1 star tip at throw zero and teaches the lesson later', () => {
     expect(COACH[1][0]).toBe('Fill the bar past a ★ to finish the planet.');
+    expect(COACH[3][0]).toBe('Watch the planet: it shows what your throw will do.');
     expect(COACH[1][1]).toBe('Make an Ocean beside a Mountain for three stars.');
   });
 

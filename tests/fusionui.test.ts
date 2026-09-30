@@ -3,8 +3,7 @@ import { REACTIONS, REACTION_IDS } from '../src/core/round';
 import { reactionForPair } from '../src/ui/screens/fieldguide';
 import { reactionColor } from '../src/ui/art/reactions';
 import { advanceFeedback, enqueueFeedback, feedbackState } from '../src/ui/feel';
-import { landingCardRect, safeTroubleText } from '../src/ui/preview';
-import type { LevelScene } from '../src/ui/game';
+import { safeTroubleText } from '../src/ui/preview';
 import { bannerTopFor, forecastBeatText, forecastInThrows, showBestCombo, starMarkerPositions } from '../src/ui/hud';
 import { rulesForLevel } from '../src/core/round';
 import { troubleTargetShape } from '../src/ui/art/troubles';
@@ -29,31 +28,9 @@ describe('fusion UI data', () => {
     expect(showBestCombo(2, rulesForLevel(25))).toBe(false);
     expect(showBestCombo(2, rulesForLevel(26))).toBe(true);
   });
-  it.each([320, 390])('keeps the landing card below the forecast and modifier at %i px', (width) => {
-    const scale = 0.86;
-    const box = (bottom: number) => ({ bottom: bottom * scale });
-    const scene = {
-      w: width,
-      h: width === 320 ? 568 : 844,
-      canvas: { getBoundingClientRect: () => ({ top: 0, height: (width === 320 ? 568 : 844) * scale }) },
-      goalsEl: { getBoundingClientRect: () => box(170) },
-      forecastEl: { getBoundingClientRect: () => box(242) },
-      el: {
-        querySelector: (selector: string) =>
-          selector === '.twist' || selector === '.banners .show'
-            ? { getBoundingClientRect: () => box(selector === '.twist' ? 205 : 220) }
-            : null,
-      },
-      predictCache: { reaction: 'scorch', lost: 'A very long creature name wanders off', comboEnd: false },
-      g: { save() {}, restore() {}, measureText: (text: string) => ({ width: text.length * 12 }) },
-      previewTextScale: 1,
-    } as unknown as LevelScene;
-    const rect = landingCardRect(scene);
-    expect(rect.y).toBeCloseTo(250, 5);
-    expect(rect.height).toBe(88);
-    expect(rect.x).toBeGreaterThanOrEqual(0);
-    expect(rect.x + rect.width).toBeLessThanOrEqual(width);
+  it('keeps coach banners below the forecast and modifier', () => {
     expect(bannerTopFor(0, 170, 242, 205)).toBe(250);
+    expect(bannerTopFor(0, Math.max(170, 190) + 8, 0, 0)).toBe(206);
   });
   it('maps the chart symmetrically to every launch reaction', () => {
     for (const id of REACTION_IDS) {

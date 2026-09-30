@@ -240,7 +240,7 @@ describe('Troubles', () => {
     expect(restoreRound(JSON.stringify(old))?.troubles).toEqual([]);
   });
 
-  it('shows every Trouble wander-off in the same landing preview', () => {
+  it('predicts every Trouble wander-off for the aim tag ghosts', () => {
     let checked = 0;
     for (let n = 14; n <= 120; n++) {
       const level = makeLevel(n);
@@ -250,9 +250,9 @@ describe('Troubles', () => {
         let state = roundState(level.start, level.nova, level.troubles, level.difficulty !== 'normal');
         for (let turn = 0; turn < level.throws; turn++) {
           const action = { kind: level.queue[turn], sector: Math.floor(random() * 24) };
-          const card = previewStep(state, action);
+          const tag = previewStep(state, action);
           const actual = stepRound(state, action);
-          expect(actual.lost).toEqual(card.lost);
+          expect(actual.lost).toEqual(tag.lost);
           for (const lost of actual.lost)
             if (actual.troubleEvents.some((event) => event.sector === lost.sector && (event.kind === 'act' || event.kind === 'spread')))
               checked++;

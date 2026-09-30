@@ -30,6 +30,7 @@ import { drawChapterBackdrop } from './art/backdrops';
 import { chapterOf } from '../meta/progression';
 import { needsBonkBadge } from './feel';
 import type { TroubleState } from '../core/troubles';
+import type { AimTagFacts } from './aimtag';
 import { emptyRoundLog, type HelpRung, type RoundEventLog } from '../meta/help';
 import { helpEndModal } from './flows/results';
 import { PRACTICE_GIFT_LINE } from '../meta/coach';
@@ -824,18 +825,15 @@ export class LevelScene {
   predictCache: {
     key: string;
     title: string;
-    lost: string;
-    reaction?: ReactionId;
-    comboStep: number;
-    comboEnd: boolean;
-    trouble: string;
+    facts: AimTagFacts;
     changed: number[];
   } | null = null;
   previewTextScale = 0;
+  aimTagPosition: { x: number; y: number } | null = null;
 
   /** Highlight the landing region and preview what it will become. */
-  drawLanding(i: number) {
-    return preview.drawLanding(this, i);
+  drawLanding(i: number, path?: ReturnType<typeof flyFull>) {
+    return preview.drawLanding(this, i, path);
   }
 
   /** Supernova meter: a ring around the launcher that fills as you transform land. */

@@ -130,7 +130,7 @@ export const UNLOCKS: readonly Unlock[] = [
     placement: 'round',
     intro: {
       title: 'Dry Spell',
-      body: 'On hot or dry land, Magma or Sunburst can cause Dry Spell. It hurts the planet. Watch the red chip!',
+      body: 'Magma or Sunburst on hot, dry land may cause Dry Spell. It hurts the planet. Watch the red outline!',
       icon: '🍂',
     },
   },

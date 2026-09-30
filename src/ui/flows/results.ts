@@ -225,7 +225,7 @@ export function levelResults(app: App, r: LevelResult) {
           null,
           REACTIONS[id].kind === 'fusion'
             ? t('+50 stardust · new sticker!')
-            : t('It dries the land and hurts the planet. Watch for the red chip.'),
+            : t('It dries the land and hurts the planet. Watch for the red outline on the planet.'),
         ),
       ),
     ),

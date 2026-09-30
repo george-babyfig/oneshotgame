@@ -72,7 +72,7 @@ export function buildHud(scene: LevelScene) {
   scene.descEl = h('div', { class: 'obj-desc' });
   scene.goalsEl = h('div', { class: `goals${scene.L.goals.length ? '' : ' hidden'}`, style: 'pointer-events:auto' });
   scene.forecastEl = h('div', { class: 'trouble-forecast', style: 'display:flex;gap:5px;justify-content:center;pointer-events:auto' });
-  scene.hintEl = h('div', { class: 'hint' }, h('div', { class: 'hint-hand' }, '👆'), h('div', null, t('Pull back & release to fling')));
+  scene.hintEl = h('div', { class: 'hint' }, h('div', null, t('Pull back & release to fling')), h('div', { class: 'hint-hand' }, '👆'));
   const twist = scene.L.twist !== 'none' ? h('div', { class: 'twist' }, scene.twistLabel()) : null;
   scene.finishEl = h(
     'button',
@@ -538,7 +538,7 @@ export function showFusionDiscovery(scene: LevelScene, id?: ReactionId) {
   if (hud && banners) {
     banners.style.top = `${bannerTopFor(
       hud.getBoundingClientRect().top,
-      scene.goalsEl.getBoundingClientRect().bottom,
+      Math.max(scene.goalsEl.getBoundingClientRect().bottom, scene.el.querySelector('.life')?.getBoundingClientRect().bottom ?? 0) + 8,
       scene.forecastEl.getBoundingClientRect().bottom,
       scene.el.querySelector('.twist')?.getBoundingClientRect().bottom ?? 0,
     )}px`;
@@ -555,7 +555,9 @@ export function showFusionDiscovery(scene: LevelScene, id?: ReactionId) {
       h(
         'span',
         null,
-        def.kind === 'fusion' ? t('+50 stardust · new sticker!') : t('It dries the land and hurts the planet. Watch for the red chip.'),
+        def.kind === 'fusion'
+          ? t('+50 stardust · new sticker!')
+          : t('It dries the land and hurts the planet. Watch for the red outline on the planet.'),
       ),
     ),
   );
@@ -614,7 +616,7 @@ function revealCoach(scene: LevelScene) {
   if (hud && banners) {
     banners.style.top = `${bannerTopFor(
       hud.getBoundingClientRect().top,
-      scene.goalsEl.getBoundingClientRect().bottom,
+      Math.max(scene.goalsEl.getBoundingClientRect().bottom, scene.el.querySelector('.life')?.getBoundingClientRect().bottom ?? 0) + 8,
       scene.forecastEl.getBoundingClientRect().bottom,
       scene.el.querySelector('.twist')?.getBoundingClientRect().bottom ?? 0,
     )}px`;

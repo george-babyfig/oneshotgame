@@ -75,6 +75,7 @@ export function showFieldGuide(app: App, page: GuidePage = 'basics') {
     'div',
     { class: 'howto' },
     h('p', null, t('👆 Pull back anywhere and let go to fling. Gravity bends your shot — watch the dotted line.')),
+    h('p', null, t('Watch the planet: it shows what your throw will do.')),
     h('p', null, t('🪨 Rock raises land · ☄️ Ice makes oceans · 🌱 Seeds grow life · 🔥 Magma heats & builds volcanoes')),
     h('p', null, t('🦌 Creatures appear when the right lands meet — a Forest next to an Ocean brings Otters!')),
     h('p', null, t('★ Reach the life target before your throws run out. Tap the small bubble to swap objects.')),

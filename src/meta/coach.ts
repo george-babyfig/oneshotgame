@@ -6,7 +6,7 @@ import type { Profile } from './profile';
 export const COACH: Record<number, Record<number, string>> = {
   1: { 0: 'Fill the bar past a ★ to finish the planet.', 1: 'Make an Ocean beside a Mountain for three stars.' },
   2: { 0: 'Tap the next throw to swap it. Try Rock before Ice Comet!' },
-  3: { 0: 'Watch the landing card for a friend moving in.' },
+  3: { 0: 'Watch the planet: it shows what your throw will do.' },
 };
 
 export type CoachEvent = 'creature' | 'wander' | 'goal' | 'nova';

@@ -5,6 +5,7 @@ import type { RoundModifiers } from '../core/modifiers';
 import { BOSS_HP } from '../core/levels';
 import { renderPlanet } from './art/planet';
 import { drawCreature, drawStillCreature, drawWanderGhost } from './art/critters';
+import { aimTagSize } from './aimtag';
 import { drawObjectFeelTrail, drawProjectile } from './art/projectiles';
 import { drawTrail } from './art/keeper';
 import { drawMeteors, drawSeason } from './art/seasons';
@@ -348,12 +349,13 @@ export function draw(scene: LevelScene) {
   const canvas = scene.canvas.getBoundingClientRect();
   const reserved = [
     ...document.querySelectorAll(
-      '.level .hud-top, .level .life, .level .goals, .level .twist, .level .hint, .level .banners .show, .level .finish:not(.hidden), .level .hud-bottom, .life-fly',
+      '.level .hud-top, .level .life, .level .goals, .level .trouble-forecast, .level .twist, .level .hint, .level .banners .show, .level .finish:not(.hidden), .level .hud-bottom, .life-fly',
     ),
   ]
     .map((el) => el.getBoundingClientRect())
     .map((r) => ({ x: r.left - canvas.left, y: r.top - canvas.top, width: r.width, height: r.height }));
-  if (scene.aimFrom && scene.pull().len >= 18) reserved.push(preview.landingCardRect(scene));
+  if (scene.aimFrom && scene.pull().len >= 18 && scene.aimTagPosition && scene.predictCache)
+    reserved.push({ ...scene.aimTagPosition, ...aimTagSize(scene.predictCache.facts, scene.w) });
   if (scene.novaOn && scene.nova.charge >= scene.nova.threshold && !scene.suppressNovaLabel && !scene.aimFrom)
     reserved.push({ x: scene.launch.x - 90, y: scene.launch.y - 80, width: 180, height: 20 });
   for (const ghost of scene.ghosts) {

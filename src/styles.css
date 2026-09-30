@@ -510,7 +510,7 @@ button {
   pointer-events: none;
 }
 /* a narrow block centred on the launcher, so it never runs into the next-object bubble on its right */
-.hint > div:last-child {
+.hint > div:first-child {
   max-width: 128px;
   text-align: center;
   line-height: 1.15;
@@ -518,21 +518,22 @@ button {
 .hint-hand {
   font-size: max(12px, calc(34px * var(--text-scale)));
   animation: pull 1.6s ease-in-out infinite;
+  height: 40px;
 }
 @keyframes pull {
   0% {
-    transform: translateY(-10px);
+    transform: translateY(0);
     opacity: 0;
   }
   20% {
     opacity: 1;
   }
   70% {
-    transform: translateY(50px);
+    transform: translateY(24px);
     opacity: 1;
   }
   100% {
-    transform: translateY(50px);
+    transform: translateY(24px);
     opacity: 0;
   }
 }
