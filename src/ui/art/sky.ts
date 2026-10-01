@@ -1,4 +1,5 @@
 import type { ObstacleId, SkyShape } from '../../core/sky';
+import { canvasDpr } from '../devcapture';
 
 type G = CanvasRenderingContext2D;
 const tau = Math.PI * 2;
@@ -160,7 +161,7 @@ export function drawSkyShape(g: G, shape: SkyShape, clear = false, still = false
 
 export function skyIconCanvas(id: ObstacleId, size = 48, hidden = false, clear = false): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = size * Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = canvas.height = size * canvasDpr();
   canvas.style.width = canvas.style.height = `${size}px`;
   const g = canvas.getContext('2d')!;
   g.scale(canvas.width / size, canvas.height / size);

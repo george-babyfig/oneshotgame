@@ -52,6 +52,8 @@ const SCENES = args.scenes ? String(args.scenes).split(',').map(Number) : [1, 2,
 const ONLY = args.only ? String(args.only).split(',') : ['raw', 'compose', 'sheet', 'video'];
 if (args['no-raw']) ONLY.splice(ONLY.indexOf('raw'), 1);
 if (args['no-video']) ONLY.splice(ONLY.indexOf('video'), 1);
+/** --marketing: the dev-only store capture mode for every page this script opens (see openGame). */
+const MARKETING = !!args.marketing;
 /** Every run sees the same calendar day: a spring Thursday late morning (no festival costume, no meteor shower). */
 const CLOCK = new Date('2026-05-14T10:30:00');
 const BROWSER_LOCALE = { en: 'en-US', es: 'es-MX', fr: 'fr-FR', de: 'de-DE', pt: 'pt-BR', ja: 'ja-JP' };
@@ -433,7 +435,13 @@ async function ensureServer() {
 
 // ------------------------------------------------------------------ browser
 let browser;
-async function openGame(lang, { width = 440, height = 956, dpr = 3, reduceMotion = true } = {}) {
+/**
+ * marketing: the dev-only store capture mode (src/ui/devcapture.ts). The page gets window.__marketing (the
+ * new-creature card drops its gem reward and rarity word) and window.__maxDpr = dpr (canvases render at the
+ * full 3× instead of 2× upscaled), and the profile loses what could read as selling: no Buddy, no resident
+ * accessories, "Hide paid looks" on. Production builds never read either flag.
+ */
+async function openGame(lang, { width = 440, height = 956, dpr = 3, reduceMotion = true, marketing = MARKETING } = {}) {
   const ctx = await browser.newContext({
     viewport: { width, height },
     screen: { width, height },
@@ -466,6 +474,11 @@ async function openGame(lang, { width = 440, height = 956, dpr = 3, reduceMotion
       else document.addEventListener('DOMContentLoaded', css);
     }
   }, reduceMotion);
+  if (marketing)
+    await page.addInitScript((maxDpr) => {
+      window.__marketing = true;
+      window.__maxDpr = maxDpr;
+    }, dpr);
   await page.goto(BASE);
   await page.waitForFunction(() => !!window.__app?.p && !!document.querySelector('.host > .screen'));
   if (await page.evaluate(() => window.__app.screen === 'title')) await page.locator('.first-title button').click();
@@ -479,6 +492,16 @@ async function openGame(lang, { width = 440, height = 956, dpr = 3, reduceMotion
   await page.evaluate(PLAY_LIB);
   await page.evaluate(() => window.__play.init());
   const seeded = await page.evaluate((o) => window.__seedProfile(o), PROFILE);
+  if (marketing)
+    await page.evaluate(async () => {
+      const a = window.__app;
+      a.p.buddy = { species: null, acc: null };
+      for (const r of a.p.home.residents) r.acc = undefined;
+      a.p.settings.hidePaidLooks = true;
+      a.applySettings();
+      a.save();
+      await a.saveNow();
+    });
   await page.evaluate(() => window.__app.selectTab('home'));
   return { ctx, page, errors, seeded };
 }
@@ -1396,8 +1419,9 @@ function encodePreview({ frames, total, segments, posterAt }) {
 }
 
 // ------------------------------------------------------------------ main
-export { SEED_LIB, PLAY_LIB, PROFILE, openGame, plan, run, fmtPath, ensureServer };
+export { SEED_LIB, PLAY_LIB, PROFILE, CLOCK, BROWSER_LOCALE, openGame, plan, run, fmtPath, ensureServer, flatten, holdOn, fireOn };
 export const setBrowser = (b) => (browser = b);
+export const stopServer = () => server?.kill();
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain)
   try {

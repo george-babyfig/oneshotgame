@@ -43,7 +43,7 @@ SPIEL, WIE DU MAGST
 
 FÜR DIE GROSSEN
 • Keine Werbung. Keine Leben und keine Energie-Timer. Keine zufälligen Belohnungen gegen Geld.
-• Optionale Käufe gibt es nur im Bereich „Erwachsene“, geschützt durch eine Elternabfrage, und sie zeigen immer genau, was man bekommt
+• Optionale Käufe gibt es nur im „Elternbereich“, geschützt durch eine Elternabfrage, und sie zeigen immer genau, was man bekommt
 • Einstellung „Sanfte Planeten“, Spielzeit-Übersicht und eine optionale Pausen-Erinnerung
 • Keine Daten erfasst: Das Spiel speichert den Fortschritt auf diesem Gerät
 

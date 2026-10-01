@@ -49,7 +49,7 @@ Enable Game Center and create the leaderboards and achievements in `gamecenter.m
 
 ## 7. Version 1.0 page (per language: en-US, es-MX, fr-FR, de-DE, pt-BR, ja)
 
-1. Screenshots: `screenshots/<lang>/6.9/` (1320 × 2868, 8 each). Only the 6.9" size is required; Apple scales it for smaller iPhones.
+1. Screenshots (recommended set): `screenshots-v2/<lang>/6.9/` ("Sticker Scrapbook", 1320 × 2868). Upload in file-name order. English has 7 stills because the App Preview is tile 1; the other languages have 8, starting with the fling. Only the 6.9" size is required; Apple scales it for smaller iPhones. The earlier set in `screenshots/<lang>/6.9/` is kept as a fallback.
 2. App Preview (optional): `preview/app-preview-en.mp4` (886 × 1920, under 30 s). Set the poster frame to the fling.
 3. Promotional text, description and keywords: `listing.md` (English) and `listing.<es|fr|de|pt|ja>.md`.
 4. Support URL: `https://<your-site>/support.html`. Marketing URL: `https://<your-site>/`.

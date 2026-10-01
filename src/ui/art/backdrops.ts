@@ -1,4 +1,5 @@
 // Soft chapter scenery; its low contrast keeps the planet and aim guide clear.
+import { canvasDpr } from '../devcapture';
 type G = CanvasRenderingContext2D;
 
 const PALETTES = [
@@ -53,7 +54,7 @@ const backdropCache = new Map<string, HTMLCanvasElement>();
 /** Draw on top of the star field but behind the planet. */
 export function drawChapterBackdrop(g: G, chapter: number, w: number, h: number, time = 0, reduceMotion = false): void {
   if (w <= 0 || h <= 0) return;
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = canvasDpr();
   const key = `${chapter}|${w}|${h}|${dpr}`;
   let canvas = backdropCache.get(key);
   if (!canvas) {

@@ -1,6 +1,7 @@
 // Vector sprites for the six flingable objects.
 import type { Kind } from '../../core/world';
 import { OBJECT_FEEL } from '../feel';
+import { canvasDpr } from '../devcapture';
 
 type G = CanvasRenderingContext2D;
 
@@ -221,7 +222,7 @@ export function drawProjectile(g: G, kind: Kind, x: number, y: number, size: num
 /** Standalone canvas icon for DOM (queue bubbles, pre-level chips). */
 export function projectileCanvas(kind: Kind, px: number): HTMLCanvasElement {
   const c = document.createElement('canvas');
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = canvasDpr();
   c.width = c.height = Math.round(px * dpr);
   c.style.width = c.style.height = `${px}px`;
   const g = c.getContext('2d')!;

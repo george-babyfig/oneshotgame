@@ -43,7 +43,7 @@ JOUE À TA FAÇON
 
 POUR LES GRANDS
 • Pas de pub. Pas de vies ni de minuteurs d'énergie. Pas de récompenses payantes au hasard.
-• Les achats facultatifs se font uniquement dans l'espace Adultes, protégé par un contrôle parental, et montrent toujours exactement ce que l'on obtient
+• Les achats facultatifs se font uniquement dans l'Espace parents, protégé par un contrôle parental, et montrent toujours exactement ce que l'on obtient
 • Réglage Planètes douces, résumé du temps de jeu et rappel de pause facultatif
 • Données non collectées : le jeu garde la progression sur cet appareil
 

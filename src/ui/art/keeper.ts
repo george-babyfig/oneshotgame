@@ -2,6 +2,7 @@
 // launcher and the trail its throws leave. Same house style as the critters.
 import { COSMETIC_BY_ID, DEFAULT_AVATAR, HAIR_COLORS, SKIN_TONES, fullSet, type AvatarParts, type Look } from '../../meta/cosmetics';
 import { shade } from './color';
+import { canvasDpr } from '../devcapture';
 
 type G = CanvasRenderingContext2D;
 const FACE_WIDTHS = [0.54, 0.49, 0.55, 0.53];
@@ -871,7 +872,7 @@ function heart(g: G, x: number, y: number, r: number, color: string) {
 
 /** A static portrait canvas of the Keeper (UI, profile card). */
 export function keeperCanvas(look: Look, px: number, t = 0.3, pose: KeeperPose = {}): HTMLCanvasElement {
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = canvasDpr();
   const cv = document.createElement('canvas');
   cv.width = cv.height = Math.round(px * dpr);
   cv.style.width = cv.style.height = `${px}px`;
@@ -884,7 +885,7 @@ export function keeperCanvas(look: Look, px: number, t = 0.3, pose: KeeperPose =
 /** A small preview tile for any cosmetic item. */
 export function itemCanvas(id: string, look: Look, px: number, t = 0.3): HTMLCanvasElement {
   const x = COSMETIC_BY_ID[id];
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = canvasDpr();
   const cv = document.createElement('canvas');
   cv.width = cv.height = Math.round(px * dpr);
   cv.style.width = cv.style.height = `${px}px`;

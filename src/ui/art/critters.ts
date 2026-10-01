@@ -1,5 +1,6 @@
 // "Critters": every creature drawn as vector art in one house style — chubby
 // bodies, big shiny eyes, rosy cheeks — assembled from a small parts kit.
+import { canvasDpr } from '../devcapture';
 type G = CanvasRenderingContext2D;
 export type CreaturePose = 'idle' | 'happy' | 'surprised' | 'wave';
 
@@ -631,7 +632,7 @@ function shadeHex(hex: string) {
 /** Render a creature to a standalone canvas (for DOM cards like the Lifebook). */
 export function critterCanvas(id: string, px: number, t = 0.4, acc = '', pose: CreaturePose = 'idle'): HTMLCanvasElement {
   const c = document.createElement('canvas');
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = canvasDpr();
   c.width = c.height = Math.round(px * dpr);
   c.style.width = c.style.height = `${px}px`;
   c.classList.add('critter-portrait');

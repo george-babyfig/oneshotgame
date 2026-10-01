@@ -2,6 +2,7 @@
 // ground, "up" is -y, `s` is the unit size (about a tenth of the planet radius).
 import type { BiomeId } from '../../core/world';
 import { hash01 } from './color';
+import { canvasDpr } from '../devcapture';
 
 type G = CanvasRenderingContext2D;
 
@@ -349,7 +350,7 @@ const propSprites = new Map<string, HTMLCanvasElement>();
 /** Static scenery shares a sprite across frames as the planet turns. */
 export function drawCachedProps(g: G, biome: BiomeId, s: number, seed: number, t: number) {
   if (movingProps.has(biome)) return drawProps(g, biome, s, seed, t);
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = canvasDpr();
   const key = `${biome}|${s.toFixed(2)}|${seed}|${dpr}`;
   let sprite = propSprites.get(key);
   if (!sprite) {

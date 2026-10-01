@@ -21,6 +21,7 @@ import { previewStep, novaReady, REACTIONS, type ReactionId, type RoundRules } f
 import { reactionCanvas, reactionPair } from './art/reactions';
 import { celebrate } from './celebrate';
 import { forecastTroubles, TROUBLES } from '../core/troubles';
+import { marketingMode } from './devcapture';
 
 const roundDiscoveries = new WeakMap<LevelScene, string[]>();
 
@@ -505,16 +506,18 @@ export function showDiscover(scene: LevelScene) {
   const sp = SPECIES_BY_ID[id];
   if (!sp) return;
   scene.discoverBusy = true;
+  // dev-only store captures: no rarity word, no rarity styling and no gem reward on the card
+  const store = marketingMode();
   const label = rarityName(sp.rarity);
-  scene.discoverEl.className = `discover show r-${sp.rarity}`;
+  scene.discoverEl.className = `discover show r-${store ? 'common' : sp.rarity}`;
   scene.discoverEl.replaceChildren(
     h('div', { class: 'd-emoji' }, critterCanvas(sp.id, 56)),
     h(
       'div',
       { class: 'd-body' },
-      h('small', null, t('New creature · {r}', { r: label })),
+      h('small', null, store ? t('New creature · {r}', { r: '' }).split(' · ')[0] : t('New creature · {r}', { r: label })),
       h('b', null, t(sp.name)),
-      h('span', null, t('+💎3 · added to your Lifebook')),
+      h('span', null, store ? t('+💎3 · added to your Lifebook').split(' · ').slice(1).join(' · ') : t('+💎3 · added to your Lifebook')),
     ),
   );
   setTimeout(() => {

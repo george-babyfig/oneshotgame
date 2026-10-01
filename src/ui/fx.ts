@@ -26,6 +26,7 @@ import type { TroubleEvent } from '../core/troubles';
 import { drawTroubles } from './art/troubles';
 import { forecastTroubles } from '../core/troubles';
 import { troubleFeel } from './feel';
+import { canvasDpr } from './devcapture';
 
 function logFlightHit(scene: LevelScene, hit: { kind: 'bonk'; by: 'moon' | 'rock' | 'ring' | 'bubble' } | { kind: 'fizzle' | 'miss' }) {
   scene.roundLog.bonks.push(hit.kind === 'bonk' ? hit.by : hit.kind === 'fizzle' ? 'mist' : 'miss');
@@ -1020,7 +1021,7 @@ export function moons(scene: LevelScene): { x: number; y: number; r: number }[] 
 export function resize(scene: LevelScene) {
   scene.w = scene.el.clientWidth;
   scene.h = scene.el.clientHeight;
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = canvasDpr();
   scene.canvas.width = Math.round(scene.w * dpr);
   scene.canvas.height = Math.round(scene.h * dpr);
   scene.g.setTransform(dpr, 0, 0, dpr, 0, 0);

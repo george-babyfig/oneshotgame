@@ -2,6 +2,7 @@ import { REACTIONS, type ReactionId } from '../../core/round';
 import { KINDS, type Kind } from '../../core/world';
 import { drawProjectile } from './projectiles';
 import { t } from '../../i18n';
+import { canvasDpr } from '../devcapture';
 
 const COLORS: Record<ReactionId, string> = {
   steam: '#c6eeff',
@@ -86,7 +87,7 @@ export function drawReactionIcon(g: CanvasRenderingContext2D, id: ReactionId, x:
 
 export function reactionCanvas(id: ReactionId, size: number): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = canvasDpr();
   canvas.width = size * dpr;
   canvas.height = size * dpr;
   canvas.style.width = `${size}px`;

@@ -6,6 +6,7 @@ import { FESTIVALS, FESTIVAL_BY_ID } from '../../meta/festivals';
 import { STICKER_BY_ID } from '../../meta/stickers';
 import { REACTIONS, type ReactionId } from '../../core/round';
 import { drawReactionIcon } from './reactions';
+import { canvasDpr } from '../devcapture';
 
 type G = CanvasRenderingContext2D;
 
@@ -298,7 +299,7 @@ export function drawSticker(g: G, id: string, r: number, t = 0.4, locked = false
 
 export function stickerCanvas(id: string, px: number, locked = false): HTMLCanvasElement {
   const c = document.createElement('canvas');
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = canvasDpr();
   c.width = c.height = Math.round(px * dpr);
   c.style.width = c.style.height = `${px}px`;
   const g = c.getContext('2d')!;

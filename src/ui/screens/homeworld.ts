@@ -79,6 +79,7 @@ import { passportName } from '../../meta/passport';
 import type { App } from '../app';
 import { getLang, t, tp } from '../../i18n';
 import { whenText } from '../../meta/dates';
+import { canvasDpr } from '../devcapture';
 
 const TAU = Math.PI * 2;
 
@@ -93,7 +94,7 @@ export function fmtTime(ms: number) {
 }
 
 function structIcon(type: BuildingType, lv: number, px: number) {
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = canvasDpr();
   const cv = document.createElement('canvas');
   cv.width = cv.height = Math.round(px * dpr);
   cv.style.width = cv.style.height = `${px}px`;
@@ -232,7 +233,7 @@ export function showHomeworld(app: App) {
   const frame = (now: number) => {
     raf = 0;
     if (stopped || document.hidden) return;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = canvasDpr();
     const w = canvas.clientWidth;
     const hh = canvas.clientHeight;
     if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(hh * dpr)) {
@@ -333,6 +334,7 @@ export function showHomeworld(app: App) {
       g.ellipse(geo.cx + Math.cos(a) * d, geo.cy + Math.sin(a) * d, R * 0.16, R * 0.1, a, 0, TAU);
       g.fill();
     }
+    g.globalAlpha = 1; // the lakes are translucent; nothing after them should be
     // plots
     const n = home.plots.length;
     const s = Math.min(84, R * 0.7);
@@ -1088,7 +1090,7 @@ function expeditionSheet(app: App, after: () => void) {
 function expeditionCard(species: string, planetName: string, colors: string[], from: string, W = 300): HTMLCanvasElement {
   const H = Math.round(W * 1.25);
   const c = document.createElement('canvas');
-  const dpr = W < 600 ? Math.min(2, window.devicePixelRatio || 1) : 1;
+  const dpr = W < 600 ? canvasDpr() : 1;
   c.width = W * dpr;
   c.height = H * dpr;
   c.style.width = `${W}px`;
