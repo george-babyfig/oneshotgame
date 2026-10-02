@@ -7,13 +7,8 @@ import { EVENT_TIERS, claimEventTier, ensureEvent, eventEndsIn } from '../../met
 import { rewardText } from '../../meta/progression';
 import { skinSwatch } from '../screens/shop';
 import type { App } from '../app';
-import { t } from '../../i18n';
-
-function timeLeft(ms: number) {
-  const d = Math.floor(ms / 86400000);
-  const hr = Math.floor((ms % 86400000) / 3600000);
-  return d > 0 ? t('{d}d {h}h left', { d, h: hr }) : t('{h}h {m}m left', { h: hr, m: Math.floor((ms % 3600000) / 60000) });
-}
+import { getLang, t } from '../../i18n';
+import { untilText } from '../../meta/dates';
 
 export function eventFlow(app: App) {
   const p = app.p;
@@ -58,13 +53,21 @@ export function eventFlow(app: App) {
     );
   };
   render();
+  const now = Date.now();
+  const until = untilText(now + eventEndsIn(new Date(now)), now, getLang());
+  const untilLabel =
+    until.key === 'until tonight'
+      ? t('until tonight')
+      : until.key === 'until {day}'
+        ? t('until {day}', until.vars)
+        : t('until {date}', until.vars);
   modal(
     [
       h(
         'div',
         { class: 'ev-banner', style: `--ev:${ev.color}` },
         h('span', { class: 'ev-emoji' }, ev.emoji),
-        h('div', null, h('b', null, t(ev.name)), h('small', null, timeLeft(eventEndsIn()))),
+        h('div', null, h('b', null, t(ev.name)), h('small', null, untilLabel)),
       ),
       h(
         'p',

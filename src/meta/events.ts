@@ -1,8 +1,10 @@
+import { EVENT_TIERS } from './tuning';
 // Weekly events: a rotating theme picked from the ISO week number, so every player
 // sees the same event with no server (Two Dots / Royal Match style live-ops).
-import type { BiomeId } from '../core/world';
+import { BIOMES, type BiomeId, type ImpactResult, type Planet } from '../core/world';
 import type { Profile } from './profile';
 import { applyReward, type Reward } from './progression';
+import { unlocked } from './unlocks';
 
 export interface EventDef {
   id: string;
@@ -73,14 +75,7 @@ export interface EventTier {
   reward: Reward;
 }
 
-export const EVENT_TIERS: EventTier[] = [
-  { tokens: 10, reward: { gems: 10 } },
-  { tokens: 25, reward: { dust: 300 } },
-  { tokens: 45, reward: { boosters: { shower: 1, spark: 1 } } },
-  { tokens: 70, reward: { gems: 25 } },
-  { tokens: 100, reward: { dust: 900, boosters: { scope: 2 } } },
-  { tokens: 140, reward: { gems: 50 } },
-];
+export { EVENT_TIERS } from './tuning';
 
 /** ISO-8601 week key like "2026-W39". */
 export function isoWeek(d = new Date()): string {
@@ -106,15 +101,29 @@ export function eventEndsIn(now = new Date()): number {
   return d.getTime() - now.getTime();
 }
 
-export const EVENT_UNLOCK_LEVEL = 8;
+export { EVENT_UNLOCK_LEVEL } from './unlocks';
+
+/** One saved week ahead can happen when local time zones change. */
+export function weekAtMostOneAhead(saved: string, current: string): boolean {
+  const start = (key: string) => {
+    const match = /^(\d{4})-W(\d{2})$/.exec(key);
+    if (!match) return NaN;
+    const year = Number(match[1]);
+    const week = Number(match[2]);
+    if (week < 1 || week > 53) return NaN;
+    const jan4 = new Date(Date.UTC(year, 0, 4));
+    return Date.UTC(year, 0, 4 - ((jan4.getUTCDay() + 6) % 7) + (week - 1) * 7);
+  };
+  return start(saved) - start(current) === 7 * 86400000;
+}
 
 export function ensureEvent(p: Profile, week = isoWeek()) {
-  if (p.event.week !== week) p.event = { week, tokens: 0, claimed: [] };
-  return eventFor(week);
+  if (week > p.event.week || (week < p.event.week && !weekAtMostOneAhead(p.event.week, week))) p.event = { week, tokens: 0, claimed: [] };
+  return eventFor(p.event.week);
 }
 
 export function eventActive(p: Profile) {
-  return p.level >= EVENT_UNLOCK_LEVEL;
+  return unlocked(p, 'weekly_event');
 }
 
 /** Tokens earned by one landed throw. */
@@ -123,6 +132,14 @@ export function tokensForLand(ev: EventDef, changed: BiomeId[], spawned: number)
   if (ev.biomes) n += changed.filter((b) => ev.biomes!.includes(b)).length;
   if (ev.creatures) n += spawned * 2;
   return n;
+}
+
+/** Count first arrivals and improved regions before the Lab updates their history. */
+export function earnedLandingProgress(result: ImpactResult, planet: Planet, regionBests: number[], arrived: Set<string>) {
+  const firstArrivals = new Set(result.spawned.filter((s) => !arrived.has(s.id)).map((s) => s.id));
+  if (result.after < result.before) return { regions: [] as BiomeId[], arrivals: 0, firstArrivals };
+  const regions = result.changed.filter((i) => BIOMES[planet.sectors[i].biome].value > regionBests[i]).map((i) => planet.sectors[i].biome);
+  return { regions, arrivals: firstArrivals.size, firstArrivals };
 }
 
 export function addTokens(p: Profile, n: number) {
@@ -140,6 +157,6 @@ export function claimEventTier(p: Profile, i: number): Reward | null {
   p.event.claimed.push(i);
   const r: Reward = { ...t.reward };
   if (i === EVENT_TIERS.length - 1) r.skin = eventFor(p.event.week).skin;
-  applyReward(p, r);
+  applyReward(p, r, 'event');
   return r;
 }

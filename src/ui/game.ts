@@ -1,43 +1,100 @@
+import { ledger } from '../meta/ledger';
+import * as hud from './hud';
+import * as preview from './preview';
+import { MAX_PULL, PULL_TO_SPEED } from './preview';
+import * as fx from './fx';
+import { type BiomeId, BIOMES, SECTORS, clonePlanet, lifeScore, type Kind, type Planet } from '../core/world';
+import { BOSS_HP, type Goal, type LevelDef } from '../core/levels';
+import { h, type Modal } from './dom';
+import { roundIntro, type CoachEvent } from '../meta/coach';
+import { UNLOCKS } from '../meta/unlocks';
+import { setRemixRim, surfaceK } from './art/planet';
+import { DEFAULT_LOOK, type Look } from '../meta/cosmetics';
 import {
-  type BiomeId,
-  BIOMES,
-  KINDS,
-  SECTORS,
-  SPECIES_BY_ID,
-  clonePlanet,
-  impact,
-  lifeScore,
-  settle,
-  type Kind,
-  type Planet,
-} from '../core/world';
-import { starsFor, type LevelDef } from '../core/levels';
-import { h, btn, fmt, modal, type Modal } from './dom';
-import { icon } from './icons';
-import { renderPlanet, surfaceK } from './art/planet';
-import { critterCanvas, drawCreature } from './art/critters';
-import { drawProjectile, projectileCanvas } from './art/projectiles';
+  lifeSparkSectors,
+  novaForThrow,
+  roundState,
+  rulesForLevel,
+  type ReactionId,
+  type RoundRules,
+  type RoundState,
+} from '../core/round';
+import { feedbackState, type FeedbackState, type FeedbackItem } from './feel';
+import { flyFull, sceneGeometry, STAR_SLING, type FlightHit, type FlightWorld } from '../core/flight';
+import { EMPTY_SKY_STATE, type ObstacleId, type SkyState } from '../core/sky';
+import type { RoundModifiers } from '../core/modifiers';
+import type { Season } from '../meta/seasons';
 import { sfx } from './audio';
 import { haptic } from './haptics';
-import { t, tp } from '../i18n';
-import { rarityName } from './text';
-import { toast } from './dom';
+import { drawChapterBackdrop } from './art/backdrops';
+import { chapterOf } from '../meta/progression';
+import { needsBonkBadge } from './feel';
+import type { TroubleState } from '../core/troubles';
+import type { AimTagFacts } from './aimtag';
+import { emptyRoundLog, type HelpRung, type RoundEventLog } from '../meta/help';
+import { helpEndModal } from './flows/results';
+import { PRACTICE_GIFT_LINE } from '../meta/coach';
+import { t } from '../i18n';
+
+export function shouldShowRoundIntro(id: string, gentle: boolean): boolean {
+  return !gentle || !['vent', 'vine', 'frost', 'traits_intro', 'buddy'].includes(id);
+}
+
+export function roundIntroCandidates(
+  planet: number,
+  objectId: string | undefined,
+  gentle: boolean,
+  troubleVisible: boolean,
+  buddyVisible: boolean,
+) {
+  return [
+    roundIntro(planet, objectId),
+    ...UNLOCKS.filter((row) => ['traits_intro', 'buddy'].includes(row.id) && row.planet <= planet),
+  ].filter(
+    (row): row is (typeof UNLOCKS)[number] =>
+      !!row &&
+      shouldShowRoundIntro(row.id, gentle) &&
+      (row.id !== 'traits_intro' || troubleVisible) &&
+      (row.id !== 'buddy' || buddyVisible),
+  );
+}
 
 export interface SceneOpts {
+  rules?: RoundRules;
   scopeLevel: number; // 0..3 aim guide length
+  /** The player's Keeper outfit, launcher and trail. */
+  look?: Look;
+  /** Real-calendar season weather, and a meteor shower tonight (Supernova charges 2×). */
+  season?: Season;
+  shower?: boolean;
+  /** This month's festival costume, worn by every creature on the planet. */
+  festAcc?: string;
+  /** Buddy creature beside the Keeper. */
+  buddy?: { species: string; acc: string } | null;
+  /** Object Lab level per object (campaign/Zen only). */
+  lab?: Partial<Record<Kind, number>>;
+  /** The launcher is fully mastered (gold glow). */
+  mastered?: boolean;
   splash: number; // 0..1
   extraThrows: number;
   boosters: { shower: boolean; spark: boolean; scope: boolean };
   glow: string;
   seen: Set<string>;
   tutorial: boolean;
+  /** Warm-up replay: the Keeper always helps this planet finish. */
+  practice?: boolean;
+  practiceFirstClear?: boolean;
   reduceMotion?: boolean;
   /** Momentum tier (0-3) active this level. */
   momentum?: number;
-  /** Coach tips keyed by throws used (0 = at the start). */
+  /** Opening coach tip (0 = before the first throw). */
   coach?: Record<number, string>;
+  gustTip?: string;
+  onGustSeen?: () => void;
   /** Object introduced on this level (shows an intro card). */
   intro?: Kind;
+  allowIntro?: (id: string) => boolean;
+  onIntro?: (id: string) => void;
   /** HUD title override (modes). */
   label?: string;
   /** Meteor Rush: seconds on the clock, unlimited throws. */
@@ -46,23 +103,34 @@ export interface SceneOpts {
   endless?: boolean;
   /** Competitive modes (daily, rush, challenge): no paid continues, no early finish. */
   competitive?: boolean;
+  gentle?: boolean;
+  clearPalette?: boolean;
+  /** Dusk backdrop and gold planet rim for a Bonus Remix round. */
+  remixPalette?: boolean;
+  onSkySeen?: (id: ObstacleId) => void;
   /** Called after every landed throw (Zen saves the planet). */
   onPlanet?: (p: Planet) => void;
   /** Label for the win button on the end card. */
   endLabel?: string;
   gems: () => number;
   spendGems: (n: number) => boolean;
-  continueCost: (i: number) => number;
+  continueOk?: (won: boolean) => boolean;
+  helpForFail?: (throwsUsed: number, throwsTotal: number) => HelpRung[];
+  hintSectors?: number[];
+  onContinue?: () => void;
   onNewSpecies: (id: string) => void;
   onSpecies?: (id: string) => void;
-  onThrow?: () => void;
+  onThrow?: (kind: Kind) => void;
   onTransform?: (regions: number) => void;
   /** Weekly event hook: returns event tokens earned by this landing. */
   onLand?: (changed: BiomeId[], spawned: number) => number;
+  /** The owner records first discoveries and pays their fixed reward. */
+  onReaction?: (id: ReactionId) => { first: boolean };
+  onCombo?: (links: number, reaction?: ReactionId, superFusion?: boolean) => void;
+  onPairTried?: (first: Kind, second: Kind) => void;
   eventEmoji?: string;
   onEnd: (r: LevelResult) => void;
   onQuit: () => void;
-  onShop: () => void;
 }
 
 export interface LevelResult {
@@ -72,8 +140,18 @@ export interface LevelResult {
   planet: Planet;
   won: boolean;
   throwsUsed: number;
+  throwsTotal: number;
   /** Throws left unused when the player finished early. */
   leftover: number;
+  /** A Comet Guardian was defeated on this planet. */
+  boss?: boolean;
+  comboBest?: number;
+  comboIcons?: ReactionId[];
+  reactions?: ReactionId[];
+  reactionEvents?: ReactionId[];
+  comboEvents?: { links: number; reaction?: ReactionId; superFusion: boolean }[];
+  reactionRecorded?: boolean;
+  comboRecorded?: boolean;
 }
 
 interface Ring {
@@ -85,13 +163,7 @@ interface Ring {
   color: string;
 }
 
-export const FINISH_DUST_PER_THROW = 15;
-const CALLOUTS: [number, string, string][] = [
-  [50, 'Paradise!', '#ff8fe0'],
-  [32, 'Thriving!', '#ffd84a'],
-  [20, 'Blooming!', '#7dffb0'],
-  [12, 'Nice!', '#9fe6ff'],
-];
+export { FINISH_DUST_PER_THROW } from '../meta/tuning';
 
 interface Particle {
   x: number;
@@ -116,86 +188,147 @@ interface Popup {
   vy: number;
 }
 
-interface Shot {
+export interface Shot {
   kind: Kind;
   x: number;
   y: number;
   vx: number;
   vy: number;
   t: number;
+  carry: number;
+  t0: number;
+  rot0: number;
   trail: { x: number; y: number }[];
+  /** A charged Supernova throw. */
+  nova?: boolean;
+  warnedBonk?: boolean;
+  bounceCount?: number;
 }
-
-const GM = 5.2e7; // gravity strength (px^3/s^2)
-const MAX_PULL = 150;
-const PULL_TO_SPEED = 6.2;
-const SCOPE_STEPS = [16, 28, 44, 90];
 
 export class LevelScene {
   el: HTMLElement;
-  private canvas: HTMLCanvasElement;
-  private g: CanvasRenderingContext2D;
-  private L: LevelDef;
-  private o: SceneOpts;
+  canvas: HTMLCanvasElement;
+  g: CanvasRenderingContext2D;
+  L: LevelDef;
+  o: SceneOpts;
   planet: Planet;
-  private throwsLeft: number;
-  private timeLeft = 0;
-  private throwsUsed = 0;
-  private qi = 0; // index of the next object to deal
-  private cur: Kind;
-  private next: Kind;
-  private shot: Shot | null = null;
-  private aimFrom: { x: number; y: number } | null = null;
-  private aimTo: { x: number; y: number } | null = null;
-  private rot = 0;
-  private time = 0;
-  private particles: Particle[] = [];
-  private rings: Ring[] = [];
-  private discoverQueue: string[] = [];
-  private discoverBusy = false;
-  private finishing = false;
-  private leftover = 0;
-  private chain = 0;
-  private popups: Popup[] = [];
-  private shake = 0;
-  private flash: { i: number; t: number }[] = [];
-  private spawnAnim = new Map<number, number>(); // sector -> anim time
-  private score: number;
-  private shownScore: number;
-  private starsGot = 0;
-  private continues = 0;
-  private ended = false;
-  private paused = false;
-  private raf = 0;
-  private last = 0;
-  private w = 0;
-  private h = 0;
-  private stars: { x: number; y: number; r: number; tw: number }[] = [];
-  private lastPullTick = 0;
-  private modalOpen: Modal | null = null;
-  private hintShown: boolean;
+  throwsLeft: number;
+  timeLeft = 0;
+  throwsUsed = 0;
+  throwsTotal = 0;
+  qi = 0; // index of the next object to deal
+  cur: Kind;
+  next: Kind;
+  get upcoming(): Kind[] {
+    return this.o.boosters.scope
+      ? [this.next, ...Array.from({ length: 4 }, (_, i) => this.L.queue[(this.qi + i) % this.L.queue.length])]
+      : [this.next];
+  }
+  shot: Shot | null = null;
+  skyState: SkyState = { ...EMPTY_SKY_STATE, brokenRocks: [] };
+  rockWobbles: { index: number; until: number }[] = [];
+  practiceBonkUsed = false;
+  mistTipShown = false;
+  gustTipShown = false;
+  surpriseBonks = 0;
+  lastHit: FlightHit | null = null;
+  aimFrom: { x: number; y: number } | null = null;
+  aimTo: { x: number; y: number } | null = null;
+  drawnAim: preview.DrawnAim | null = null;
+  aimGeneration = 0;
+  rot = 0;
+  time = 0;
+  particles: Particle[] = [];
+  rings: Ring[] = [];
+  discoverQueue: string[] = [];
+  fusionDiscoverQueue: ReactionId[] = [];
+  discoverBusy = false;
+  finishing = false;
+  leftover = 0;
+  popups: Popup[] = [];
+  feedback: FeedbackState<FeedbackItem> = feedbackState();
+  ghosts: { species: string; sector: number; wants: BiomeId; started: number; throw: number }[] = [];
+  goalPulse: { sectors: number[]; until: number } | null = null;
+  nova: RoundState['nova'] = { charge: 0, threshold: 12, fired: 0, held: false };
+  combo: RoundState['combo'] = { links: 0, rest: false, best: 0 };
+  comboCharge = 0;
+  // P1 Trouble clock and shield survive each scene throw.
+  troubles: TroubleState[] = [];
+  buddyShieldUsed = false;
+  calmUsed = false;
+  forecastEl!: HTMLElement;
+  reactionsSeen = new Set<ReactionId>();
+  reactionEvents: ReactionId[] = [];
+  landedKinds: (Kind | null)[] = Array(SECTORS).fill(null);
+  comboEvents: { links: number; reaction?: ReactionId; superFusion: boolean }[] = [];
+  comboIconsCurrent: ReactionId[] = [];
+  comboIconsBest: ReactionId[] = [];
+  hitStopUntil = 0;
+  reactionArc: { from: number; to: number; id: ReactionId; until: number } | null = null;
+  shake = 0;
+  flash: { i: number; t: number }[] = [];
+  spawnAnim = new Map<number, number>(); // sector -> anim time
+  score: number;
+  shownScore: number;
+  starsGot = 0;
+  private scoreAtThrow = 0;
+  private shrugUntil = 0;
+  private danceStart = -1;
+  private chapterNumber = 1;
+  regionBests: number[];
+  arrived: Set<string>;
+  ended = false;
+  paused = false;
+  raf = 0;
+  last = 0;
+  w = 0;
+  h = 0;
+  stars: { x: number; y: number; r: number; tw: number }[] = [];
+  lastPullTick = 0;
+  modalOpen: Modal | null = null;
+  hintShown: boolean;
   // HUD refs
-  private hudThrows!: HTMLElement;
-  private hudFill!: HTMLElement;
-  private hudScore!: HTMLElement;
-  private hudStars: HTMLElement[] = [];
-  private curEl!: HTMLElement;
-  private nextEl!: HTMLElement;
-  private descEl!: HTMLElement;
-  private hintEl!: HTMLElement;
-  private finishEl!: HTMLElement;
-  private coachEl!: HTMLElement;
-  private discoverEl!: HTMLElement;
+  hudThrows!: HTMLElement;
+  hudFill!: HTMLElement;
+  hudScore!: HTMLElement;
+  hudStars: HTMLElement[] = [];
+  goalsEl!: HTMLElement;
+  goalsDone = 0;
+  curEl!: HTMLElement;
+  nextEl!: HTMLElement;
+  descEl!: HTMLElement;
+  hintEl!: HTMLElement;
+  finishEl!: HTMLElement;
+  coachEl!: HTMLElement;
+  discoverEl!: HTMLElement;
+  liveEl!: HTMLElement;
+  coachEvents = new Set<CoachEvent>();
+  practiceGifts = 0;
+  roundLog: RoundEventLog = emptyRoundLog();
+  firstCreaturePointsShown = false;
+  liveTimer = 0;
+  coachTimer = 0;
+  onResolvedThrow?: () => void;
+  suppressNovaLabel = false;
+  focusTarget: { kind: 'ring' | 'queue'; until: number } | null = null;
+
+  startedAt = performance.now();
 
   constructor(level: LevelDef, opts: SceneOpts) {
+    if (!opts.endless) ledger.count('round_started');
     this.L = level;
+    if (level.sky.obstacle) opts.onSkySeen?.(level.sky.obstacle);
+    this.chapterNumber = chapterOf(level.n).n;
     this.o = opts;
+    if (level.sky.gusty && opts.gustTip) this.o.coach = { ...opts.coach, 0: opts.gustTip };
     this.planet = clonePlanet(level.start);
-    if (opts.boosters.spark) {
-      for (const i of [3, 11, 19]) this.planet.sectors[i].life = Math.max(1, this.planet.sectors[i].life);
-      settle(this.planet);
-    }
+    // P1 seeds only the Trouble state here; the round step owns every action.
+    this.troubles = roundState(this.planet, level.nova, level.troubles, level.difficulty !== 'normal').troubles;
+    if (opts.boosters.spark) fx.sparkStart(this.planet, lifeSparkSectors(level, this.planet));
+    this.regionBests = this.planet.sectors.map((s) => BIOMES[s.biome].value);
+    this.arrived = new Set(this.planet.sectors.map((s) => s.species).filter((id): id is string => !!id));
     this.throwsLeft = level.throws + opts.extraThrows + (opts.boosters.shower ? 3 : 0);
+    this.throwsTotal = this.throwsLeft;
     if (opts.timeLimit) this.timeLeft = opts.timeLimit;
     if (opts.timeLimit || opts.endless) this.throwsLeft = Infinity;
     this.cur = level.queue[0];
@@ -208,295 +341,189 @@ export class LevelScene {
     this.g = this.canvas.getContext('2d')!;
     this.el = h('div', { class: 'screen level' }, this.canvas, this.buildHud());
     this.bindInput();
+    if (import.meta.env.DEV) {
+      const scene = this;
+      this.devHook = {
+        get w() {
+          return scene.w;
+        },
+        aimAt: (sector) => this.aimAt(sector),
+        aimAtClear: (sector) => preview.aimAt(this, sector, true),
+        drawPreview: (vector) => {
+          this.aimFrom = { x: this.launch.x, y: this.launch.y };
+          this.aimTo = { x: this.launch.x - vector.vx / PULL_TO_SPEED, y: this.launch.y - vector.vy / PULL_TO_SPEED };
+          this.drawnAim = null;
+          this.drawAim();
+          const drawn = this.drawnAim;
+          const clearWorld = { ...this.flightWorld(this.rot), sky: undefined };
+          const clear = flyFull(STAR_SLING, { ...this.launch, ...vector, elapsed: 0 }, clearWorld, this.time);
+          return { drawn, clear, predicted: this.predict(vector.vx, vector.vy) };
+        },
+        fire: (vector) => {
+          if (this.canAim()) {
+            const drawn =
+              this.drawnAim && Math.hypot(this.drawnAim.vx - vector.vx, this.drawnAim.vy - vector.vy) < 1e-6 ? this.drawnAim : undefined;
+            this.aimFrom = this.aimTo = this.drawnAim = null;
+            this.fire(drawn?.vx ?? vector.vx, drawn?.vy ?? vector.vy, drawn);
+          }
+        },
+        predict: (vx, vy) => this.predict(vx, vy).hit ?? { kind: 'miss' },
+        get lastHit() {
+          return scene.lastHit;
+        },
+        roundTime: () => this.time,
+        get surpriseBonks() {
+          return scene.surpriseBonks;
+        },
+      };
+      window.__scene = this.devHook;
+    }
     this.raf = requestAnimationFrame(() => {
       if (this.destroyed) return;
       this.resize();
       this.renderHud();
       this.showCoach(0);
-      if (opts.intro) this.introCard(opts.intro);
+      const candidates =
+        opts.intro || (!opts.competitive && !opts.endless && !opts.timeLimit)
+          ? roundIntroCandidates(level.n, opts.intro, !!opts.gentle, level.troubles.length > 0, level.troubles.length > 0 && !!opts.buddy)
+          : [];
+      for (const row of candidates) {
+        if (this.introCard(row.id)) break;
+      }
       this.raf = requestAnimationFrame(this.frame);
     });
     window.addEventListener('resize', this.resize);
   }
 
+  get rules(): RoundRules {
+    return this.o.rules ?? rulesForLevel(this.L.n);
+  }
+
   // ---------------------------------------------------------------- HUD
-  private buildHud(): HTMLElement {
-    this.hudThrows = h('div', { class: 'hud-throws' });
-    this.hudFill = h('div', { class: 'life-fill' });
-    this.hudScore = h('div', { class: 'life-score' });
-    const bar = h('div', { class: 'life-bar' }, this.hudFill);
-    const max = this.barMax();
-    this.hudStars = this.L.stars.map((t) => {
-      const s = h('div', { class: 'life-star', style: `left:${(t / max) * 100}%` }, '★');
-      bar.append(s);
-      return s;
-    });
-    this.curEl = h('button', { class: 'obj cur', 'aria-label': 'Current object' });
-    this.nextEl = h('button', { class: 'obj next', 'aria-label': 'Swap with next object' });
-    this.nextEl.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.swap();
-    });
-    this.descEl = h('div', { class: 'obj-desc' });
-    this.hintEl = h('div', { class: 'hint' }, h('div', { class: 'hint-hand' }, '👆'), h('div', null, t('Pull back & release to fling')));
-    const twist = this.L.twist !== 'none' ? h('div', { class: 'twist' }, this.twistLabel()) : null;
-    this.finishEl = h(
-      'button',
-      { class: 'finish hidden', onclick: () => this.finishEarly() },
-      h('b', null, t('Finish ✓')),
-      h('small', null, ''),
-    );
-    this.discoverEl = h('div', { class: 'discover' });
-    this.coachEl = h('div', { class: 'coach' });
-    return h(
-      'div',
-      { class: 'hud' },
-      h(
-        'div',
-        { class: 'hud-top' },
-        h('button', { class: 'icon', 'aria-label': 'Pause', onclick: () => this.pause() }, icon('pause', 22)),
-        h(
-          'div',
-          { class: 'hud-title' },
-          h('div', { class: 'hud-level' }, this.o.label ?? t('Planet {n}', { n: this.L.n })),
-          h('div', { class: 'hud-name' }, this.L.name),
-          this.L.difficulty !== 'normal'
-            ? h('div', { class: `hud-diff ${this.L.difficulty}` }, this.L.difficulty === 'super' ? t('💀 SUPER HARD') : t('🔥 HARD'))
-            : null,
-          this.o.momentum ? h('div', { class: 'hud-diff momentum-tag' }, t('⚡ Momentum ×{n}', { n: this.o.momentum })) : null,
-        ),
-        this.hudThrows,
-      ),
-      h('div', { class: 'life' }, bar, this.hudScore),
-      twist,
-      h('div', { class: 'banners' }, this.coachEl, this.discoverEl),
-      this.finishEl,
-      h(
-        'div',
-        { class: 'hud-bottom' },
-        h(
-          'div',
-          { class: 'queue' },
-          this.curEl,
-          h('div', { class: 'next-wrap' }, this.nextEl, h('div', { class: 'swap-lbl' }, t('tap to swap'))),
-        ),
-        this.descEl,
-      ),
-      this.hintShown ? this.hintEl : null,
-    );
+  buildHud() {
+    return hud.buildHud(this);
   }
 
-  private twistLabel() {
-    const map: Record<string, string> = {
-      fast: t('🌀 Fast Spin'),
-      tiny: t('🔹 Tiny World'),
-      moon: t('🌑 A moon blocks shots'),
-      hot: t('🔥 Scorched start'),
-      frozen: t('🧊 Frozen start'),
-      ocean: t('🌊 Water World'),
-      wind: t('💨 Solar Wind'),
-      heavy: t('🪐 Dense Core'),
-      wobble: t('🌀 Wobbly Spin'),
-      twin: t('🌑🌑 Twin Moons'),
-    };
-    return map[this.L.twist] ?? '';
+  twistLabel() {
+    return hud.twistLabel(this);
   }
 
-  private barMax() {
-    return Math.round(this.L.stars[2] * 1.12);
+  barMax() {
+    return hud.barMax(this);
   }
 
-  private renderHud() {
-    if (this.o.timeLimit) {
-      this.renderClock();
-    } else if (this.o.endless) {
-      this.hudThrows.replaceChildren(h('span', { class: 'n' }, '∞'), h('span', { class: 'l' }, t('zen')));
-    } else {
-      this.hudThrows.replaceChildren(h('span', { class: 'n' }, String(this.throwsLeft)), h('span', { class: 'l' }, t('throws')));
-      this.hudThrows.classList.toggle('low', this.throwsLeft <= 2);
-    }
-    const k = KINDS[this.cur];
-    const n = KINDS[this.next];
-    this.curEl.replaceChildren(projectileCanvas(this.cur, 40));
-    this.curEl.style.setProperty('--c', k.color);
-    this.nextEl.replaceChildren(projectileCanvas(this.next, 36));
-    this.nextEl.style.setProperty('--c', n.color);
-    this.descEl.replaceChildren(h('b', null, t(k.name)), ` — ${t(k.desc)}`);
-    this.renderScore();
-    this.renderFinish();
+  renderHud() {
+    return hud.renderHud(this);
   }
 
   /** Score counter "heats up" on big gains (Balatro-style escalation). */
-  private heat(delta: number) {
-    const lv = delta >= 40 ? 3 : delta >= 22 ? 2 : delta >= 10 ? 1 : 0;
-    if (!lv) return;
-    const el = this.hudScore;
-    el.classList.remove('heat1', 'heat2', 'heat3');
-    void el.offsetWidth;
-    el.classList.add(`heat${lv}`);
-    this.hudFill.classList.toggle('blaze', lv >= 2);
-    clearTimeout(this.heatTimer);
-    this.heatTimer = window.setTimeout(() => {
-      el.classList.remove('heat1', 'heat2', 'heat3');
-      this.hudFill.classList.remove('blaze');
-    }, 1400);
+  heat(delta: number) {
+    return hud.heat(this, delta);
   }
-  private heatTimer = 0;
+  heatTimer = 0;
 
-  private renderScore() {
-    const max = this.barMax();
-    this.hudFill.style.width = `${Math.min(100, (this.shownScore / max) * 100)}%`;
-    this.hudScore.textContent = t('{n} life', { n: fmt(this.shownScore) });
-    this.hudStars.forEach((s, i) => s.classList.toggle('on', this.shownScore >= this.L.stars[i]));
+  renderScore() {
+    return hud.renderScore(this);
   }
 
-  private lastClock = -1;
-  private renderClock() {
-    const secs = Math.max(0, Math.ceil(this.timeLeft));
-    if (secs === this.lastClock) return;
-    if (secs <= 5 && secs > 0 && this.lastClock !== secs) sfx.click();
-    this.lastClock = secs;
-    this.hudThrows.replaceChildren(h('span', { class: 'n' }, `${secs}`), h('span', { class: 'l' }, t('seconds')));
-    this.hudThrows.classList.toggle('low', secs <= 10);
+  lastClock = -1;
+  renderClock() {
+    return hud.renderClock(this);
   }
 
-  private get over() {
+  /** Celebrate newly earned stars (from score rising, or goals completing). */
+  checkStars() {
+    const before = this.starsGot;
+    const result = hud.checkStars(this);
+    if (this.starsGot > before) {
+      this.cheerUntil = Math.max(this.cheerUntil, this.time + 0.9);
+      if (this.starsGot === 3) this.danceStart = this.time;
+    }
+    return result;
+  }
+
+  /** Stars that count: every goal must be met first. */
+  starsNow(score = this.score) {
+    return hud.starsNow(this, score);
+  }
+
+  goalIcon(g: Goal) {
+    return hud.goalIcon(this, g);
+  }
+
+  renderGoals() {
+    return hud.renderGoals(this);
+  }
+
+  get over() {
     return this.o.timeLimit ? this.timeLeft <= 0 : this.throwsLeft <= 0;
   }
 
-  private renderFinish() {
-    if (this.o.competitive || this.o.endless || this.o.timeLimit) {
-      this.finishEl.classList.add('hidden');
-      return;
-    }
-    const now = starsFor(this.score, this.L.stars);
-    const show = now > 0 && this.throwsLeft > 0 && !this.ended && !this.finishing;
-    this.finishEl.classList.toggle('hidden', !show);
-    this.finishEl.classList.toggle('hot', now >= 3);
-    (this.finishEl.lastChild as HTMLElement).textContent = t('+✨{d} for {n} left', {
-      d: this.throwsLeft * FINISH_DUST_PER_THROW,
-      n: this.throwsLeft,
-    });
+  renderFinish() {
+    return hud.renderFinish(this);
   }
 
   /** "Meteor finale": leftover throws rain down as a stardust bonus. */
-  private finishEarly() {
-    if (this.shot || this.ended || this.finishing || this.modalOpen || starsFor(this.score, this.L.stars) === 0) return;
-    this.finishing = true;
-    clearTimeout(this.endTimer);
-    this.renderFinish();
-    const n = this.throwsLeft;
-    sfx.whoosh();
-    for (let k = 0; k < n; k++) {
-      setTimeout(
-        () => {
-          if (this.ended) return;
-          const a = Math.random() * Math.PI * 2;
-          const x = this.cx + Math.cos(a) * this.R * 1.05;
-          const y = this.cy + Math.sin(a) * this.R * 1.05;
-          this.burst(x, y, '#ffd76a', 16, 5);
-          this.ring(x, y, '#ffd76a', this.R * 0.5);
-          this.popup(x, y - 12, `+✨${FINISH_DUST_PER_THROW}`, '#ffd76a', 18);
-          this.throwsLeft--;
-          this.renderHud();
-          sfx.coin();
-          haptic.tick();
-        },
-        120 + k * 160,
-      );
-    }
-    const done = () => {
-      if (this.ended) return;
-      if (this.paused) return void setTimeout(done, 300);
-      this.finishing = false;
-      this.leftover = n;
-      this.endModal(starsFor(this.score, this.L.stars));
-    };
-    setTimeout(done, 400 + n * 160);
+  finishEarly() {
+    return hud.finishEarly(this);
   }
 
-  private swap() {
-    if (this.shot || this.ended) return;
-    [this.cur, this.next] = [this.next, this.cur];
-    sfx.click();
-    haptic.tick();
-    this.renderHud();
-    this.curEl.classList.remove('pop');
-    void this.curEl.offsetWidth;
-    this.curEl.classList.add('pop');
+  swap() {
+    return hud.swap(this);
   }
 
   // ---------------------------------------------------------------- geometry
-  private resize = () => {
-    const r = this.el.getBoundingClientRect();
-    this.w = r.width;
-    this.h = r.height;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    this.canvas.width = Math.round(this.w * dpr);
-    this.canvas.height = Math.round(this.h * dpr);
-    this.g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const rnd = mulberry(this.L.n * 7919);
-    this.stars = Array.from({ length: 90 }, () => ({ x: rnd() * this.w, y: rnd() * this.h, r: rnd() * 1.4 + 0.3, tw: rnd() * 6 }));
-  };
+  resize = () => fx.resize(this);
 
-  private get cx() {
-    return this.w / 2;
+  get cx() {
+    return sceneGeometry(this.w, this.h, this.L.size).cx;
   }
   /** 0..1 progress of the "fly to your galaxy" exit animation. */
-  private exitK = 0;
-  private get cy() {
+  exitK = 0;
+  get cy() {
     const k = this.exitK * this.exitK;
-    return this.h * 0.43 - k * this.h * 0.5;
+    return sceneGeometry(this.w, this.h, this.L.size).cy - k * this.h * 0.5;
   }
-  private get R() {
-    return Math.min(this.w * 0.27, this.h * 0.17) * this.L.size * (1 - this.exitK * 0.85);
+  get R() {
+    return sceneGeometry(this.w, this.h, this.L.size).R * (1 - this.exitK * 0.85);
   }
-  private get launch() {
-    return { x: this.w / 2, y: this.h - 150 };
+  get launch() {
+    return sceneGeometry(this.w, this.h, this.L.size).launch;
   }
   /** Moons that block shots (Moon Guard: one; Twin Moons: two, orbiting opposite ways). */
-  private get moons(): { x: number; y: number; r: number }[] {
-    if (this.L.twist !== 'moon' && this.L.twist !== 'twin') return [];
-    const out = [];
-    const a = this.time * 0.8;
-    const d = this.R * 2.05;
-    out.push({ x: this.cx + Math.cos(a) * d, y: this.cy + Math.sin(a) * d, r: this.R * 0.28 });
-    if (this.L.twist === 'twin') {
-      const b = -this.time * 0.6 + Math.PI;
-      const e = this.R * 1.6;
-      out.push({ x: this.cx + Math.cos(b) * e, y: this.cy + Math.sin(b) * e, r: this.R * 0.22 });
-    }
-    return out;
+  get moons() {
+    return fx.moons(this);
   }
 
   /** Solar Wind: sideways push in px/s², direction fixed per level. */
-  private get wind() {
+  get wind() {
     return this.L.spin > 0 ? 170 : -170;
   }
 
   /** Planet spin rate right now (Wobbly Spin swings back and forth). */
-  private spinNow(time = this.time) {
+  spinNow(time = this.time) {
     return this.L.twist === 'wobble' ? this.L.spin * 1.7 * Math.cos(time * 0.9) : this.L.spin;
   }
 
-  /** How far the planet will have turned `dt` seconds from now. */
-  private rotAhead(dt: number) {
-    if (this.L.twist !== 'wobble') return this.L.spin * dt;
-    return ((this.L.spin * 1.7) / 0.9) * (Math.sin((this.time + dt) * 0.9) - Math.sin(this.time * 0.9));
-  }
-
   // ---------------------------------------------------------------- input
-  private bindInput() {
+  bindInput() {
     const pos = (e: PointerEvent) => {
       const r = this.canvas.getBoundingClientRect();
-      return { x: e.clientX - r.left, y: e.clientY - r.top };
+      return { x: ((e.clientX - r.left) * this.w) / r.width, y: ((e.clientY - r.top) * this.h) / r.height };
     };
     this.canvas.addEventListener('pointerdown', (e) => {
       if (this.aimPointer !== null || !this.canAim()) return;
+      const point = pos(e);
+      if (preview.queueHit(this, point.x, point.y)) {
+        this.swap();
+        return;
+      }
       this.aimPointer = e.pointerId;
+      this.aimGeneration++;
       this.canvas.setPointerCapture(e.pointerId);
       this.aimFrom = pos(e);
       this.aimTo = pos(e);
+      this.drawnAim = null;
     });
     this.canvas.addEventListener('pointermove', (e) => {
       if (!this.aimFrom || e.pointerId !== this.aimPointer) return;
@@ -513,28 +540,68 @@ export class LevelScene {
       if (e.pointerId !== this.aimPointer) return;
       this.aimPointer = null;
       if (!this.aimFrom) return;
+      const from = this.aimFrom;
       const p = this.pull();
-      this.aimFrom = this.aimTo = null;
-      if (p.len < 18 || !this.canAim()) return; // a tap, or the level ended mid-drag
-      this.fire(p.vx, p.vy);
+      const releaseTo = pos(e);
+      const releaseLen = Math.hypot(from.x - releaseTo.x, from.y - releaseTo.y);
+      if (!this.canAim()) {
+        this.aimFrom = this.aimTo = this.drawnAim = null;
+        return;
+      }
+      const ringDistance = Math.hypot(from.x - this.launch.x, from.y - this.launch.y);
+      if (
+        p.len < 18 &&
+        releaseLen < 18 &&
+        this.L.n >= 24 &&
+        this.novaOn &&
+        this.nova.charge >= this.nova.threshold &&
+        ringDistance >= 39 &&
+        ringDistance <= 69 &&
+        !preview.queueHit(this, from.x, from.y)
+      ) {
+        this.nova.held = !this.nova.held;
+        this.aimFrom = this.aimTo = this.drawnAim = null;
+        haptic.tick();
+        sfx.click();
+        return;
+      }
+      if (this.drawnAim) {
+        const drawn = this.drawnAim;
+        this.aimFrom = this.aimTo = this.drawnAim = null;
+        this.fire(drawn.vx, drawn.vy, drawn);
+      } else if (releaseLen >= 18) {
+        // A sub-frame fling must display its preview for a frame before it can launch.
+        this.aimTo = releaseTo;
+        const generation = this.aimGeneration;
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            if (this.destroyed || generation !== this.aimGeneration) return;
+            const drawn = this.drawnAim;
+            this.aimFrom = this.aimTo = this.drawnAim = null;
+            if (drawn && this.canAim()) this.fire(drawn.vx, drawn.vy, drawn);
+          }),
+        );
+      } else this.aimFrom = this.aimTo = this.drawnAim = null;
     };
     this.canvas.addEventListener('pointerup', release);
     this.canvas.addEventListener('pointercancel', (e) => {
       if (e.pointerId !== this.aimPointer) return;
       this.aimPointer = null;
-      this.aimFrom = this.aimTo = null;
+      this.aimGeneration++;
+      this.aimFrom = this.aimTo = this.drawnAim = null;
     });
   }
 
-  private aimPointer: number | null = null;
-  private destroyed = false;
+  aimPointer: number | null = null;
+  destroyed = false;
+  private devHook?: Window['__scene'];
 
   /** Can the player start or release a throw right now? */
-  private canAim() {
+  canAim() {
     return !this.shot && !this.ended && !this.paused && !this.modalOpen && !this.finishing && !this.over;
   }
 
-  private pull() {
+  pull() {
     if (!this.aimFrom || !this.aimTo) return { vx: 0, vy: 0, len: 0 };
     let dx = this.aimFrom.x - this.aimTo.x;
     let dy = this.aimFrom.y - this.aimTo.y;
@@ -547,14 +614,43 @@ export class LevelScene {
     return { vx: dx * PULL_TO_SPEED, vy: dy * PULL_TO_SPEED, len: l };
   }
 
-  private fire(vx: number, vy: number) {
+  aimAt(sector: number) {
+    return preview.aimAt(this, sector);
+  }
+
+  fire(vx: number, vy: number, drawn?: preview.DrawnAim) {
+    this.scoreAtThrow = this.score;
+    this.lastHit = null;
     const { x, y } = this.launch;
-    this.shot = { kind: this.cur, x, y, vx, vy, t: 0, trail: [] };
+    const nova = novaForThrow(this.roundState());
+    const warnedBonk = drawn?.badge ?? needsBonkBadge(this.predict(vx, vy).hit);
+    this.shot = {
+      kind: this.cur,
+      x,
+      y,
+      vx,
+      vy,
+      t: 0,
+      carry: 0,
+      t0: drawn?.roundTime ?? this.time,
+      rot0: drawn?.rotation ?? this.rot,
+      trail: [],
+      nova,
+      warnedBonk,
+      bounceCount: 0,
+    };
+    if (nova) {
+      sfx.combo(6);
+      haptic.heavy();
+    }
     if (Number.isFinite(this.throwsLeft)) this.throwsLeft--;
     this.throwsUsed++;
-    sfx.launch();
-    haptic.medium();
-    this.o.onThrow?.();
+    this.coachEl.classList.remove('show');
+    clearTimeout(this.coachTimer);
+    sfx.objectLaunch(this.shot.kind);
+    haptic.object(this.shot.kind);
+    this.o.onThrow?.(this.shot.kind);
+    if (this.throwsUsed === 1 && this.L.n === 1) this.showCoach(1);
     if (this.hintShown) {
       this.hintShown = false;
       this.hintEl.remove();
@@ -567,732 +663,231 @@ export class LevelScene {
   }
 
   // ---------------------------------------------------------------- physics
-  private step(s: { x: number; y: number; vx: number; vy: number }, dt: number) {
-    const dx = this.cx - s.x;
-    const dy = this.cy - s.y;
-    const r2 = Math.max(dx * dx + dy * dy, 400);
-    const r = Math.sqrt(r2);
-    const a = (this.L.twist === 'heavy' ? GM * 1.45 : GM) / r2;
-    if (this.L.twist === 'wind') s.vx += this.wind * dt;
-    s.vx += (dx / r) * a * dt;
-    s.vy += (dy / r) * a * dt;
-    s.x += s.vx * dt;
-    s.y += s.vy * dt;
+  flightWorld(rotation: number): FlightWorld {
+    return fx.flightWorld(this, rotation);
   }
 
-  private hitSector(x: number, y: number): number {
-    const ang = Math.atan2(y - this.cy, x - this.cx) - this.rot;
-    const t = ((ang % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-    return Math.floor(t / ((Math.PI * 2) / SECTORS)) % SECTORS;
+  predict(vx: number, vy: number) {
+    return preview.predictFlight(this, vx, vy);
   }
 
-  private surfaceR(i: number) {
+  surfaceR(i: number) {
     return this.R * surfaceK(this.planet.sectors[i]);
   }
 
-  private update(dt: number) {
-    this.time += dt;
-    if (this.o.timeLimit && !this.ended && !this.modalOpen && this.timeLeft > 0) {
-      this.timeLeft -= dt;
-      this.renderClock();
-      if (this.timeLeft <= 0) {
-        this.aimFrom = this.aimTo = null;
-        sfx.whoosh();
-        this.popup(this.cx, this.cy - this.R * 1.6, t("Time's up!"), '#ffd84a', 32, 1.6);
-        this.afterShot();
-      }
-    }
-    this.rot += this.spinNow() * dt;
-    if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 30);
-    // score tween
-    if (this.shownScore !== this.score) {
-      const d = this.score - this.shownScore;
-      this.shownScore += Math.sign(d) * Math.max(1, Math.ceil(Math.abs(d) * 0.12));
-      if (Math.abs(this.score - this.shownScore) < 1) this.shownScore = this.score;
-      const got = starsFor(this.shownScore, this.L.stars);
-      if (got > this.starsGot) {
-        this.starsGot = got;
-        sfx.star(got - 1);
-        haptic.success();
-        if (got === 3) {
-          this.confetti();
-          this.popup(this.cx, this.cy - this.R * 1.9, t('★★★ Perfect planet!'), '#ffd84a', 24, 2);
-        }
-        this.renderFinish();
-        const s = this.hudStars[got - 1];
-        s.classList.remove('pop');
-        void s.offsetWidth;
-        s.classList.add('pop');
-      }
-      this.renderScore();
-    }
-    const sh = this.shot;
-    if (sh) {
-      const sub = 4;
-      for (let k = 0; k < sub && this.shot; k++) {
-        this.step(sh, dt / sub);
-        sh.t += dt / sub;
-        const d = Math.hypot(sh.x - this.cx, sh.y - this.cy);
-        const i = this.hitSector(sh.x, sh.y);
-        const m = this.moons.find((mm) => Math.hypot(sh.x - mm.x, sh.y - mm.y) < mm.r + 8);
-        if (m) {
-          this.burst(sh.x, sh.y, '#c9c3d6', 14, 4);
-          this.popup(sh.x, sh.y - 10, t('Blocked!'), '#fff', 18);
-          sfx.miss();
-          this.shot = null;
-          this.afterShot();
-          break;
-        }
-        if (d <= this.surfaceR(i) + 6) {
-          this.land(sh, i);
-          break;
-        }
-        if (sh.t > 5 || sh.x < -150 || sh.x > this.w + 150 || sh.y < -250 || sh.y > this.h + 150) {
-          this.popup(Math.min(Math.max(sh.x, 60), this.w - 60), Math.min(Math.max(sh.y, 120), this.h - 200), t('Missed!'), '#ffb3c1', 20);
-          sfx.miss();
-          this.shot = null;
-          this.afterShot();
-          break;
-        }
-      }
-      if (this.shot) {
-        sh.trail.push({ x: sh.x, y: sh.y });
-        if (sh.trail.length > 18) sh.trail.shift();
-        if (Math.random() < 0.6)
-          this.particles.push({
-            x: sh.x,
-            y: sh.y,
-            vx: (Math.random() - 0.5) * 30,
-            vy: (Math.random() - 0.5) * 30,
-            life: 0.5,
-            max: 0.5,
-            size: 3,
-            color: KINDS[sh.kind].color,
-            g: 0,
-          });
-      }
-    }
-    for (const p of this.particles) {
-      p.life -= dt;
-      p.vy += p.g * dt;
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      p.vx *= 0.98;
-      p.vy *= 0.98;
-    }
-    this.particles = this.particles.filter((p) => p.life > 0);
-    for (const p of this.popups) {
-      p.life -= dt;
-      p.y += p.vy * dt;
-      p.vy *= 0.96;
-    }
-    this.popups = this.popups.filter((p) => p.life > 0);
-    this.flash = this.flash.filter((f) => (f.t -= dt) > 0);
-    for (const r of this.rings) r.t += dt;
-    this.rings = this.rings.filter((r) => r.t < r.max);
-    for (const [k, v] of this.spawnAnim) {
-      if (v - dt <= 0) this.spawnAnim.delete(k);
-      else this.spawnAnim.set(k, v - dt);
+  roundState(): RoundState {
+    return fx.roundState(this);
+  }
+
+  roundModifiers(): RoundModifiers {
+    return fx.roundModifiers(this);
+  }
+
+  update(dt: number) {
+    return fx.update(this, dt);
+  }
+
+  land(sh: Shot, i: number) {
+    return fx.land(this, sh, i);
+  }
+
+  announce(id: string, at: number, firstArrival: boolean) {
+    return hud.announce(this, id, at, firstArrival);
+  }
+
+  showDiscover() {
+    return hud.showDiscover(this);
+  }
+
+  showCoach(k: number) {
+    hud.showCoach(this, k);
+    if (k === 0 && this.L.sky.gusty && this.o.gustTip) {
+      this.o.onGustSeen?.();
+      this.o.gustTip = undefined;
     }
   }
 
-  private land(sh: Shot, i: number) {
-    this.shot = null;
-    const res = impact(this.planet, sh.kind, i, this.o.splash);
-    sfx.impact(sh.kind);
-    haptic.heavy();
-    this.shake = this.o.reduceMotion ? 0 : 10;
-    this.burst(sh.x, sh.y, KINDS[sh.kind].color, 34, 7);
-    this.ring(sh.x, sh.y, KINDS[sh.kind].color, this.R * 0.9);
-    const delta = res.after - res.before;
-    this.chain = delta > 0 ? this.chain + 1 : 0;
-    const quality = delta + res.spawned.length * 6;
-    const call = CALLOUTS.find(([min]) => quality >= min);
-    if (call) {
-      const text = this.chain >= 3 ? `${t(call[1])} ×${this.chain}` : t(call[1]);
-      setTimeout(() => {
-        this.popup(this.cx, this.cy + this.R * 1.45, text, call[2], 34, 1.4);
-        sfx.combo(CALLOUTS.length - CALLOUTS.indexOf(call) + Math.min(this.chain, 4));
-        haptic.success();
-      }, 260);
+  showCoachEvent(event: CoachEvent) {
+    return hud.showCoachEvent(this, event);
+  }
+
+  introCard(id: string) {
+    const row = UNLOCKS.find((x) => x.id === id && x.intro);
+    if (row) return hud.introCard(this, row);
+    return false;
+  }
+
+  endTimer = 0;
+  afterShot() {
+    if (this.score <= this.scoreAtThrow) this.shrugUntil = this.time + 0.75;
+    return hud.afterShot(this);
+  }
+
+  checkEnd() {
+    const before = this.practiceGifts;
+    const result = hud.checkEnd(this);
+    if (this.L.n <= 3 && this.practiceGifts > before) {
+      const line = t(PRACTICE_GIFT_LINE);
+      const label = this.coachEl.querySelector('span:last-child');
+      if (label) label.textContent = line;
+      hud.speak(this, line);
     }
-    this.score = res.after;
-    this.heat(res.after - res.before);
-    if (res.changed.length) this.o.onTransform?.(res.changed.length);
-    this.o.onPlanet?.(this.planet);
-    const tokens = this.o.onLand?.(
-      res.changed.map((ci) => this.planet.sectors[ci].biome),
-      res.spawned.length,
-    );
-    if (tokens) setTimeout(() => this.popup(sh.x + 30, sh.y + 10, `+${tokens} ${this.o.eventEmoji ?? '⭐'}`, '#ffd84a', 18, 1.3), 500);
-    if (delta !== 0) this.popup(sh.x, sh.y - 20, `${delta > 0 ? '+' : ''}${delta}`, delta > 0 ? '#9dffb0' : '#ff9db0', 26);
-    // name up to two newly formed biomes
-    const shown = new Set<string>();
-    res.changed.forEach((ci, k) => {
-      this.flash.push({ i: ci, t: 0.5 });
-      const bname = t(BIOMES[this.planet.sectors[ci].biome].name);
-      if (!shown.has(bname) && shown.size < 2 && this.planet.sectors[ci].biome !== 'barren') {
-        shown.add(bname);
-        const [x, y] = this.sectorPoint(ci, 1.35);
-        setTimeout(
-          () => {
-            this.popup(x, y, bname, '#ffffff', 15);
-            sfx.bloom(k);
-          },
-          120 + shown.size * 140,
-        );
-      }
-    });
-    res.spawned.forEach((s, k) => {
-      setTimeout(() => this.announce(s.id, s.at), 350 + k * 450);
-    });
-    this.afterShot();
+    return result;
   }
 
-  private announce(id: string, at: number) {
-    const sp = SPECIES_BY_ID[id];
-    if (!sp) return;
-    this.spawnAnim.set(at, 0.9);
-    const [x, y] = this.sectorPoint(at, 1.55);
-    const rare = sp.rarity === 'rare' || sp.rarity === 'legendary';
-    const isNew = !this.o.seen.has(id);
-    this.o.onSpecies?.(id);
-    sfx.creature(rare || isNew);
-    haptic.success();
-    this.burst(x, y, rare ? '#ffd84a' : '#ffffff', rare ? 40 : 20, rare ? 7 : 4);
-    this.popup(x, y - 16, `${t(sp.name)}${isNew ? t(' — NEW!') : ''}`, rare ? '#ffd84a' : '#e0f7ff', rare ? 20 : 16, 2.2);
-    if (isNew) {
-      this.o.seen.add(id);
-      this.o.onNewSpecies(id);
-      this.discoverQueue.push(id);
-      this.showDiscover();
-    }
+  endModal(stars: number) {
+    const rungs = stars === 0 ? (this.o.helpForFail?.(this.throwsUsed, this.throwsTotal) ?? []) : [];
+    if (rungs.length) return helpEndModal(this, rungs);
+    return hud.endModal(this, stars);
   }
 
-  private showDiscover() {
-    if (this.discoverBusy || this.ended) return;
-    const id = this.discoverQueue.shift();
-    if (!id) return;
-    const sp = SPECIES_BY_ID[id];
-    if (!sp) return;
-    this.discoverBusy = true;
-    const label = rarityName(sp.rarity);
-    this.discoverEl.className = `discover show r-${sp.rarity}`;
-    this.discoverEl.replaceChildren(
-      h('div', { class: 'd-emoji' }, critterCanvas(sp.id, 56)),
-      h(
-        'div',
-        { class: 'd-body' },
-        h('small', null, t('New creature · {r}', { r: label })),
-        h('b', null, t(sp.name)),
-        h('span', null, t('+💎3 · added to your Lifebook')),
-      ),
-    );
-    setTimeout(() => {
-      this.discoverEl.classList.remove('show');
-      setTimeout(() => {
-        this.discoverBusy = false;
-        this.showDiscover();
-      }, 300);
-    }, 2300);
+  exitRaf = 0;
+
+  finish(stars: number) {
+    return hud.finish(this, stars);
   }
 
-  private showCoach(k: number) {
-    const text = this.o.coach?.[k];
-    if (!text) {
-      this.coachEl.classList.remove('show');
-      return;
-    }
-    this.coachEl.replaceChildren(h('span', { class: 'coach-ic' }, '💡'), h('span', null, t(text)));
-    this.coachEl.classList.remove('show');
-    void this.coachEl.offsetWidth;
-    this.coachEl.classList.add('show');
-  }
-
-  private introCard(kind: Kind) {
-    const k = KINDS[kind];
-    this.paused = true;
-    const m = modal(
-      [
-        h('div', { class: 'm-sub' }, t('New object!')),
-        h('div', { class: 'intro-art' }, projectileCanvas(kind, 110)),
-        h('div', { class: 'm-title' }, t(k.name)),
-        h('p', null, t(k.desc)),
-        btn(t('Got it!'), 'primary wide', () => m.close()),
-      ],
-      { onClose: () => ((this.paused = false), (this.modalOpen = null)) },
-    );
-    this.modalOpen = m;
-    sfx.levelUp();
-  }
-
-  private endTimer = 0;
-  private afterShot() {
-    this.renderHud();
-    this.showCoach(this.throwsUsed);
-    if (this.o.endless) return;
-    if (this.over) {
-      clearTimeout(this.endTimer);
-      this.endTimer = window.setTimeout(() => this.checkEnd(), 1400);
-    }
-  }
-
-  private checkEnd() {
-    if (this.ended || (this.modalOpen && !this.paused) || !this.over) return;
-    if (this.shot || this.paused) {
-      this.endTimer = window.setTimeout(() => this.checkEnd(), 300);
-      return;
-    }
-    this.shownScore = this.score;
-    this.renderScore();
-    const stars = starsFor(this.score, this.L.stars);
-    this.endModal(stars);
-  }
-
-  private endModal(stars: number) {
-    const cost = this.o.continueCost(this.continues);
-    const canCont = this.continues < 3 && this.leftover === 0 && !this.o.competitive && !this.o.timeLimit;
-    const won = stars > 0;
-    const finish = () => {
-      m.close();
-      this.modalOpen = null;
-      this.finish(stars);
-    };
-    const cont = () => {
-      if (!this.o.spendGems(cost)) {
-        sfx.error();
-        toast(t('Not enough gems — grab a pack in the Shop!'), 'bad');
-        return;
-      }
-      m.close();
-      this.modalOpen = null;
-      this.continues++;
-      this.throwsLeft += 5;
-      sfx.gem();
-      haptic.success();
-      this.renderHud();
-    };
-    const need = won ? (stars < 3 ? this.L.stars[stars] - this.score : 0) : this.L.stars[0] - this.score;
-    const m = modal(
-      [
-        h(
-          'div',
-          { class: 'end-title' + (won ? '' : ' lost') },
-          won ? (this.o.timeLimit ? t("Time's up!") : t('Planet complete!')) : this.o.timeLimit ? t("Time's up!") : t('Out of throws'),
-        ),
-        h('div', { class: 'end-stars' }, ...[0, 1, 2].map((i) => h('span', { class: i < stars ? 'on' : '' }, '★'))),
-        h('div', { class: 'end-score' }, t('{n} life', { n: fmt(this.score) })),
-        this.leftover
-          ? h(
-              'p',
-              { class: 'end-need' },
-              tp(this.leftover, 'Meteor finale: +✨{d} for {n} unused throw', 'Meteor finale: +✨{d} for {n} unused throws', {
-                d: this.leftover * FINISH_DUST_PER_THROW,
-              }),
-            )
-          : null,
-        need > 0 && !this.leftover
-          ? h(
-              'p',
-              { class: 'end-need' },
-              won ? t('Only {n} life from the next star!', { n: fmt(need) }) : t('Just {n} life short of a star.', { n: fmt(need) }),
-            )
-          : null,
-        canCont && (need > 0 || !won)
-          ? btn(
-              h(
-                'span',
-                { class: 'stack' },
-                h('b', null, t('+5 THROWS')),
-                h('small', null, t('💎 {c} · you have {g}', { c: cost, g: this.o.gems() })),
-              ),
-              'gem wide',
-              cont,
-            )
-          : null,
-        won || this.o.competitive || this.o.timeLimit
-          ? btn(this.o.endLabel ?? t('Collect'), 'primary wide', finish)
-          : btn(t('Try again'), 'primary wide', () => {
-              m.close();
-              this.modalOpen = null;
-              this.finish(0);
-            }),
-      ],
-      { dismiss: false, cls: 'end' },
-    );
-    this.modalOpen = m;
-    if (won) {
-      sfx.win();
-      haptic.success();
-      this.confetti();
-    } else {
-      sfx.lose();
-      haptic.warn();
-    }
-  }
-
-  private exitRaf = 0;
-
-  private finish(stars: number) {
-    if (this.ended) return;
-    this.ended = true;
-    const send = () =>
-      !this.destroyed &&
-      this.o.onEnd({
-        level: this.L,
-        score: this.score,
-        stars,
-        planet: this.planet,
-        won: stars > 0,
-        throwsUsed: this.throwsUsed,
-        leftover: this.leftover,
-      });
-    if (stars === 0 || this.o.reduceMotion || this.o.endless) return send();
-    // the finished planet shrinks and flies up to join your galaxy
-    sfx.whoosh();
-    this.el.querySelector('.hud')?.classList.add('fade-out');
-    const t0 = performance.now();
-    const step = (now: number) => {
-      this.exitK = Math.min(1, (now - t0) / 750);
-      if (Math.random() < 0.8) this.burst(this.cx, this.cy + this.R, '#ffd76a', 2, 2);
-      if (this.destroyed) return;
-      if (this.exitK < 1) this.exitRaf = requestAnimationFrame(step);
-      else send();
-    };
-    this.exitRaf = requestAnimationFrame(step);
-  }
-
-  private pause() {
-    if (this.ended || this.modalOpen) return;
-    this.paused = true;
-    this.aimFrom = this.aimTo = null;
-    const m = modal(
-      [
-        h('div', { class: 'end-title' }, t('Paused')),
-        btn(t('Resume'), 'primary wide', () => m.close()),
-        btn(t('Restart planet'), 'ghost wide', () => {
-          if (this.ended) return;
-          m.close();
-          this.ended = true;
-          this.o.onEnd({ level: this.L, score: 0, stars: 0, planet: this.planet, won: false, throwsUsed: -1, leftover: 0 });
-        }),
-        btn(t('Leave to galaxy'), 'ghost wide', () => {
-          if (this.ended) return;
-          m.close();
-          this.ended = true;
-          this.o.onQuit();
-        }),
-      ],
-      {
-        onClose: () => {
-          this.paused = false;
-          if (this.modalOpen === m) this.modalOpen = null;
-        },
-      },
-    );
-    this.modalOpen = m;
+  pause() {
+    return hud.pause(this);
   }
 
   // ---------------------------------------------------------------- fx helpers
   /** Drifting streaks that show the wind's direction and strength. */
-  private drawWind() {
-    const g = this.g;
-    const dir = Math.sign(this.wind);
-    g.strokeStyle = 'rgba(200,230,255,0.55)';
-    g.lineWidth = 2.5;
-    g.lineCap = 'round';
-    for (let k = 0; k < 18; k++) {
-      const y = ((k * 97) % 100) / 100;
-      const speed = 60 + ((k * 37) % 50);
-      const x = ((((this.time * speed * dir + k * 131) % (this.w + 80)) + this.w + 80) % (this.w + 80)) - 40;
-      g.beginPath();
-      g.moveTo(x, y * this.h);
-      g.lineTo(x - dir * (18 + (k % 3) * 8), y * this.h);
-      g.stroke();
-    }
+  drawWind() {
+    return fx.drawWind(this);
   }
 
-  private burst(x: number, y: number, color: string, n: number, speed: number) {
-    for (let k = 0; k < n; k++) {
-      const a = Math.random() * Math.PI * 2;
-      const v = (Math.random() * 0.8 + 0.3) * speed * 40;
-      const life = 0.4 + Math.random() * 0.6;
-      this.particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life, max: life, size: 2 + Math.random() * 3.5, color, g: 0 });
-    }
+  burst(x: number, y: number, color: string, n: number, speed: number) {
+    return fx.burst(this, x, y, color, n, speed);
   }
 
-  private ring(x: number, y: number, color: string, r: number) {
-    this.rings.push({ x, y, t: 0, max: 0.55, r, color });
+  ring(x: number, y: number, color: string, r: number) {
+    return fx.ring(this, x, y, color, r);
   }
 
-  private confetti() {
-    if (this.o.reduceMotion) return;
-    const cols = ['#ffd84a', '#5ef2b0', '#ff8fc8', '#6ec8ff', '#b58cff'];
-    for (let k = 0; k < 90; k++) {
-      const life = 1.6 + Math.random() * 1.2;
-      this.particles.push({
-        x: Math.random() * this.w,
-        y: -10 - Math.random() * 80,
-        vx: (Math.random() - 0.5) * 80,
-        vy: 60 + Math.random() * 140,
-        life,
-        max: life,
-        size: 2.5 + Math.random() * 3,
-        color: cols[k % cols.length],
-        g: 120,
-      });
-    }
+  cheerUntil = 0;
+  private readonly fallbackLook: Look = { ...DEFAULT_LOOK };
+  /** Bonus life from Object Lab perks (on top of the planet's own life). */
+  bonus = 0;
+  get look(): Look {
+    const look = this.o.look ?? this.fallbackLook;
+    look.expression = this.aimFrom ? 'focused' : this.shrugUntil > this.time ? 'shrug' : this.cheerUntil > this.time ? 'cheer' : undefined;
+    look.dance = this.danceStart >= 0 && this.time - this.danceStart < 1 ? this.time - this.danceStart : undefined;
+    return look;
   }
 
-  private popup(x: number, y: number, text: string, color: string, size: number, dur = 1.2) {
-    this.popups.push({ x, y, text, color, size, life: dur, max: dur, vy: -40 });
+  emoteAt = -1;
+  /** Comet Guardian health (boss planets). */
+  bossHp = BOSS_HP;
+  bossFlash = 0;
+
+  hitBoss(x: number, y: number) {
+    return fx.hitBoss(this, x, y);
   }
 
-  private sectorPoint(i: number, k: number): [number, number] {
+  /** The Comet Guardian: a grumpy comet with a fiery tail and health pips. */
+  drawBoss() {
+    return fx.drawBoss(this);
+  }
+  confetti() {
+    return fx.confetti(this);
+  }
+
+  popup(x: number, y: number, text: string, color: string, size: number, dur = 1.2, priority = 1) {
+    return fx.popup(this, x, y, text, color, size, dur, priority);
+  }
+
+  sectorPoint(i: number, k: number): [number, number] {
     const a = this.rot + (i + 0.5) * ((Math.PI * 2) / SECTORS);
     const r = this.R * k;
     return [this.cx + Math.cos(a) * r, this.cy + Math.sin(a) * r];
   }
 
   // ---------------------------------------------------------------- render
-  private frame = (now: number) => {
+  frame = (now: number) => {
     const dt = Math.min(0.033, (now - (this.last || now)) / 1000);
     this.last = now;
     try {
-      if (!this.paused) this.update(dt);
+      if (!this.paused && !this.modalOpen) this.update(dt);
       this.draw();
     } finally {
       if (!this.destroyed) this.raf = requestAnimationFrame(this.frame);
     }
   };
 
-  private draw() {
-    const g = this.g;
-    const { w, h: H } = this;
-    g.save();
-    // background
-    const bg = g.createRadialGradient(this.cx, this.cy, this.R * 0.5, this.cx, this.cy, Math.max(w, H));
-    bg.addColorStop(0, `hsl(${this.L.hue} 55% 22%)`);
-    bg.addColorStop(0.5, `hsl(${(this.L.hue + 40) % 360} 50% 10%)`);
-    bg.addColorStop(1, '#07061a');
-    g.fillStyle = bg;
-    g.fillRect(0, 0, w, H);
-    for (const s of this.stars) {
-      g.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(this.time * 0.8 + s.tw));
-      g.fillStyle = '#fff';
-      g.beginPath();
-      g.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      g.fill();
-    }
-    g.globalAlpha = 1;
-    if (this.shake > 0) g.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
-    this.drawPlanet();
-    for (const r of this.rings) {
-      const k = r.t / r.max;
-      g.globalAlpha = (1 - k) * 0.8;
-      g.strokeStyle = r.color;
-      g.lineWidth = 4 * (1 - k) + 1;
-      g.beginPath();
-      g.arc(r.x, r.y, r.r * (0.2 + k), 0, Math.PI * 2);
-      g.stroke();
-    }
-    g.globalAlpha = 1;
-    for (const m of this.moons) {
-      g.fillStyle = '#b9b3c9';
-      g.beginPath();
-      g.arc(m.x, m.y, m.r, 0, Math.PI * 2);
-      g.fill();
-      g.fillStyle = 'rgba(0,0,0,0.18)';
-      g.beginPath();
-      g.arc(m.x + m.r * 0.3, m.y + m.r * 0.2, m.r * 0.3, 0, Math.PI * 2);
-      g.fill();
-    }
-    if (this.L.twist === 'wind') this.drawWind();
-    this.drawAim();
-    // shot
-    const sh = this.shot;
-    if (sh) {
-      sh.trail.forEach((p, k) => {
-        g.globalAlpha = (k / sh.trail.length) * 0.5;
-        g.fillStyle = KINDS[sh.kind].color;
-        g.beginPath();
-        g.arc(p.x, p.y, 3 + k * 0.4, 0, Math.PI * 2);
-        g.fill();
-      });
-      g.globalAlpha = 1;
-      drawProjectile(g, sh.kind, sh.x, sh.y, 30, this.time, sh.t * 6);
-    }
-    // particles
-    for (const p of this.particles) {
-      g.globalAlpha = Math.max(0, p.life / p.max);
-      g.fillStyle = p.color;
-      g.beginPath();
-      g.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      g.fill();
-    }
-    g.globalAlpha = 1;
-    // popups
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    for (const p of this.popups) {
-      const k = p.life / p.max;
-      g.globalAlpha = Math.min(1, k * 2.5);
-      const sc = k > 0.85 ? 1 + (k - 0.85) * 3 : 1;
-      g.font = `700 ${Math.round(p.size * sc)}px Fredoka, ui-rounded, system-ui, sans-serif`;
-      const half = g.measureText(p.text).width / 2 + 8;
-      p.x = Math.min(this.w - half, Math.max(half, p.x));
-      g.lineWidth = 5;
-      g.strokeStyle = 'rgba(10,6,30,0.85)';
-      g.strokeText(p.text, p.x, p.y);
-      g.fillStyle = p.color;
-      g.fillText(p.text, p.x, p.y);
-    }
-    g.globalAlpha = 1;
-    g.restore();
+  draw() {
+    return fx.draw(this);
   }
 
-  private drawPlanet() {
-    const lifeK = this.o.endless ? 0.6 : Math.min(1, this.score / this.L.stars[2]);
-    renderPlanet(this.g, this.planet, {
-      cx: this.cx,
-      cy: this.cy,
-      R: this.R,
-      rot: this.rot,
-      time: this.time,
-      glow: this.o.glow,
-      lifeK,
-      flash: (i) => (this.flash.find((f) => f.i === i)?.t ?? 0) * 1.4,
-      creature: (g, i, x, y, a) => {
-        const sp = SPECIES_BY_ID[this.planet.sectors[i].species!];
-        if (!sp) return;
-        const anim = this.spawnAnim.get(i) ?? 0;
-        const pop = anim > 0 ? 1 + Math.sin((anim / 0.9) * Math.PI) * 0.8 : 1;
-        const size = this.R * (sp.rarity === 'common' ? 0.2 : sp.rarity === 'uncommon' ? 0.24 : 0.3) * pop;
-        drawCreature(g, sp.id, x, y, a + Math.PI / 2, size, this.time + i);
-      },
-    });
+  drawPlanet() {
+    drawChapterBackdrop(this.g, this.chapterNumber, this.w, this.h, this.time, !!this.o.reduceMotion, !!this.o.remixPalette);
+    setRemixRim(!!this.o.remixPalette);
+    try {
+      return fx.drawPlanet(this);
+    } finally {
+      setRemixRim(false);
+    }
   }
 
-  private predictCache: { key: string; label: string; delta: number; spawn: string } | null = null;
+  predictCache: {
+    key: string;
+    title: string;
+    facts: AimTagFacts;
+    changed: number[];
+  } | null = null;
+  previewTextScale = 0;
+  aimTagPosition: { x: number; y: number } | null = null;
 
   /** Highlight the landing region and preview what it will become. */
-  private drawLanding(i: number) {
-    const g = this.g;
-    const step = (Math.PI * 2) / SECTORS;
-    const a0 = this.rot + i * step;
-    const pulse = 0.55 + Math.sin(this.time * 10) * 0.25;
-    const r = this.surfaceR(i);
-    g.save();
-    g.globalAlpha = pulse;
-    g.strokeStyle = '#ffffff';
-    g.lineWidth = 3;
-    g.beginPath();
-    g.arc(this.cx, this.cy, r + 4, a0 - step * 0.5, a0 + step * 1.5);
-    g.stroke();
-    g.restore();
-    const key = `${i}|${this.cur}|${this.throwsUsed}`;
-    if (this.predictCache?.key !== key) {
-      const sim = clonePlanet(this.planet);
-      const res = impact(sim, this.cur, i, this.o.splash);
-      const before = BIOMES[this.planet.sectors[i].biome];
-      const after = BIOMES[sim.sectors[i].biome];
-      this.predictCache = {
-        key,
-        label: after.id !== before.id ? `${after.deco} ${t(after.name)}` : '',
-        delta: res.after - res.before,
-        spawn: res.spawned.length ? SPECIES_BY_ID[res.spawned[0].id].emoji : '',
-      };
-    }
-    const pc = this.predictCache;
-    if (!pc.label && !pc.delta) return;
-    const [x, y] = this.sectorPoint(i, 1.42);
-    const text = `${pc.label}${pc.spawn ? ' ' + pc.spawn : ''}${pc.delta ? `  ${pc.delta > 0 ? '+' : ''}${pc.delta}` : ''}`.trim();
-    g.font = '700 14px Fredoka, ui-rounded, system-ui, sans-serif';
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    const w = g.measureText(text).width + 16;
-    const cx = Math.min(this.w - w / 2 - 4, Math.max(w / 2 + 4, x));
-    g.fillStyle = 'rgba(10,6,30,0.78)';
-    g.beginPath();
-    g.roundRect(cx - w / 2, y - 13, w, 26, 13);
-    g.fill();
-    g.fillStyle = pc.delta >= 0 ? '#bfffd6' : '#ffc0cc';
-    g.fillText(text, cx, y + 1);
+  drawLanding(i: number, path?: ReturnType<typeof flyFull>) {
+    return preview.drawLanding(this, i, path);
   }
 
-  private drawAim() {
-    const g = this.g;
-    const L = this.launch;
-    // launcher pad
-    g.fillStyle = 'rgba(255,255,255,0.08)';
-    g.beginPath();
-    g.arc(L.x, L.y, 34, 0, Math.PI * 2);
-    g.fill();
-    g.strokeStyle = 'rgba(255,255,255,0.25)';
-    g.lineWidth = 2;
-    g.stroke();
-    if (!this.shot && !this.ended) {
-      const p = this.pull();
-      const bounce = this.aimFrom ? 0 : Math.sin(this.time * 3) * 3;
-      const ox = this.aimFrom ? -p.vx / PULL_TO_SPEED / 3 : 0;
-      const oy = this.aimFrom ? -p.vy / PULL_TO_SPEED / 3 : 0;
-      drawProjectile(this.g, this.cur, L.x + ox, L.y + oy + bounce, 36, this.time);
-      if (this.aimFrom && p.len >= 18) {
-        // trajectory preview
-        const steps = SCOPE_STEPS[this.o.boosters.scope ? 3 : this.o.scopeLevel];
-        const s = { x: L.x, y: L.y, vx: p.vx, vy: p.vy };
-        g.fillStyle = '#ffffff';
-        let hit = -1;
-        for (let k = 0; k < steps; k++) {
-          for (let j = 0; j < 3; j++) this.step(s, 1 / 90);
-          const d = Math.hypot(s.x - this.cx, s.y - this.cy);
-          // where will it land, allowing for the spin during the flight? (same test as a real throw)
-          const ft = ((k + 1) * 3) / 90;
-          const ang = Math.atan2(s.y - this.cy, s.x - this.cx) - (this.rot + this.rotAhead(ft));
-          const tt = ((ang % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-          const si = Math.floor(tt / ((Math.PI * 2) / SECTORS)) % SECTORS;
-          if (d <= this.surfaceR(si) + 6) {
-            hit = si;
-            break;
-          }
-          g.globalAlpha = 0.85 * (1 - k / steps);
-          g.beginPath();
-          g.arc(s.x, s.y, 3.2 - (k / steps) * 1.8, 0, Math.PI * 2);
-          g.fill();
-        }
-        g.globalAlpha = 1;
-        if (hit >= 0) this.drawLanding(hit);
-        // rubber band
-        g.strokeStyle = KINDS[this.cur].color;
-        g.lineWidth = 3;
-        g.globalAlpha = 0.6;
-        g.beginPath();
-        g.moveTo(L.x - 26, L.y);
-        g.lineTo(L.x + ox, L.y + oy);
-        g.lineTo(L.x + 26, L.y);
-        g.stroke();
-        g.globalAlpha = 1;
-      }
-    }
+  /** Supernova meter: a ring around the launcher that fills as you transform land. */
+  /** The Supernova is introduced after the first tutorial planets. */
+  get novaOn() {
+    return this.L.nova;
+  }
+
+  drawNovaMeter(x: number, y: number, aiming: boolean) {
+    return preview.drawNovaMeter(this, x, y, aiming);
+  }
+
+  drawAim() {
+    return preview.drawAim(this);
   }
 
   destroy() {
     clearTimeout(this.endTimer);
+    clearTimeout(this.liveTimer);
+    clearTimeout(this.coachTimer);
     this.ended = true;
     this.destroyed = true;
     cancelAnimationFrame(this.raf);
     cancelAnimationFrame(this.exitRaf);
     window.removeEventListener('resize', this.resize);
     this.modalOpen?.close();
+    // the next round may already have installed its own hook
+    if (import.meta.env.DEV && window.__scene === this.devHook) delete window.__scene;
   }
 }
 
-function mulberry(seed: number) {
-  let s = seed >>> 0;
-  return () => {
-    let t = (s = (s + 0x6d2b79f5) >>> 0);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+declare global {
+  interface Window {
+    __scene?: {
+      readonly w: number;
+      aimAt: (sector: number) => { vx: number; vy: number };
+      aimAtClear: (sector: number) => { vx: number; vy: number };
+      drawPreview: (vector: { vx: number; vy: number }) => {
+        drawn: preview.DrawnAim | null;
+        clear: ReturnType<typeof flyFull>;
+        predicted: ReturnType<LevelScene['predict']>;
+      };
+      fire: (vector: { vx: number; vy: number }) => void;
+      predict: (vx: number, vy: number) => { kind: string; sector?: number; by?: string };
+      readonly lastHit: { kind: string; sector?: number; by?: string } | null;
+      roundTime: () => number;
+      readonly surpriseBonks: number;
+    };
+  }
 }

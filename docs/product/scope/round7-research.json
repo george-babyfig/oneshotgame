@@ -1,0 +1,992 @@
+{
+ "synth": {
+  "roadmapRows": [
+   {
+    "finding": "One visible twist on a familiar level beats bigger numbers",
+    "source": "Super Mario Galaxy Prankster Comets, Portal Advanced Chambers, Mario Kart Mirror Mode",
+    "what": "\ud83d\udd28 Every remixed planet gets exactly one named twist chip, picked from its seed and shown before the first throw. The deck is our own existing twists (Solar Wind, Dense Core, Wobbly Spin, Twin Moons, Moon Guard, Tiny World, Fast Spin, Scorched, Snowball, Water World) plus a new Short Supply tray twist. The 10th planet keeps its Comet Guardian. No timer twists ([1], [2], [3])"
+   },
+   {
+    "finding": "An added objective turns a known level into a new puzzle",
+    "source": "Where's My Water? Challenges, Super Mario 3D World remixed courses",
+    "what": "\ud83d\udd28 Always-on goals: every remixed planet, chapter 1 included, has exactly one goal taken from what the greedy solver built. It is shown as an icon ([4], [5])"
+   },
+   {
+    "finding": "Unlock the harder version on completion, not perfection",
+    "source": "Celeste B-Sides, Mario Kart 8 (v4.1 opened Mirror to all), Tetris Effect Expert",
+    "what": "\ud83d\udd28 A chapter's Remix opens once its boss planet is cleared, at any star count. Nothing can be bought to open it sooner ([6], [7], [8])"
+   },
+   {
+    "finding": "Mastery layers must be generated, provable and never revoked",
+    "source": "Candy Crush Saga (Dreamworld, Sugar Stars, Master Trophies)",
+    "what": "\ud83d\udd28 Remix planets are a pure function of the planet number plus a fixed 'RX' salt, so there is no hand-built track to maintain. Star targets come from the solver run on that exact seed, never from a multiplier. Remix stars are a best-ever record that no retune can take away ([9], [10], [11], [12])"
+   },
+   {
+    "finding": "Prestige players see on every launch, with no power attached",
+    "source": "Hollow Knight Steel Soul menu style, Mario Kart 8 Deluxe gold parts",
+    "what": "\ud83d\udd28 Remix stars (their own gold counter, x/30 per chapter), a chapter frame that goes silver then gold on the Star Map and Passport, and a chapter Passport title. No gems, dust, materials or new currency ([13], [14])"
+   },
+   {
+    "finding": "Changed music tells players a familiar place feels different",
+    "source": "Celeste B-Sides soundtrack, Alto's Adventure Zen Mode",
+    "what": "\u2705 Festival and Voyage music themes are built. Festival music plays only while the month's festival is unfinished ([15], [16])"
+   },
+   {
+    "finding": "A code-free sticker pack can ship inside the existing app",
+    "source": "Apple Messages docs, iMessage and App Review pages (platform, not a game)",
+    "what": "\u23f3 Free iMessage sticker pack: about 24 wordless 408 px stickers exported from our own sticker and creature art and bundled as an extension. Every sticker is unlocked. No purchases, links or promo stickers ([17], [18], [19])"
+   },
+   {
+    "finding": "Paid skips or random reveals for mastery content",
+    "source": "Angry Birds Mighty Eagle, Rayman Legends Lucky Tickets, Monument Valley paid expansion",
+    "what": "\u274c Never: no paid Remix unlock, skip or continue, no Remix currency, and no scratch-card or random reward reveal. Remix is free ([20], [21], [22])"
+   },
+   {
+    "finding": "First-try, limited-try or expiring mastery challenges",
+    "source": "Candy Crush Gold Crowns, Rhythm Heaven Perfect Campaign, Mini Motorways Daily Challenges",
+    "what": "\u274c Never: retries are unlimited and free, the best result is kept, and seeds stay fixed. No Remix timers, streaks, expiry or push notifications ([23], [24], [25])"
+   }
+  ],
+  "sources": [
+   {
+    "n": 1,
+    "url": "https://www.mariowiki.com/Prankster_Comet"
+   },
+   {
+    "n": 2,
+    "url": "https://strategywiki.org/wiki/Portal/Advanced_Chambers"
+   },
+   {
+    "n": 3,
+    "url": "https://mariokart.fandom.com/wiki/Mirror_Mode"
+   },
+   {
+    "n": 4,
+    "url": "https://wheresmywater.fandom.com/wiki/Challenges"
+   },
+   {
+    "n": 5,
+    "url": "https://www.mariowiki.com/World_Mushroom_(Super_Mario_3D_World)"
+   },
+   {
+    "n": 6,
+    "url": "https://celeste.ink/wiki/Alternate_sides"
+   },
+   {
+    "n": 7,
+    "url": "https://www.destructoid.com/mario-kart-8-update-unlocks-200cc-and-mirror-mode-for-everyone/"
+   },
+   {
+    "n": 8,
+    "url": "https://tetris.wiki/Tetris_Effect"
+   },
+   {
+    "n": 9,
+    "url": "https://candycrush.fandom.com/wiki/Dreamworld"
+   },
+   {
+    "n": 10,
+    "url": "https://candycrush.zendesk.com/hc/en-us/articles/360002087578-How-do-I-collect-Sugar-Stars"
+   },
+   {
+    "n": 11,
+    "url": "https://candycrush.fandom.com/wiki/Trophy"
+   },
+   {
+    "n": 12,
+    "url": "https://community.king.com/en/candy-crush-saga/discussion/344013/impossible-sugar-stars"
+   },
+   {
+    "n": 13,
+    "url": "https://hollowknight.fandom.com/wiki/Menu_Styles_(Hollow_Knight)"
+   },
+   {
+    "n": 14,
+    "url": "https://www.nintendolife.com/guides/mario-kart-8-deluxe-gold-kart-how-to-unlock-all-gold-kart-parts-and-gold-mario"
+   },
+   {
+    "n": 15,
+    "url": "https://radicaldreamland.bandcamp.com/album/celeste-b-sides"
+   },
+   {
+    "n": 16,
+    "url": "https://blog.builtbysnowman.com/post/145301948017/altos-adventure-zen-mode"
+   },
+   {
+    "n": 17,
+    "url": "https://developer.apple.com/documentation/messages/adding-your-sticker-packs-to-messages"
+   },
+   {
+    "n": 18,
+    "url": "https://developer.apple.com/imessage/"
+   },
+   {
+    "n": 19,
+    "url": "https://developer.apple.com/app-store/review/guidelines/"
+   },
+   {
+    "n": 20,
+    "url": "https://toucharcade.com/2010/12/23/new-angry-birds-update-adds-the-mighty-eagle-new-chapter"
+   },
+   {
+    "n": 21,
+    "url": "https://raymanpc.com/wiki/en/Lucky_ticket"
+   },
+   {
+    "n": 22,
+    "url": "https://www.gamedeveloper.com/business/ustwo-responds-to-complaints-about-paid-i-monument-valley-i-dlc"
+   },
+   {
+    "n": 23,
+    "url": "https://candycrush.fandom.com/wiki/Sugar_Stars"
+   },
+   {
+    "n": 24,
+    "url": "https://rhythmheaven.fandom.com/wiki/Perfect_Campaign"
+   },
+   {
+    "n": 25,
+    "url": "https://steamcommunity.com/app/1127500/discussions/0/597386372524909497/"
+   },
+   {
+    "n": 26,
+    "url": "https://slaythespire.wiki.gg/wiki/Ascension"
+   },
+   {
+    "n": 27,
+    "url": "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/childrens-information/childrens-code-guidance-and-resources/age-appropriate-design-a-code-of-practice-for-online-services/13-nudge-techniques/"
+   },
+   {
+    "n": 28,
+    "url": "https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2793493"
+   },
+   {
+    "n": 29,
+    "url": "https://www.vice.com/en/article/celeste-assist-mode-change-and-accessibility/"
+   },
+   {
+    "n": 30,
+    "url": "https://developer.apple.com/app-store/kids-apps/"
+   },
+   {
+    "n": 31,
+    "url": "https://developer.apple.com/videos/play/wwdc2020/10145/"
+   },
+   {
+    "n": 32,
+    "url": "https://developer.apple.com/design/human-interface-guidelines/imessage-apps-and-stickers"
+   },
+   {
+    "n": 33,
+    "url": "https://developer.apple.com/library/archive/documentation/Xcode/Reference/xcode_ref-Asset_Catalog_Format/StickerPack.html"
+   },
+   {
+    "n": 34,
+    "url": "https://developer.apple.com/forums/thread/50394"
+   },
+   {
+    "n": 35,
+    "url": "https://developer.apple.com/library/archive/qa/qa1686/_index.html"
+   },
+   {
+    "n": 36,
+    "url": "https://developer.apple.com/forums/thread/797781"
+   },
+   {
+    "n": 37,
+    "url": "https://github.com/ionic-team/capacitor/blob/main/cli/src/ios/common.ts"
+   },
+   {
+    "n": 38,
+    "url": "https://github.com/ionic-team/capacitor/issues/8571"
+   },
+   {
+    "n": 39,
+    "url": "https://developer.apple.com/app-store/sticker-submissions/"
+   },
+   {
+    "n": 40,
+    "url": "https://developer.apple.com/documentation/messages/adding-sticker-packs-and-imessage-apps-to-the-system-stickers-app-messages-camera-and-facetime"
+   },
+   {
+    "n": 41,
+    "url": "https://en.wikipedia.org/wiki/NES_Remix"
+   }
+  ],
+  "remixDesign": "SCOPE. Remix has one tier per chapter. It is built on the existing makeLevel / greedyPlan / pickGoals in src/core/levels.ts and needs no new art pipeline and no new currency. Stacked Ascension-style tiers (Remix+, Remix++) are deferred, because stacked modifiers become walls for young players [26].\n\n1. UNLOCK RULE\n- A chapter's Remix opens when that chapter's boss planet (planet 10c) is cleared at any star count, which is the same moment the chapter is marked finished. It is never gated on 3 stars, and nothing opens it early for money [6][7][8].\n- How players find it: a quiet gold \"Remix\" chip on finished chapter cards in the Star Map, plus a single Inbox letter the first time any Remix opens. No pop-up, no push notification, no red dot. It is never shown when the child pauses, quits or ends a session [28].\n\n2. WHAT A REMIXED PLANET IS\n- Generation: remixLevel(n) = makeLevel(n, 'RX', { goals: true, boss: n % 10 === 0, remix: true }). It is a pure function of the planet number and a fixed salt, so nothing is hand-built and Remix grows with the endless campaign for free [9]. Seeds are fixed and never re-rolled per attempt, so a retry is always the same planet. One code change is needed: difficultyOf() and the chapter sawtooth currently treat any non-'PP' prefix as 'normal'. The remix flag must keep Hard at slot 5, Super Hard at slot 9 and the Comet Guardian at slot 10, so each remixed chapter keeps its own curve.\n- What stays familiar: the same chapter, slot, planet name, hue, available kinds in the tray and difficulty slot. What reads as \"remixed\": a new seed (different start land, deal order and spin), a dusk sky palette with a thin gold rim on the planet, and the Voyage/festival music played through a variant (a filter or tempo change on the themes we already have) [5][15].\n- Exactly ONE twist per planet [1][2][3]. It is drawn deterministically from the seed and named on the pre-level card before the first throw (prelevel.ts already shows the TWISTS name and description, and those strings are already localized). The v1 deck is the existing twists plus one new tray twist, \"Short Supply\": one kind is removed from the deal and the solver re-runs on the changed queue. Order runs from gentle to hard: slots 1-4 draw start-state or size twists (Scorched, Snowball, Water World, Tiny World), slots 5-9 draw physics twists (Solar Wind, Dense Core, Wobbly Spin, Twin Moons, Moon Guard, Fast Spin), and slot 10's twist is the Comet Guardian. No timers, no stacked penalties, no permanent-placement rules. Twist names and parameters are our own.\n- Always-on goal: every remixed planet has exactly ONE goal, including chapter 1, where classic planets have none before planet 6. pickGoals takes it from the solver's own plan, so it is reachable. It is shown as an icon, with optional voiceover for pre-literate players [4][30]. In v1.1, add \"inverted\" goals such as \"finish with no volcano\" once the solver can check them.\n- Tougher targets, shifted one notch: Remix 1 star = the classic 2-star share of the greedy optimum; Remix 2 stars = halfway between the classic 2- and 3-star shares; Remix 3 stars = the classic 3-star share (the 0.97 cap is unchanged). All three come from greedyPlan on the remix seed itself (with the Short Supply queue when that twist is drawn), never from a multiplier over classic targets [12]. Caveat (our own inference): the solver assumes perfect aim, and physics twists make aiming harder without changing the land plan. So do not push 3 stars higher; the twist and the goal carry the extra challenge.\n- Power: Remix uses exactly the classic rules the solver already models. It adds no power and pays none out.\n\n3. REWARDS (no new currency, nothing sold)\n- Remix stars: the familiar 1-3 star scale drawn in gold. They have their own counter (\"Remix x/30\" per chapter, with a total on the Passport) and never count toward Star Road, chapter chests, Explorer Rank, daily quests or Momentum, so Remix never feels required. Each planet's best-ever result is saved the moment a level ends. A failed attempt removes nothing, and all 10 remixed planets are open at once.\n- Chapter frame ladder: an outline once any remixed planet is played, silver when all 10 are cleared (at least 1 star each), gold at 30/30. The frame shows on the Star Map chapter card and on the Passport, where the child looks on every launch [13]. It changes art only.\n- Passport titles: a chapter title at silver that names the chapter, not talent (for example \"Chapter 4 Remixed\"). Add 2-3 account-wide titles for total Remix stars across any chapters (for example \"Orbit Tinkerer\"), so kids choose where to master rather than needing perfection everywhere [41]. Titles are derived in titlesOwned() from stored stars, so they cannot disappear.\n- Small fixed extras: one deed sticker in the in-game Sticker Album for the first gold frame, and a gold marker on each 3-star remixed planet. Add 3 progressive Game Center achievements (First Remix, Remix a Boss chapter, Gold Frames 1/5/10) with centred, text-free 1024 px art [31]. No leaderboard.\n- Permanence: store profile.remix[chapter] = { v: REMIX_RULES, best: [10 values] } with a save migration. Stars only go up (max of old and new). A later retune changes future targets only and never lowers stored stars, frames or titles [10][11].\n- Remix pays no gems, dust or materials. The shop sells nothing that looks like Remix (no gold frame, no skip).\n\n4. STAR MAP PRESENTATION\n- A finished chapter card gets a Classic | Remix toggle. The Remix side shows the same 10-planet row in dusk colours, with twist-chip icons, gold stars, x/30 and the frame state. The current and teaser chapters show no Remix.\n- Pre-level card: twist chip, goal icon and the three targets, all before the first throw.\n- Result screen: only \"Next remix planet\" and \"Map\". No shop button, no \"unlock more\", and the next planet never starts automatically [19]. The gold-frame end card is calm: \"Chapter remixed! Nice spot for a break.\" [27]\n- Do not show a Remix percentage on every chapter card; progress lives in the Remix view and the Passport. Zen Garden already exists as the calm alternative, so Remix never needs to be the default next step.\n\n5. PITFALLS FOR KIDS 6+\n- No first-try conditions, limited tries, expiry, streaks, timers beyond the normal ~1-minute level, or continue offers [23][24][25].\n- Copy praises the shot and suggests a new angle; never \"Failed\" or \"not good enough\". Remix is labelled \"Bonus\", and finishing the classic campaign counts as full completion [29].\n- Remix never touches classic stars, chapter completion or campaign progress, and never gates the campaign.\n- No sad or pleading creatures and no countdowns when Remix is declined [28].\n- Keep Remix out of the date-seeded daily, weekly and monthly calendar: no weekly \"Remix rules\" planet and no date-exclusive remix medals.\n- One goal per planet, shown as an icon first. Twists come from our own parameters so no other game's mode is cloned.\n\n6. ONE-DEVELOPER BUILD ORDER\n- Step 1: remixLevel, the target shift, the Short Supply twist, the profile.remix migration, and vitest checks. The checks: the same n always gives the same level; for chapters 1-50, every remixed planet has one twist and one goal that greedyPlan meets, targets strictly increase and 3 stars stays within the solver cap; stored stars never drop on replay or after a TUNE change.\n- Step 2: the Star Map toggle, pre-level chip, result card, dusk palette with gold rim, and the music variant.\n- Step 3: frames, titles, achievements, the album sticker, and strings for the 5 locales.\n- Deferred: inverted goals, a \"visitor creature\" twist, choosing 1 of 2 twist chips, Remix+, and a parental-area early unlock.",
+  "imessagePlan": "STATUS: \u23f3. GOAL: a free, fully unlocked, static sticker pack bundled into Pocket Planet as a Sticker Pack extension. The extension contains no code, and everyone who installs the game sees it in Messages automatically [17][18]. As a bundled extension it gets no Stickers-category listing of its own; a free standalone sticker app could come later, but it would be a second app record to maintain.\n\nCONTENT: about 24 stickers, all at one size, Regular 408x408 px (3 per row); sizes are never mixed [32]. It is a separate, wordless \"chat set\" of reaction poses drawn from our own art code (drawCreature, the planet art, and drawSticker's white die-cut border and shadow without the RARITY_BG backgrounds). Examples: a planet waving hi, a wide-eyed penguin, a volcano \"oops\", a cheering forest, a seed crossing its fingers, and festival creatures in costume (kept year-round, with no jokes that only work on one date). Add 2-3 free Round 7 celebration stickers: a dusk \"remixed\" planet, a Passport stamp and a dancing festival creature. LEFT OUT: in-game album and rarity art, the gold chapter frame (it must stay earned-only), any shop, \"play now\" or promo sticker, anything that looks like Apple emoji, and baked-in text [19]. Optionally, 3-4 animated creatures as .stickersequence PNG frames.\n\nCAN BE DONE ON LINUX NOW:\n1. `npm run stickers:export`, modelled on resources/render-art.cjs (Playwright plus the Vite dev server, because the art needs a browser Canvas 2D). Draw on a canvas of exactly 408x408. Do not use stickerCanvas(), which multiplies by devicePixelRatio. Write Stickers.xcstickers/Sticker Pack.stickerpack/Contents.json (grid-size \"regular\") and one .sticker folder per sticker, each with an English accessibility-label [33].\n2. Make the script and CI fail if any file is not exactly 408x408 or is 500,000 bytes or more. The limit covers the whole file, every animation frame included, and Xcode only warns [34].\n3. Render the iMessage App Icon set from the same script. The icons must be opaque (use the #0b0a24 space background; otherwise upload fails with ITMS-90647), composed for the 4:3 shape, with a simplified silhouette for the 54x40 breadcrumb [35].\n4. CI guard: after `npx cap sync ios`, CapApp-SPM/Package.swift must still say .iOS(.v15) and every IPHONEOS_DEPLOYMENT_TARGET must be 15.0 [37][38].\n\nNEEDS A MAC WITH XCODE:\n- Choose File > New > Target > Sticker Pack Extension. Set the bundle id to com.pocketplanet.game.Stickers, IPHONEOS_DEPLOYMENT_TARGET to 15.0 and TARGETED_DEVICE_FAMILY to 1 (both matching App), and use the same MARKETING_VERSION and CURRENT_PROJECT_VERSION as App. Embed it in App, do not link CapApp-SPM, and point it at the generated catalog.\n- Fill every slot Xcode's iMessage App Icon set shows. QA1686 and the HIG list different sizes, and a missing icon can leave the pack \"unknown to FrontBoard\" [35][36].\n- Set up signing and a provisioning profile for the extension's App ID, then archive and upload.\n- Test in the Simulator and on a device: the pack appears in Messages; stickers peel off and send; the largest animated sticker works; VoiceOver reads the labels in en/es/fr/de/pt/ja. Ship v1 with the default Messages context. Test NSStickerSharingLevel and the media context on a device later, before enabling either [40].\n- App Store Connect: add the iMessage app icon and iMessage screenshots with invented names and no phone numbers [39]. Mention the pack in the app description (Guideline 4.4). Keep \"For Kids\" wording out unless the app is in the Kids Category (2.3.8) [19].\n\nNEVER: re-run `npx cap add ios`, which rewrites every bundle id to com.pocketplanet.game. Never put IAP, links or marketing in the extension (4.4), and never make paid or Remix-locked sticker sets.\n\nOPEN QUESTION: accessibility-label is one string per sticker, and Apple documents no localization key for it, so how to localize the labels is still unconfirmed."
+ },
+ "kept": [
+  {
+   "game": "Candy Crush Saga",
+   "feature": "Sugar Stars, Gold Crowns, Master Titles and Master Trophies (mastery layer over beaten levels)",
+   "whatItIs": "CORRECTED. Sugar Stars used to require a score of twice the level's three-star target. They were also given automatically with a Gold Crown, which is earned by clearing a level on the first attempt. King's current help article describes the rule differently: finish with 5 or more moves to spare going into Sugar Crush, or with a Gold Crown. So the mastery rule has changed over time. Master Titles were earned by mastering all 15 levels of an episode through Gold Crowns or Sugar Stars. The wiki says all Master Titles were removed 'as of Candy Cup'. Master Trophies were a separate feature, and they were taken away from players on 29 Sept 2021 (v212.02). A community manager said that feature was on hold to be reworked. Players also started a thread called 'Impossible Sugar Stars?'.",
+   "lesson": "A mastery tier built on top of an already-validated target is cheap to make and easy to read. A title for mastering a whole chapter gives completionists a goal they can see. There are warnings. A 'first try' condition punishes experimenting. Taking away prestige players already earned damages trust. A fixed multiplier (2x the score) is not guaranteed to be reachable on every board. Mastery rules that change after launch (score-based, then moves-based) blur what an earned badge means.",
+   "applyToRemix": "Take each Remix star threshold from the greedy solver's proven result for that remixed seed, not from a flat multiplier over classic targets, so every Remix star can be proven reachable. Award the gold chapter frame when all 10 remixed planets have 3 Remix stars. Never require or reward a first-try clear. Treat frames and Passport titles as permanent. Store the Remix generator/rules version with each result so later rebalances never revoke or redefine what a player earned.",
+   "sources": [
+    "https://candycrush.zendesk.com/hc/en-us/articles/360002087578-How-do-I-collect-Sugar-Stars",
+    "https://candycrush.fandom.com/wiki/Sugar_Stars",
+    "https://candycrush.fandom.com/wiki/Master_Title",
+    "https://candycrush.fandom.com/wiki/Trophy",
+    "https://community.king.com/en/candy-crush-saga/discussion/271908/sugar-stars-master-trophy",
+    "https://community.king.com/en/candy-crush-saga/discussion/344013/impossible-sugar-stars"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "game": "Candy Crush Saga",
+   "feature": "Dreamworld (a parallel remix of existing levels)",
+   "whatItIs": "CORRECTED. Dreamworld was a second map that opened once level 50 was completed. Almost all of its levels were based on the matching levels in Reality, often with the same layout but different limits. For example, Dreamworld level 50 is the Reality layout in 30 moves instead of 50. It added a Moon Scale rule: balance matches of two randomly chosen colours or Odus the owl wakes and the level fails. King stopped adding new Dreamworld episodes on 6 May 2015, when it ended at 665 levels. On 11 Dec 2016 King removed it from mobile, saying it was focusing on 'producing many more, new and exciting levels in the normal world'. It was disabled for Flash players on 17 May 2017. Many players were upset. Note: 'A note to you regarding Dreamworld' is a player's complaint thread, not a King statement.",
+   "lesson": "Taking existing layouts and adding one new rule is a proven way to double the content. But a parallel track that was maintained by hand was frozen first (no new episodes after 2015) and later removed so the team could focus on the main level pipeline, and players resented the loss. A remix layer should be generated from systems that already exist so it never needs separate upkeep. The new rule should read as a goal, not as a sudden fail state.",
+   "applyToRemix": "Make each Remix planet a pure function of the chapter seed plus a fixed salt (e.g. hash(chapterSeed,'remix')), with no hand-authored remix content. Remix then grows with the endless campaign at no authoring cost and never has to be retired. Present always-on goals as positive targets ('grow 3 ocean'), not as punishing gotchas like Odus waking up.",
+   "sources": [
+    "https://candycrush.fandom.com/wiki/Dreamworld",
+    "https://candycrush.fandom.com/wiki/Level_50/Dreamworld",
+    "https://candycrush.fandom.com/wiki/Moon_Scale",
+    "https://community.king.com/en/candy-crush-saga/discussion/209394/a-note-to-you-regarding-dreamworld",
+    "https://en.wikipedia.org/wiki/Candy_Crush_Saga"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "game": "Super Mario Run",
+   "feature": "Pink / Purple / Black colour-coin versions of each course",
+   "whatItIs": "Confirmed. Each course starts with Pink Coins. Collecting every Pink Coin in a course unlocks the option to make Purple Coins appear there, and collecting every Purple Coin unlocks Black Coins. Each step moves the coins and makes the course layout harder, with Black the hardest. The player picks which colour set to play. Collecting all 120 Black Coins opens the Black Coin Pipe to the special course 'Make the Cut!'. That is 6 worlds x 4 courses x 5 coins.",
+   "lesson": "Mastery tiers work well on the same level when each tier unlocks per level, is picked explicitly by the player, and shows clearly as a colour. The reward for full mastery is more content (a bonus course), not currency. Because the player opts in each time, a hard version never replaces the easy one.",
+   "applyToRemix": "Unlock Remix per chapter as soon as that chapter is finished, and put a clear Classic/Remix choice on the chapter card with its own framing (the gold frame being the top tier). For full Remix mastery of a chapter, reward extra content or cosmetics, such as one seeded 'encore' planet or a new sticker for the in-game sticker book, rather than any currency. Keep to one Remix tier per chapter rather than copying a three-colour ladder.",
+   "sources": [
+    "https://www.mariowiki.com/Color_coin",
+    "https://www.mariowiki.com/Black_Coin",
+    "https://www.mariowiki.com/Purple_Coin",
+    "https://www.pocketgamer.com/super-mario-run/how-to-unlock-bonus-levels-in-super-mario-run-with-pink-purple-and-black-coins/"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "Super Mario Run",
+   "feature": "Remix 10 mode",
+   "whatItIs": "Confirmed. It was added in the 29 Sept 2017 update, announced on 22 Sept. The player runs 10 bite-sized courses in a row, randomly chosen snippets that are mostly shortened World Tour and Toad Rally courses, so each attempt is different. There is no Game Over: failing only costs the chance to collect more coins and rainbow Bonus Medals, and play moves on. Medals and progress unlock Mushroom Kingdom items and the rescue of Princess Daisy, lost in Area 30. Unlike the other modes, it has no rescue bubbles. One blogger (Louard On Games) called it 'the purest form of Mario Run' and wrote that the mode first renewed his interest and then ended it, framing that around the nature of its rewards.",
+   "lesson": "Short randomized slices of existing content, played with 'fail forward', give a fresh mode without new level design. Progress is always positive, and failure only shrinks the payout. The same critic's loss of interest suggests a fail-forward mode needs a reward track with a clear end rather than one that thins out.",
+   "applyToRemix": "Borrow only the principle that failure lowers the payout but never blocks progress: a missed Remix target still banks whatever Remix stars were earned, and the next remixed planet in the chapter is always playable. Keep the per-chapter Remix seeds fixed, not re-rolled every attempt, so chasing Remix stars stays fair and repeatable. End the reward track with a fixed finish (gold frame plus Passport title) rather than an endless drip.",
+   "sources": [
+    "https://nintendowire.com/news/2017/09/22/super-mario-run-update-remix-10-mode-daisy-coming-soon/",
+    "https://nintendowire.com/news/2017/09/28/super-mario-run-remix-10-impressions/",
+    "https://mario.fandom.com/wiki/Remix_10",
+    "http://louardongames.blogspot.com/2018/10/thoughts-on-super-mario-run-remix-10.html",
+    "https://nintendoeverything.com/super-mario-run-getting-huge-update-next-week-remix-10-mode-daisy-world-star-choose-own-music/"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "Mini Metro / Mini Motorways (Dinosaur Polo Club)",
+   "feature": "Per-map Extreme/Expert modes, Endless mode, and Expert rules in Daily Challenges",
+   "whatItIs": "CORRECTED (one detail). In Mini Metro, Extreme mode unlocks per map when the player earns the harder of that map's two achievements. In Extreme, lines, trains and carriages cannot be moved once placed. Achievements work in normal and Extreme mode but not in Endless, where stations never overcrowd. Mini Motorways' Endless & Expert update (3 Nov 2022) made Endless available immediately on every unlocked map. Expert Mode, which the developer says is inspired by Mini Metro's Extreme, needs 1000+ on the map to unlock City Challenges and then 600+ on a City Challenge. In Expert, road tiles and upgrades quickly become permanent, and it has its own leaderboards. The May 2023 'Extra for Experts' update applies Expert rules to one Daily Challenge each week. Correction: only the first attempt at a Daily Challenge logs a leaderboard score, and players complained when a practice run was the one that counted. A dedicated replay warning could not be confirmed.",
+   "lesson": "Make the hard mode a new rule or constraint (commitment) rather than only bigger numbers. Unlock it per map, after a skill milestone the player has shown on that map. Offer a no-pressure mode alongside it with separate scoring so that prestige stays meaningful. Then reuse the hard mode's rules in the dated challenge calendar to get more out of them. 'Only your first try counts' scoring frustrates even adult players.",
+   "applyToRemix": "Gate Remix per chapter behind a milestone that can always be reached (the chapter is finished; optionally, N classic stars in it). Make it feel tougher mainly through always-on goals the solver has proven, not only raised score. Keep Remix stars in their own counter so they do not dilute classic stars. Once a week, the date-seeded weekly planet could use 'Remix rules' to bring the mode back without a server. Keep the player's best result with unlimited retries, never first-attempt-only scoring.",
+   "sources": [
+    "https://mini-metro.fandom.com/wiki/Extreme",
+    "https://mini-metro.fandom.com/wiki/Achievement",
+    "https://dinopoloclub.com/2022/11/03/play-mini-motorways-your-way-with-our-new-endless-expert-mode-update/",
+    "https://steamcommunity.com/app/1127500/discussions/0/3488628040291938148/",
+    "https://dinopoloclub.com/2023/05/04/buckle-up-for-new-daily-challenges-with-the-extra-for-experts-update/",
+    "https://steamcommunity.com/app/1127500/discussions/0/597386372524909497/",
+    "https://dinopoloclub.com/support/mini-motorways/"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "Where's My Water?",
+   "feature": "Challenges / Cranky Challenges",
+   "whatItIs": "Confirmed. Challenges send the player back to earlier story levels with an extra objective to meet. The objective types include: 'Zero-duck it' (collect no ducks), finish without using a certain object, collect the opposite character's ducks (e.g. Cranky ducks in a Swampy level), have no fluid left at the end, or touch an object only a limited number of times. Challenges come in sets of three, and finishing a set unlocks a bonus level. Note: a 'Swampy Challenges' page that turns up in searches is fan fiction ('Fanon'), so this finding uses the canonical names.",
+   "lesson": "Inverting or limiting the original objective on a level the player already knows makes a genuinely new puzzle, because the player's familiarity becomes the starting point. Small sets of three, each with a concrete payoff, keep the replay layer short and satisfying.",
+   "applyToRemix": "Add 'inverted' always-on goals the greedy solver can verify, such as 'finish with no volcano', 'use at most 2 magma' or 'bring a penguin without any forest'. Consider small cosmetic milestones inside a chapter (for example after remixed planets 3, 6 and 9, a sticker for the in-game sticker book), building toward the gold frame at 10/10.",
+   "sources": [
+    "https://wheresmywater.fandom.com/wiki/Challenges",
+    "https://wheresmywater.fandom.com/wiki/Cranky_Challenges"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "game": "Bad Piggies (with Hitman GO as corroboration)",
+   "feature": "Stars as separate objectives that can be earned in different runs",
+   "whatItIs": "Confirmed. In Bad Piggies story levels, the first star is for getting Ross to the goal. The other stars are for secondary objectives such as collecting the Star Box, not using a certain part, or finishing within a time limit. Unlike in Angry Birds, each star can be earned on its own, and on some levels all three in one run is impossible. Hitman GO likewise gives up to three stamps per level for objectives such as no kills, a move limit or collecting a briefcase. These often cannot all be done in one playthrough.",
+   "lesson": "Splitting mastery into separate objectives, each banked once achieved, turns replay into several short, focused attempts instead of one perfectionist run. That lowers frustration for young players, and each replay feels like a new puzzle because the goal changes.",
+   "applyToRemix": "Bank Remix stars per objective across attempts: star 1 for clearing the remixed planet, star 2 for the always-on goal, star 3 for the Remix life-score target. The solver then only has to prove each objective reachable on its own, which is a weaker and easier guarantee than all three in one run. Show clearly that stars can come from different tries.",
+   "sources": [
+    "https://badpiggies.fandom.com/wiki/Star",
+    "https://tvtropes.org/pmwiki/pmwiki.php/VideoGame/BadPiggies",
+    "https://en.wikipedia.org/wiki/Hitman_Go",
+    "https://hitman.fandom.com/wiki/Hitman_GO"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "Alto's Adventure / Alto's Odyssey",
+   "feature": "Zen Mode",
+   "whatItIs": "Core facts confirmed. Zen Mode came to Alto's Adventure as a free update on 2 June 2016 on iOS (9 June on Android), alongside a Photo Mode. It removes score, coins, power-ups and on-screen UI, has a calmer soundtrack, and lets you carry on after a crash. Snowman built it after players wrote in about using the game to relieve stress and anxiety. NOT re-verified in this pass (they come from the original researcher's search snippets only): that Snowman also cited younger players, that it is opened with a swipe on the main screen, that Alto's Odyssey kept it the same way, and that Odyssey has 180 goals.",
+   "lesson": "A second life for finished content does not have to mean more pressure. Watching how players actually use the game can reveal demand for a calmer mode. Keep the alternative mode easy to reach, not deep in menus.",
+   "applyToRemix": "Remix is the 'harder' way to replay, so keep it strictly opt-in: no nagging badges, timers or daily prompts. Consider pairing it with a calm counterpart for younger children, such as replaying a finished planet with no throw limit and no score, so they are never pushed toward the tougher mode. In any case, Remix's no-currency, cosmetic-only reward design fits this lesson.",
+   "sources": [
+    "https://www.gamedeveloper.com/design/players-use-i-alto-s-adventure-i-as-coping-mechanism-dev-responds-with-zen-mode-",
+    "https://blog.builtbysnowman.com/post/145301948017/altos-adventure-zen-mode",
+    "https://toucharcade.com/2016/06/01/altos-adventure-update-with-zen-mode-and-photo-tool-coming-tomorrow/",
+    "https://www.engadget.com/2016-06-01-altos-adventure-zen-mode.html",
+    "https://mobilesyrup.com/2016/06/01/calming-game-altos-adventure-just-got-more-relaxing/",
+    "https://techpp.com/2018/02/28/alto-odyssey-zen-mode/"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "game": "Two Dots",
+   "feature": "Treasure Hunts and Rewinds",
+   "whatItIs": "NOT re-verified in this pass. The fetch was blocked and the search budget ran out; these claims come from the original researcher's snippets of the official Dots help centre. As reported: Treasure Hunts are time-limited sets of 7 levels in the Events tab, with up to 4 days to finish. Clearing all 7 earns a collectible Medallion, stamped with the completion date and a worldwide ranking. Rewinds bring back old Treasure Hunts, Arcades and Scavenger Hunts so players can earn prizes they missed. A Treasure Hunt Rewind can upgrade an already-earned medallion, up to three times with one upgrade per Rewind, and a new Rewind starts each Monday. The exact numbers (7 levels, 4 days, 3 upgrades, Monday) should be checked before they are quoted.",
+   "lesson": "Rotating archived content back means missing an event is not permanent, which reduces FOMO. Letting players upgrade a collectible they already own gives them a cosmetic prestige track over old content.",
+   "applyToRemix": "Pocket Planet's date-seeded daily/weekly/monthly planets can be regenerated for any past date with no server. An always-open 'Archive' lets children earn missed Passport stamps later, with no expiry, no lives and no rotation schedule. Remix could upgrade an existing chapter stamp in the Passport (for example plain, then silver, then gold frame) rather than adding a new currency.",
+   "sources": [
+    "https://dots.helpshift.com/hc/en/3-two-dots/faq/386-what-are-treasure-hunts/",
+    "https://dots.helpshift.com/hc/en/3-two-dots/faq/391-what-are-rewinds/",
+    "https://dots.helpshift.com/hc/en/3-two-dots/faq/262-what-is-a-treasure-hunt-rewind/?s=in-game-events&f=what-is-a-treasure-hunt-rewind"
+   ],
+   "confidence": "low"
+  },
+  {
+   "game": "Angry Birds 2",
+   "feature": "Daily Challenge difficulty ladder and King Pig Panic",
+   "whatItIs": "NOT re-verified in this pass. The fetch was blocked for angrybirds.com and the Rovio help centre, and the search budget ran out. As reported by the original researcher: the Daily Challenge has three stages ending in a boss, and a difficulty meter from Beginner to Super Bird. Winning three in a row moves you up and failing moves you down. A 7-day passing streak pays a legendary chest. King Pig Panic follows with three boss levels always at Super Bird difficulty, and rewards include extra Mighty Eagle Bootcamp cards usable only the same day. That an official Rovio story on 'new DC and KPP difficulty levels and rewards' exists suggests an adaptive ladder is real. The specific thresholds and rewards are unconfirmed.",
+   "lesson": "An adaptive difficulty band per player keeps daily replay challenging without being overwhelming. The retention hooks layered on top (streaks, random loot chests, rewards that expire the same day) run on loss aversion and chance. Keep the principle and drop the hooks.",
+   "applyToRemix": "Borrow only per-player difficulty bands. For example, offer a 'Remix+' star target on chapters where the player already has 3 classic stars everywhere, always capped by the solver's proven score. Never show demotion, never tie rewards to streaks or missed days, and keep every reward fixed, previewable and cosmetic.",
+   "sources": [
+    "https://angrybirds.fandom.com/wiki/Angry_Birds_2/Daily_Challenge",
+    "https://roviosupport.helpshift.com/hc/en/10-angry-birds-2/faq/1401-daily-challenge-king-pig-panic/",
+    "https://www.angrybirds.com/stories/new-dc-and-kpp-difficulty-levels-and-rewards/"
+   ],
+   "confidence": "low"
+  },
+  {
+   "game": "Monument Valley",
+   "feature": "Forgotten Shores expansion and Ida's (RED) Dream",
+   "whatItIs": "NOT re-opened in this pass (all domains blocked, search budget used up). The core facts match widely reported coverage. Forgotten Shores (November 2014) added 8 new chapters as a $1.99 in-app purchase for a game that had cost $3.99. Some players left 1-star reviews because the expansion was paid, and ustwo responded publicly. Ida's (RED) Dream was a later bonus chapter whose proceeds went to (RED). The precise release date (the original said 12 Nov) and Kill Screen's reading that it 'widens rather than lengthens' the game, with its own difficulty curve and a preference for surprise over 'harder and harder', come only from the original researcher's snippets.",
+   "lesson": "Content added after the ending should restart its own gentle curve and lean on novelty and surprise, not raw difficulty. Charging for extra content in a game players think of as 'complete' can cause backlash even when the content is good.",
+   "applyToRemix": "Give each remixed chapter its own curve: early remixed planets gentle, pressure peaking at the Super Hard 9th and the boss 10th. Most of the variety should come from new seeds and goal combinations, not higher numbers. Keep Remix free with no new currency, as already planned, which avoids the paid-expansion backlash.",
+   "sources": [
+    "https://www.gamedeveloper.com/business/ustwo-responds-to-complaints-about-paid-i-monument-valley-i-dlc",
+    "https://www.killscreen.com/forgotten-shores/",
+    "https://sixcolors.com/post/2014/11/the-forgotten-shores-of-app-store-pricing/",
+    "https://toucharcade.com/2014/11/24/monument-valley-gets-additional-chapter-for-charity-with-idas-red-dream-update/"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "game": "Celeste",
+   "feature": "B-Sides and C-Sides (called \"Hard Mode\", then \"Remix Mode\" during development)",
+   "whatItIs": "Each chapter hides a Cassette Tape. Finding it unlocks that chapter's B-Side: a much harder level built from the same chapter's mechanics, set to a guest-artist remix of the chapter's music (the Celeste B-Sides album), which ends with a red Crystal Heart. Each Crystal Heart except the C-Side ones has its own name and achievement. Clearing Core's B-Side (which itself needs 15 hearts, meaning all A-Side hearts plus B-Side hearts 1-7) unlocks the C-Sides, which are shorter and even harder. According to the Celeste wiki as quoted in search results, the B-Sides were called 'Hard Mode' and then 'Remix Mode' during development, and the composer realised that remixing the music would give the harder levels their own vibe.",
+   "lesson": "A remix keeps the chapter's vocabulary: its mechanics, its setting and its song. It squeezes that into a denser test instead of adding new systems, and the remixed music tells players at once that this is the same place made harder. Each chapter's remix unlocks as soon as that chapter is done, while the player still remembers it. A second, harder tier waits until the player has cleared the first tier across a whole set. The rewards are named collectibles, not power.",
+   "applyToRemix": "Unlock a chapter's Remix as soon as its boss planet (planet 10) is cleared, never after 'the whole game', since our campaign is endless. Remix planets reuse the chapter's own land set, creatures and biome music, played through a variant arrangement or filter from the festival and Voyage music tools we already have, so the chapter sounds 'remixed'. Consider a compressed Remix of about 5 planets instead of 10: shorter and denser. If a second tier ever comes, gate it on clearing Remix across several chapters, not on one hard planet. Rewards stay cosmetic (Remix stars, gold frame, Passport title), and there is no new currency.",
+   "sources": [
+    "https://celeste.ink/wiki/Alternate_sides",
+    "https://www.gamerevolution.com/guides/477911-unlock-celeste-c-side-levels-bonus",
+    "https://celeste.ink/wiki/Crystal_Heart",
+    "https://radicaldreamland.bandcamp.com/album/celeste-b-sides",
+    "https://celeste.ink/wiki/Celeste_B-Sides",
+    "https://celestegame.fandom.com/wiki/Chapter_8:_Core"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "Super Mario Galaxy / Super Mario Galaxy 2",
+   "feature": "Prankster Comets (Speedy, Daredevil, Cosmic, Fast Foe, Purple; Galaxy 2 Comet Medals)",
+   "whatItIs": "In Galaxy 1, Prankster Comets start appearing over the 15 major galaxies once the 13th Power Star is collected. Each comet replays a galaxy the player already knows with one colour-coded rule change: a time limit of about 4-6 minutes (Speedy), 1 HP and usually a boss rematch with no Life Mushrooms or coins (Daredevil), a race against a Cosmic clone (Cosmic), faster enemies and obstacles in only two galaxies (Fast Foe), or collecting 100 purple coins, available only after the main story is beaten (Purple). In Galaxy 2, a galaxy's comet appears only after the player finds that galaxy's Comet Medal (hidden in its first mission), and some comets also need a minimum number of medals collected overall. Galaxy 2's Speedy comets start with less time but scatter '+' clocks through the level, each adding 10 seconds.",
+   "lesson": "Each remix is one named, visible twist laid over an unchanged, familiar layout, and the player is told the twist before playing. A small reusable library of twist types, applied across many existing levels, produces a lot of fresh-feeling content with little authoring. Comets are gated on having explored the base level first. Where a twist adds pressure, like a timer, Nintendo later let the player earn relief inside the level (clocks) instead of only facing a fixed limit.",
+   "applyToRemix": "Build an original 'twist deck' of 4-6 remix modifiers that come from Pocket Planet's own systems, for example: 'Heavy Pull' (stronger gravity bend), 'Backspin' (planet rotates the other way), 'Short Supply' (one fewer throw of one element), 'Old Ground' (planet starts with some land already changed), 'Picky Guest' (a creature goal is always on). Each remix planet gets exactly ONE twist, picked deterministically from its seed and shown as a coloured chip before the first throw. The greedy solver checks that the star targets can be reached under that twist. Skip real-time timer twists: levels already run about a minute, and extra time pressure hurts young players.",
+   "sources": [
+    "https://nintendo.fandom.com/wiki/Prankster_Comet",
+    "https://www.mariowiki.com/Prankster_Comet",
+    "https://mario.fandom.com/wiki/Prankster_Comet",
+    "https://mario.fandom.com/wiki/Daredevil_Comet",
+    "https://mario.fandom.com/wiki/Speedy_Comet",
+    "https://www.mariowiki.com/Comet_Medal",
+    "https://mario.fandom.com/wiki/Comet_Medal",
+    "https://mario.neoseeker.com/wiki/Timer"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "Super Mario 3D World (+ Bowser's Fury)",
+   "feature": "Post-credits special worlds of remixed courses (World Mushroom, World Flower) and Mystery House Marathon",
+   "whatItIs": "World Mushroom and World Flower consist of remixes of earlier courses. These are harder versions that may be set at a different time of day (for example 'Night Falls on Really Rolling Hills'), turned into speed-run courses, or given extra objectives, often with changed geometry and enemy placement. Mystery House Marathon, the final Mystery House (in World Crown), strings together 30 ten-second challenges, some of them harder versions of earlier Mystery Box rooms, and failing any challenge sends the player back to the start. World Crown only unlocks once every Green Star and Stamp has been collected and every gold flag has been reached.",
+   "lesson": "Three readable remix levers are enough: (a) a change of presentation, such as night instead of day, that tells the player at once 'this is the same place, remixed'; (b) a tighter resource; (c) an added objective. The remixes live in their own space after the main content, so they never block the core path. A 100% completion gate (World Crown) and a restart-from-zero marathon turn the final remix into a grind.",
+   "applyToRemix": "Give Remix planets a distinct look (a dusk or night sky palette, a gold rim or halo on the planet) so kids recognise 'my chapter, remixed' without reading. Use the always-on goal as the 'added objective' lever and tougher star targets as the 'tighter' lever. Keep Remix on a separate entry point from the chapter map (for example a gold 'Remix' tab on a finished chapter), and never require Remix for campaign progress. Don't gate anything behind full completion, and never make a failed remix planet throw away progress on other planets.",
+   "sources": [
+    "https://www.mariowiki.com/World_Mushroom_(Super_Mario_3D_World)",
+    "https://mario.fandom.com/wiki/World_Flower_(Super_Mario_3D_World)",
+    "https://www.mariowiki.com/Mystery_House_Marathon",
+    "https://mario.fandom.com/wiki/Mystery_House_Marathon",
+    "https://mario.fandom.com/wiki/World_Crown",
+    "https://www.gamerguides.com/super-mario-3d-world/guide/walkthrough/world-crown/world-crown-overview"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "NES Remix series (Nintendo)",
+   "feature": "Remix stages plus 1-3 star and rainbow-star ratings",
+   "whatItIs": "Short challenges are rated with up to 3 stars, and exceptionally strong clears earn rainbow stars instead. Remix stages twist the original games in ways that range from cosmetic (mirrored graphics, a monochrome Game Boy-style palette) to crossovers (Link, who cannot jump, playing a Donkey Kong stage) to hard ones (invisible platforms). Bonus stages unlock at cumulative star totals. CORRECTION: the '501 stars / 504 rainbow stars' thresholds belong to NES Remix 2 (Bonus Levels 21 and 22), not the first NES Remix. In Ultimate NES Remix, about 762 stars unlocks Famicom Remix mode.",
+   "lesson": "Remix twists can run along a spectrum from cosmetic to crossover to hard, so not every remix needs to be brutal. A 'beyond 3 stars' tier (rainbow) extends an existing star system without adding a currency. Gating on cumulative totals, instead of perfection on every level, lets players choose which levels to master.",
+   "applyToRemix": "Draw 'Remix stars' on the same familiar 1-3 star scale but in a distinct gold style, so the UI rules kids already know carry over. Order a chapter's remix planets from gentle twists to hard ones. If any later perk is gated (for example the Passport title), gate it on a total of Remix stars across chapters, not on 3-starring every remix planet.",
+   "sources": [
+    "https://en.wikipedia.org/wiki/NES_Remix",
+    "https://operationrainfall.com/2014/07/01/review-nes-remix/",
+    "https://www.nintendolife.com/reviews/wiiu/nes_remix_pack",
+    "https://www.supercheats.com/wiiu/nes-remix-2/",
+    "https://gamefaqs.gamespot.com/boards/835611-ultimate-nes-remix/70746474"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "game": "Mario Kart series",
+   "feature": "Mirror Mode; Mario Kart 8 v4.1 unlock change; Gold Mario and gold kart parts",
+   "whatItIs": "Mirror Mode flips every track horizontally at 150cc speed, so left turns become right turns. In Mario Kart DS, Wii and 7 it unlocked after winning gold trophies in the 150cc cups. Mario Kart 8's Version 4.1 update (1 May 2015) made Mirror and 200cc available by default. CORRECTION on Mario Kart 8 Deluxe gold items: Gold Mario needs gold trophies in every 200cc cup; the Gold Kart (Gold Standard) comes from 150cc and Mirror cup results; Gold Tires come from beating every 150cc Staff Ghost in Time Trials; the Gold Glider comes from collecting 5,000 coins. Gold Mario has the same stats as Metal Mario.",
+   "lesson": "A pure geometric change to a known layout is a remix that costs nothing to author and still retests muscle memory. Nintendo itself loosened a strict mastery gate on a fun variant after launch. Gold items with the same stats show prestige without power, and each is tied to a different, visible accomplishment.",
+   "applyToRemix": "Use the methodology, not the mode: pick one zero-authoring transform of our OWN planet parameters, such as reversing spin direction together with a reflected starting land layout, and re-run the greedy solver, since reversed spin changes which gravity-bent shots land. Unlock Remix when the chapter is FINISHED (boss cleared at any star count), not when it is 3-starred. The gold chapter frame and Passport title must change nothing about gameplay. For the iMessage pack: keep Remix-only gold art (the gold frame, Remix title badges) OUT of any sticker pack that is sold, so the prestige look can only be earned.",
+   "sources": [
+    "https://mariokart.fandom.com/wiki/Mirror_Mode",
+    "https://www.destructoid.com/mario-kart-8-update-unlocks-200cc-and-mirror-mode-for-everyone/",
+    "https://mynintendonews.com/2015/05/01/mario-kart-8-update-version-4-1/",
+    "https://www.nintendolife.com/guides/mario-kart-8-deluxe-gold-kart-how-to-unlock-all-gold-kart-parts-and-gold-mario",
+    "https://attackofthefanboy.com/guides/mario-kart-8-deluxe-guide-how-to-unlock-the-gold-tires/",
+    "https://strategywiki.org/wiki/Mario_Kart_Wii/Unlockables"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "Slay the Spire",
+   "feature": "Ascension levels",
+   "whatItIs": "Ascension unlocks per character after that character first defeats an Act 3 boss (Act 4 is not needed). There are 20 levels. Each adds one modifier and keeps all the earlier ones, and beating an Act 3 boss at a level unlocks the next level for that character only. Any unlocked level can be picked, so the player can step down whenever they like. The reward is mostly the Ascension number and achievements, not in-run power.",
+   "lesson": "An opt-in ladder where each rung adds exactly ONE named, understandable change works well, and the number reached becomes the prestige. Letting players step back down removes the fear of getting stuck. Because the modifiers stack, later rungs become walls. That suits dedicated adults, not kids.",
+   "applyToRemix": "If Remix ever gets tiers, keep it to at most 3 per chapter (Remix, Remix+, Remix++). Each tier adds one named twist on top of the previous tier, and every unlocked tier stays replayable. For v1, ship a single Remix tier per chapter and show 'Remix x/N stars' as the only number. Don't copy the 20-rung stacking, because it creates the difficulty walls we must avoid for young players.",
+   "sources": [
+    "https://slaythespire.wiki.gg/wiki/Ascension",
+    "https://slay-the-spire.fandom.com/wiki/Ascension",
+    "https://www.pocketgamer.com/slay-the-spire/ascension-guide/"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "Hades",
+   "feature": "Pact of Punishment (Heat), bounties, and God Mode",
+   "whatItIs": "The Pact appears only after the player's first successful escape (first defeat of the final boss). The player chooses which Conditions to accept, and each adds Heat. Bosses beaten at or above a weapon's Target Heat pay one-time bounties, tracked per weapon, and a player can only claim the bounty for the lowest Heat not yet completed with that weapon, so the ladder rises one step at a time. Bounties stop at Heat 20 per weapon (21 bounty runs from Heat 0 to 20); the only later reward is a cosmetic prize from Skelly at Heat 32. Separately, God Mode can be toggled at any time and gives 20% damage resistance, rising 2% per death to a cap of 80%, without locking out achievements or content.",
+   "lesson": "Letting players pick WHICH kind of harder they face gives them ownership. Paying each rung once, in order, stops farming and makes 'done' visible. Supergiant pairs its challenge ladder with an easing option that carries no penalty, so failure stings less. Caution: Hades' bounties are upgrade resources, which is a power reward. We want prestige only.",
+   "applyToRemix": "Optional light choice: when a Remix planet starts, show 2 seeded twist chips and let the child pick one (both are checked by the solver). Award each Remix star once, with no repeat payouts. Once a chapter's Remix is fully gold-framed, mark it 'Complete' so there is no endless grind. Borrow the spirit of an easing option: after several failed tries on a remix planet, offer a gentle 'show me a hint' aim guide that still lets the child finish and still counts, and never punish them or require payment.",
+   "sources": [
+    "https://hades.fandom.com/wiki/Pact_of_Punishment",
+    "https://www.gameskinny.com/tips/hades-pact-of-punishment-conditions-bounties-heat-explained/",
+    "https://www.thegamer.com/hades-heat-pact-punishment-trivia/",
+    "https://steamcommunity.com/app/1145360/discussions/0/2841165820095145436/",
+    "https://hades.fandom.com/wiki/God_Mode",
+    "https://www.gamesradar.com/hades-god-mode-achievements/"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "Hollow Knight (and Hollow Knight: Silksong)",
+   "feature": "Steel Soul Mode and the Steel Soul menu style",
+   "whatItIs": "Steel Soul is a permadeath mode that becomes available after the game has been finished once. Finishing any ending in Steel Soul unlocks the 'Steel Soul' title-menu style (plus related achievements), but no in-game items or power. CORRECTION: the early-unlock directional code on the Extras menu (Up, Down, Up, Down, Left, Right, Left, Right) is confirmed for Silksong (2025); I could not confirm that the original Hollow Knight has it.",
+   "lesson": "The best prestige reward is one you see every time you open the game: a changed menu style beats a hidden achievement. Silksong also adds a bypass for players who want the challenge sooner. Permadeath save-wiping is a harsh adult stake that must not carry over to a kids' game.",
+   "applyToRemix": "Put the gold chapter frame where kids see it on every launch (the chapter map and the Passport cover), and let an earned Passport title show on the Passport. A failed Remix planet never deletes, locks or resets progress; the child just retries. Consider letting the parental/settings area unlock Remix early for a sibling or a kid who wants it (a soft bypass, never paid).",
+   "sources": [
+    "https://hollowknight.fandom.com/wiki/Menu_Styles_(Hollow_Knight)",
+    "https://hollowknight.wiki/w/Steel_Soul_Mode_(Hollow_Knight)",
+    "https://hollowknight.fandom.com/wiki/Steel_Soul_Mode",
+    "https://www.thegamer.com/hollow-knight-silksong-steel-soul-perma-death-mode-cheat-code/",
+    "https://www.techradar.com/gaming/silksongs-brutal-steel-soul-mode-can-be-unlocked-without-beating-the-game-heres-how"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "game": "Portal (2007)",
+   "feature": "Challenge Chambers and Advanced Chambers (Bonus Maps)",
+   "whatItIs": "After the campaign, chambers 13-18 can be replayed as Challenges: the same layouts, scored on fewest portals, fewest steps or shortest time, with bronze, silver and gold medals (18 challenges, tied to achievements). The same six chambers also have Advanced versions that keep the general layout but change or remove something the player relied on, such as making surfaces non-portalable or covering floors with toxic goo. CORRECTION on the example: Advanced 13's first room has no cube, the chamber has only one Weighted Storage Cube instead of the usual supply, and most of the main room's floor is goo.",
+   "lesson": "There are two cheap ways to remix a room that has already been solved. One keeps the room exactly as it is and changes the scoring metric. The other removes or changes ONE affordance the player depended on, which forces a fresh solution in a familiar space.",
+   "applyToRemix": "Two twist types that fit our solver: 'Thrifty' (a remix planet also shows a 'throws to spare' target, computed by the solver so it is always reachable, and meeting it adds to the life score toward stars) and 'Missing Piece' (one element, such as magma, is absent from the tray, and the solver must confirm the goal is still reachable, e.g. a volcano-free route to the target creature). Because both are simply a seed plus a rule, they need no new art.",
+   "sources": [
+    "https://strategywiki.org/wiki/Portal/Challenges",
+    "https://strategywiki.org/wiki/Portal/Advanced_Chambers",
+    "https://strategywiki.org/wiki/Portal/Chamber_13",
+    "https://theportalwiki.com/wiki/Portal_Test_Chamber_13_(Advanced)",
+    "https://theportalwiki.com/wiki/Test_Chambers"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "Rayman Legends",
+   "feature": "Invaded levels (and a caution about Back to Origins lucky tickets)",
+   "whatItIs": "Every stage in the Legends worlds except boss and musical stages gets an 'Invasion' version, in which enemies from one of the other worlds invade the familiar stage. The player races to save three Teensies strapped to rockets that launch at 40, 50 and 60 seconds, with no checkpoints and one hit point. Separately, the roughly 40 'Back to Origins' levels (remastered Rayman Origins stages) are unlocked through scratch-card 'Lucky Tickets', earned by finishing a level with enough Lums; matching three images on a ticket unlocks a painting, a Teensy, Lums or a creature.",
+   "lesson": "The crossover remix, where one familiar space is invaded by another world's cast, is a very readable twist that also reminds players of content they have already seen. Staggered rewards (40/50/60 s) give partial success instead of pass/fail. The scratch-card unlock is a random-reveal pattern that we must not borrow in a kids' game, even with a free currency.",
+   "applyToRemix": "A 'Visitor' twist of our own (not a timed invasion): a remix planet in chapter N is visited by a creature from a different chapter's biome (for example, a tundra chapter's remix asks you to host a desert creature), which forces new land combinations; the solver confirms the needed lands can be made with that chapter's tray. Tiered goals map onto our existing 1-3 stars (partial credit), so no timers are needed. Remix and every reward must unlock deterministically and never through a randomized reveal.",
+   "sources": [
+    "http://plannedallalong.blogspot.com/2022/12/rayman-legends.html",
+    "https://en.wikipedia.org/wiki/Rayman_Legends",
+    "https://raymanpc.com/wiki/en/Lucky_ticket",
+    "https://www.shacknews.com/article/80209/rayman-legends-to-feature-about-40-remastered-levels-from-rayman",
+    "https://raymanpc.com/wiki/en/Back_to_Origins"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "Shovel Knight (Treasure Trove)",
+   "feature": "New Game Plus",
+   "whatItIs": "New Game+ unlocks once a campaign is completed on a save file. It resets stage and story progress, but the player keeps all purchased upgrades, gear and relics. In return, the player takes double damage, healing items are scarcer and chickens are replaced by bombs, and each stage has at most two checkpoints (one midway, one before the boss). Because time, money and relics carry over, several feats (for example Hurry Up, Penny Pincher, Beeline) cannot be earned in NG+.",
+   "lesson": "This is the classic whole-game New Game+: power carries over, and several penalties are stacked on top to compensate. It suits adults but runs against 'one twist per remix'. Resetting the whole save story is a heavy commitment. Some feats cannot be earned in NG+ because of what carries over, which is confusing.",
+   "applyToRemix": "Do the opposite on purpose: Remix is per chapter, never resets or touches campaign progress, and carries over no power (no throw bonuses, no upgrades). Each remix planet adds one twist, not a stack of penalties. Make it clear which rewards can be earned in Remix (Remix stars, the gold frame, the Passport title) so no badge is secretly impossible.",
+   "sources": [
+    "https://shovelknight.fandom.com/wiki/New_Game_Plus",
+    "https://shovelknight.fandom.com/wiki/Checkpoint",
+    "https://cliqist.com/2014/09/29/a-guide-to-shovel-knights-feats/",
+    "https://en.wikipedia.org/wiki/Shovel_Knight"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "Rhythm Heaven series (with Tetris Effect as a contrast)",
+   "feature": "Perfect Campaign; Tetris Effect Expert Journey",
+   "whatItIs": "After a minigame is rated 'Superb', Rhythm Heaven may offer a Perfect Campaign at random times on a randomly chosen Superb game. The player gets three tries to finish it with zero misses before the offer disappears or moves to another game. Success earns a certificate and a gift, and collecting every certificate unlocks a special certificate. Tetris Effect's Expert Journey uses the same stages with a higher line goal (48 lines vs. 36 on Normal). CORRECTION: Expert originally required clearing Normal, but a later update removed that requirement.",
+   "lesson": "Perfection challenges should only be offered on content the player has already shown mastery of, and a certificate is a lovely prestige reward. Rhythm Heaven's limited-tries, disappearing offer creates fail pressure and fear of missing out. Tetris Effect shows the calmer version: the same stages with a raised numeric bar, always available, and the developer later removed even its unlock gate.",
+   "applyToRemix": "Unlock each chapter's remix only after that chapter is cleared. Show a printable-style 'Remix Certificate' on the Passport when a chapter's Remix is gold-framed. Never make Remix offers expire or limit attempts; remixes stay available forever.",
+   "sources": [
+    "https://rhythmheaven.fandom.com/wiki/Perfect_Campaign",
+    "https://rhwiki.net/wiki/Perfect_Campaign",
+    "https://tetris.wiki/Tetris_Effect",
+    "https://harddrop.com/wiki/Tetris_Effect",
+    "https://steamcommunity.com/sharedfiles/filedetails/?id=2959897059"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "Brawl Stars (Supercell)",
+   "feature": "Brawler Mastery track and Mastery Titles, removed in 2025 and replaced by Records",
+   "whatItIs": "From early 2023 until a June 2025 update, each brawler had a Mastery points track that ended in a cosmetic Title shown under the player's name. According to search excerpts of Supercell's 'RIP Masteries' post (not re-opened in this pass), Supercell said only 11.8% of players had ever earned a Brawler Title, most players did not understand how Masteries worked, and the system rewarded grinding. Titles then moved to Records, with tiers at 20/50/100/200/300 wins. A later move of Titles to brawler Trophy tiers (reportedly February 2026) is also unconfirmed.",
+   "lesson": "A prestige cosmetic only works when most players understand the path to it and can reach it by playing well, not by piling up hours. A long grind makes the badge rare because the path is tedious, not because it takes skill. The studio itself decided this was bad engagement and took it out.",
+   "applyToRemix": "Earn Remix stars through skill on a small, fixed set: 10 remixed planets per chapter, 30 stars at most, with an 'x/30' counter always visible. Give the Passport title at a reachable point (for example, clearing all 10 remix planets with at least 1 star) and keep the gold frame for 30/30. Never ask for volume like 'win 200 remix levels'. Titles should name the chapter or world (e.g. 'Tundra Remixer') and not rank the child against other players.",
+   "sources": [
+    "https://supercell.com/en/games/brawlstars/blog/news/rip-masteries/",
+    "https://brawlstars.fandom.com/wiki/Mastery",
+    "https://brawlstars.fandom.com/wiki/Titles",
+    "https://brawlstars.fandom.com/wiki/Records",
+    "https://tech.yahoo.com/gaming/articles/brawl-stars-removing-masteries-reworking-183313674.html"
+   ],
+   "confidence": "low"
+  },
+  {
+   "game": "Clash Royale (Supercell)",
+   "feature": "Card Mastery badges and the June 2025 change to mastery rewards",
+   "whatItIs": "Each card has Mastery tasks, usually starting with generic ones (win battles with the card, deal damage with it) and then card-specific objectives. Progress shows as a mastery badge on the player's profile, and the badge's look changes as more tasks are done. Tasks paid Gold and Gems. Games-press summaries of a June 2025 Supercell post (not re-opened in this pass) say mastery Gem rewards were cut (regular cards 150 to 100, Champions 300 to 100) and 2,525 Gems were moved to Trophy Road.",
+   "lesson": "The lasting prestige is the badge on the profile, which visibly changes as tasks are done. Putting premium currency on top made mastery feel like an economic chore, and the studio reportedly had to walk that back. Mastery rewards should say something about the player, not pay out currency.",
+   "applyToRemix": "Let the chapter frame change in visible steps: an outline when Remix is started, silver when all 10 remix planets are cleared, gold at 30/30. It pays no coins and no currency. The 'tasks' are simply each remix planet's always-on goal, shown with the same icons as base-game goals so there is nothing new to learn.",
+   "sources": [
+    "https://clashroyale.fandom.com/wiki/Card_Mastery",
+    "https://support.clashroyale.com/hc/en-us/articles/49484906100763-Card-Mastery",
+    "https://supercell.com/en/games/clashroyale/blog/news/card-mastery-rewards-changes/",
+    "https://www.sportskeeda.com/mobile-games/clash-royale-card-mastery-reward-changes-explained-june-17-2025",
+    "https://gamingonphone.com/news/clash-royale-confirms-mastery-gem-rewards-are-changing-in-late-june-2025-update/"
+   ],
+   "confidence": "low"
+  },
+  {
+   "game": "Pokemon GO (Niantic)",
+   "feature": "Four-tier Medals (bronze/silver/gold/platinum) and Gym Badges (basic/bronze/silver/gold)",
+   "whatItIs": "Medals have four tiers: bronze, silver, gold and platinum. Type medals add catch bonuses for that type (+1 at bronze up to +4 at platinum). Gym Badges go from Basic to Bronze, Silver and Gold as a player keeps battling at, defending, feeding or raiding one real-world Gym, and higher badge levels give more items when spinning that Gym. Niantic has also run event-exclusive medals.",
+   "lesson": "A four-step metal ladder is readable at any age, and it makes partial progress feel like an achievement in itself. But GO ties the tiers to gameplay power and items, and it also runs event-exclusive medals, which turns recognition into something players feel they need. Take the easy-to-read ladder and leave the tie-ins behind.",
+   "applyToRemix": "Use a three-step material ladder on the chapter card (plain, then silver, then gold) that shows on the campaign map and in the Passport. The tiers change art only; there are no throw bonuses and no extra lives. Do not make date-exclusive Remix medals. Keep the date-seeded daily, weekly and monthly content separate from Remix, so Remix never expires.",
+   "sources": [
+    "https://bulbapedia.bulbagarden.net/wiki/Medal_(GO)",
+    "https://pokemongo.fandom.com/wiki/Medals",
+    "https://pokemongo.fandom.com/wiki/Gym_Badges",
+    "https://niantic.helpshift.com/hc/en/6-pokemon-go/faq/101-how-do-i-level-up-and-earn-medals/",
+    "https://pokemongo.fandom.com/wiki/List_of_Event_Exclusive_Medals"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "game": "Duolingo",
+   "feature": "Legendary level (gold to purple crown, later a trophy), and skill 'cracking' decay",
+   "whatItIs": "Legendary arrived in 2021 as a harder mastery challenge on a fully levelled skill that turned it from gold to purple. After the 2022 learning-path redesign it became a trophy. Per fan-site write-ups (not re-opened in this pass), it allowed about 3 mistakes, cost free users 100 gems per attempt (unlimited for Super subscribers) and reportedly offered a gem-priced continue after too many mistakes. Users found it confusing, reported mastered skills 'cracking' through the older skill-decay system, and saw its meaning change more than once.",
+   "lesson": "Charging per attempt, selling a continue, and letting prestige decay or be redefined later together turn a mastery reward into anxiety and pressure to pay. Earned prestige should be free to attempt, permanent, and mean the same thing over time.",
+   "applyToRemix": "Remix attempts are free and unlimited. Failing a remix planet offers only 'Try again' or 'Back to map', never a continue offer. Remix stars and the gold frame never decay. If targets are retuned in an update, stars already earned stay. Remix adds no timer beyond the normal ~1-minute level.",
+   "sources": [
+    "https://duolingo.fandom.com/wiki/Legendary",
+    "https://duoplanet.com/duolingo-legendary-levels-get-to-know-the-purple-crowns/",
+    "https://happilyevertravels.com/duolingo-legendary-level/",
+    "https://duolingoguides.com/duolingo-legendary-disappeared/",
+    "https://duolingo.fandom.com/wiki/Skill"
+   ],
+   "confidence": "low"
+  },
+  {
+   "game": "Rhythm Heaven series (Nintendo)",
+   "feature": "Perfect Campaign: 'Perfect' rank, certificate and Perfect marker",
+   "whatItIs": "Once a stage has a 'Superb' rank, it can be picked at random for a Perfect Campaign. Any miss ends an attempt, the player gets three attempts, and after that the campaign moves to another stage. A Perfect earns an in-game certificate, a small gift with no gameplay power (reading material, songs, toys and similar), and a Perfect marker on that stage's icon.",
+   "lesson": "The Perfect stamp works because it is a visible certificate on content the player has already cleared, and its gift has no gameplay power. The random, three-strikes window is different: it adds made-up scarcity that is wrong for players aged 6 and up.",
+   "applyToRemix": "Add a 'Perfect' stamp to a remix planet when it has 3 stars and its always-on goal is met. The stamp is always available and retries are unlimited. The gift can be a lore postcard in the Passport. Stickers in the iMessage pack should not be withheld as the gift; the pack stays fully unlocked for everyone.",
+   "sources": [
+    "https://rhythmheaven.fandom.com/wiki/Perfect_Campaign",
+    "https://rhwiki.net/wiki/Perfect_Campaign",
+    "https://rhythmheaven.fandom.com/wiki/Rank",
+    "https://nerdschalk.com/how-to-get-perfect-ranks-rhythm-heaven-groove/"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "game": "New Super Mario Bros. Wii / U (Nintendo)",
+   "feature": "Super Guide and sparkling save-file stars",
+   "whatItIs": "In NSMB Wii, a Super Guide Block appears after a player loses eight lives in a row on one level, and hitting it lets Luigi play the level. The save file shows completion stars that sparkle only if Super Guide has not come into play. Per MarioWiki and fan Q&A excerpts (not re-opened in this pass), the block merely appearing is enough to lose the sparkle for good, even if it was never used. NSMB U reportedly lets the shine return once that course is cleared without the block. Nintendo's Iwata Asks chapter 'A Medal for Skilled Players' covers the idea of marking unassisted play.",
+   "lesson": "Marking unassisted play is fine. Permanently tarnishing a save because help was merely offered punishes players who struggle, who are often the youngest, and Nintendo's own sequel reportedly made the mark recoverable. Prestige should always be earnable again.",
+   "applyToRemix": "Do not dim or take back anything when a player struggles or uses help. Award the gold frame the first time a qualifying completion happens. Starting or failing Remix never changes the base chapter's stars, badges or completion state. Show a gold marker on each mastered remix planet on the chapter map, so progress is visible where the child already looks.",
+   "sources": [
+    "https://www.mariowiki.com/Super_Guide_Block",
+    "https://www.nintendo.com/en-gb/Iwata-Asks/Iwata-Asks-New-Super-Mario-Bros-Wii/Volume-1/6-A-Medal-for-Skilled-Players/6-A-Medal-for-Skilled-Players-210961.html",
+    "https://gamefaqs.gamespot.com/wii-u/632934-new-super-mario-bros-u/answers/340746-super-guide-appearance-disabling-shining-stars-on-save-file"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "game": "Angry Birds (Rovio)",
+   "feature": "1-3 star rating, Golden Eggs, and the paid Mighty Eagle",
+   "whatItIs": "Each level gives 1 to 3 stars by score. Several Golden Eggs are earned by getting 3 stars on every level of an episode, and they open bonus levels or toys. The Mighty Eagle was a one-time in-app purchase added in a December 2010 update. It could be used once per hour to clear a level the player was stuck on, but a level cleared that way earned no stars. On cleared levels it opened 'Total Destruction', where 100% destruction earns a feather.",
+   "lesson": "Rovio kept paid help out of the prestige layer (skipping gives no stars), which kept 3 stars meaningful, but a paid skip still sat in a game kids play. Pocket Planet can keep the separation and drop the skip altogether. The extra reward for 3 stars everywhere was a new way to play, not power.",
+   "applyToRemix": "A chapter's Remix opens only after that chapter is finished; nothing can be bought to open it early. At 30/30 Remix stars, the reward can be a playful no-score view of that chapter's planets instead of currency. Nothing sold in the shop can raise Remix stars or look like a gold frame.",
+   "sources": [
+    "https://angrybirds.fandom.com/wiki/Star",
+    "https://angrybirds.fandom.com/wiki/Golden_Eggs",
+    "https://www.angrybirdsnest.com/angry-birds-mighty-eagle-explained/",
+    "https://toucharcade.com/2010/12/23/new-angry-birds-update-adds-the-mighty-eagle-new-chapter"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "game": "Celeste (Maddy Thorson / Noel Berry)",
+   "feature": "Strawberries and Golden Strawberries, and the reworded Assist Mode text",
+   "whatItIs": "Strawberries are optional collectibles; the game itself says they will impress your friends but do little else. Golden Strawberries, which appear once a chapter is cleared, require clearing that chapter without dying. Assist Mode's intro text was reworded in the 2019 v1.3 update after community feedback. The old text called the default difficulty 'essential' to the experience. The new text says Celeste 'is intended to be a challenging and rewarding experience' and hopes players who need Assist Mode 'can still find that experience', because the old wording felt othering.",
+   "lesson": "Optional mastery content can run entirely on the player's own satisfaction if the game says so plainly. The words around difficulty matter as much as the numbers: copy should never suggest that a player who takes help is playing wrong.",
+   "applyToRemix": "Intro copy: 'Bonus! Play this chapter's planets in a new mix. Your chapter is already complete.' Failure copy stays warm and about the shot ('That orbit was tricky - try another angle?'), never 'Failed'. Finishing the base campaign always counts as full completion, and Remix is labelled 'extra' everywhere.",
+   "sources": [
+    "https://celeste.ink/wiki/Strawberry",
+    "https://celestegame.fandom.com/wiki/Collectibles",
+    "https://www.vice.com/en/article/celeste-assist-mode-change-and-accessibility/",
+    "https://halfcoordinated.medium.com/gaming-accessibility-and-language-my-full-interview-response-regarding-celestes-assist-mode-b52ee22d6821"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "game": "Apple Game Center (platform guidance)",
+   "feature": "Achievement states, progressive achievements, leaderboards (HIG and WWDC20 'Design for Game Center'), plus Screen Time Game Center controls",
+   "whatItIs": "Confirmed on Apple pages: the HIG defines four achievement states (locked, in-progress, hidden, completed). For progressive achievements the system shows encouragement such as 'You're more than halfway to completing ... Keep going!'. Achievement titles and descriptions are cut off after two lines each. The HIG also says recurring leaderboards 'can increase engagement by giving players more chances to take the lead'. The WWDC20 session allows up to 100 achievements and advises being selective 'so earning every one feels rewarding'. It asks for custom art per achievement with no text in it (1024x1024 at 2x, cropped to a circle, so keep content centred) and for in-game notifications timed 'right at that moment of completion'. Screen Time lets parents restrict Game Center features such as multiplayer, adding friends and profile changes (Apple support page, not re-opened in this pass).",
+   "lesson": "Platform-level prestige should be few in number, short and clear (two lines at most), progressive where possible, and celebrated at the moment it is earned. Recurring leaderboards are explicitly an engagement tool, which is exactly what should not be aimed at 6-year-olds.",
+   "applyToRemix": "The campaign is endless, so per-chapter achievements would hit the 100 cap. Use a few progressive ones instead: 'First Remix', 'Remix a Boss chapter', 'Gold Frames 1/5/10'. Give each unique 1024x1024 art in the sticker style: centred for the circular crop, no text. Add no Remix leaderboard. If a leaderboard exists anywhere, make it classic (all-time) and opt-in, and make sure the game works fully when parents turn Game Center off.",
+   "sources": [
+    "https://developer.apple.com/design/human-interface-guidelines/game-center",
+    "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/game-center.json",
+    "https://developer.apple.com/videos/play/wwdc2020/10145/",
+    "https://support.apple.com/en-ph/105121"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "n/a: Apple App Store Kids Category rules",
+   "feature": "Guideline 1.3, parental gates, 3.1.1 loot-box odds, Kids age bands",
+   "whatItIs": "Confirmed on Apple pages: Guideline 1.3 says Kids Category apps 'must not include links out of the app, purchasing opportunities, or other distractions to kids unless reserved for a designated area behind a parental gate'. It also says they 'should not include third-party analytics or third-party advertising', with limited exceptions for analytics. Guideline 3.1.1 requires apps selling randomized virtual items to disclose the odds before purchase. Apple's kids page explains parental gates, suggests a voiceover prompt for pre-literate children, describes Ask to Buy, and lists the age bands 5 and under, 6-8 and 9-11.",
+   "lesson": "The moment of mastery is when emotion runs highest, and it is exactly where monetized games place offers. In a kids app, prestige moments must contain no commerce and should end in choices about play, not links to a store.",
+   "applyToRemix": "Remix results and the gold-frame celebration offer only 'Next remix planet' and 'Map': no shop button and no 'unlock more'. Show always-on goals as icons (with optional voiceover) so pre-literate 6-year-olds understand them. The iMessage sticker extension needs no purchases and no link-outs outside a parental gate, and should ship every sticker unlocked rather than locked behind Remix progress, so it never nags.",
+   "sources": [
+    "https://developer.apple.com/app-store/review/guidelines/",
+    "https://developer.apple.com/app-store/kids-apps/"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "n/a: UK ICO Age Appropriate Design Code (Children's Code)",
+   "feature": "Standard 13 (nudge techniques) and the Feb 2023 'top tips for games designers'",
+   "whatItIs": "Corrected: Standard 13's main rule is not to use nudge techniques that lead children to give unnecessary personal data or weaken their privacy settings. Its guidance adds that reward loops and similar engagement techniques (such as streaks) keep children engaged in ways that feed data collection. It warns against using personal data to reward extended play, and encourages nudges towards wellbeing, such as taking breaks. According to law-firm and trade-body summaries (not re-opened in this pass), the ICO's February 2023 top tips for games designers include checkpoints, automatic saving and natural breaks so children can stop without losing progress, avoiding designs that create fear of missing out, and assessing the risks of time-limited offers and randomised rewards.",
+   "lesson": "Harder optional content needs natural stopping points and no loss when a child leaves. It must never be time-limited to create urgency, and success should not lead straight into more play automatically.",
+   "applyToRemix": "Each remix planet is a self-contained ~1-minute unit, and its stars save the moment it ends. After a gold frame, show a calm end card ('Chapter mastered! Nice spot for a break') and do not auto-start the next remix. No expiring Remix, no Remix streaks, and no push notifications about Remix.",
+   "sources": [
+    "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/childrens-information/childrens-code-guidance-and-resources/age-appropriate-design-a-code-of-practice-for-online-services/13-nudge-techniques/",
+    "https://www.mondaq.com/uk/data-protection/1296750/icos-top-tips-for-game-designers",
+    "https://tiga.org/news/ico-issues-new-guidance-for-game-developers-on-protecting-children",
+    "https://mse.dlapiper.com/post/102i83a/new-ico-guidance-on-childrens-code-for-games-companies-identify-under-18s-and-p"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "game": "n/a: research, Radesky, Hiniker et al., JAMA Network Open 2022",
+   "feature": "Prevalence of manipulative design in apps used by children (parasocial pressure, fabricated time pressure, navigation constraints, lures)",
+   "whatItIs": "A cross-sectional study coded the apps played by 160 children aged 3-5. It grouped manipulative design into parasocial relationship pressure, fabricated time pressure, navigation constraints and lures (including pressure to buy or watch ads). Search excerpts put lures in roughly 45% of apps and only about 20% of apps free of these designs; those figures were not re-opened in this pass. Reported examples include characters pleading next to a countdown and rewards shown at moments a child might stop. Press coverage said children from lower-income families met more of these designs.",
+   "lesson": "Even harmless-looking rewards like stars and prizes become manipulative when they are timed to the moment a child tries to leave, or paired with fake urgency or a character's emotional pleading. The test is when and how a reward appears, not only whether it costs money.",
+   "applyToRemix": "Never show Remix or its rewards as a pop-up when the child pauses, quits or finishes a session. The only way in is a quiet 'Remix' badge on a chapter card that is already complete. Creatures and mascots never look sad or plead when Remix is declined. No countdown before entering a remix.",
+   "sources": [
+    "https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2793493",
+    "https://faculty.washington.edu/alexisr/childrenManipulativeDesign.pdf",
+    "https://www.michiganmedicine.org/health-lab/design-tricks-commonly-used-monetize-young-childrens-app-use",
+    "https://www.clickondetroit.com/all-about-ann-arbor/2022/06/17/university-of-michigan-study-young-children-exposed-to-sneaky-ads-profit-tactics-in-apps/"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "game": "n/a: UNICEF/LEGO RITEC-8 framework; Mueller & Dweck 1998",
+   "feature": "Child wellbeing outcomes (autonomy, competence) and research on effort vs intelligence praise",
+   "whatItIs": "RITEC-8 comes from the UNICEF and LEGO Group project on responsible innovation in technology for children. It lists eight wellbeing outcomes for digital play, including autonomy (children freely choose how to engage) and competence (a sense of mastery). The sample size and country count cited earlier (787 children aged 8-12 in 18 countries) were not re-verified. Mueller & Dweck (1998, Journal of Personality and Social Psychology) found that fifth graders praised for intelligence showed less persistence, less enjoyment and worse performance after failure than children praised for effort.",
+   "lesson": "Prestige for kids should mark skill the child chose to pursue. The wording should credit strategy and effort rather than talent, so a failed remix does not read as 'you're not good enough'. Later mindset research has debated effect sizes (not checked here), so treat this as guidance for copywriting, not hard science.",
+   "applyToRemix": "Prefer titles like 'Orbit Tinkerer' or 'Chapter 4 Remixed' over 'Genius' or 'Pro'. Result copy praises the shot ('Great slingshot around the moon!'). Remix is always opt-in: it is never the default next step on the map and never recommended by a pop-up.",
+   "sources": [
+    "https://www.unicef.org/childrightsandbusiness/workstreams/responsible-technology/online-gaming/ritec-design-toolbox",
+    "https://digitalthrivingplaybook.org/big-idea/designing-for-childrens-well-being-in-digital-play-the-ritec-8-framework/",
+    "https://pubmed.ncbi.nlm.nih.gov/9686450/",
+    "https://psycnet.apa.org/doiLanding?doi=10.1037%2F0022-3514.75.1.33"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "game": "Apple platform reference (Messages framework)",
+   "feature": "Sticker pack image specifications (Adding your sticker packs to Messages)",
+   "whatItIs": "Verified. Apple's doc says 'Sticker packs don't require any code'. You drag images into the Sticker Pack folder inside the Stickers asset catalog. Valid files are PNG, APNG, GIF, JPEG, HEIC or HEICS, each 'less than 500 KB', and you should 'always provide @3x images (300 x 300 pixels to 618 x 618 pixels)'; the system downscales to @2x/@1x at runtime. You pick one size for the whole pack in the Attributes inspector: Small 100 pt (300 px), Medium 136 pt (408 px) or Large 206 pt (618 px). The HIG and the asset-catalog grid-size key call the middle size 'Regular'. The HIG's grid illustrations show 4 small, 3 regular or 2 large stickers per row. Under 'Specify sticker availability', an NSStickerSharingLevel key in the extension Info.plist restricts the pack to Messages or makes it system-wide. The doc prints the value literally as `{OS}` and ends with an unclear sentence: 'If you add this key to your app, your sticker pack doesn't appear in the list.'",
+   "lesson": "Build the pack at a single fixed canvas size from the start and treat 500 KB per file as a hard budget. Our art is drawn in code, so the export can hit the exact pixel size with no resampling.",
+   "applyToRemix": "Add an export step that renders each sticker at exactly 408x408 (Regular, 3 per row, good for a set of about 24-30) or 618x618 (Large, 2 per row). Do not call stickerCanvas(id, px): it multiplies by devicePixelRatio (up to 2x) and sets a CSS size, so stickerCanvas(id, 408) gives 816 px on a Retina browser. Instead, make a canvas of exactly the target size, translate to its centre and call drawSticker(g, id, size * 0.44, t), following the existing Playwright-in-dev-server pattern in resources/render-art.cjs. The step should fail if any file is not square at exactly that size, or is 500,000 bytes or more (this satisfies both Apple's 'less than 500 KB' and the HIG's '500 KB or smaller').",
+   "sources": [
+    "https://developer.apple.com/documentation/messages/adding-your-sticker-packs-to-messages",
+    "https://developer.apple.com/tutorials/data/documentation/messages/adding-your-sticker-packs-to-messages.json",
+    "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/imessage-apps-and-stickers.json"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "Apple platform reference (Human Interface Guidelines)",
+   "feature": "HIG: iMessage apps and stickers (best practices + specifications)",
+   "whatItIs": "Verified. The HIG says to 'create stickers that are expressive, inclusive, and versatile', legible 'against a wide range of backgrounds and when rotated or scaled', and optionally to use transparency. It says 'for each sticker, provide a localized alternative description' for VoiceOver, and 'don't mix sizes within a single sticker pack' (Small 300, Regular 408, Large 618 px). Its format table lists PNG (8-bit transparency, no animation), APNG (8-bit, animated), GIF (single-colour transparency, animated) and JPEG (neither). Each file must be 500 KB or smaller. It also says 'prefer providing one primary experience in your iMessage app'.",
+   "lesson": "Design stickers as a chat vocabulary (reactions people actually send), not as a copy of the collection screen. Every sticker must read on light and dark bubbles, on photos, and when scaled or rotated by the sender.",
+   "applyToRemix": "Our drawSticker already draws a white die-cut border and drop shadow (src/ui/art/stickers.ts), which suits the legibility rule. Build a separate 'chat set' of reaction poses from drawCreature and the planet art: a planet waving hi, a wide-eyed penguin, a volcano 'oops', a cheering forest, a seed crossing its fingers. Leave out drawSticker's RARITY_BG backgrounds so the in-game album keeps its value. Keep the art wordless, because text baked into an image cannot be localized in a static pack. Add a few Round 7 celebration stickers that everyone gets, with no gating or spending: a gold-framed remixed planet, a Passport stamp and a dancing festival creature. Write alt text for en/es/fr/de/pt/ja. Note that the asset catalog's accessibility-label is one string per sticker, so the way to localize it is still unconfirmed.",
+   "sources": [
+    "https://developer.apple.com/design/human-interface-guidelines/imessage-apps-and-stickers",
+    "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/imessage-apps-and-stickers.json"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "Apple platform reference (App Store / App Store Connect)",
+   "feature": "Shipping a sticker pack inside an existing iOS app (Sticker Pack Extension) and its listing",
+   "whatItIs": "Verified. Apple says 'If you have an iOS app, you can bundle it with a sticker pack or an iMessage extension'. The pack is listed 'in the same category and with the same description as your iOS app', and 'users who download your iOS app will automatically see the sticker pack in iMessage'. The Stickers category 'is only available to standalone sticker pack apps and iMessage apps'; 'iOS apps with iMessage or sticker pack extensions can't choose the Stickers category'. App Store Connect needs an app icon plus an iMessage app icon, and has an iMessage screenshots well. Moving between standalone and extension 'you must create it as a new app', while moving between sticker pack and iMessage app of the same kind is a version update. A 2016 developer-forum thread reports that at least one iMessage screenshot was required for a bundled pack. Another shows the extension bundle id must be the app's id plus a suffix.",
+   "lesson": "Shipping the pack as an extension is the cheapest option: no new app record, and every player gets it automatically. The cost is that it gets no Stickers-category discovery of its own.",
+   "applyToRemix": "Ship the pack as an extension target with bundle id com.pocketplanet.game.Stickers (our appId in capacitor.config.ts is com.pocketplanet.game) in the same update as Remix and the festival/Voyage music. Prepare iMessage screenshots with invented names and no phone numbers (sticker-submissions page; Guideline 2.3.9). A free standalone sticker app is possible later, purely for Stickers-category discovery, but it is a second app record to maintain. It must stay free, with no IAP and no link-outs.",
+   "sources": [
+    "https://developer.apple.com/imessage/",
+    "https://developer.apple.com/app-store/sticker-submissions/",
+    "https://developer.apple.com/help/app-store-connect/create-an-app-record/add-imessage-app-information",
+    "https://developer.apple.com/forums/thread/62159",
+    "https://developer.apple.com/forums/thread/71736"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "Apple platform reference (icons)",
+   "feature": "iMessage App Icon set for a Sticker Pack extension",
+   "whatItIs": "Verified. Legacy Technical Q&A QA1686 (Table 8) lists these required iMessage/Sticker Pack extension icons: 1024x768 (Messages App Store); 120x90 and 180x135 (app drawer, iPhone); 134x100 (iPad); 148x110 (iPad Pro); 54x40 and 81x60 ('breadcrumb icons in the chat transcript'); 64x48 and 96x72 ('message bubble branding'). It says they 'must be opaque', otherwise upload fails with ITMS-90647. The current HIG table differs: 148x110, 143x100, 120x90/180x135, 64x48/96x72, 54x40/81x60, Settings 58/87, and App Store 1024x1024. In an August 2025 forum thread about a sticker extension that was 'unknown to FrontBoard', an Apple DTS engineer said 'you must provide iMessage App Icon when building sticker packs' and told the developer to confirm every icon in the well was filled. The thread does not confirm that this fixed it.",
+   "lesson": "The icon is the pack's brand mark inside other people's chats (breadcrumb and bubble branding). It must be readable at 27x20 pt and fully opaque.",
+   "applyToRemix": "Extend resources/render-art.cjs, which already renders the app icon from game code on a #0b0a24 space background, to fill every iMessage App Icon slot opaquely. These icons are 4:3, so compose the planet for that shape instead of cropping the square icon. Simplify the silhouette for the 54x40 breadcrumb. QA1686 and the HIG disagree on the iPad size (134x100 vs 143x100) and the App Store size (1024x768 vs 1024x1024), so fill whatever slots Xcode's set shows when the target is created.",
+   "sources": [
+    "https://developer.apple.com/library/archive/qa/qa1686/_index.html",
+    "https://developer.apple.com/design/human-interface-guidelines/imessage-apps-and-stickers",
+    "https://developer.apple.com/forums/thread/797781",
+    "https://developer.apple.com/forums/thread/48717"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "game": "Apple platform reference (asset catalog / enforcement)",
+   "feature": "Sticker asset catalog format and 500 KB enforcement for animated stickers",
+   "whatItIs": "Verified. A .stickerpack folder's Contents.json has properties.grid-size (small/regular/large) and a stickers array of filename entries, which can be .sticker or .stickersequence folders. A .sticker holds filename and an optional accessibility-label ('a custom string used by Voice Over. The sticker name is used if no string is provided'); no localization key is documented. A .stickersequence is an animated sticker built from a frames array of images, with duration, duration-type and repetitions (0 = loop) keys. An Apple engineer said the 500 KB limit 'is for the entire file, not an individual frame', and that it is enforced by the asset compiler and by MSConversation insert at runtime. A developer reported that Xcode only warns, and that an oversized animated sticker would not peel off, sent as a blank image and then broke sticker dragging.",
+   "lesson": "The catalog is plain JSON plus images, so we can generate the whole pack from our code-drawn art. That makes it reproducible and diffable, with no hand-dragging in Xcode.",
+   "applyToRemix": "Add an `npm run stickers:export` script modelled on resources/render-art.cjs: Playwright plus the Vite dev server, because drawSticker and drawCreature need a browser Canvas 2D. It renders each sticker and writes the extension's Stickers.xcstickers/Sticker Pack.stickerpack (the Xcode template's catalog name) with Contents.json and accessibility labels. For 3-4 animated creatures, prefer a .stickersequence of PNG frames drawn with drawCreature's time parameter, so we need no APNG encoder (APNG would need a new dependency). Cap frame count and palette, and check file size in CI, because Xcode only warns. How the 500 KB limit applies to a compiled sequence is unconfirmed, so also test the largest animated sticker on a device.",
+   "sources": [
+    "https://developer.apple.com/library/archive/documentation/Xcode/Reference/xcode_ref-Asset_Catalog_Format/StickerPack.html",
+    "https://developer.apple.com/library/archive/documentation/Xcode/Reference/xcode_ref-Asset_Catalog_Format/Sticker.html",
+    "https://developer.apple.com/library/archive/documentation/Xcode/Reference/xcode_ref-Asset_Catalog_Format/StickerFilmStrip.html",
+    "https://developer.apple.com/forums/thread/50394",
+    "https://developer.apple.com/forums/thread/797781"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "Apple platform reference (presentation contexts)",
+   "feature": "Stickers outside the Messages transcript: Messages camera, FaceTime, system Stickers app",
+   "whatItIs": "Partly corrected. Apple says that 'in iOS 12 and later', sticker packs can declare MSSupportedPresentationContexts in the extension Info.plist. The media value means the pack 'appears inside the Stickers app throughout iOS including in Messages, FaceTime, the emoji keyboard, and Markup', and in camera and FaceTime effects. 'If you indicate support for both messages and media, your Stickers only present in the media context including in Messages.' That media doc does not mention NSStickerSharingLevel. A PR merged 25 Sep 2026 (SnapWorth #179) adds a pack to an existing app with productType messages-sticker-pack and bundle id eu.snapworth.app.SnapWorthStickers. It sets NSStickerSharingLevel = OS and also declares both messages and media contexts, and together these are what put the stickers in the emoji keyboard, Messages camera and FaceTime. It targets iOS 17.0 and ships English-only sticker labels across all its locales. The claim that the system sticker drawer arrived in iOS 17 came from an XDA page I could not open.",
+   "lesson": "Decide on purpose where the stickers should appear. Wider reach (photos, FaceTime, the emoji keyboard) gives more organic exposure but changes how the pack is presented, and Apple's docs on these keys are thin and partly ambiguous. Test on device before committing.",
+   "applyToRemix": "Ship v1 with the default Messages presentation. On current iOS hardware, test NSStickerSharingLevel = OS and the media context, alone and together, before enabling either. Keep the extension at iOS 15.0, not the PR's 17.0, because of the Capacitor deployment-target coupling (see the Capacitor finding).",
+   "sources": [
+    "https://developer.apple.com/documentation/messages/adding-sticker-packs-and-imessage-apps-to-the-system-stickers-app-messages-camera-and-facetime",
+    "https://developer.apple.com/tutorials/data/documentation/messages/adding-sticker-packs-and-imessage-apps-to-the-system-stickers-app-messages-camera-and-facetime.json",
+    "https://github.com/hsilviu05/SnapWorth/pull/179"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "game": "Apple platform reference (App Review Guidelines)",
+   "feature": "Review rules that bind a sticker extension (4.4, 2.3.4, 5.2.5, 4.5.6, 1.3, 2.3.8, 2.3.9)",
+   "whatItIs": "Verified verbatim. Guideline 4.4: 'clearly and accurately disclose what extensions are made available in the app's marketing text, and the extensions may not include marketing, advertising, or in-app purchases.' 2.3.4 (app previews): 'Stickers and iMessage extensions may show the user experience in the Messages app.' 5.2.5: 'Apps and extensions, including third-party keyboards and Sticker packs, may not include Apple emoji'. 4.5.6 adds that Apple emoji may not be embedded in the app binary. 1.3 (Kids Category): no links out, purchasing or other distractions except behind a parental gate, and no third-party analytics or ads except in limited cases. 2.3.8: 'For Kids'/'For Children' wording is reserved for the Kids Category. 2.3.9: show fictional account information in screenshots. I found no rule that bans or explicitly permits a sticker extension in a Kids Category app.",
+   "lesson": "A no-code sticker pack meets the kid-safe rules because it cannot sell, track or link. Keep it that way: no store hooks or promo copy inside the pack.",
+   "applyToRemix": "All stickers are free and included. No 'unlock more in the shop' stickers, no Remix-exclusive or paid sets, and no 'Play Pocket Planet!' promo sticker. Draw our own faces and hearts instead of anything that looks like Apple emoji. Mention the sticker pack in the App Store description as 4.4 requires.",
+   "sources": [
+    "https://developer.apple.com/app-store/review/guidelines/"
+   ],
+   "confidence": "high"
+  },
+  {
+   "game": "Capacitor 8 + Swift Package Manager (our stack)",
+   "feature": "Adding a Sticker Pack extension target to a Capacitor SPM iOS project",
+   "whatItIs": "Verified against our installed @capacitor/cli 8.5.2 and the upstream source. getMajoriOSVersion (dist/ios/common.js) reads the 2 characters after the FIRST 'IPHONEOS_DEPLOYMENT_TARGET = ' in project.pbxproj. generatePackageText (dist/util/spm.js) writes that into CapApp-SPM/Package.swift as platforms: [.iOS(.vNN)], with swift-tools-version defaulting to 5.9. Our Package.swift currently says swift-tools 5.9 and .iOS(.v15), and all four pbxproj entries are 15.0. BI-Client PR #87 documents a widget extension at iOS 17, listed first, that bumped the package from 15 to 17; it was fixed by reordering entries. Capacitor issue #8571: a target of 18 or higher with tools 5.9 gives 'v18 is unavailable'; the undocumented workaround is experimental.ios.spm.swiftToolsVersion '6.0'. editProjectSettingsIOS rewrites every PRODUCT_BUNDLE_IDENTIFIER to the appId, and it is called only from tasks/add.js (`cap add`), not from sync. A code-free sticker extension has no reason to link CapApp-SPM.",
+   "lesson": "A code-free extension is compatible with Capacitor SPM. The risk is hidden coupling through the pbxproj, so verify the generated files after every sync.",
+   "applyToRemix": "Add the target in Xcode with IPHONEOS_DEPLOYMENT_TARGET = 15.0 and TARGETED_DEVICE_FAMILY = 1, matching App. Do not link CapApp-SPM products to it. Keep MARKETING_VERSION and CURRENT_PROJECT_VERSION in sync with App. Add a CI check that, after `npx cap sync ios`, CapApp-SPM/Package.swift still says .iOS(.v15) and every IPHONEOS_DEPLOYMENT_TARGET in the pbxproj is 15.0. Never re-run `npx cap add ios`, because it would give the extension the app's own bundle id.",
+   "sources": [
+    "https://github.com/ionic-team/capacitor/blob/main/cli/src/ios/common.ts",
+    "https://github.com/werb210/BI-Client/pull/87",
+    "https://github.com/ionic-team/capacitor/issues/8571"
+   ],
+   "confidence": "high"
+  }
+ ],
+ "rejected": [
+  {
+   "game": "Candy Crush Saga",
+   "feature": "Claim that Sugar Stars are for scoring 'exactly' 2x the three-star target (as the current rule)",
+   "reason": "Partly wrong. The 2x-score threshold is the historical rule described on the fan wiki. King's current help article describes Sugar Stars as earned by finishing with 5+ moves to spare (or with a Gold Crown). The finding was corrected to show the rule changed over time."
+  },
+  {
+   "game": "Candy Crush Saga",
+   "feature": "Claim that Master Titles and Master Trophies are the same thing and were removed together in v212.02",
+   "reason": "Conflated. Master Titles (all 15 levels of an episode mastered) were removed 'as of Candy Cup'. The Master Trophy feature was taken away from players on 29 Sept 2021 (v212.02). Corrected in the kept finding."
+  },
+  {
+   "game": "Candy Crush Saga",
+   "feature": "'A note to you regarding Dreamworld' cited as King's explanation",
+   "reason": "That King Community thread is a player's complaint asking for Dreamworld back, not a King statement. King's stated reason (focusing on new levels in the normal world) comes from the wiki's quote. The source was kept only as evidence of player upset."
+  },
+  {
+   "game": "Mini Motorways",
+   "feature": "'Replaying a Daily shows a warning that only the first score counts'",
+   "reason": "Could not confirm a warning prompt. What is confirmed is that only the first Daily attempt logs a leaderboard score, and players asked for a prompt after practice runs counted. The finding was corrected, and the applyToRemix suggestion to 'count only the first attempt locally' was removed as unkind to children."
+  },
+  {
+   "game": "Royal Match / Toon Blast",
+   "feature": "Area replays",
+   "reason": "Carried over from the original research: the search results were contradictory third-party tips and could not be confirmed."
+  },
+  {
+   "game": "Crossy Road",
+   "feature": "Replay-of-finished-content mode",
+   "reason": "Carried over from the original research: no such mode was found."
+  },
+  {
+   "game": "Cut the Rope",
+   "feature": "'Hard/remastered levels' replay mode",
+   "reason": "Carried over from the original research: only a Super Nibble Nom bonus chapter and extra 'power' stars were visible, and the details could not be checked."
+  },
+  {
+   "game": "Where's My Water?",
+   "feature": "Mystery Duck as a replay mode",
+   "reason": "Carried over from the original research: it is a separate story chapter of new levels, not replays. The Challenges finding covers the actual replay mode."
+  },
+  {
+   "game": "Super Mario 3D World (Nintendo)",
+   "feature": "Clearing a course with all five characters turns its map star gold",
+   "reason": "Could not confirm; the source (Den of Geek) was blocked and search budget was exhausted, and it does not match what I recall (character clears feed a save-file star). Removed from the NSMB finding, and the applyToRemix no longer cites it."
+  },
+  {
+   "game": "Pokemon GO (Niantic)",
+   "feature": "Some medals unlock wardrobe items; Gym Badge levels give extra XP",
+   "reason": "Could not confirm either detail. The medal tiers, type catch bonuses and more Gym-spin items are kept; the wardrobe and XP claims were dropped."
+  },
+  {
+   "game": "Duolingo",
+   "feature": "Legendary as a 'timed' challenge introduced in 'March 2021'",
+   "reason": "Could not confirm the timer or the exact month. Softened to '2021', and the timer was removed from whatItIs and the lesson. The Remix 'no extra timer' rule stands on its own."
+  },
+  {
+   "game": "n/a: UK ICO Children's Code",
+   "feature": "Original wording that Standard 13 says providers 'should not use reward loops ... to keep children engaged'",
+   "reason": "This overstated the standard. Standard 13's rule is about nudging children to share unnecessary data or weaken privacy; reward loops appear in its guidance as engagement techniques that feed data collection. whatItIs was corrected."
+  },
+  {
+   "game": "Brawl Stars (Supercell)",
+   "feature": "Claim (in pitfalls) that Records pay random Starr Drops",
+   "reason": "Not re-verified in this pass, so it is no longer stated as fact. The pitfall still holds: any random reward breaks Pocket Planet's money rules."
+  },
+  {
+   "game": "Alto's Adventure / Sneaky Sasquatch / Clash (Supercell)",
+   "feature": "Emotion-first sticker sets and in-chat attribution as word of mouth",
+   "reason": "I could not re-verify any of it. Every cited source was blocked by this session's egress policy (canadiangamedevs.com, macworld.com, 9to5mac.com, apps.apple.com, osxdaily.com, thesweetsetup.com), and the WebSearch budget was used up. So the sticker counts (60+ llamoji, about 50 Sneaky Sasquatch stickers), the Clash Theater description and the 'Sticker Details > View' flow all rest only on the original researcher's search snippets. They may be true but should not be cited until someone checks them with open access. I kept the parts I could verify elsewhere: in-chat branding via breadcrumb and bubble-branding icons (QA1686) is in the icon finding, and the free Round 7 celebration stickers are in the HIG finding."
+  },
+  {
+   "game": "Monument Valley / Super Mario Run / Angry Birds / Pok\u00e9mon",
+   "feature": "Launch-timed and split sticker packs",
+   "reason": "I could not re-verify it. The App Store listings (apps.apple.com), 9to5mac and nintendowire were all blocked by egress policy, and the search budget was used up, so the pack sizes, launch dates and $1.99 price are unconfirmed. I kept the part I could verify: only standalone packs can use the Stickers category, and switching needs a new app record. That is now in the App Store listing finding, together with the kid-safe option of a later free standalone pack."
+  }
+ ],
+ "pitfalls": [
+  "Fact-check method note: WebFetch was blocked by the network egress proxy for every domain tried in this pass (candycrush.fandom, mariowiki, mini-metro.fandom, dinopoloclub, nintendowire, gamedeveloper, blog.builtbysnowman, sixcolors, killscreen, techpp, dots.helpshift, angrybirds.com). Checks therefore rest on WebSearch result snippets. The session's WebSearch budget (200) ran out after the Candy Crush (x2), Super Mario Run (x2), Mini Metro/Motorways, Where's My Water, Bad Piggies/Hitman GO and core Alto's Zen Mode findings were verified. Two Dots, Angry Birds 2, Monument Valley and the Alto's Odyssey-specific details were NOT re-verified and are marked low or medium accordingly.",
+  "Revoking prestige: Candy Crush took away all earned Master Trophies on 29 Sept 2021 (v212.02), and Master Titles were removed separately. Remix stars, gold frames and Passport titles should be permanent once earned, including across rebalances of the solver or generator. Version the Remix generator so old results stay valid.",
+  "Rule drift: Candy Crush's Sugar Star condition appears to have changed from '2x the three-star score' to 'finish with 5+ moves to spare', so the same badge means different things to different players. Do not redefine Remix star conditions after launch. If they must change, keep old awards under the rules they were earned with.",
+  "Unprovable mastery targets: Candy Crush's historical Sugar Star was a flat 2x the three-star score, and players started 'Impossible Sugar Stars?' threads. A flat multiplier on Pocket Planet's classic targets could produce Remix targets the greedy solver cannot prove reachable. Always take Remix targets from a solver run on the remixed seed itself.",
+  "'First try' mastery (Candy Crush Gold Crowns), first-attempt-only scoring (Mini Motorways Daily Challenges, where players complained that practice runs counted) and permanent-placement hard rules (Mini Metro Extreme, Mini Motorways Expert) punish experimenting and can frustrate young children. Remix should allow unlimited retries, keep the best result, and state its constraints before play.",
+  "Parallel-track maintenance: Candy Crush's hand-built Dreamworld stopped getting new episodes in May 2015 and was removed from mobile in Dec 2016 so King could focus on main-world levels, and players were upset. Remix must be generated, not hand-built, so it never competes with the main pipeline.",
+  "Repetition fatigue: a Super Mario Run blogger who called Remix 10 its 'purest form' later lost interest and framed that around its rewards. Remix needs a reward track with a clear end (gold frame plus Passport title), not an open-ended drip.",
+  "Streaks, expiring rewards and random loot (as reported for Angry Birds 2: a 7-day streak legendary chest and same-day-only cards; not re-verified in this pass) run on loss aversion and chance and break our kid-safe money rules. Never tie Remix rewards to streaks, dates or randomness.",
+  "Pay-to-skip: the original Angry Birds sold the Mighty Eagle as an in-app purchase that could clear an unbeaten level (on a cooldown), which made a paid item part of level mastery (not re-verified in this pass). Nothing that skips or eases Remix may ever be sold.",
+  "Paid 'more of the same' for a game players see as complete drew 1-star reviews (Monument Valley's $1.99 Forgotten Shores, which ustwo responded to publicly). Keeping Remix free with no new currency avoids this.",
+  "Time-limited events with a short window (Two Dots Treasure Hunts, reportedly 4 days; not re-verified) create FOMO. Because Pocket Planet's date-seeded content can be regenerated for any past date, missed dailies and weeklies can stay replayable forever, with no lives and no expiry.",
+  "Remix seeds that re-roll on every attempt (confirmed: Super Mario Run's Remix 10 picks random course snippets each run) make star-chasing feel random and unfair. Keep each chapter's Remix seed fixed so retries are deterministic, and let children replay the exact same remixed planet.",
+  "Diluting the classic progression: if Remix stars count toward the same totals as classic stars, the harder mode can feel mandatory. Keep separate counters, as Mini Metro keeps achievements out of Endless, and never gate campaign progress behind Remix.",
+  "Over-heavy completionism: Super Mario Run hides a single bonus course behind all 120 Black Coins. Keep Remix rewards chapter-sized (10 planets leading to one gold frame) so goals stay reachable for children.",
+  "Mechanic-copy check: the applyToRemix texts were reviewed so they borrow principles, not mechanics. There is no three-colour coin ladder, no random-snippet fail-forward run, no Moon Scale-style fail rule, and no streak or chest rewards. Every Remix reward stays fixed, previewable and cosmetic, with no new currency.",
+  "Difficulty walls from stacking penalties: Slay the Spire's 20 cumulative Ascension modifiers, and Shovel Knight NG+'s double damage, scarcer healing and two checkpoints per stage, show how stacked penalties become walls. Pocket Planet should apply one twist per remix planet, and every star target must be proven by the solver under that twist.",
+  "Completion-gate grind: Super Mario 3D World's World Crown needs every Green Star and Stamp plus every gold flag, and its Mystery House Marathon sends you back to challenge 1 after any failure. Don't gate the Passport title or the gold frame on 3-starring everything; use totals or 'finished Remix', and never make a failure erase progress on other planets.",
+  "Mastery gates on a fun variant can lock casual players out: Mario Kart 8 v4.1 (1 May 2015) made Mirror and 200cc available by default instead of gated behind 150cc golds, and a Tetris Effect update removed the 'clear Normal first' gate on Expert. Unlock Remix on chapter completion, not on perfection.",
+  "Time pressure for kids: Galaxy's Speedy comets and Rayman Legends' Invasion rockets at 40/50/60 s with one hit point and no checkpoints add stress. Keep Remix untimed beyond the normal level length and always show the star targets before the first throw.",
+  "Expiring or limited-try offers: Rhythm Heaven's Perfect Campaign gives three tries and then disappears or moves on. This creates fear of missing out and failure anxiety that doesn't suit kids, so Remix must never expire or cap attempts, and date-seeded daily content should not gate Remix rewards.",
+  "Randomized unlock presentation: Rayman Legends unlocks its Back to Origins levels through scratch-card 'Lucky Tickets' (match three images). Even with a free currency this is a gambling-style reveal, which our kid-safe money rules forbid. All Remix unlocks and rewards must be deterministic and shown in advance.",
+  "Harsh failure stakes: Hollow Knight's Steel Soul is permadeath. A failed Remix planet must never delete, lock or reset progress.",
+  "Prestige dilution: gold cosmetics (Mario Kart 8 Deluxe's Gold Mario has the same stats as Metal Mario, and each gold part is tied to a specific feat) only mean something because they are earned. Selling Remix-only gold art in the iMessage sticker pack would empty the gold frame and title of meaning, and would blur the kid-safe line between earned and paid items.",
+  "Repetition fatigue: a remix that only raises numbers on an identical layout feels like a chore. The classics always add a perceptible change (a named twist, a mirrored layout, a night palette, an invading cast, guest-remixed music), so each remix planet needs a change a player can see or hear, not only harder targets.",
+  "Carried-over power trivializes or confuses: Shovel Knight NG+ keeps upgrades and relics, and several feats (Hurry Up, Penny Pincher, Beeline and others) become impossible there. Remix should carry no power over, and should say clearly which badges can be earned there.",
+  "Cloning risk in the twist deck: several twist ideas map closely onto a named mode in another game (mirror track, timed comet, timed invasion). Keep the methodology (one visible change to a known layout) but build every twist from Pocket Planet's own parameters (spin, gravity strength, tray contents, starting land, creature goals), with its own names, and have the solver check it.",
+  "Research caveat (not a design pitfall): in this fact-check pass WebFetch was blocked by the egress proxy for every domain tried (celeste.ink, mariowiki.com, mario.fandom.com, slaythespire.wiki.gg, theportalwiki.com, nintendolife.com, en.wikipedia.org, hollowknight.wiki, thegamer.com), and the session's WebSearch budget ran out near the end. Every claim above was checked against WebSearch result snippets for the cited pages, not the full pages. Corrections made: the NES Remix 501/504 star thresholds are from NES Remix 2; the Mario Kart 8 Deluxe gold-part unlocks were fixed; the Portal Advanced 13 example was fixed; the Hollow Knight early-unlock code is confirmed only for Silksong; the Galaxy 2 Speedy comets start with less time plus +10 s clocks; the Tetris Effect Expert gate was later removed. The Galaxy 2 Grandmaster Galaxy and DKC Tropical Freeze examples from the draft pitfalls were dropped because they could not be re-verified.",
+  "Grind gates: a prestige track earned by volume (wins or hours) instead of skill on a fixed set is understood and earned by very few players and trains grinding. Brawl Stars reportedly removed Masteries after only 11.8% of players ever earned a Title. Cap Remix at a fixed 10 planets / 30 stars per chapter.",
+  "Prestige that pays: attaching currency, power or items to mastery (Pokemon GO catch bonuses and Gym Badge items, Clash Royale mastery Gems) turns an optional badge into an obligation. Any random reward attached to prestige would also break the 'no random rewards' rule.",
+  "Per-attempt cost, pay-to-continue, or subscription-only mastery (Duolingo Legendary reportedly cost free users 100 gems per attempt, with a paid continue). Remix attempts must be free and unlimited, with no continue offer.",
+  "Decaying or redefined prestige: Duolingo skills 'cracked' over time, and Legendary changed meaning more than once. Earned Remix stars and gold frames must be permanent and survive retuning.",
+  "Scarcity windows: Rhythm Heaven's randomly chosen Perfect Campaign gives three attempts, then moves to another stage. Never rotate, expire or limit tries on Remix or Perfect stamps.",
+  "Permanent tarnish for struggling: NSMB Wii reportedly loses the save file's sparkle for good once the Super Guide merely appears, and NSMB U reportedly made it recoverable. Any 'unassisted' marker must be re-earnable, and Remix must never change base-chapter completion.",
+  "Shaming language: Celeste's Assist Mode text had to drop wording that called the default difficulty 'essential'. Remix failure and help copy must never suggest a child is playing wrong or is 'not good enough'; praise the shot or strategy, not talent.",
+  "Social comparison and engagement levers aimed at kids: Apple's HIG itself presents recurring leaderboards as a way to 'increase engagement'. Do not add a Remix leaderboard, and make sure everything works when parents restrict Game Center in Screen Time.",
+  "Commerce at the mastery moment: shop buttons or 'unlock more' prompts on Remix results or gold-frame celebrations break the spirit of Apple guideline 1.3. The iMessage sticker extension also needs no purchases and no link-outs outside a parental gate.",
+  "Lures at exit points, fake urgency and parasocial pressure (Radesky 2022): no Remix pop-up on pause, quit or session end; no countdowns; no sad or pleading creatures when Remix is declined.",
+  "FOMO and no natural stop (ICO Children's Code Standard 13 guidance and the 2023 games tips): no expiring remixes, no Remix streaks, no push notifications about Remix, no auto-starting the next remix. Save stars per planet so leaving loses nothing.",
+  "Hard difficulty walls (my own inference, not from a source): the greedy solver proves a score is reachable, not that a 6-year-old's shaky aim can reach it. Tougher Remix star targets should leave a clear gap below the solver's score, especially for 3 stars and on Hard, Super Hard and boss planets. Consider setting Remix 1-star at the base game's 2-star level.",
+  "Unclear always-on goals for pre-literate players (my inference, linked to Apple's voiceover suggestion for pre-literate kids): show Remix goals as icons with optional voiceover before the first throw, and keep one goal per planet.",
+  "Completion-percentage pressure (my inference): showing Remix % on every chapter card makes optional content feel required. Keep Remix progress to the completed chapter's card badge, the Remix view and the Passport.",
+  "Repetition fatigue (my inference): remixing the same chapter can feel samey. Make sure remix seeds actually change planet layout and gravity sources, and let players leave a Remix at any time with progress kept.",
+  "Locked stickers (my inference): gating iMessage stickers behind Remix progress would mean sharing game progress with the extension and would nag kids. Ship the pack fully unlocked and static.",
+  "Fact-check note: in this pass the web search budget was used up and the network proxy blocked every non-Apple domain (Supercell, fandom wikis, Bulbapedia, MarioWiki, Wikipedia, ICO, JAMA, PubMed, UNICEF, games press). Only Apple pages were opened and confirmed: App Review Guidelines 1.3 and 3.1.1, the Kids apps page, the Game Center HIG (via its JSON endpoint) and WWDC20 session 10145. The other findings rest on the original researcher's search excerpts, checked against general knowledge. Precise figures marked 'reportedly' or 'not re-opened' (11.8%, Clash Royale gem amounts, 45%/20%, 787 children in 18 countries, the Feb 2026 Brawl Stars change) should be checked before they are quoted publicly.",
+  "If the iMessage App Icon set is missing or incomplete, the extension can fail to show up ('unknown to FrontBoard') even though the build succeeds; Apple DTS's answer was to provide every icon (forum thread 797781). Any transparent pixel in those icons fails upload with ITMS-90647 (QA1686).",
+  "QA1686 and the current HIG list different iMessage icon sizes (iPad 134x100 vs 143x100; App Store 1024x768 vs 1024x1024). Fill whatever slots Xcode's iMessage App Icon set shows, and compose the art for the 4:3 shape.",
+  "The 500 KB limit covers the whole file, including every APNG frame. Xcode only warns, and an oversized animated sticker can fail to peel off or send blank at runtime. Enforce the limit in our export script or CI, and test the largest sticker sequence on a device, since how the limit applies to a compiled .stickersequence is unconfirmed.",
+  "stickerCanvas(id, px) is not an exact-pixel exporter: it multiplies by devicePixelRatio (capped at 2) and sets a CSS size. Export by drawing with drawSticker/drawCreature on a canvas of exactly 408 or 618 px, in headless Chromium like resources/render-art.cjs, because this art needs a browser Canvas 2D and the project has no node-canvas.",
+  "Mixing sticker sizes in one pack goes against the HIG. Pick Regular (408 px, 3 per row) or Large (618 px, 2 per row) and render everything at that size.",
+  "Capacitor SPM takes the CapApp-SPM platform from the FIRST IPHONEOS_DEPLOYMENT_TARGET in project.pbxproj. A new extension target that Xcode creates with a newer iOS default can bump Package.swift, or break it: at iOS 18 or higher with swift-tools 5.9 it cannot resolve. Pin the extension to 15.0 (not 17.0 as in the SnapWorth PR) and check Package.swift after every `cap sync`.",
+  "`npx cap add ios` rewrites every PRODUCT_BUNDLE_IDENTIFIER to the appId (com.pocketplanet.game). Regenerating the ios folder would give the extension the app's own id, and the build or upload would then fail.",
+  "Guideline 4.4 bans marketing, advertising and in-app purchases inside extensions. No 'get more stickers' or 'play now' hooks, and no paid sticker sets; paid sets would also conflict with our kid-safe money rules.",
+  "Guideline 5.2.5 bans Apple emoji in sticker packs, and 4.5.6 bans embedding Apple emoji in the binary. Draw our own expressions.",
+  "A bundled extension inherits the game's category and cannot use the Stickers category, so it gets no sticker-store discovery of its own. Moving it to a standalone app later means creating a new app record.",
+  "A no-code pack is static and cannot read game progress. Exporting rarity-tiered or earned album stickers (drawSticker's RARITY_BG) would give everyone the rare ones and cheapen the in-game album. Keep a separate chat set.",
+  "Content cannot rotate: our date-seeded festivals cannot change a static pack. Festival stickers stay in the pack year-round or wait for app updates. Avoid stickers that only make sense on one date.",
+  "Localization is weak. accessibility-label is one string per sticker with no documented localization key, and the SnapWorth PR shipped English-only labels. Text baked into sticker images cannot be localized either, so keep stickers wordless and test VoiceOver in ja/fr/pt/de/es.",
+  "Apple's NSStickerSharingLevel paragraph prints the value as `{OS}` and ends with an unclear sentence ('If you add this key to your app, your sticker pack doesn't appear in the list'). Declaring both the messages and media contexts makes stickers present only in the media context. Test both keys on a device before shipping either.",
+  "iMessage screenshots were reported as required even for a bundled pack. They must show fictional accounts and no phone numbers (sticker-submissions page; Guideline 2.3.9). Keep 'For Kids' wording out of the metadata unless the app is in the Kids Category (Guideline 2.3.8).",
+  "This check could only reach developer.apple.com and github.com. apps.apple.com, itunes.apple.com, apple.com, support.apple.com, capacitorjs.com, 9to5mac, macworld, nintendowire, osxdaily, thesweetsetup, canadiangamedevs, xda-developers, ustwogames and builtbysnowman were blocked by egress policy, and the WebSearch budget was used up. The game-example findings were therefore rejected as unverifiable, not as disproven."
+ ]
+}

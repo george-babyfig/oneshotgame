@@ -1,0 +1,22 @@
+const { open, shot, txt, clickText, nav } = require('./lib.cjs');
+const fs = require('fs');
+(async () => {
+  const prof = fs.readFileSync(__dirname + '/fresh2.json', 'utf8');
+  const { b, ctx, page, logs } = await open({ viewport: { width: 320, height: 568 } });
+  await ctx.addInitScript((p) => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('pp.profile', p); } }, prof);
+  await page.goto('http://127.0.0.1:5173/');
+  await page.waitForTimeout(2500);
+  console.log('screen', await page.evaluate(() => window.__app.screen), 'modals', await page.evaluate(() => [...document.querySelectorAll('.modal')].map(m => m.innerText.slice(0,50))));
+  await shot(page, 'd01-se-fresh-launch');
+  await clickText(page, /Stamp day/); await page.waitForTimeout(1500);
+  await page.evaluate(() => window.__app.showHome(true)); await page.waitForTimeout(800);
+  await shot(page, 'd02-se-fresh-home');
+  console.log(await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, homeH: document.querySelector('.home').scrollHeight, homeCH: document.querySelector('.home').clientHeight, navBottom: Math.round(document.querySelector('.nav').getBoundingClientRect().bottom) })));
+  await page.evaluate(() => { const a = window.__app; a.p.level = 24; a.p.tutorial = true; a.p.gems = 500; a.p.dust = 5000; a.save(); a.showHome(true); });
+  await page.waitForTimeout(1000);
+  await shot(page, 'd03-se-mid-home');
+  console.log(await page.evaluate(() => ({ homeH: document.querySelector('.home').scrollHeight, homeCH: document.querySelector('.home').clientHeight, navBottom: Math.round(document.querySelector('.nav').getBoundingClientRect().bottom), galaxy: document.querySelector('.galaxy-wrap').getBoundingClientRect().toJSON(), sideL: document.querySelector('.side-l').getBoundingClientRect().toJSON(), sideR: document.querySelector('.side-r').getBoundingClientRect().toJSON() })));
+  console.log((await txt(page)).replace(/\n+/g,' | '));
+  console.log(logs.join('\n'));
+  await b.close();
+})();

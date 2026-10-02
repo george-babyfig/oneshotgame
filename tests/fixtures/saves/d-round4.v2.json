@@ -1,0 +1,353 @@
+{
+  "v": 2,
+  "gems": 212,
+  "dust": 3050,
+  "level": 19,
+  "stars": {
+    "1": 3,
+    "2": 3,
+    "3": 3,
+    "4": 3,
+    "5": 2,
+    "6": 3,
+    "7": 1,
+    "8": 3,
+    "9": 3,
+    "10": 2,
+    "11": 3,
+    "12": 3,
+    "13": 3,
+    "14": 1,
+    "15": 2,
+    "16": 3,
+    "17": 3,
+    "18": 3
+  },
+  "seen": ["otter", "turtle", "octopus", "whale", "camel", "eagle", "bear", "butterfly", "elephant"],
+  "galaxy": [
+    {
+      "n": 1,
+      "name": "Pebble",
+      "hue": 47,
+      "stars": 3,
+      "species": ["turtle", "octopus"],
+      "life": 43,
+      "colors": ["#8fd65a", "#2f7fe0"]
+    },
+    {
+      "n": 2,
+      "name": "Mossy",
+      "hue": 94,
+      "stars": 3,
+      "species": ["octopus", "whale", "camel"],
+      "life": 46,
+      "colors": ["#8fd65a", "#2f7fe0", "#2f9e4f"]
+    },
+    {
+      "n": 3,
+      "name": "Glimmer",
+      "hue": 141,
+      "stars": 3,
+      "species": ["whale"],
+      "life": 49,
+      "colors": ["#8fd65a"]
+    },
+    {
+      "n": 4,
+      "name": "Brook",
+      "hue": 188,
+      "stars": 3,
+      "species": ["camel", "eagle"],
+      "life": 52,
+      "colors": ["#8fd65a", "#2f7fe0"]
+    },
+    {
+      "n": 5,
+      "name": "Cinder",
+      "hue": 235,
+      "stars": 2,
+      "species": ["eagle", "bear", "butterfly"],
+      "life": 55,
+      "colors": ["#8fd65a", "#2f7fe0", "#2f9e4f"]
+    },
+    {
+      "n": 6,
+      "name": "Dewdrop",
+      "hue": 282,
+      "stars": 3,
+      "species": ["bear"],
+      "life": 58,
+      "colors": ["#8fd65a"]
+    },
+    {
+      "n": 7,
+      "name": "Tumble",
+      "hue": 329,
+      "stars": 1,
+      "species": ["butterfly", "elephant"],
+      "life": 61,
+      "colors": ["#8fd65a", "#2f7fe0"]
+    },
+    {
+      "n": 8,
+      "name": "Fern",
+      "hue": 16,
+      "stars": 3,
+      "species": ["elephant", "unicorn", "kraken"],
+      "life": 64,
+      "colors": ["#8fd65a", "#2f7fe0", "#2f9e4f"]
+    },
+    {
+      "n": 9,
+      "name": "Puddle",
+      "hue": 63,
+      "stars": 3,
+      "species": ["otter"],
+      "life": 67,
+      "colors": ["#8fd65a"]
+    },
+    {
+      "n": 10,
+      "name": "Sprig",
+      "hue": 110,
+      "stars": 2,
+      "species": ["turtle", "octopus"],
+      "life": 70,
+      "colors": ["#8fd65a", "#2f7fe0"]
+    },
+    {
+      "n": 11,
+      "name": "Nimbus",
+      "hue": 157,
+      "stars": 3,
+      "species": ["octopus", "whale", "camel"],
+      "life": 73,
+      "colors": ["#8fd65a", "#2f7fe0", "#2f9e4f"]
+    },
+    {
+      "n": 12,
+      "name": "Coral",
+      "hue": 204,
+      "stars": 3,
+      "species": ["whale"],
+      "life": 76,
+      "colors": ["#8fd65a"]
+    },
+    {
+      "n": 13,
+      "name": "Ember",
+      "hue": 251,
+      "stars": 3,
+      "species": ["camel", "eagle"],
+      "life": 79,
+      "colors": ["#8fd65a", "#2f7fe0"]
+    },
+    {
+      "n": 14,
+      "name": "Frost",
+      "hue": 298,
+      "stars": 1,
+      "species": ["eagle", "bear", "butterfly"],
+      "life": 82,
+      "colors": ["#8fd65a", "#2f7fe0", "#2f9e4f"]
+    },
+    {
+      "n": 15,
+      "name": "Willow",
+      "hue": 345,
+      "stars": 2,
+      "species": ["bear"],
+      "life": 85,
+      "colors": ["#8fd65a"]
+    },
+    {
+      "n": 16,
+      "name": "Pip",
+      "hue": 32,
+      "stars": 3,
+      "species": ["butterfly", "elephant"],
+      "life": 88,
+      "colors": ["#8fd65a", "#2f7fe0"]
+    },
+    {
+      "n": 17,
+      "name": "Marble",
+      "hue": 79,
+      "stars": 3,
+      "species": ["elephant", "unicorn", "kraken"],
+      "life": 91,
+      "colors": ["#8fd65a", "#2f7fe0", "#2f9e4f"]
+    },
+    {
+      "n": 18,
+      "name": "Sunny",
+      "hue": 126,
+      "stars": 3,
+      "species": ["otter"],
+      "life": 94,
+      "colors": ["#8fd65a"]
+    }
+  ],
+  "lastCollect": 1785368700000,
+  "upgrades": {
+    "scope": 1,
+    "throws": 1,
+    "splash": 0,
+    "vault": 1
+  },
+  "boosters": {
+    "shower": 2,
+    "spark": 1,
+    "scope": 0
+  },
+  "piggy": 60,
+  "starter": false,
+  "pass": false,
+  "roadPass": [],
+  "skin": "classic",
+  "skins": ["classic"],
+  "processedTx": [],
+  "daily": {
+    "last": "2026-07-29",
+    "streak": 12
+  },
+  "quests": {
+    "day": "2026-07-29",
+    "list": [],
+    "bonusClaimed": true
+  },
+  "road": [0, 1, 2],
+  "chapters": [1],
+  "dailyPlanet": {
+    "day": "2026-07-29",
+    "best": 240,
+    "stars": 2,
+    "rewarded": true
+  },
+  "settings": {
+    "sound": true,
+    "music": true,
+    "haptics": false,
+    "reduceMotion": true,
+    "notifications": true,
+    "lang": "de",
+    "hemi": "north"
+  },
+  "tutorial": true,
+  "meta": {
+    "installed": 1783241100000,
+    "lastSeen": 1785401100000,
+    "sessions": 40,
+    "rated": true,
+    "starterOffered": true,
+    "notifAsked": true
+  },
+  "stats": {
+    "throws": 980,
+    "plays": 60,
+    "wins": 30,
+    "bestLife": 180,
+    "creatures": 350,
+    "threeStars": 12,
+    "dailies": 5,
+    "rushBest": 900,
+    "rushPlays": 4,
+    "zenThrows": 20,
+    "challenges": 1,
+    "hardWins": 1,
+    "bestStreak": 4
+  },
+  "momentum": {
+    "streak": 1,
+    "shieldDay": ""
+  },
+  "visitors": [],
+  "mementos": ["otter"],
+  "rank": 3,
+  "habitats": [],
+  "challengeLog": [],
+  "zen": null,
+  "event": {
+    "week": "2026-W31",
+    "tokens": 22,
+    "claimed": []
+  },
+  "gcReported": ["first_win"],
+  "look": {
+    "suit": "suit_sky",
+    "hat": "hat_antenna",
+    "launcher": "l_pad",
+    "trail": "tr_dots",
+    "emote": "em_cheer"
+  },
+  "wardrobe": [],
+  "mastery": {
+    "l_pad": 700
+  },
+  "passport": {
+    "first": 1,
+    "second": 4,
+    "set": true,
+    "title": "",
+    "banner": 1,
+    "badges": []
+  },
+  "home": {
+    "ring": 1,
+    "plots": [
+      {
+        "type": "mill",
+        "lv": 2,
+        "since": 1785368700000
+      },
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "residents": [],
+    "expedition": null,
+    "debris": [],
+    "lastDebris": 1785368700000,
+    "started": 1783845900000,
+    "intro": true,
+    "paint": {
+      "ground": "meadow",
+      "sea": "blue"
+    },
+    "paints": [],
+    "accs": []
+  },
+  "lab": {
+    "rock": 2
+  },
+  "flings": {
+    "rock": 300,
+    "ice": 280
+  },
+  "sightings": {
+    "otter": 20
+  },
+  "mail": [
+    {
+      "id": "welcome",
+      "kind": "welcome",
+      "at": 1783241100000,
+      "read": true,
+      "claimed": true
+    }
+  ],
+  "bosses": [10],
+  "presets": [null, null, null],
+  "mats": {
+    "stone": 5
+  },
+  "bundles": [],
+  "constellations": [],
+  "dyes": [],
+  "dye": {
+    "main": null,
+    "trim": null
+  }
+}

@@ -1,9 +1,11 @@
+import { CHALLENGE_REWARD } from '../../meta/tuning';
 // Modes hub: Daily Planet, Meteor Rush, Zen Garden and Challenge a Friend.
 import { h, btn, fmt, modal, toast } from '../dom';
 import { sfx, setMusicTheme } from '../audio';
 import { haptic } from '../haptics';
 import { LevelScene, type LevelResult } from '../game';
 import { starsFor, type LevelDef } from '../../core/levels';
+import { rulesForLevel } from '../../core/round';
 import { clonePlanet } from '../../core/world';
 import { today } from '../../meta/profile';
 import {
@@ -13,6 +15,7 @@ import {
   challengeShareText,
   dailyLevel,
   dailyNumber,
+  dailyWeatherReport,
   dailyShareText,
   decodeChallenge,
   encodeChallenge,
@@ -24,7 +27,8 @@ import {
   rushSeed,
   zenLevel,
 } from '../../meta/modes';
-import { RANK_UNLOCKS, unlocked } from '../../meta/rank';
+import { unlocked } from '../../meta/unlocks';
+import { recordWishRound } from '../../meta/wishes';
 import { shareText } from '../share';
 import { NO_BOOSTERS, type App } from '../app';
 import { t } from '../../i18n';
@@ -32,11 +36,11 @@ import { gcScore } from '../gamecenter';
 
 type Mode = 'daily' | 'rush' | 'zen' | 'challenge';
 
-const INFO: Record<Mode, { emoji: string; name: string; desc: string; rank: number }> = {
-  daily: { emoji: '📅', name: 'Daily Planet', desc: 'Everyone gets the same planet today. Share your result!', rank: 2 },
-  rush: { emoji: '☄️', name: 'Meteor Rush', desc: '{n} seconds, unlimited throws. How much life can you grow?', rank: 3 },
-  zen: { emoji: '🧘', name: 'Zen Garden', desc: 'No targets, no clock. A world of your own that stays between visits.', rank: 4 },
-  challenge: { emoji: '🤝', name: 'Challenge a Friend', desc: 'Send a code, play the same planet, compare scores.', rank: 5 },
+const INFO: Record<Mode, { emoji: string; name: string; desc: string; planet: number }> = {
+  daily: { emoji: '📅', name: 'Daily Planet', desc: 'Everyone gets the same planet today. Share your result!', planet: 27 },
+  rush: { emoji: '☄️', name: 'Meteor Rush', desc: '{n} seconds, unlimited throws. How much life can you grow?', planet: 38 },
+  zen: { emoji: '🧘', name: 'Zen Garden', desc: 'No targets, no clock. A world of your own that stays between visits.', planet: 30 },
+  challenge: { emoji: '🤝', name: 'Challenge a Friend', desc: 'Send a code, play the same planet, compare scores.', planet: 40 },
 };
 
 export function modesBadge(app: App) {
@@ -47,11 +51,12 @@ export function modesBadge(app: App) {
 export function modesFlow(app: App) {
   const p = app.p;
   const d = p.dailyPlanet;
+  const weather = dailyWeatherReport(today(), p.level);
   const sub: Record<Mode, string> = {
     daily:
       d.day === today() && d.rewarded
         ? t('Done today · best {n} {stars}', { n: fmt(d.best), stars: '★'.repeat(d.stars) })
-        : t('#{n} · 💎 up to {gems}', { n: dailyNumber(today()), gems: 20 }),
+        : `${t('#{n} · 💎 up to {gems}', { n: dailyNumber(today()), gems: 20 })}${weather ? ` · ${t('Weather Report: {name}', { name: t(weather) })}` : ''}`,
     rush: p.stats.rushBest ? t('Best {n} life', { n: fmt(p.stats.rushBest) }) : t('Earn stardust'),
     zen: p.zen ? t('Your garden is waiting') : t('Start a new garden'),
     challenge: t('{n} played', { n: p.challengeLog.length }),
@@ -65,7 +70,7 @@ export function modesFlow(app: App) {
         class: `mode${open ? '' : ' locked'}`,
         onclick: () => {
           sfx.click();
-          if (!open) return toast(t('Reach Explorer Rank {n} to unlock {mode}', { n: i.rank, mode: t(RANK_UNLOCKS[i.rank]) }));
+          if (!open) return toast(t('Opens at planet {n}', { n: i.planet }));
           m.close();
           startMode(app, mode);
         },
@@ -75,7 +80,7 @@ export function modesFlow(app: App) {
         'div',
         { class: 'mode-body' },
         h('b', null, t(i.name)),
-        h('small', null, open ? t(i.desc, { n: RUSH_SECONDS }) : t('Unlocks at Explorer Rank {n}', { n: i.rank })),
+        h('small', null, open ? t(i.desc, { n: RUSH_SECONDS }) : t('Opens at planet {n}', { n: i.planet })),
         open ? h('span', null, sub[mode]) : null,
       ),
     );
@@ -84,9 +89,9 @@ export function modesFlow(app: App) {
 }
 
 function startMode(app: App, mode: Mode) {
-  if (mode === 'daily') return play(app, dailyLevel(today()), 'daily');
-  if (mode === 'rush') return play(app, rushLevel(rushSeed()), 'rush');
-  if (mode === 'zen') return play(app, zenLevel(app.p.zen), 'zen');
+  if (mode === 'daily') return play(app, dailyLevel(today(), app.p.level), 'daily');
+  if (mode === 'rush') return play(app, rushLevel(rushSeed(), app.p.level), 'rush');
+  if (mode === 'zen') return play(app, zenLevel(app.p.zen, app.p.level), 'zen');
   challengeMenu(app);
 }
 
@@ -94,7 +99,9 @@ function play(app: App, L: LevelDef, mode: Mode, vs?: { code: string; seed: stri
   const p = app.p;
   p.stats.plays++;
   const opts = app.sceneOpts(
+    mode,
     {
+      rules: rulesForLevel(Math.min(L.n, p.level)),
       label: {
         daily: t('Daily #{n}', { n: dailyNumber(today()) }),
         rush: t('Meteor Rush'),
@@ -121,12 +128,13 @@ function modeEnded(app: App, mode: Mode, r: LevelResult, vs?: { code: string; se
   const p = app.p;
   if (r.throwsUsed === -1) {
     // restart from the pause menu
-    if (mode === 'daily') return play(app, dailyLevel(today()), mode);
-    if (mode === 'rush') return play(app, rushLevel(rushSeed()), mode);
-    if (mode === 'challenge' && vs) return play(app, challengeLevel(vs.seed), mode, vs);
-    return play(app, zenLevel(p.zen), mode);
+    if (mode === 'daily') return play(app, dailyLevel(today(), app.p.level), mode);
+    if (mode === 'rush') return play(app, rushLevel(rushSeed(), app.p.level), mode);
+    if (mode === 'challenge' && vs) return play(app, challengeLevel(vs.seed, p.level), mode, vs);
+    return play(app, zenLevel(p.zen, p.level), mode);
   }
   const stars = starsFor(r.score, r.level.stars);
+  if (mode === 'daily' || mode === 'zen') recordWishRound(p, mode, r.planet, today(), r.level.start);
   const again = () => (m.close(), startMode(app, mode === 'challenge' ? 'challenge' : mode));
   let body: (HTMLElement | null)[] = [];
   if (mode === 'daily') {
@@ -164,7 +172,7 @@ function modeEnded(app: App, mode: Mode, r: LevelResult, vs?: { code: string; se
       h(
         'div',
         { class: 'm-title' },
-        vs.score ? (out.won ? t('You win! 🏆') : r.score === vs.score ? t("It's a tie!") : t('So close!')) : t('Challenge ready!'),
+        vs.score ? (out.won ? t('You win! 🏆') : r.score === vs.score ? t("It's a tie!") : t('Good try!')) : t('Challenge ready!'),
       ),
       vs.score
         ? h(
@@ -176,8 +184,8 @@ function modeEnded(app: App, mode: Mode, r: LevelResult, vs?: { code: string; se
           )
         : h('div', { class: 'end-score' }, t('{n} life', { n: fmt(r.score) })),
       out.gems
-        ? h('div', { class: 'reward-list' }, h('span', null, `💎 ${out.gems}`), h('span', null, '✨ 50'))
-        : h('div', { class: 'reward-list' }, h('span', null, '✨ 50')),
+        ? h('div', { class: 'reward-list' }, h('span', null, `💎 ${out.gems}`), h('span', null, `✨ ${CHALLENGE_REWARD.dust}`))
+        : h('div', { class: 'reward-list' }, h('span', null, `✨ ${CHALLENGE_REWARD.dust}`)),
       h(
         'p',
         { class: 'muted' },
@@ -219,10 +227,10 @@ function challengeMenu(app: App) {
   const m = modal([
     h('div', { class: 'm-title' }, t('Challenge a Friend')),
     h('p', { class: 'muted' }, t('Start a new challenge, or enter a code a friend sent you.')),
-    btn(t('🎲 New challenge'), 'primary wide', () => {
+    btn(t('✨ New challenge'), 'primary wide', () => {
       m.close();
       const seed = newChallengeSeed();
-      play(app, challengeLevel(seed), 'challenge', { code: seed, seed, score: 0 });
+      play(app, challengeLevel(seed, app.p.level), 'challenge', { code: seed, seed, score: 0 });
     }),
     h('div', { class: 'sec-title' }, t('Have a code?')),
     input,
@@ -233,7 +241,7 @@ function challengeMenu(app: App) {
         return toast(t("That code doesn't look right — check it and try again"), 'bad');
       }
       m.close();
-      play(app, challengeLevel(c.seed), 'challenge', { code: encodeChallenge(c.seed, c.score), seed: c.seed, score: c.score });
+      play(app, challengeLevel(c.seed, app.p.level), 'challenge', { code: encodeChallenge(c.seed, c.score), seed: c.seed, score: c.score });
     }),
   ]);
   setTimeout(() => input.focus(), 250);

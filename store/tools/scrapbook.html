@@ -1,0 +1,729 @@
+<!doctype html>
+<!--
+  Comet Garden store art v2, "Sticker Scrapbook" (production spec: the approved FINAL-SPEC, sections 3-8).
+  One template for every shot, locale and size: store/tools/scrapbook.mjs sets window.__CFG and screenshots
+  the page. Real captures sit untouched inside paper photo cards (crop / scale <= 1 / tilt only); stickers are
+  the game's own renders cut by scrapbook-stickers.py. Fonts load from site/fonts and the system, never the network.
+  window.__CFG = { W, H, shot, lang, size, accent, glowA, glowB, hideText, audit, only }
+  The social pack (store/tools/scrapbook-social.mjs) uses the same recipes at other sizes and adds, only when set:
+  shot.subs (a smaller second line), shot.brand (the app icon + "Comet Garden" wordmark), card shadowK (paper
+  shadow scale), and layout capLeft / tapeH / cornerSq / captionZone. Without them the store shots render as before.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Comet Garden scrapbook shot</title>
+    <style>
+      @font-face {
+        font-family: Fredoka;
+        font-weight: 700;
+        src: url(../../site/fonts/fredoka-latin-700-normal.woff2) format('woff2');
+        unicode-range:
+          U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+          U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: Fredoka;
+        font-weight: 700;
+        src: url(../../site/fonts/fredoka-latin-ext-700-normal.woff2) format('woff2');
+        unicode-range:
+          U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF,
+          U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      /* Fredoka 600: the social pack's tagline only (scrapbook-social.mjs); the store shots never use it */
+      @font-face {
+        font-family: Fredoka;
+        font-weight: 600;
+        src: url(../../site/fonts/fredoka-latin-600-normal.woff2) format('woff2');
+        unicode-range:
+          U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+          U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: Fredoka;
+        font-weight: 600;
+        src: url(../../site/fonts/fredoka-latin-ext-600-normal.woff2) format('woff2');
+        unicode-range:
+          U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF,
+          U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      :root {
+        --star: #fff4e2; /* headline: warm starlight */
+        --paper: #fbf7ee; /* the game's own Photo-mode polaroid paper (homeworld.ts renderPhoto) */
+        --ink: #1b1846;
+        --accent: #ffc93d; /* set per slot (sky ramp) */
+        --jp: 'Hiragino Maru Gothic ProN', 'Hiragino Sans', sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #120e36;
+      }
+      .canvas {
+        position: relative;
+        overflow: hidden;
+        background: #120e36;
+        font-family: Fredoka, var(--jp);
+      }
+      .base,
+      .glow,
+      #stars,
+      #orbits {
+        position: absolute;
+        inset: 0;
+      }
+      .glow {
+        -webkit-mask-image: linear-gradient(180deg, transparent 0, transparent var(--mask0, 430px), #000 var(--mask1, 760px));
+        mask-image: linear-gradient(180deg, transparent 0, transparent var(--mask0, 430px), #000 var(--mask1, 760px));
+      }
+
+      /* the one-line caption: Fredoka 700, sentence case, one accent span, a hard shadow and nothing else */
+      .cap {
+        position: absolute;
+        left: 0;
+        right: 0;
+        z-index: 8;
+        text-align: center;
+        margin: 0;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.01em;
+        color: var(--star);
+        white-space: nowrap;
+        text-shadow: 0 5px 0 rgba(8, 6, 34, 0.55);
+      }
+      .cap em {
+        font-style: normal;
+        color: var(--accent);
+      }
+      .cap .bl {
+        display: inline-block;
+        width: 0;
+        height: 0;
+      }
+      .hide-text .cap,
+      .hide-text .cap em,
+      .hide-text .sub,
+      .hide-text .brand span {
+        color: transparent !important;
+        text-shadow: none !important;
+        -webkit-text-stroke: 0 !important;
+      }
+      /* social pack only (scrapbook-social.mjs): a second, smaller line (the OG tagline) and the wordmark lockup,
+         the app icon on an 8 px paper ring beside "Comet Garden" in the headline's starlight */
+      .sub {
+        position: absolute;
+        left: 0;
+        right: 0;
+        z-index: 8;
+        text-align: center;
+        margin: 0;
+        font-weight: 600;
+        line-height: 1;
+        color: #cfc8f6;
+        white-space: nowrap;
+      }
+      .sub .bl {
+        display: inline-block;
+        width: 0;
+        height: 0;
+      }
+      .brand {
+        position: absolute;
+        z-index: 8;
+        display: flex;
+        align-items: center;
+        color: var(--star);
+        font-family: Fredoka, sans-serif;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.01em;
+        white-space: nowrap;
+      }
+      .brand img {
+        display: block;
+        border-radius: 22%;
+        box-shadow:
+          0 0 0 var(--ring, 8px) var(--paper),
+          0 14px 18px rgba(6, 3, 30, 0.45);
+      }
+      .brand span {
+        text-shadow: 0 4px 0 rgba(8, 6, 34, 0.55);
+      }
+      .audit .brand,
+      .audit .sub {
+        display: none;
+      }
+      /* Japanese until M PLUS Rounded 1c ExtraBold is bundled: Hiragino Maru Gothic W4 with a same-colour 0.05 em stroke for weight */
+      html[lang='ja'] .cap {
+        font-family: var(--jp);
+        font-weight: 700;
+        letter-spacing: 0;
+        -webkit-text-stroke: 0.05em currentColor;
+        paint-order: stroke fill;
+      }
+      html[lang='ja'] .cap em {
+        -webkit-text-stroke: 0.05em var(--accent);
+      }
+
+      /* paper photo card around a real capture: the game's own Photo-mode polaroid print (homeworld.ts renderPhoto),
+         an even top and side border and a heavy bottom lip; near-square corners so it never reads as a phone bezel */
+      .card {
+        position: absolute;
+        background: linear-gradient(140deg, #ffffff 0%, var(--paper) 45%, #f1eadf 100%);
+        padding: 36px 36px 110px;
+        z-index: 3;
+        border-radius: 16px;
+        box-shadow:
+          0 46px 70px -10px rgba(4, 2, 22, 0.62),
+          0 12px 22px rgba(4, 2, 22, 0.38),
+          inset 0 -3px 0 rgba(180, 170, 220, 0.35);
+      }
+      .card .win {
+        position: relative;
+        overflow: hidden;
+        border-radius: 8px;
+        background: #140f3a;
+      }
+      .card .win img {
+        position: absolute;
+        left: 0;
+        top: 0;
+        transform-origin: 0 0;
+        image-rendering: auto;
+      }
+      .card .win::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        box-shadow: inset 0 0 0 2px rgba(20, 14, 60, 0.35);
+        pointer-events: none;
+      }
+      .audit .card {
+        box-shadow: none;
+      }
+      .audit .card .win::after {
+        display: none;
+      }
+      .tape {
+        position: absolute;
+        z-index: 5;
+        height: 84px;
+        clip-path: polygon(
+          0 6%,
+          4% 0,
+          8% 7%,
+          12% 0,
+          16% 6%,
+          20% 0,
+          80% 0,
+          84% 6%,
+          88% 0,
+          92% 7%,
+          96% 0,
+          100% 6%,
+          100% 94%,
+          96% 100%,
+          92% 93%,
+          88% 100%,
+          84% 94%,
+          80% 100%,
+          20% 100%,
+          16% 94%,
+          12% 100%,
+          8% 93%,
+          4% 100%,
+          0 94%
+        );
+        filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.18));
+      }
+      /* stickers are stuck ON the page: lift shadow only, never a ground shadow */
+      .stk {
+        position: absolute;
+        z-index: 6;
+        transform-origin: 50% 50%;
+        filter: drop-shadow(0 14px 12px rgba(6, 3, 30, 0.4)) drop-shadow(0 3px 2px rgba(6, 3, 30, 0.3));
+      }
+      .only-stickers .stk {
+        filter: none;
+      }
+      .chip {
+        position: absolute;
+        z-index: 7;
+        background: var(--paper);
+        border-radius: 999px;
+        padding: 14px 44px 14px 30px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        color: var(--ink);
+        font-weight: 700;
+        font-size: 58px;
+        line-height: 1;
+        white-space: nowrap;
+        box-shadow: 0 18px 24px rgba(6, 3, 30, 0.45);
+        transform-origin: 50% 50%;
+      }
+      html[lang='ja'] .chip span {
+        font-family: var(--jp);
+        -webkit-text-stroke: 0.04em currentColor;
+        paint-order: stroke fill;
+      }
+      .chip img {
+        height: 116px;
+        margin: -10px 0;
+      }
+      .chip i {
+        font-style: normal;
+        color: #6b62b8;
+      }
+      .chip i.arrow {
+        display: flex;
+        align-items: center;
+      } /* Fredoka has no U+2192: a drawn arrow in the operator colour, same weight as its + */
+    </style>
+  </head>
+  <body>
+    <div class="canvas" id="cv">
+      <div class="base" id="base"></div>
+      <div class="glow" id="glow"></div>
+      <svg id="orbits"></svg>
+      <canvas id="stars"></canvas>
+    </div>
+    <script>
+      (async function () {
+        const C = window.__CFG;
+        if (C.measure) {
+          // caption widths at 100 px in the real lockup (scrapbook.mjs autofit)
+          document.documentElement.lang = C.lang || 'en';
+          const h = document.createElement('h1');
+          h.className = 'cap';
+          h.style.position = 'static';
+          h.style.display = 'inline-block';
+          h.style.fontSize = '100px';
+          document.getElementById('cv').appendChild(h);
+          await document.fonts.load('700 100px Fredoka', 'Éé');
+          if (C.lang === 'ja') {
+            try {
+              await document.fonts.load('700 100px "Hiragino Maru Gothic ProN"', 'あ');
+            } catch (e) {}
+          }
+          await document.fonts.ready;
+          window.__REPORT = {
+            widths: C.measure.map((t) => {
+              h.innerHTML = t.replace(/\*(.+?)\*/g, '<em>$1</em>');
+              return h.getBoundingClientRect().width;
+            }),
+            fredoka: document.fonts.check('700 100px Fredoka'),
+          };
+          document.body.dataset.ready = '1';
+          return;
+        }
+        const S = C.shot,
+          W = C.W || 1320,
+          H = C.H || 2868;
+        const cv = document.getElementById('cv');
+        cv.style.width = W + 'px';
+        cv.style.height = H + 'px';
+        document.documentElement.lang = C.lang || 'en';
+        if (C.hideText) cv.classList.add('hide-text');
+        if (C.audit) cv.classList.add('audit', 'hide-text');
+        document.documentElement.style.setProperty('--accent', C.accent);
+        const k = W / 1320;
+        const [a, b] = [C.glowA, C.glowB];
+        const L = S.layout || {};
+        const only = C.only; // 'stickers': sticker masks only (placement report)
+        if (only === 'stickers') {
+          cv.classList.add('only-stickers');
+          cv.style.background = 'transparent';
+          document.body.style.background = 'transparent';
+          document.documentElement.style.background = 'transparent';
+        }
+
+        // ---------- background: base night, five masked glows (none behind the caption), stars, one dotted orbit
+        if (!only && !C.audit) {
+          document.getElementById('base').style.background =
+            L.base || 'linear-gradient(180deg, #120e36 0%, #15113f 15%, #1e185a 34%, #2a2078 62%, #30247f 100%)';
+          const glow = document.getElementById('glow');
+          glow.style.setProperty('--mask0', (L.mask0 ?? 430) + 'px');
+          glow.style.setProperty('--mask1', (L.mask1 ?? 760) + 'px');
+          glow.style.background = (
+            L.glows || [
+              [820, 700, '4% 86%', a, 0.92],
+              [760, 1000, '100% 50%', b, 0.8],
+              [700, 600, '0% 38%', b, 0.4],
+              [1100, 520, '50% 100%', a, 0.62],
+              [1200, 1600, '50% 60%', a, 0.26],
+            ]
+          )
+            .map(([w, h, at, c, al]) => `radial-gradient(${w * k}px ${h * k}px at ${at}, rgba(${c},${al}), rgba(${c},0) 72%)`)
+            .join(',');
+          const svg = document.getElementById('orbits');
+          svg.setAttribute('width', W);
+          svg.setAttribute('height', H);
+          svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+          const clipY = L.orbitClipY ?? 470;
+          svg.innerHTML =
+            `<defs><clipPath id="cl"><rect x="0" y="${clipY}" width="${W}" height="${H}"/></clipPath></defs><g clip-path="url(#cl)">` +
+            (S.orbits || [])
+              .map(
+                (o) =>
+                  `<ellipse cx="${o[0]}" cy="${o[1]}" rx="${o[2]}" ry="${o[3]}" transform="rotate(${o[4]} ${o[0]} ${o[1]})" fill="none" stroke="rgba(255,244,226,.22)" stroke-width="${7 * k}" stroke-linecap="round" stroke-dasharray="0 ${30 * k}"/>`,
+              )
+              .join('') +
+            '</g>';
+        } else if (C.audit) {
+          document.getElementById('base').style.background = '#000';
+        }
+
+        // ---------- caption: one line; the baseline sits at y 318 via a zero-size inline-block probe
+        const md = (t) => t.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        const caps = [];
+        if (!only)
+          for (const c of [{ text: S.head, size: C.size, baseline: L.baseline ?? 318, left: L.capLeft }]) {
+            const h = document.createElement('h1');
+            h.className = 'cap';
+            h.style.fontSize = c.size + 'px';
+            h.innerHTML = md(c.text) + '<span class="bl"></span>';
+            if (c.left != null) {
+              // social OG: the wordmark headline sits left-aligned in its own column
+              h.style.left = c.left + 'px';
+              h.style.right = 'auto';
+              h.style.textAlign = 'left';
+            }
+            cv.appendChild(h);
+            caps.push([h, c]);
+          }
+        // social pack only: smaller lines (the OG tagline), each on its own baseline, centred or left-aligned
+        const subs = [];
+        for (const s of only ? [] : S.subs || []) {
+          const p = document.createElement('p');
+          p.className = 'sub';
+          p.style.fontSize = s.size + 'px';
+          if (s.weight) p.style.fontWeight = s.weight;
+          if (s.color) p.style.color = s.color;
+          p.innerHTML = md(s.text) + '<span class="bl"></span>';
+          if (s.left != null) {
+            p.style.left = s.left + 'px';
+            p.style.right = 'auto';
+            p.style.textAlign = 'left';
+          }
+          cv.appendChild(p);
+          subs.push([p, s]);
+        }
+        await document.fonts.ready;
+        if (C.lang === 'ja') {
+          try {
+            await document.fonts.load('700 100px "Hiragino Maru Gothic ProN"', 'あ');
+          } catch (e) {}
+        }
+        for (const [h, c] of [...caps, ...subs]) {
+          h.style.top = '0px';
+          const bl = h.querySelector('.bl').getBoundingClientRect().bottom;
+          h.style.top = c.baseline - bl + 'px';
+        }
+        const glyphBox = (h) => {
+          const r = document.createRange();
+          r.selectNodeContents(h);
+          const q = r.getBoundingClientRect();
+          return [q.left, q.top, q.right, q.bottom];
+        };
+        const capBoxes = caps.map(([h]) => glyphBox(h));
+        const subBoxes = subs.map(([p]) => glyphBox(p));
+
+        // social pack only: the wordmark lockup (app icon + "Comet Garden"), top-left at (x, y) or centred on cx
+        const brandBoxes = [];
+        for (const br of only ? [] : S.brand || []) {
+          const el = document.createElement('div');
+          el.className = 'brand';
+          el.style.gap = (br.gap ?? Math.round(br.iconSize * 0.26)) + 'px';
+          el.style.setProperty('--ring', (br.ring ?? 8) + 'px');
+          const ic = document.createElement('img');
+          ic.src = br.icon;
+          ic.style.width = ic.style.height = br.iconSize + 'px';
+          await ic.decode().catch(() => {});
+          el.appendChild(ic);
+          let span = null;
+          if (br.text) {
+            span = document.createElement('span');
+            span.textContent = br.text;
+            span.style.fontSize = br.size + 'px';
+            el.appendChild(span);
+          }
+          cv.appendChild(el);
+          const w = el.getBoundingClientRect().width;
+          el.style.left = (br.cx != null ? br.cx - w / 2 : br.x) + 'px';
+          el.style.top = br.y + 'px';
+          const q = el.getBoundingClientRect();
+          const ring = br.ring ?? 8;
+          brandBoxes.push({
+            box: [q.left - ring, q.top - ring, q.right, q.bottom + ring].map(Math.round),
+            icon: (() => {
+              const r = ic.getBoundingClientRect();
+              return [r.left, r.top, r.right, r.bottom].map(Math.round);
+            })(),
+            text: span ? glyphBox(span).map(Math.round) : null,
+          });
+        }
+
+        // ---------- seeded stars, never behind the caption glyphs (±40 x, ±30 y)
+        if (!only && !C.audit) {
+          const st = document.getElementById('stars');
+          st.width = W;
+          st.height = H;
+          let seed = S.seed || 7;
+          const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+          const g = st.getContext('2d');
+          const nStars = Math.round((260 * (W * H)) / (1320 * 2868));
+          for (let i = 0; i < nStars; i++) {
+            const x = rnd() * W,
+              y = rnd() * H,
+              r = (1.2 + rnd() * rnd() * 3.6) * Math.max(k, 0.8),
+              al = 0.25 + rnd() * 0.6;
+            if (
+              [...capBoxes, ...subBoxes, ...brandBoxes.map((b) => b.box)].some(
+                (q) => x > q[0] - 40 && x < q[2] + 40 && y > q[1] - 30 && y < q[3] + 30,
+              )
+            )
+              continue;
+            g.beginPath();
+            g.arc(x, y, r, 0, 7);
+            g.fillStyle = `rgba(255,244,226,${al})`;
+            g.fill();
+          }
+        }
+
+        // ---------- cards (stack order = array order), each with at most one washi tape across its top border
+        const wins = [],
+          tapes = [];
+        let z = 3;
+        const CD = S.card || {}; // the set's card recipe (scrapbook-shots.json "card"); a card may override any field
+        for (const cd of only ? [] : S.cards || []) {
+          const card = document.createElement('div');
+          card.className = 'card';
+          const bw = cd.border ?? CD.border ?? 36; // top and side paper
+          const lip = cd.lip ?? CD.lip ?? bw; // bottom paper strip
+          card.style.padding = `${bw}px ${bw}px ${lip}px`;
+          card.style.borderRadius = (cd.radius ?? CD.radius ?? 16) + 'px';
+          const sk = cd.shadowK ?? CD.shadowK; // social pack: the paper shadow scaled with a smaller card
+          if (sk != null && !C.audit)
+            card.style.boxShadow = `0 ${46 * sk}px ${70 * sk}px ${-10 * sk}px rgba(4,2,22,.62), 0 ${12 * sk}px ${22 * sk}px rgba(4,2,22,.38), inset 0 -3px 0 rgba(180,170,220,.35)`;
+          card.style.left = cd.x - bw + 'px';
+          card.style.top = cd.y - bw + 'px';
+          // tilt about the window centre (not the paper centre, which the lip moves), so crop maths stay window-based
+          card.style.transformOrigin = `${bw + cd.w / 2}px ${bw + cd.h / 2}px`;
+          card.style.transform = `rotate(${C.audit ? 0 : cd.rot || 0}deg)`;
+          card.style.zIndex = z++;
+          const win = document.createElement('div');
+          win.className = 'win';
+          win.style.width = cd.w + 'px';
+          win.style.height = cd.h + 'px';
+          win.style.borderRadius = (cd.winRadius ?? CD.winRadius ?? 8) + 'px';
+          const img = document.createElement('img');
+          img.src = cd.src;
+          img.style.transform = `scale(${cd.scale}) translate(${-cd.sx}px, ${-cd.sy}px)`;
+          win.appendChild(img);
+          card.appendChild(win);
+          cv.appendChild(card);
+          wins.push({ x: cd.x, y: cd.y, w: cd.w, h: cd.h, rot: cd.rot || 0, bw, lip });
+          if (cd.tape && !C.audit) {
+            const t = document.createElement('div');
+            t.className = 'tape';
+            const [tx, ty, tw, trot, tcol] = cd.tape;
+            const th = L.tapeH ?? 84 * k; // social pack: a tape height to suit a small card
+            t.style.left = tx - tw / 2 + 'px';
+            t.style.top = ty - th / 2 + 'px';
+            t.style.width = tw + 'px';
+            t.style.height = th + 'px';
+            t.style.transform = `rotate(${trot}deg)`;
+            t.style.zIndex = z++;
+            t.style.background = `repeating-linear-gradient(-60deg, rgba(255,255,255,.34) 0 ${12 * k}px, rgba(255,255,255,0) ${12 * k}px ${30 * k}px), linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0) 60%), ${tcol}`;
+            cv.appendChild(t);
+            tapes.push({ x: tx, y: ty, w: tw, h: th, rot: trot });
+          }
+        }
+
+        // ---------- stickers (never mirrored; tilt only)
+        const stks = [];
+        for (const s of C.audit ? [] : S.stickers || []) {
+          const el = document.createElement('img');
+          el.className = 'stk';
+          el.src = s.src;
+          await el.decode().catch(() => {});
+          const hgt = (s.w * el.naturalHeight) / el.naturalWidth;
+          el.style.width = s.w + 'px';
+          el.style.left = s.x - s.w / 2 + 'px';
+          el.style.top = s.y - hgt / 2 + 'px';
+          el.style.transform = `rotate(${s.rot || 0}deg)`;
+          el.style.zIndex = 30 + stks.length;
+          cv.appendChild(el);
+          stks.push({ el, s, hgt });
+        }
+        // ---------- the recipe-chip callout (shot 4 only)
+        const chipBoxes = [];
+        for (const ch of C.audit || only ? [] : S.chips || []) {
+          const el = document.createElement('div');
+          el.className = 'chip';
+          el.innerHTML = ch.html;
+          el.style.zIndex = 40;
+          cv.appendChild(el);
+          await Promise.all([...el.querySelectorAll('img')].map((i) => i.decode().catch(() => {})));
+          const r = el.getBoundingClientRect();
+          el.style.left = ch.x - r.width / 2 + 'px';
+          el.style.top = ch.y - r.height / 2 + 'px';
+          el.style.transform = `rotate(${ch.rot || 0}deg)`;
+          const q = el.getBoundingClientRect();
+          chipBoxes.push([q.left, q.top, q.right, q.bottom].map(Math.round));
+        }
+        await Promise.all(
+          [...document.images].map((i) =>
+            i.complete
+              ? 0
+              : new Promise((r) => {
+                  i.onload = i.onerror = r;
+                }),
+          ),
+        );
+
+        // ---------- placement report (spec 6.2): share of each sticker over any capture window, and the keep-outs
+        const toLocal = (x, y, w) => {
+          const cx = w.x + w.w / 2,
+            cy = w.y + w.h / 2,
+            t = (-w.rot * Math.PI) / 180;
+          const dx = x - cx,
+            dy = y - cy;
+          return [dx * Math.cos(t) - dy * Math.sin(t), dx * Math.sin(t) + dy * Math.cos(t)];
+        };
+        const inWin = (x, y, w) => {
+          const [u, v] = toLocal(x, y, w);
+          return Math.abs(u) <= w.w / 2 && Math.abs(v) <= w.h / 2;
+        };
+        const inRect = (x, y, r) => {
+          const [u, v] = toLocal(x, y, r);
+          return Math.abs(u) <= r.w / 2 && Math.abs(v) <= r.h / 2;
+        };
+        const corners = wins.flatMap((w) => {
+          const cx = w.x + w.w / 2,
+            cy = w.y + w.h / 2,
+            t = (w.rot * Math.PI) / 180,
+            hw = w.w / 2 + w.bw,
+            top = w.h / 2 + w.bw,
+            bot = w.h / 2 + w.lip;
+          return [
+            [-hw, -top],
+            [hw, -top],
+            [hw, bot],
+            [-hw, bot],
+          ].map(([u, v]) => [cx + u * Math.cos(t) - v * Math.sin(t), cy + u * Math.sin(t) + v * Math.cos(t)]);
+        });
+        const tapeRects = tapes.map((t) => ({ x: t.x - (t.w + 8) / 2, y: t.y - (t.h + 8) / 2, w: t.w + 8, h: t.h + 8, rot: t.rot })); // 4 px clearance
+        const report = [];
+        const CSQ = L.cornerSq ?? 96; // corner keep-out squares
+        const CZ = L.captionZone || [72, 130, 1248, 400]; // the caption zone no sticker may enter
+        for (const { el, s, hgt } of stks) {
+          const c = document.createElement('canvas');
+          c.width = W;
+          c.height = H;
+          const q = c.getContext('2d');
+          q.translate(s.x, s.y);
+          q.rotate(((s.rot || 0) * Math.PI) / 180);
+          q.drawImage(el, -s.w / 2, -hgt / 2, s.w, hgt);
+          const R = Math.ceil(Math.hypot(s.w, hgt) / 2) + 2;
+          const x0 = Math.max(0, Math.floor(s.x - R)),
+            y0 = Math.max(0, Math.floor(s.y - R));
+          const x1 = Math.min(W, Math.ceil(s.x + R)),
+            y1 = Math.min(H, Math.ceil(s.y + R));
+          const d = q.getImageData(x0, y0, x1 - x0, y1 - y0).data;
+          let tot = 0,
+            over = 0,
+            bx0 = 1e9,
+            by0 = 1e9,
+            bx1 = -1,
+            by1 = -1,
+            corner = 1e9,
+            tape = 0,
+            cornerSq = 0,
+            caption = 0;
+          for (let yy = y0; yy < y1; yy += 2)
+            for (let xx = x0; xx < x1; xx += 2) {
+              const al = d[((yy - y0) * (x1 - x0) + (xx - x0)) * 4 + 3];
+              if (al < 128) continue;
+              tot++;
+              if (wins.some((w) => inWin(xx, yy, w))) over++;
+              bx0 = Math.min(bx0, xx);
+              by0 = Math.min(by0, yy);
+              bx1 = Math.max(bx1, xx);
+              by1 = Math.max(by1, yy);
+              for (const [px, py] of corners) corner = Math.min(corner, Math.hypot(xx - px, yy - py));
+              if (tapeRects.some((t) => inRect(xx, yy, t))) tape++;
+              if ((xx < CSQ || xx > W - CSQ) && (yy < CSQ || yy > H - CSQ)) cornerSq++;
+              if (xx >= CZ[0] && xx <= CZ[2] && yy >= CZ[1] && yy <= CZ[3]) caption++;
+            }
+          const centreDist = Math.min(...corners.map(([px, py]) => Math.hypot(s.x - px, s.y - py)));
+          report.push({
+            id: s.id,
+            over: +(over / Math.max(tot, 1)).toFixed(3),
+            bbox: [bx0, by0, bx1, by1],
+            cornerDist: Math.round(centreDist),
+            cornerPixelDist: Math.round(corner),
+            tapeTouch: tape,
+            cornerSquare: cornerSq,
+            captionZone: caption,
+            margins: { left: bx0, right: W - bx1, bottom: H - by1, top: by0 },
+          });
+        }
+        const tapeReport = tapes.map((t) => {
+          const cx = t.x,
+            cy = t.y,
+            th = (t.rot * Math.PI) / 180;
+          const pts = [
+            [-t.w / 2, -t.h / 2],
+            [t.w / 2, -t.h / 2],
+            [t.w / 2, t.h / 2],
+            [-t.w / 2, t.h / 2],
+          ].map(([u, v]) => [cx + u * Math.cos(th) - v * Math.sin(th), cy + u * Math.sin(th) + v * Math.cos(th)]);
+          const bb = [
+            Math.min(...pts.map((p) => p[0])),
+            Math.min(...pts.map((p) => p[1])),
+            Math.max(...pts.map((p) => p[0])),
+            Math.max(...pts.map((p) => p[1])),
+          ].map(Math.round);
+          const capHit = capBoxes.some((q) => bb[0] < q[2] && bb[2] > q[0] && bb[1] < q[3] && bb[3] > q[1]);
+          // sample points on the tape body (inner 80 % x 70 %, off the zigzag ends) that lie on no card paper: the
+          // tape over the open nebula, where its colour reads on its own (scrapbook-post.py tape-colour gate)
+          const onPaper = (x, y) =>
+            wins.some((w) => {
+              const [u, v] = toLocal(x, y, w);
+              return Math.abs(u) <= w.w / 2 + w.bw && v >= -w.h / 2 - w.bw && v <= w.h / 2 + w.lip;
+            });
+          const nebula = [];
+          for (let i = -0.4; i <= 0.4001; i += 0.02)
+            for (let j = -0.35; j <= 0.3501; j += 0.05) {
+              const u = i * t.w,
+                v = j * t.h;
+              const px = Math.round(cx + u * Math.cos(th) - v * Math.sin(th)),
+                py = Math.round(cy + u * Math.sin(th) + v * Math.cos(th));
+              if (!onPaper(px, py)) nebula.push([px, py]);
+            }
+          return { bbox: bb, captionTouch: capHit, x: t.x, y: t.y, w: t.w, h: t.h, rot: t.rot, nebula };
+        });
+        window.__REPORT = {
+          stickers: report,
+          tapes: tapeReport,
+          caption: capBoxes.map((q) => q.map(Math.round)),
+          subs: subBoxes.map((q) => q.map(Math.round)),
+          brand: brandBoxes,
+          windows: wins,
+          chips: chipBoxes,
+          cardCorners: corners.map((p) => p.map(Math.round)),
+        };
+        document.body.dataset.ready = '1';
+      })();
+    </script>
+  </body>
+</html>

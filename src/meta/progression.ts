@@ -1,8 +1,11 @@
-// Chapters, the Star Road reward track, and daily quests.
-import { rngFrom } from '../core/levels';
+import { CHAPTER_REWARD, CHAPTER_RANK_REWARD } from './tuning';
+import { STAR_ROAD } from './tuning';
+import { earn, type EarnSource } from './wallet';
+// Chapters and the Star Road reward track. Legacy quests are kept for save migration.
 import type { BoosterId } from './config';
-import type { Profile, QuestState } from './profile';
+import type { Profile } from './profile';
 import { t } from '../i18n';
+import { COSMETIC_BY_ID } from './cosmetics';
 
 // ------------------------------------------------------------------ chapters
 export const LEVELS_PER_CHAPTER = 10;
@@ -43,17 +46,30 @@ export interface Reward {
   dust?: number;
   boosters?: Partial<Record<BoosterId, number>>;
   skin?: string;
+  /** Keeper cosmetic (ownership is derived from the claimed tier, see cosmetics.ts). */
+  item?: string;
 }
 
-export function chapterReward(n: number): Reward {
-  return { gems: 25 + n * 5, dust: 200 * n, boosters: { shower: 1, spark: 1, scope: 1 } };
+export function chapterReward(n: number, p?: Profile): Reward {
+  let rankGems = 0;
+  let rankDust = 0;
+  for (let rank = (p?.m4RankPaidThrough ?? n - 1) + 1; rank <= Math.min(n, 7); rank++) {
+    rankGems += CHAPTER_RANK_REWARD.gems[rank] ?? 0;
+    rankDust += CHAPTER_RANK_REWARD.dust[rank] ?? 0;
+  }
+  return {
+    gems: CHAPTER_REWARD.baseGems + n * CHAPTER_REWARD.gemsPerChapter + rankGems,
+    dust: CHAPTER_REWARD.dustPerChapter * n + rankDust,
+    boosters: { shower: 1, spark: 1, scope: 1 },
+  };
 }
 
 export function openChest(p: Profile, n: number): Reward | null {
   if (!chestsReady(p).includes(n)) return null;
+  const r = chapterReward(n, p);
   p.chapters.push(n);
-  const r = chapterReward(n);
-  applyReward(p, r);
+  p.m4RankPaidThrough = Math.max(p.m4RankPaidThrough, Math.min(n, 7));
+  applyReward(p, r, 'chest');
   return r;
 }
 
@@ -77,28 +93,12 @@ export interface RoadTier {
   pass: Reward;
 }
 
-export const STAR_ROAD: RoadTier[] = [
-  { stars: 5, reward: { gems: 15 }, pass: { skin: 'cosmic', gems: 30 } },
-  { stars: 12, reward: { boosters: { shower: 2 } }, pass: { gems: 40 } },
-  { stars: 20, reward: { dust: 400 }, pass: { boosters: { shower: 2, spark: 2, scope: 2 } } },
-  { stars: 30, reward: { skin: 'rose', gems: 10 }, pass: { gems: 50 } },
-  { stars: 42, reward: { gems: 30 }, pass: { dust: 1500 } },
-  { stars: 55, reward: { boosters: { spark: 2, scope: 2 } }, pass: { gems: 60 } },
-  { stars: 70, reward: { dust: 1200 }, pass: { boosters: { shower: 3, spark: 3, scope: 3 } } },
-  { stars: 85, reward: { skin: 'lime', gems: 20 }, pass: { gems: 80 } },
-  { stars: 100, reward: { gems: 50 }, pass: { dust: 4000 } },
-  { stars: 120, reward: { boosters: { shower: 3, spark: 3, scope: 3 } }, pass: { gems: 100 } },
-  { stars: 140, reward: { dust: 3000 }, pass: { boosters: { shower: 5, spark: 5, scope: 5 } } },
-  { stars: 165, reward: { skin: 'gold', gems: 40 }, pass: { gems: 120 } },
-  { stars: 190, reward: { gems: 80 }, pass: { dust: 8000 } },
-  { stars: 220, reward: { dust: 6000, gems: 50 }, pass: { gems: 150 } },
-  { stars: 260, reward: { gems: 120 }, pass: { gems: 250 } },
-];
+export { STAR_ROAD } from './tuning';
 
-export function roadReady(p: Profile, stars: number): number[] {
+export function roadReady(p: Profile): number[] {
   const out: number[] = [];
   STAR_ROAD.forEach((t, i) => {
-    if (stars < t.stars) return;
+    if (p.roadPoints < t.stars) return;
     if (!p.road.includes(i)) out.push(i);
     else if (p.pass && !p.roadPass.includes(i)) out.push(i);
   });
@@ -106,28 +106,28 @@ export function roadReady(p: Profile, stars: number): number[] {
 }
 
 /** Claim everything unlocked on tier i (free lane, plus pass lane if owned). */
-export function claimRoad(p: Profile, i: number, stars: number): Reward[] {
+export function claimRoad(p: Profile, i: number): Reward[] {
   const t = STAR_ROAD[i];
   const got: Reward[] = [];
-  if (!t || stars < t.stars) return got;
+  if (!t || p.roadPoints < t.stars) return got;
   if (!p.road.includes(i)) {
     p.road.push(i);
-    applyReward(p, t.reward);
+    applyReward(p, t.reward, 'star_road');
     got.push(t.reward);
   }
   if (p.pass && !p.roadPass.includes(i)) {
     p.roadPass.push(i);
-    applyReward(p, t.pass);
+    applyReward(p, t.pass, 'star_road');
     got.push(t.pass);
   }
   return got;
 }
 
-/** Total gem value of the pass lane (used for the sales pitch). */
+/** The current pass lane contains looks only. */
 export const PASS_GEMS = STAR_ROAD.reduce((a, t) => a + (t.pass.gems ?? 0), 0);
 
-// ------------------------------------------------------------------ quests
-export type QuestEvent = 'throw' | 'win' | 'star' | 'creature' | 'three' | 'booster' | 'collect' | 'land';
+// Legacy quest shape supports save migration in wishes.ts.
+export type QuestEvent = 'throw' | 'win' | 'star' | 'creature' | 'three' | 'booster' | 'collect' | 'land' | 'voyage' | 'spot';
 
 export interface QuestDef {
   id: string;
@@ -136,72 +136,14 @@ export interface QuestDef {
   gems: number;
   text: (goal: number) => string;
   emoji: string;
-}
-
-export const QUESTS: QuestDef[] = [
-  { id: 'throw25', event: 'throw', goal: 25, gems: 8, emoji: '🪨', text: (g) => t('Fling {n} objects', { n: g }) },
-  { id: 'win3', event: 'win', goal: 3, gems: 12, emoji: '🪐', text: (g) => t('Complete {n} planets', { n: g }) },
-  { id: 'star6', event: 'star', goal: 6, gems: 15, emoji: '⭐', text: (g) => t('Earn {n} stars', { n: g }) },
-  { id: 'creature8', event: 'creature', goal: 8, gems: 10, emoji: '🦊', text: (g) => t('Bring {n} creatures to life', { n: g }) },
-  { id: 'three1', event: 'three', goal: 1, gems: 15, emoji: '🌟', text: () => t('Get 3 stars on any planet') },
-  { id: 'booster1', event: 'booster', goal: 1, gems: 6, emoji: '🌠', text: () => t('Use a booster') },
-  { id: 'collect2', event: 'collect', goal: 2, gems: 8, emoji: '✨', text: (g) => t('Collect stardust {n} times', { n: g }) },
-  { id: 'land20', event: 'land', goal: 20, gems: 10, emoji: '🌍', text: (g) => t('Transform {n} regions', { n: g }) },
-];
-export const QUEST_BY_ID: Record<string, QuestDef> = Object.fromEntries(QUESTS.map((q) => [q.id, q]));
-export const QUEST_BONUS: Reward = { gems: 20, boosters: { shower: 1 } };
-
-/** Make sure today's three quests exist. */
-export function ensureQuests(p: Profile, day: string) {
-  if (p.quests.day === day && p.quests.list.length) return;
-  const rnd = rngFrom(`Q-${day}`);
-  const pool = [...QUESTS];
-  const list: QuestState[] = [];
-  while (list.length < 3 && pool.length) {
-    const q = pool.splice(Math.floor(rnd() * pool.length), 1)[0];
-    list.push({ id: q.id, progress: 0, claimed: false });
-  }
-  p.quests = { day, list, bonusClaimed: false };
-}
-
-/** Advance quests; returns ids that just became complete. */
-export function questEvent(p: Profile, ev: QuestEvent, amount = 1): string[] {
-  const done: string[] = [];
-  for (const q of p.quests.list) {
-    const def = QUEST_BY_ID[q.id];
-    if (!def || def.event !== ev || q.progress >= def.goal) continue;
-    q.progress = Math.min(def.goal, q.progress + amount);
-    if (q.progress >= def.goal) done.push(q.id);
-  }
-  return done;
-}
-
-export function claimQuest(p: Profile, id: string): number {
-  const q = p.quests.list.find((x) => x.id === id);
-  const def = QUEST_BY_ID[id];
-  if (!q || !def || q.claimed || q.progress < def.goal) return 0;
-  q.claimed = true;
-  p.gems += def.gems;
-  return def.gems;
-}
-
-export function claimQuestBonus(p: Profile): Reward | null {
-  if (p.quests.bonusClaimed || !p.quests.list.length || !p.quests.list.every((q) => q.claimed)) return null;
-  p.quests.bonusClaimed = true;
-  applyReward(p, QUEST_BONUS);
-  return QUEST_BONUS;
-}
-
-export function questsClaimable(p: Profile): number {
-  let n = p.quests.list.filter((q) => !q.claimed && q.progress >= (QUEST_BY_ID[q.id]?.goal ?? Infinity)).length;
-  if (!p.quests.bonusClaimed && p.quests.list.length && p.quests.list.every((q) => q.claimed)) n++;
-  return n;
+  /** Only offered once the feature it needs is unlocked. */
+  need?: (p: Profile) => boolean;
 }
 
 // ------------------------------------------------------------------ rewards
-export function applyReward(p: Profile, r: Reward) {
-  if (r.gems) p.gems += r.gems;
-  if (r.dust) p.dust += r.dust;
+export function applyReward(p: Profile, r: Reward, source: EarnSource = 'generic_reward') {
+  if (r.gems) earn(p, 'gems', r.gems, source);
+  if (r.dust) earn(p, 'dust', r.dust, source);
   for (const [k, v] of Object.entries(r.boosters ?? {})) p.boosters[k as BoosterId] += v ?? 0;
   if (r.skin && !p.skins.includes(r.skin)) p.skins.push(r.skin);
 }
@@ -213,5 +155,6 @@ export function rewardText(r: Reward): string[] {
   const bEmoji: Record<string, string> = { shower: '🌠', spark: '✨', scope: '🔭' };
   for (const [k, v] of Object.entries(r.boosters ?? {})) if (v) out.push(`${bEmoji[k]} ×${v}`);
   if (r.skin) out.push(t('🌈 New atmosphere'));
+  if (r.item) out.push(t('🧑‍🚀 {name}', { name: t(COSMETIC_BY_ID[r.item]?.name ?? '') }));
   return out;
 }

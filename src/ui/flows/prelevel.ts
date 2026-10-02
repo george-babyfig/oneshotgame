@@ -1,134 +1,309 @@
-// Pre-level sheet: star targets, objects in play, and optional boosters.
+// Level details sit over the live round until a tap or the first fling.
 import { h, btn, fmt, modal, toast } from '../dom';
 import { sfx } from '../audio';
-import { DIFFICULTY_DUST, makeLevel, TWISTS } from '../../core/levels';
-import { MOMENTUM_PERKS, momentumActive, momentumPerkText } from '../../meta/momentum';
-import { KINDS } from '../../core/world';
+import { DIFFICULTY_DUST, TWISTS, type LevelDef } from '../../core/levels';
+import { BIOMES, KINDS, SPECIES_BY_ID, traitOf, lifeScore, type BiomeId, type TraitId } from '../../core/world';
 import { BOOSTERS, type BoosterId } from '../../meta/config';
 import { spendDust } from '../../meta/economy';
 import { chapterOf } from '../../meta/progression';
+import { momentumActive, MOMENTUM_PERKS } from '../../meta/momentum';
 import { projectileCanvas } from '../art/projectiles';
-import type { App, Boosters } from '../app';
-import { t, tp } from '../../i18n';
-import { kindDesc, kindName } from '../text';
+import { critterCanvas } from '../art/critters';
+import { sparkStart } from '../fx';
+import { ledger } from '../../meta/ledger';
+import { planetName, t } from '../../i18n';
+import type { App } from '../app';
+import type { LevelScene } from '../game';
+import { showGoalRecipe } from '../hud';
+import { lifeSparkSectors } from '../../core/round';
+import { OBSTACLES } from '../../core/sky';
+import { skyIconCanvas } from '../art/sky';
+import { buddyChipAvailable, buddyEligible, buddyShieldFor, nextPlanetBuddy, planetBuddyFor } from '../../meta/buddy';
+import { traitBadge } from '../art/traits';
+import { haptic } from '../haptics';
+
+export function goalChips(L: LevelDef, scene?: LevelScene) {
+  if (!L.goals.length) return null;
+  return h(
+    'div',
+    { class: 'pre-goals' },
+    h('small', null, t('Goals')),
+    ...L.goals.map((g) =>
+      h(
+        scene ? 'button' : 'span',
+        { class: 'goal', ...(scene ? { type: 'button', onclick: () => showGoalRecipe(scene, g) } : {}) },
+        g.type === 'species' ? critterCanvas(g.id, 30) : h('span', { class: 'gi' }, BIOMES[g.id as BiomeId].deco),
+        h(
+          'b',
+          null,
+          g.type === 'species' ? t(SPECIES_BY_ID[g.id].name) : t('{n}× {name}', { n: g.count, name: t(BIOMES[g.id as BiomeId].name) }),
+        ),
+      ),
+    ),
+  );
+}
+
+export function twistChip(L: LevelDef, clear = false) {
+  if (L.sky.obstacle)
+    return h(
+      'div',
+      { class: 'twist-chip sky-prelevel' },
+      skyIconCanvas(L.sky.obstacle, 42, false, clear),
+      h('span', null, h('b', null, t(OBSTACLES[L.sky.obstacle].name)), h('small', null, t(OBSTACLES[L.sky.obstacle].rule))),
+    );
+  return L.twist === 'none' ? h('span') : h('div', { class: 'twist-chip' }, `${t(TWISTS[L.twist].name)}: ${t(TWISTS[L.twist].desc)}`);
+}
 
 export function preLevel(app: App, n: number) {
-  if (document.querySelector('.modal.pre')) return;
+  app.startLevel(n);
+  const scene = app.scene!;
   const p = app.p;
-  const L = makeLevel(n);
-  const chosen: Boosters = { shower: false, spark: false, scope: false };
-  const kinds = Object.values(KINDS).filter((k) => k.unlock <= n);
-  const newKind = kinds.find((k) => k.unlock === n);
-  const row = h('div', { class: 'boosters' });
-  // Boosters that Momentum already gives for free can't be (wastefully) selected.
+  const L = scene.L;
+  const buddyChip = preLevelBuddyChip(app, scene, L);
+  const chosen = { shower: false, spark: false, scope: false };
+  const fromInventory = { shower: false, spark: false, scope: false };
+  const explained = new Set<BoosterId>();
   const perk = momentumActive(p) ? MOMENTUM_PERKS[p.momentum.streak] : null;
   const free = (id: BoosterId) => (id === 'spark' && !!perk?.spark) || (id === 'scope' && !!perk?.scope);
-  const renderBoosters = () => {
+  const panel = h('div', { class: 'level-info', role: 'group', 'aria-label': t('Planet details') });
+  panel.inert = true;
+  const entranceGate = h('div', { class: 'level-info-gate', 'aria-hidden': 'true' });
+  let committed = false;
+  const dismiss = () => {
+    entranceGate.remove();
+    panel.remove();
+  };
+  const commit = () => {
+    if (committed) return;
+    committed = true;
+    const count = Object.values(chosen).filter(Boolean).length;
+    if (count) ledger.count('boosters_used', count);
+    for (const id of Object.keys(chosen) as BoosterId[]) {
+      if (!chosen[id]) continue;
+      if (fromInventory[id]) p.boosters[id]--;
+      else spendDust(p, BOOSTERS[id].dust, 'booster');
+    }
+    if (count) app.save();
+  };
+  const originalThrow = scene.o.onThrow;
+  scene.o.onThrow = (kind) => {
+    commit();
+    dismiss();
+    originalThrow?.(kind);
+  };
+  let tapStart: { x: number; y: number } | null = null;
+  scene.canvas.addEventListener('pointerdown', (event) => (tapStart = { x: event.clientX, y: event.clientY }));
+  scene.canvas.addEventListener('pointerup', (event) => {
+    if (tapStart && Math.hypot(event.clientX - tapStart.x, event.clientY - tapStart.y) < 18) dismiss();
+    tapStart = null;
+  });
+  const choose = (id: BoosterId) => {
+    if (chosen[id]) return;
+    const b = BOOSTERS[id];
+    const reserved = (Object.keys(chosen) as BoosterId[]).reduce(
+      (sum, key) => sum + (chosen[key] && !fromInventory[key] ? BOOSTERS[key].dust : 0),
+      0,
+    );
+    if (p.boosters[id] > 0) fromInventory[id] = true;
+    else if (p.dust - reserved >= b.dust) sfx.coin();
+    else return toast(t('Needs ✨{dust} stardust', { dust: b.dust }));
+    chosen[id] = true;
+    scene.o.boosters[id] = true;
+    if (id === 'shower') {
+      scene.throwsLeft += 3;
+      scene.throwsTotal += 3;
+      scene.renderHud();
+    } else if (id === 'spark') {
+      sparkStart(scene.planet, lifeSparkSectors(scene.L, scene.planet));
+      scene.score = scene.shownScore = lifeScore(scene.planet);
+      scene.regionBests = scene.planet.sectors.map((sector) => BIOMES[sector.biome].value);
+      scene.arrived = new Set(scene.planet.sectors.map((sector) => sector.species).filter((species): species is string => !!species));
+      scene.renderHud();
+    }
+    renderBoosters();
+  };
+  const row = h('div', { class: 'boosters' });
+  const renderBoosters = () =>
     row.replaceChildren(
       ...(Object.keys(BOOSTERS) as BoosterId[]).map((id) => {
         const b = BOOSTERS[id];
-        const owned = p.boosters[id];
-        const el = h(
+        const tile = h(
           'button',
-          { class: `booster${chosen[id] || free(id) ? ' on' : ''}` },
+          { class: `booster${chosen[id] || free(id) ? ' on' : ''}`, type: 'button' },
           h('span', { class: 'be' }, b.emoji),
           h('span', { class: 'bn' }, t(b.name)),
-          h('span', { class: 'bc' }, free(id) ? t('Free') : owned > 0 ? `×${owned}` : `✨${b.dust}`),
+          h('span', { class: 'bc' }, free(id) ? t('Free') : chosen[id] ? '✓' : p.boosters[id] ? `×${p.boosters[id]}` : `✨${b.dust}`),
         );
-        el.addEventListener('click', () => {
+        tile.addEventListener('click', () => {
           sfx.click();
-          if (free(id)) return toast(t('Already free with Momentum!'), 'good');
-          if (chosen[id]) chosen[id] = false;
-          else if (owned > 0) chosen[id] = true;
-          else if (spendDust(p, b.dust)) {
-            p.boosters[id]++;
-            chosen[id] = true;
-            sfx.coin();
-            app.save();
-          } else {
-            sfx.error();
-            toast(t('Needs ✨{dust} stardust — or 💎{gems} in the Shop', { dust: b.dust, gems: b.gems }), 'bad');
+          if (chosen[id]) return;
+          if (!explained.has(id)) {
+            explained.add(id);
+            const info = modal([
+              h('div', { class: 'm-title' }, t(b.name)),
+              h('p', null, t(b.desc)),
+              btn(t('OK'), 'primary wide', () => info.close()),
+            ]);
+            return;
           }
-          renderBoosters();
+          if (free(id)) return toast(t('Already free with Momentum!'), 'good');
+          if (p.boosters[id] > 0) return choose(id);
+          const reserved = (Object.keys(chosen) as BoosterId[]).reduce(
+            (sum, key) => sum + (chosen[key] && !fromInventory[key] ? BOOSTERS[key].dust : 0),
+            0,
+          );
+          const canGet = p.dust - reserved >= b.dust;
+          const getButton = btn(
+            canGet ? t('Get 1 for ✨{price}', { price: b.dust }) : t('Needs ✨{dust} stardust', { dust: b.dust }),
+            canGet ? 'primary wide' : 'primary wide dim',
+            () => {
+              if (canGet) choose(id);
+              confirm.close();
+            },
+          );
+          getButton.disabled = !canGet;
+          const confirm = modal([
+            h('div', { class: 'm-title' }, t(b.name)),
+            h('p', null, t(b.desc)),
+            getButton,
+            btn(t('Cancel'), 'ghost wide', () => confirm.close()),
+          ]);
         });
-        return el;
+        return tile;
       }),
     );
-  };
   renderBoosters();
-  const best = p.stars[n] ?? 0;
-  const m = modal(
-    [
-      h('div', { class: 'm-sub' }, t('{chapter} · Planet {n}', { chapter: t(chapterOf(n).name), n })),
-      h('div', { class: 'm-title' }, L.name),
-      L.difficulty !== 'normal'
-        ? h(
-            'div',
-            { class: `diff-chip ${L.difficulty}` },
-            L.difficulty === 'super'
-              ? t('💀 Super Hard planet · ×{n} stardust', { n: DIFFICULTY_DUST.super })
-              : t('🔥 Hard planet · ×{n} stardust', { n: DIFFICULTY_DUST.hard }),
-          )
-        : null,
-      L.twist !== 'none' ? h('div', { class: 'twist-chip' }, `${t(TWISTS[L.twist].name)}: ${t(TWISTS[L.twist].desc)}`) : null,
-      h(
-        'div',
-        { class: 'targets' },
-        ...L.stars.map((target, i) =>
-          h(
-            'div',
-            { class: `tg${i < best ? ' got' : ''}` },
-            h('b', null, '★'.repeat(i + 1)),
-            h('span', null, t('{n} life', { n: fmt(target) })),
-          ),
+  panel.append(
+    h('div', { class: 'm-sub' }, t('{chapter} · Planet {n}', { chapter: t(chapterOf(n).name), n })),
+    h('div', { class: 'm-title' }, planetName(L.name)),
+    L.difficulty === 'normal'
+      ? h('span')
+      : h(
+          'div',
+          { class: `diff-chip ${L.difficulty}` },
+          L.difficulty === 'super'
+            ? t('💀 Super Hard planet · ×{n} stardust', { n: DIFFICULTY_DUST.super })
+            : t('🔥 Hard planet · ×{n} stardust', { n: DIFFICULTY_DUST.hard }),
+        ),
+    twistChip(L, p.settings.planetColours === 'clear'),
+    buddyChip ?? h('span'),
+    goalChips(L, scene) ?? h('span'),
+    h(
+      'div',
+      { class: 'targets' },
+      ...L.stars.map((target, i) =>
+        h(
+          'div',
+          { class: `tg${i < (p.stars[n] ?? 0) ? ' got' : ''}` },
+          h('b', null, '★'.repeat(i + 1)),
+          h('span', null, t('{n} life', { n: fmt(target) })),
         ),
       ),
-      h(
-        'div',
-        { class: 'kinds' },
-        ...kinds.map((k) =>
-          h(
-            'span',
-            { class: `kc${k === newKind ? ' new' : ''}`, title: kindDesc(k.id) },
-            projectileCanvas(k.id, 34),
-            k === newKind ? h('small', null, t('NEW')) : null,
-          ),
-        ),
-      ),
-      newKind
-        ? h(
-            'p',
-            { class: 'newkind' },
-            t('New: {emoji} {name} — {desc}', { emoji: newKind.emoji, name: kindName(newKind.id), desc: kindDesc(newKind.id) }),
-          )
-        : null,
-      momentumActive(p)
-        ? h(
-            'div',
-            { class: `momentum${p.momentum.streak ? '' : ' off'}` },
-            h('span', { class: 'halo' }, '⚡'),
-            p.momentum.streak
-              ? t('Momentum ×{n}: {perks} free', { n: p.momentum.streak, perks: momentumPerkText(p.momentum.streak) })
-              : t('Win in a row to build Momentum and get free head-starts'),
-          )
-        : null,
-      h('div', { class: 'm-sub' }, t('Boosters')),
-      row,
-      btn(
-        tp(
-          L.throws + p.upgrades.throws + (momentumActive(p) ? MOMENTUM_PERKS[p.momentum.streak].throws : 0),
-          'Launch! · {n} throw',
-          'Launch! · {n} throws',
-        ),
-        'primary big wide',
-        () => {
-          for (const id of Object.keys(chosen) as BoosterId[]) if (chosen[id]) p.boosters[id]--;
-          app.save();
-          m.close();
-          app.startLevel(n, { boosters: { ...chosen }, level: L });
-        },
-      ),
-    ],
-    { cls: 'pre' },
+    ),
+    h(
+      'div',
+      { class: 'kinds' },
+      ...Object.values(KINDS)
+        .filter((kind) => kind.unlock <= n)
+        .map((kind) => projectileCanvas(kind.id, 34)),
+    ),
+    h('div', { class: 'm-sub' }, t('Boosters')),
+    row,
+    btn(t('Got it'), 'primary wide', dismiss),
   );
+  scene.el.append(panel, entranceGate);
+  // Font loading and the entrance can finish without moving a live tap target.
+  window.setTimeout(() => {
+    entranceGate.remove();
+    if (panel.isConnected) panel.inert = false;
+  }, 300);
+}
+
+/** Remix's first-throw card shows its whole twist and target without a shop. */
+export function remixPreLevel(app: App, n: number) {
+  app.startRemix(n);
+  const scene = app.scene!;
+  const L = scene.L;
+  const panel = h(
+    'div',
+    { class: 'level-info remix-prelevel', role: 'group', 'aria-label': t('Bonus Remix details') },
+    h('div', { class: 'm-sub' }, t('Remix · Bonus')),
+    h('div', { class: 'm-title' }, planetName(L.name)),
+    L.twist === 'boss'
+      ? h('div', { class: 'twist-chip' }, t('☄️ Comet Guardian — hit it 3 times!'))
+      : twistChip(L, app.p.settings.planetColours === 'clear'),
+    L.shortKind
+      ? h(
+          'div',
+          { class: 'short-kind', 'aria-label': t('Resting this planet: {name}', { name: t(KINDS[L.shortKind].name) }) },
+          h('span', { class: 'short-kind-icon', 'aria-hidden': 'true' }, projectileCanvas(L.shortKind, 36)),
+          h('span', null, t('Resting this planet: {name}', { name: t(KINDS[L.shortKind].name) })),
+        )
+      : null,
+    goalChips(L, scene),
+    h(
+      'div',
+      { class: 'targets' },
+      ...L.stars.map((target, i) =>
+        h('div', { class: 'tg' }, h('b', null, '★'.repeat(i + 1)), h('span', null, t('{n} life', { n: fmt(target) }))),
+      ),
+    ),
+    btn(t('Set off!'), 'primary wide', () => panel.remove()),
+  );
+  const originalThrow = scene.o.onThrow;
+  scene.o.onThrow = (kind) => {
+    panel.remove();
+    originalThrow?.(kind);
+  };
+  scene.el.append(panel);
+}
+
+/** The suggested resident helps this planet; Styles keeps the saved Buddy. */
+export function syncPlanetBuddy(scene: LevelScene, species: string, acc: string, shield: TraitId | null) {
+  scene.o.buddy = { species, acc };
+  (scene.o as typeof scene.o & { buddyShield?: TraitId | null }).buddyShield = shield;
+  scene.predictCache = null;
+  scene.renderHud();
+}
+
+function preLevelBuddyChip(app: App, scene: LevelScene, level: LevelDef): HTMLElement | null {
+  const friends = buddyEligible(app.p);
+  if (!buddyChipAvailable(app.p, level.n, level.troubles, !!scene.o.gentle)) return null;
+  const troubles = level.troubles;
+  const first = planetBuddyFor(app.p, troubles);
+  if (!first) return null;
+  let selected = first;
+  const chip = h('button', {
+    class: 'twist-chip buddy-chip',
+    type: 'button',
+    style: 'width:100%;text-align:left;display:flex;align-items:center;gap:8px;min-height:48px',
+  });
+  const update = () => {
+    const id = selected;
+    const creature = SPECIES_BY_ID[id];
+    const trait = traitOf(id);
+    syncPlanetBuddy(scene, id, app.p.buddy.acc ?? scene.o.festAcc ?? '', buddyShieldFor(app.p, 'campaign', level.n, id));
+    chip.replaceChildren(
+      critterCanvas(id, 34),
+      h('span', { class: 'buddy-chip-copy' }, h('b', null, t('Buddy')), h('small', null, buddyHelpLine(trait, t(creature.name)))),
+      trait ? traitBadge(trait, true) : h('span'),
+    );
+    chip.setAttribute('aria-label', t('Your Buddy {name}. Tap to choose a friend.', { name: t(creature.name) }));
+  };
+  chip.addEventListener('click', () => {
+    selected = nextPlanetBuddy(selected, friends);
+    sfx.click();
+    haptic.light();
+    update();
+  });
+  update();
+  return chip;
+}
+
+function buddyHelpLine(trait: ReturnType<typeof traitOf>, name: string): string {
+  if (trait === 'fireproof') return t('Your Buddy {name} keeps fire off its home.', { name });
+  if (trait === 'swimmer') return t('Your Buddy {name} keeps fire and weeds off its home.', { name });
+  if (trait === 'weedproof') return t('Your Buddy {name} keeps weeds off its home.', { name });
+  if (trait === 'frostproof') return t('Your Buddy {name} keeps frost off its home.', { name });
+  return t('Your Buddy {name} makes the first Trouble wait 1 throw.', { name });
 }

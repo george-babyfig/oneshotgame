@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Only this site's own files may load: no CDNs, trackers or embeds (the game promises Data Not Collected). -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'"
+    />
+    <title>Comet Garden — Fling comets, grow tiny worlds</title>
+    <meta
+      name="description"
+      content="Comet Garden is a cozy space game for iPhone: fling comets, grow tiny worlds and welcome cute creatures. No ads, and purchases stay with grown-ups."
+    />
+    <meta name="robots" content="index,follow" />
+    <meta name="theme-color" content="#0b0a24" />
+    <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png" />
+    <link rel="apple-touch-icon" href="img/icon-180.png" />
+    <link rel="stylesheet" href="style.css" />
+    <!-- TODO: once the domain is chosen, add <link rel="canonical" href="https://YOUR-DOMAIN/"> and
+         <meta property="og:url" content="https://YOUR-DOMAIN/">, and make og:image absolute
+         (https://YOUR-DOMAIN/img/og.png). Most link previews ignore relative image paths. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Comet Garden" />
+    <meta property="og:title" content="Comet Garden — Fling comets, grow tiny worlds" />
+    <meta
+      property="og:description"
+      content="Fling comets, grow a tiny world and welcome the cute creatures who move in. A cozy space game for iPhone."
+    />
+    <meta property="og:image" content="img/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Comet Garden: a bunny on a tiny green planet, with the words Fling comets, grow tiny worlds" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="wrap">
+        <a class="brand" href="index.html" aria-current="page">
+          <img src="img/icon-180.png" width="36" height="36" alt="" />
+          Comet Garden
+        </a>
+        <nav class="nav" aria-label="Main">
+          <ul>
+            <li><a href="support.html">Support</a></li>
+            <li><a href="privacy.html">Privacy</a></li>
+            <li><a href="press.html">Press kit</a></li>
+            <li><a href="notes.html">Dev notes</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero wrap" aria-labelledby="hero-title">
+        <div class="hero-art">
+          <span class="orbit" aria-hidden="true"></span>
+          <img
+            src="img/icon-512.png"
+            width="512"
+            height="512"
+            alt="Comet Garden app icon: a round white bunny sitting on top of a small blue and green planet"
+          />
+        </div>
+        <h1 id="hero-title">Comet Garden</h1>
+        <p class="subtitle">Fling comets, grow tiny worlds</p>
+        <p class="lede">Fling a comet, watch a tiny world bloom, and welcome the creatures who move in.</p>
+        <div class="cta-row">
+          <!-- TODO: App Store badge + link after approval.
+               Use Apple's official "Download on the App Store" badge from Apple's marketing resources,
+               saved into img/ (never hotlinked), wrapped in <a href="https://apps.apple.com/app/idXXXXXXXXXX">.
+               Until then this is a plain, non-clickable note. -->
+          <p class="store-placeholder">
+            <small>Coming soon</small>
+            <span>on the App Store for iPhone</span>
+          </p>
+          <a class="btn btn-primary" href="#look">See how it plays</a>
+        </div>
+        <p class="hero-note">No ads · Six languages · Data Not Collected</p>
+      </section>
+
+      <section class="section wrap" id="look" aria-labelledby="look-title">
+        <div class="section-head">
+          <p class="eyebrow">Take a peek</p>
+          <h2 id="look-title">A tiny world in your hands</h2>
+          <p>Pull back, aim and let go. Every throw changes the planet, and every planet has new friends to meet.</p>
+        </div>
+        <div class="shots-scroll" role="region" aria-label="Screenshots (scroll sideways for more)" tabindex="0">
+          <ul class="shots">
+            <li>
+              <img
+                src="img/shot-1.jpg"
+                width="506"
+                height="1100"
+                loading="lazy"
+                alt="Screenshot: Watch it bloom. Two taped photos of the same planet, bare grey rock and then green, blue and full of friends, with a deer sticker."
+              />
+            </li>
+            <li>
+              <img
+                src="img/shot-2.jpg"
+                width="506"
+                height="1100"
+                loading="lazy"
+                alt="Screenshot: Welcome a friend. A Canopy Octopus moves onto a lively planet, with a card saying it joined your Lifebook."
+              />
+            </li>
+            <li>
+              <img
+                src="img/shot-3.jpg"
+                width="506"
+                height="1100"
+                loading="lazy"
+                alt="Screenshot: Mix a Fusion. Rock and ice make a Super Glacier and a Combo 4 on a planet full of creatures."
+              />
+            </li>
+            <li>
+              <img
+                src="img/shot-4.jpg"
+                width="506"
+                height="1100"
+                loading="lazy"
+                alt="Screenshot: Read the sky. The aim line curls through a swirling Magnet Mist and the planet shows +37 life before the throw."
+              />
+            </li>
+            <li>
+              <img
+                src="img/shot-5.jpg"
+                width="506"
+                height="1100"
+                loading="lazy"
+                alt="Screenshot: Build your world. A round green Homeworld with windmills, little buildings, resident friends and the Keeper."
+              />
+            </li>
+            <li>
+              <img
+                src="img/shot-6.jpg"
+                width="506"
+                height="1100"
+                loading="lazy"
+                alt="Screenshot: Meet 36 creatures. Lifebook cards for creatures like Hopper Bunny and Rainbow Parrot, with crab, penguin and parrot stickers."
+              />
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <div class="wrap" id="features">
+        <section class="feature accent-sun" aria-labelledby="f-fling">
+          <div class="feature-art" aria-hidden="true">
+            <svg viewBox="0 0 320 320" focusable="false">
+              <defs>
+                <radialGradient id="fa-ocean" cx="38%" cy="34%" r="72%">
+                  <stop offset="0" stop-color="#63b4f4" />
+                  <stop offset="1" stop-color="#1c3a98" />
+                </radialGradient>
+                <linearGradient id="fa-tail" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#ffb13d" stop-opacity="0" />
+                  <stop offset="1" stop-color="#ffb13d" stop-opacity="0.9" />
+                </linearGradient>
+                <radialGradient id="fa-head" cx="35%" cy="35%" r="70%">
+                  <stop offset="0" stop-color="#fff4c8" />
+                  <stop offset="0.5" stop-color="#ffb13d" />
+                  <stop offset="1" stop-color="#ff7a2f" />
+                </radialGradient>
+              </defs>
+              <circle cx="196" cy="200" r="98" fill="url(#fa-ocean)" stroke="#8fd8ff" stroke-width="3" />
+              <path
+                d="M138 176c16-30 60-38 80-16 14 16-2 36-26 36-20 0-30 12-46 4-12-6-14-14-8-24z"
+                fill="#5cc468"
+                stroke="#f0d68c"
+                stroke-width="5"
+              />
+              <path d="M214 236c14-12 42-10 48 6 4 14-14 24-32 20-14-3-26-16-16-26z" fill="#5cc468" stroke="#f0d68c" stroke-width="5" />
+              <path d="M150 120l10-22 12 18 12-26 12 30z" fill="#9b8c7a" stroke="#f0d68c" stroke-width="4" stroke-linejoin="round" />
+              <path d="M22 30L96 118L112 100Z" fill="url(#fa-tail)" />
+              <circle cx="104" cy="110" r="17" fill="url(#fa-head)" />
+              <path d="M126 112q16 4 22 10" fill="none" stroke="#ffd76a" stroke-width="5" stroke-linecap="round" stroke-dasharray="1 12" />
+              <path d="M262 64l4 10 10 4-10 4-4 10-4-10-10-4 10-4z" fill="#ffd76a" />
+              <path d="M58 214l3 7 7 3-7 3-3 7-3-7-7-3 7-3z" fill="#5ef2b0" />
+            </svg>
+          </div>
+          <div>
+            <p class="eyebrow">Fling and grow</p>
+            <h2 id="f-fling">Every throw changes the world</h2>
+            <p class="lede">Gravity bends each comet around the planet, and what it carries decides what grows.</p>
+            <ul class="dots">
+              <li>Pull back, aim and let go: gravity bends every throw around the planet</li>
+              <li>
+                Rocks raise mountains, ice comets fill oceans, seed pods grow meadows and forests, magma builds volcanoes, rain clouds and
+                sunbursts help it all thrive
+              </li>
+              <li>The planet shows what your throw will do before you let go: new land, who moves in, and anyone who might wander off</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="feature flip accent-life" aria-labelledby="f-creatures">
+          <div class="feature-art" aria-hidden="true">
+            <svg viewBox="0 0 320 320" focusable="false">
+              <defs>
+                <radialGradient id="fb-ocean" cx="50%" cy="20%" r="80%">
+                  <stop offset="0" stop-color="#63b4f4" />
+                  <stop offset="1" stop-color="#1c3a98" />
+                </radialGradient>
+              </defs>
+              <circle cx="160" cy="400" r="200" fill="url(#fb-ocean)" stroke="#8fd8ff" stroke-width="3" />
+              <path d="M40 262c30-40 110-58 170-50 40 6 70 22 80 40-60-12-150-8-250 10z" fill="#5cc468" stroke="#f0d68c" stroke-width="5" />
+              <g>
+                <ellipse cx="86" cy="178" rx="9" ry="24" fill="#faf8ff" />
+                <ellipse cx="110" cy="178" rx="9" ry="24" fill="#faf8ff" />
+                <ellipse cx="86" cy="180" rx="4" ry="16" fill="#ffbed2" />
+                <ellipse cx="110" cy="180" rx="4" ry="16" fill="#ffbed2" />
+                <ellipse cx="98" cy="218" rx="34" ry="30" fill="#faf8ff" />
+                <circle cx="88" cy="214" r="4" fill="#281e46" />
+                <circle cx="108" cy="214" r="4" fill="#281e46" />
+                <ellipse cx="80" cy="224" rx="6" ry="4" fill="#ffbed2" />
+                <ellipse cx="116" cy="224" rx="6" ry="4" fill="#ffbed2" />
+              </g>
+              <g>
+                <circle cx="152" cy="150" r="13" fill="#ffecbe" />
+                <circle cx="190" cy="150" r="13" fill="#ffecbe" />
+                <circle cx="152" cy="150" r="6" fill="#ffaa78" />
+                <circle cx="190" cy="150" r="6" fill="#ffaa78" />
+                <ellipse cx="171" cy="190" rx="42" ry="38" fill="#ffecbe" />
+                <circle cx="158" cy="184" r="5" fill="#281e46" />
+                <circle cx="184" cy="184" r="5" fill="#281e46" />
+                <path d="M164 198q7 6 14 0" fill="none" stroke="#281e46" stroke-width="3" stroke-linecap="round" />
+                <ellipse cx="148" cy="198" rx="7" ry="4" fill="#ffaa78" />
+                <ellipse cx="194" cy="198" rx="7" ry="4" fill="#ffaa78" />
+              </g>
+              <g>
+                <path d="M236 196l8-22 8 22z" fill="#c8f0ff" />
+                <path d="M258 196l8-22 8 22z" fill="#c8f0ff" />
+                <ellipse cx="255" cy="222" rx="30" ry="26" fill="#c8f0ff" />
+                <circle cx="246" cy="218" r="4" fill="#281e46" />
+                <circle cx="264" cy="218" r="4" fill="#281e46" />
+                <ellipse cx="238" cy="228" rx="5" ry="3" fill="#96c8ff" />
+                <ellipse cx="272" cy="228" rx="5" ry="3" fill="#96c8ff" />
+              </g>
+              <path d="M170 96c-6-10-22-6-18 6 3 8 18 16 18 16s15-8 18-16c4-12-12-16-18-6z" fill="#ff8fe0" />
+              <path d="M60 80l4 10 10 4-10 4-4 10-4-10-10-4 10-4z" fill="#ffd76a" />
+              <path d="M268 88l3 7 7 3-7 3-3 7-3-7-7-3 7-3z" fill="#5ef2b0" />
+            </svg>
+          </div>
+          <div>
+            <p class="eyebrow">Meet the creatures</p>
+            <h2 id="f-creatures">Cute friends move in</h2>
+            <p class="lede">Build the right home and someone new comes to live there.</p>
+            <ul class="dots">
+              <li>
+                36 creatures to find, each with a favourite home: otters where forest meets the sea, newts on warm volcanoes, owls in snowy
+                pines
+              </li>
+              <li>Every creature brings a trait that protects its home</li>
+              <li>Keep them all in your Lifebook, from common friends to rare legends</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="feature accent-gem" aria-labelledby="f-mix">
+          <div class="feature-art" aria-hidden="true">
+            <svg viewBox="0 0 320 320" focusable="false">
+              <defs>
+                <radialGradient id="fc-ice" cx="35%" cy="35%" r="70%">
+                  <stop offset="0" stop-color="#e6fbff" />
+                  <stop offset="0.5" stop-color="#4de1ff" />
+                  <stop offset="1" stop-color="#1b8fd6" />
+                </radialGradient>
+                <radialGradient id="fc-magma" cx="35%" cy="35%" r="70%">
+                  <stop offset="0" stop-color="#ffe0b0" />
+                  <stop offset="0.5" stop-color="#ff7a2f" />
+                  <stop offset="1" stop-color="#c2451b" />
+                </radialGradient>
+                <linearGradient id="fc-tail-l" x1="1" y1="0" x2="0" y2="0">
+                  <stop offset="0" stop-color="#4de1ff" stop-opacity="0.8" />
+                  <stop offset="1" stop-color="#4de1ff" stop-opacity="0" />
+                </linearGradient>
+                <linearGradient id="fc-tail-r" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stop-color="#ff7a2f" stop-opacity="0.8" />
+                  <stop offset="1" stop-color="#ff7a2f" stop-opacity="0" />
+                </linearGradient>
+              </defs>
+              <path d="M84 110L14 92L14 128Z" fill="url(#fc-tail-l)" />
+              <path d="M236 110L306 92L306 128Z" fill="url(#fc-tail-r)" />
+              <circle cx="92" cy="110" r="26" fill="url(#fc-ice)" />
+              <circle cx="228" cy="110" r="26" fill="url(#fc-magma)" />
+              <g fill="#eef1ff">
+                <circle cx="140" cy="112" r="22" />
+                <circle cx="164" cy="96" r="28" />
+                <circle cx="188" cy="114" r="20" />
+                <rect x="132" y="110" width="64" height="24" rx="12" />
+              </g>
+              <rect x="112" y="150" width="96" height="36" rx="18" fill="#ffd76a" />
+              <text
+                x="160"
+                y="175"
+                text-anchor="middle"
+                font-family="Fredoka, ui-rounded, system-ui, sans-serif"
+                font-weight="700"
+                font-size="20"
+                fill="#1b1040"
+              >
+                Steam!
+              </text>
+              <circle cx="92" cy="252" r="14" fill="#4de1ff" />
+              <circle cx="152" cy="244" r="19" fill="#5ef2b0" />
+              <circle cx="222" cy="234" r="25" fill="#ffb13d" />
+              <path
+                d="M110 250q12-6 22-6M174 240q14-6 24-6"
+                fill="none"
+                stroke="#ffd76a"
+                stroke-width="5"
+                stroke-linecap="round"
+                stroke-dasharray="1 10"
+              />
+              <path d="M268 262l4 10 10 4-10 4-4 10-4-10-10-4 10-4z" fill="#ffd76a" />
+            </svg>
+          </div>
+          <div>
+            <p class="eyebrow">Mix, chain and plan</p>
+            <h2 id="f-mix">Clever throws, bigger magic</h2>
+            <p class="lede">Put the right throws together and watch what they make.</p>
+            <ul class="dots">
+              <li>Fusions: two throws that work together, like ice and magma making Steam</li>
+              <li>Combos: clever throws back to back grow a chain of bonus power</li>
+              <li>Supernova: charge it up and send a super-sized throw</li>
+              <li>Read the sky: drifting rocks, a bubble moon and a turning ring of pebbles to time your throws around</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="feature flip accent-pink" aria-labelledby="f-home">
+          <div class="feature-art" aria-hidden="true">
+            <svg viewBox="0 0 320 320" focusable="false">
+              <defs>
+                <radialGradient id="fd-ocean" cx="38%" cy="30%" r="75%">
+                  <stop offset="0" stop-color="#63b4f4" />
+                  <stop offset="1" stop-color="#1c3a98" />
+                </radialGradient>
+              </defs>
+              <circle cx="160" cy="214" r="92" fill="url(#fd-ocean)" stroke="#ff8fe0" stroke-width="3" />
+              <path
+                d="M84 196c18-24 70-30 100-18 26 10 44 6 60 18-6 30-60 30-90 22-26-7-58 4-70-22z"
+                fill="#5cc468"
+                stroke="#f0d68c"
+                stroke-width="5"
+              />
+              <path d="M98 152l14-40 14 40z" fill="#3caa64" />
+              <path d="M200 148l14-44 14 44z" fill="#3caa64" />
+              <path d="M126 142a22 22 0 0 1 44 0z" fill="#ffcd96" />
+              <rect x="142" y="126" width="12" height="16" rx="3" fill="#965a3c" />
+              <path d="M172 132a18 18 0 0 1 32 0z" fill="#ffb4dc" />
+              <ellipse cx="148" cy="92" rx="7" ry="18" fill="#faf8ff" />
+              <ellipse cx="166" cy="92" rx="7" ry="18" fill="#faf8ff" />
+              <ellipse cx="157" cy="116" rx="22" ry="18" fill="#faf8ff" />
+              <circle cx="150" cy="113" r="3" fill="#281e46" />
+              <circle cx="164" cy="113" r="3" fill="#281e46" />
+              <path d="M250 60l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#ffd76a" />
+              <path d="M62 84l3 7 7 3-7 3-3 7-3-7-7-3 7-3z" fill="#4de1ff" />
+              <circle cx="266" cy="244" r="6" fill="#ff8fe0" />
+              <circle cx="52" cy="232" r="5" fill="#5ef2b0" />
+            </svg>
+          </div>
+          <div>
+            <p class="eyebrow">A Homeworld of your own</p>
+            <h2 id="f-home">A home for every friend</h2>
+            <p class="lede">The friends you meet can come and live with you.</p>
+            <ul class="dots">
+              <li>Invite the friends you meet to live on your Homeworld</li>
+              <li>Choose a Buddy who helps when a Trouble appears on a planet</li>
+              <li>Make your Keeper: faces, skin tones, hair and outfits</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      <section class="section wrap accent-dust" aria-labelledby="play-title">
+        <div class="section-head">
+          <p class="eyebrow">Play your way</p>
+          <h2 id="play-title">Gentle to start, lots to explore</h2>
+          <p>
+            More than 100 planets ramp up gently, with 1 to 3 stars on each. When a planet is tricky, a help ladder shows what happened,
+            offers a tip, and then a little extra help.
+          </p>
+        </div>
+        <ul class="chips" aria-label="Ways to play">
+          <li>Daily Planet</li>
+          <li>Weekly Voyage</li>
+          <li>Meteor Rush</li>
+          <li>Zen Garden</li>
+          <li>Friend challenges</li>
+        </ul>
+      </section>
+
+      <section class="section wrap" id="grown-ups" aria-labelledby="grownups-title">
+        <div class="panel">
+          <div class="section-head">
+            <p class="eyebrow">For grown-ups</p>
+            <h2 id="grownups-title">Calm, fair and private</h2>
+            <p>The things grown-ups ask about first, answered up front.</p>
+          </div>
+          <ul class="cards">
+            <li class="card">
+              <h3>
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <circle cx="12" cy="12" r="11" fill="#5ef2b0" />
+                  <path
+                    d="M7 12.5l3.2 3.2L17 9"
+                    fill="none"
+                    stroke="#0b0a24"
+                    stroke-width="2.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                No ads
+              </h3>
+              <p>There are no ads anywhere in the game.</p>
+            </li>
+            <li class="card">
+              <h3>
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <circle cx="12" cy="12" r="11" fill="#5ef2b0" />
+                  <path
+                    d="M7 12.5l3.2 3.2L17 9"
+                    fill="none"
+                    stroke="#0b0a24"
+                    stroke-width="2.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                No energy timers
+              </h3>
+              <p>No lives and no energy timers. Nobody waits for a meter to refill.</p>
+            </li>
+            <li class="card">
+              <h3>
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <circle cx="12" cy="12" r="11" fill="#5ef2b0" />
+                  <path
+                    d="M7 12.5l3.2 3.2L17 9"
+                    fill="none"
+                    stroke="#0b0a24"
+                    stroke-width="2.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                No random paid rewards
+              </h3>
+              <p>Every optional purchase shows exactly what you get.</p>
+            </li>
+            <li class="card">
+              <h3>
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <circle cx="12" cy="12" r="11" fill="#ffd76a" />
+                  <rect x="7.5" y="10.5" width="9" height="7" rx="1.5" fill="#0b0a24" />
+                  <path d="M9.5 10.5V9a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="#0b0a24" stroke-width="2" />
+                </svg>
+                Purchases stay with grown-ups
+              </h3>
+              <p>Optional purchases are sold only in the Grown-ups area, behind a parent check.</p>
+            </li>
+            <li class="card">
+              <h3>
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <circle cx="12" cy="12" r="11" fill="#4de1ff" />
+                  <path d="M12 17.5c-3-2-5-4-5-6.3A2.7 2.7 0 0 1 12 9.5a2.7 2.7 0 0 1 5 1.7c0 2.3-2 4.3-5 6.3z" fill="#0b0a24" />
+                </svg>
+                Gentle planets
+              </h3>
+              <p>A setting in the Grown-ups area: sky bumps give the throw back, and Troubles and Clashes rest.</p>
+            </li>
+            <li class="card">
+              <h3>
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <circle cx="12" cy="12" r="11" fill="#b3a3ff" />
+                  <circle cx="12" cy="12" r="6" fill="none" stroke="#0b0a24" stroke-width="2" />
+                  <path d="M12 8.8V12l2.2 1.6" fill="none" stroke="#0b0a24" stroke-width="2" stroke-linecap="round" />
+                </svg>
+                Play-time summary
+              </h3>
+              <p>See this week's rounds and minutes, and set an optional break reminder.</p>
+            </li>
+          </ul>
+          <div class="banner">
+            <h3>Data Not Collected</h3>
+            <p>
+              No accounts, no analytics and no tracking. Progress stays on this device. <a href="privacy.html">Read the privacy policy</a>.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section wrap" aria-labelledby="lang-title">
+        <div class="section-head">
+          <p class="eyebrow">Languages</p>
+          <h2 id="lang-title">Play in six languages</h2>
+        </div>
+        <ul class="chips big">
+          <li lang="en">English</li>
+          <li lang="es">Español</li>
+          <li lang="fr">Français</li>
+          <li lang="de">Deutsch</li>
+          <li lang="pt-BR">Português (Brasil)</li>
+          <li lang="ja">日本語</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <nav class="nav" aria-label="Footer">
+          <ul>
+            <li><a href="support.html">Support</a></li>
+            <li><a href="privacy.html">Privacy</a></li>
+            <li><a href="press.html">Press kit</a></li>
+            <li><a href="notes.html">Dev notes</a></li>
+          </ul>
+        </nav>
+        <!-- TODO: replace OWNER NAME with the legal name used in App Store Connect's Copyright field. -->
+        <p class="fineprint">© 2026 <span class="placeholder">OWNER NAME</span></p>
+        <p class="fineprint">
+          Apple, iPhone and App Store are trademarks of Apple Inc., registered in the U.S. and other countries and regions.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

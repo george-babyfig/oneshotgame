@@ -17,20 +17,28 @@ export function drawGalaxy(
   opts: { reduceMotion?: boolean; onTap?: (g: GalaxyPlanet) => void } = {},
 ): GalaxyView {
   const g = c.getContext('2d')!;
-  const dpr = Math.min(2, devicePixelRatio || 1);
+  let dpr = 0;
   const shown = planets.slice(-12);
   const positions = new Map<number, { x: number; y: number; r: number }>();
   let raf = 0;
-  const speed = opts.reduceMotion ? 0.25 : 1;
+  let stopped = false;
+  const speed = opts.reduceMotion ? 0 : 1;
+  const schedule = () => {
+    if (!raf && !stopped && !document.hidden) raf = requestAnimationFrame(draw);
+  };
   const draw = (now: number) => {
-    const r = c.getBoundingClientRect();
-    if (c.width !== Math.round(r.width * dpr) || c.height !== Math.round(r.height * dpr)) {
-      c.width = Math.round(r.width * dpr);
-      c.height = Math.round(r.height * dpr);
+    raf = 0;
+    if (stopped || document.hidden) return;
+    dpr = Math.min(2, devicePixelRatio || 1);
+    const width = c.clientWidth;
+    const height = c.clientHeight;
+    if (c.width !== Math.round(width * dpr) || c.height !== Math.round(height * dpr)) {
+      c.width = Math.round(width * dpr);
+      c.height = Math.round(height * dpr);
     }
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const w = r.width;
-    const H = r.height;
+    const w = width;
+    const H = height;
     const cx = w / 2;
     const cy = H / 2;
     const t = (now / 1000) * speed;
@@ -97,9 +105,16 @@ export function drawGalaxy(
         drawCreature(g, sp.id, x, y - size + 1 + Math.sin(t * 3 + i) * 1.2, 0, size * 1.05, t + i);
       }
     });
-    raf = requestAnimationFrame(draw);
+    if (!opts.reduceMotion) schedule();
   };
-  raf = requestAnimationFrame(draw);
+  const onVisible = () => {
+    if (document.hidden) {
+      cancelAnimationFrame(raf);
+      raf = 0;
+    } else schedule();
+  };
+  document.addEventListener('visibilitychange', onVisible);
+  schedule();
   if (opts.onTap) {
     c.addEventListener('click', (e) => {
       const r = c.getBoundingClientRect();
@@ -120,7 +135,11 @@ export function drawGalaxy(
     });
   }
   return {
-    stop: () => cancelAnimationFrame(raf),
+    stop: () => {
+      stopped = true;
+      cancelAnimationFrame(raf);
+      document.removeEventListener('visibilitychange', onVisible);
+    },
     pos: (n) => positions.get(n) ?? null,
   };
 }

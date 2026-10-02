@@ -1,59 +1,72 @@
-# App Store listing — Pocket Planet (日本語)
+# Comet Garden — App Store listing (日本語, ja)
 
-**Name:** Pocket Planet
-**Subtitle (30):** 投げて、育てて、いきもの発見！
+**App name (30):** Comet Garden
+(Optional alternative, owner's call: 「Comet Garden（コメットガーデン）」 or 「コメットガーデン」 for the ja name field. Keep "Comet Garden" as primary; a katakana name must also be unique on the store.)
+**Subtitle (30):** すいせいを投げて、ちいさな惑星をそだてよう
+**Primary category:** Games → Casual · **Secondary:** Games → Simulation (set once; same for every language)
+**Age rating:** 4+ (same as en-US)
+**Price:** same as en-US (not part of the localized text)
 
 ## Promotional text (170)
 
-新登場：「今日の惑星」「メテオラッシュ」「禅の庭」、そして「友だちと対戦」！さらに、きみが留守の間にお客さんがプレゼントをおいていってくれるよ！
+すいせいを投げて、かわいいいきものがひっこしてくる小さな世界をそだてよう。フュージョンをつくり、コンボをつなげて、ホームワールドをつくろう。広告なし。おかいものは大人だけ。
 
-## Description
+## Description (4,000)
 
-くるくる回る小さな惑星に、いわ・こおりすいせい・マグマ・タネを投げこもう。みるみるうちに、惑星がいのちであふれだす！
+すいせいを投げて、ちいさな世界が花ひらくのをながめ、ひっこしてくるいきものたちをむかえよう。
 
-投げたものは重力でカーブするから、ねらいを定めるのも楽しさのひとつ。いわで山がもりあがり、こおりで海ができ、マグマで火山が生まれ、タネで森がそだちます。ぴったりの地形をとなりあわせにすると、かわいいいきものたちがやってくるよ。森と海のあいだにはカワウソ、火山と海のあいだにはくろいしガメ、そして大胆な惑星には伝説のいきものも！
+【投げて、そだてる】
+・ひっぱって、ねらって、はなすだけ。重力で、投げた軌道が惑星のまわりでまがります
+・いわは山を、こおりすいせいは海を、タネは草原と森を、マグマは火山をつくります。あまぐもとおひさまボールが、すべてをいきいきとそだてます
+・はなす前に、惑星が投げの結果を見せてくれます。新しい土地、ひっこしてくるいきもの、お散歩に出かけそうないきものまで
 
-ちょっとしたスキマ時間にぴったり
-• 1ステージ約1分。待ち時間にもサクッと遊べる
-• 1つの惑星で最大3つ星。パーフェクトをめざしてリプレイしよう
-• 手ごたえ十分のハード＆スーパーハードな惑星も
+【いきものたちに会おう】
+・見つけられるいきものは36ひき。それぞれにお気に入りのすみかがあります。森と海がであう場所にはカワウソ、あたたかい火山にはイモリ、雪のつもったマツにはフクロウ
+・どのいきものも、すみかを守る「とくちょう」をもっています
+・いきもの図鑑に、ぜんぶ記録しよう。ふつうのなかまから、レアなでんせつまで
 
-きみと一緒に広がる銀河
-• クリアした惑星は銀河に加わり、留守の間も星くずをつくってくれる
-• 銀河に遊びにきたいきものが、プレゼントや思い出の品をおいていく
-• 星くずでずっとつづくアップグレードをゲット
+【まぜて、つなげて、作戦を立てよう】
+・フュージョン：2つの投げが力をあわせます。たとえば、こおりとマグマでスチームに
+・コンボ：うまい投げを続けると、ボーナスのパワーがどんどんつながります
+・スーパーノヴァ：パワーをためて、特大の一投をくりだそう
+・そらを読もう：ただよう岩、バブルムーン、まわるこいしのわ。タイミングを見きわめて投げよう
 
-発見がいっぱい
-• いきもの図鑑にあつめられるいきものは36種類。ふつうの子から伝説の子まで
-• すみかセット、宝箱つきのチャプター、そしてスターロード
-• デイリークエスト、毎日のプレゼント、探検家ランク
+【自分だけのホームワールド】
+・出会ったなかまを、ホームワールドにまねこう
+・バディをえらぼう。惑星にこまりごとが起きたとき、たすけてくれます
+・キーパーをつくろう：かお、はだのいろ、かみがた、コーデ
 
-好きなスタイルで遊ぼう
-• 今日の惑星：毎日みんなが同じ世界に挑戦。結果をシェアしよう
-• メテオラッシュ：60秒間、投げ放題！
-• 禅の庭：目標も時間制限もなし。自分だけの世界をのんびりつくろう
-• 友だちと対戦：コードを送って、どっちがたくさんいのちを育てられるか勝負！
+【自分のペースであそぼう】
+・100をこえる惑星。むずかしさは少しずつ上がり、どの惑星でも星を1〜3つもらえます
+・むずかしい惑星では、ヘルプが一歩ずつ：なにがおきたか、ちいさなヒント、そしてもう少しのおてつだい
+・今日の惑星、ウィークリーボヤージュ、メテオラッシュ、禅の庭、友だちと対戦
+・English、Español、Français、Deutsch、Português (Brasil)、日本語であそべます
 
-安心・やさしい設計：広告なし、ライフやスタミナの待ち時間なし、ガチャ・ルートボックスなし、トラッキングなし。有料アイテムは、手に入るものがいつもはっきりわかります。
+【おとなの方へ】
+・広告なし。ライフやスタミナの待ち時間なし。有料のランダム報酬（ガチャ）もありません。
+・追加購入は任意で、保護者チェックのある「おうちの方へ」エリアでのみ販売。中身は、購入前にいつもはっきり表示されます
+・「やさしい惑星」設定、プレイ時間のまとめ、休憩をすすめるおしらせ（任意）
+・データの収集なし：進みぐあいはこの端末に保存されます
 
-## Keywords (100)
+ご質問やアイデアは、下のサポートページからどうぞ。たのしく投げてね！
 
-惑星,宇宙,カジュアル,癒し,放置,かわいい,動物,コレクション,育成,重力,パズル,オフライン,ほのぼの,暇つぶし,簡単,ゆるい,箱庭
+## Keywords (100 bytes, ja)
+
+宇宙,箱庭,育成,癒し,かわいい,動物,ほのぼの,流れ星,隕石,銀河,図鑑,物理
+
+_Native terms: 箱庭 (miniature-world sandbox), 育成 (raising/growing), 癒し and ほのぼの (soothing, heart-warming), 図鑑 (collection book). Two-kanji terms are whole words in Japanese; the "longer than 2 characters" advice in docs/product/store-research.md is about Latin letters. すいせい, 投げ, 惑星 and そだてる are left out because the subtitle already has them. Optional swap if testing: 物理 → 彗星 (the kanji spelling of the subtitle's すいせい)._
+
+## Support / marketing / privacy
+
+- Support URL: https://<your-site>/support.html (site files in `site/`; same URL for every language)
+- Marketing URL: https://<your-site>/
+- Privacy policy URL: https://<your-site>/privacy.html (the page includes a Japanese section)
+- Copyright: 2026 <owner legal name>
 
 ## What's New
 
-はじめてのリリースです。遊んでくれてありがとう！
+Not shown for version 1.0 (Apple has no "What's New" on a first release). From 1.0.1, translate the English notes from `store/whats-new-template.md`; sign-off suggestion: 「たのしく投げてね！ — Comet Garden チーム」.
 
-## In-app purchases
+## Lengths
 
-See listing.md
-
-## Review notes
-
-See listing.md
-
-## Screenshots
-
-See listing.md
-
-Character counts: subtitle 15, promo 72, keywords 68
+Subtitle 21/30 chars · Promotional text 86/170 chars · Description 1,086/4,000 chars · Keywords 98/100 bytes (UTF-8). Measured with python3 on the exact text to paste (len() in characters; blank lines in the description counted).

@@ -1,4 +1,4 @@
-// Pocket Planet — world simulation. Pure logic, no DOM.
+// Comet Garden — world simulation. Pure logic, no DOM.
 // A planet is a ring of sectors. Flung objects change a sector (and splash its
 // neighbours); each sector's numbers decide its biome; biome neighbourhoods
 // spawn creatures. "Life" (score) = biome values + creature points.
@@ -47,12 +47,12 @@ export interface BiomeDef {
 
 export const BIOMES: Record<BiomeId, BiomeDef> = {
   barren: { id: 'barren', name: 'Bare Rock', value: 0, color: '#a08aa6', deco: '', recipe: 'Where nothing has landed yet' },
-  ocean: { id: 'ocean', name: 'Ocean', value: 2, color: '#2f7fe0', deco: '🌊', sea: true, recipe: '☄️ Ice on low ground' },
+  ocean: { id: 'ocean', name: 'Ocean', value: 3, color: '#2f7fe0', deco: '🌊', sea: true, recipe: '☄️ Ice on low ground' },
   reef: { id: 'reef', name: 'Reef', value: 5, color: '#1fc6c0', deco: '🪸', sea: true, recipe: '🌱 Seeds in the ocean' },
   icesheet: {
     id: 'icesheet',
     name: 'Ice Sheet',
-    value: 2,
+    value: 3,
     color: '#bfe8ff',
     deco: '🧊',
     sea: true,
@@ -70,22 +70,22 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
   meadow: { id: 'meadow', name: 'Meadow', value: 3, color: '#8fd65a', deco: '🌼', recipe: '🌱 The edges of where a seed lands' },
   forest: { id: 'forest', name: 'Forest', value: 5, color: '#2f9e4f', deco: '🌲', recipe: '🌱 Right where a seed lands' },
   jungle: { id: 'jungle', name: 'Jungle', value: 6, color: '#1f8a3b', deco: '🌴', recipe: '🌱🌱 A forest that gets warm (🔥 or ☀️)' },
-  mountain: { id: 'mountain', name: 'Mountain', value: 2, color: '#8a7f8d', deco: '⛰️', recipe: '🪨 A rock on bare ground' },
-  highland: { id: 'highland', name: 'Highland', value: 4, color: '#7fa36a', deco: '🌳', recipe: '🌱 Seeds on a mountain' },
-  desert: { id: 'desert', name: 'Desert', value: 2, color: '#e6c170', deco: '🏜️', recipe: '🔥 Magma on flat ground' },
-  savanna: { id: 'savanna', name: 'Savanna', value: 4, color: '#d9b84a', deco: '🌾', recipe: '🌱 Seeds in a desert' },
+  mountain: { id: 'mountain', name: 'Mountain', value: 5, color: '#8a7f8d', deco: '⛰️', recipe: '🪨 A rock on bare ground' },
+  highland: { id: 'highland', name: 'Highland', value: 7, color: '#7fa36a', deco: '🌳', recipe: '🌱 Seeds on a mountain' },
+  desert: { id: 'desert', name: 'Desert', value: 5, color: '#e6c170', deco: '🏜️', recipe: '🔥 Magma on flat ground' },
+  savanna: { id: 'savanna', name: 'Savanna', value: 7, color: '#d9b84a', deco: '🌾', recipe: '🌱 Seeds in a desert' },
   tundra: {
     id: 'tundra',
     name: 'Tundra',
-    value: 2,
+    value: 3,
     color: '#dfe9f2',
     deco: '❄️',
     recipe: '☄️☄️ Two ices on a tall mountain (or a frozen planet)',
   },
-  taiga: { id: 'taiga', name: 'Taiga', value: 4, color: '#5f9a7f', deco: '🌲', recipe: '🌱 Seeds on tundra' },
+  taiga: { id: 'taiga', name: 'Taiga', value: 5, color: '#5f9a7f', deco: '🌲', recipe: '🌱 Seeds on tundra' },
   swamp: { id: 'swamp', name: 'Swamp', value: 3, color: '#6f8a4a', deco: '🟫', recipe: '☄️ Ice on a hill or mountain' },
   marsh: { id: 'marsh', name: 'Marsh', value: 5, color: '#4f8f5a', deco: '🍃', recipe: '🌱 Seeds in a swamp' },
-  volcano: { id: 'volcano', name: 'Volcano', value: 3, color: '#d9533b', deco: '🌋', recipe: '🔥 Magma on a hill or mountain' },
+  volcano: { id: 'volcano', name: 'Volcano', value: 6, color: '#d9533b', deco: '🌋', recipe: '🔥 Magma on a hill or mountain' },
 };
 
 export function biomeOf(s: Pick<Sector, 'land' | 'water' | 'heat' | 'life'>): BiomeId {
@@ -113,15 +113,64 @@ export interface KindDef {
   color: string;
   desc: string;
   unlock: number; // level it first appears
+  stats: { element: 'earth' | 'water' | 'life' | 'fire' | 'air' | 'light'; power: number; reach: number; job: string };
 }
 
 export const KINDS: Record<Kind, KindDef> = {
-  rock: { id: 'rock', name: 'Rock', emoji: '🪨', color: '#b8a9c9', desc: 'Raises land', unlock: 1 },
-  ice: { id: 'ice', name: 'Ice Comet', emoji: '☄️', color: '#7fdcff', desc: 'Adds water, cools', unlock: 1 },
-  seed: { id: 'seed', name: 'Seed Pod', emoji: '🌱', color: '#7dff8a', desc: 'Grows life where there is land or water', unlock: 2 },
-  magma: { id: 'magma', name: 'Magma', emoji: '🔥', color: '#ff7a3d', desc: 'Heats up, builds volcanoes, dries water', unlock: 4 },
-  storm: { id: 'storm', name: 'Rain Cloud', emoji: '🌧️', color: '#9fb4ff', desc: 'Light rain over a wide area', unlock: 7 },
-  sun: { id: 'sun', name: 'Sunburst', emoji: '☀️', color: '#ffd84a', desc: 'Warms a wide area and sparks life', unlock: 11 },
+  rock: {
+    id: 'rock',
+    name: 'Rock',
+    emoji: '🪨',
+    color: '#b8a9c9',
+    desc: 'Raises land',
+    unlock: 1,
+    stats: { element: 'earth', power: 3, reach: 1, job: 'Builds tall mountains' },
+  },
+  ice: {
+    id: 'ice',
+    name: 'Ice Comet',
+    emoji: '☄️',
+    color: '#7fdcff',
+    desc: 'Adds water, cools',
+    unlock: 1,
+    stats: { element: 'water', power: 2, reach: 1, job: 'Makes cool water' },
+  },
+  seed: {
+    id: 'seed',
+    name: 'Seed Pod',
+    emoji: '🌱',
+    color: '#7dff8a',
+    desc: 'Grows life where there is land or water',
+    unlock: 2,
+    stats: { element: 'life', power: 2, reach: 1, job: 'Grows strong roots' },
+  },
+  magma: {
+    id: 'magma',
+    name: 'Magma',
+    emoji: '🔥',
+    color: '#ff7a3d',
+    desc: 'Heats up, builds volcanoes, dries water',
+    unlock: 4,
+    stats: { element: 'fire', power: 2, reach: 1, job: 'Builds warm volcanoes' },
+  },
+  storm: {
+    id: 'storm',
+    name: 'Rain Cloud',
+    emoji: '🌧️',
+    color: '#9fb4ff',
+    desc: 'Light rain over a wide area',
+    unlock: 7,
+    stats: { element: 'air', power: 1, reach: 3, job: 'Brings wide rain' },
+  },
+  sun: {
+    id: 'sun',
+    name: 'Sunburst',
+    emoji: '☀️',
+    color: '#ffd84a',
+    desc: 'Warms a wide area and sparks life',
+    unlock: 11,
+    stats: { element: 'light', power: 1, reach: 3, job: 'Brings wide warmth' },
+  },
 };
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -153,48 +202,131 @@ function touch(p: Planet, i: number, f: (s: Sector) => void) {
 
 const habitable = (s: Sector) => s.land >= 1 || s.water >= 1;
 
+/** Object Lab level (1-5) and whether the throw is a charged Supernova. */
+export interface ImpactBoost {
+  lv?: number;
+  nova?: boolean;
+}
+
+/** Repeat the object's main effect across its expanded Supernova reach. */
+function applyBoost(p: Planet, kind: Kind, at: number, splash: number) {
+  const r = Math.min(4, KINDS[kind].stats.reach + splash + 1);
+  for (let d = -r; d <= r; d++)
+    touch(p, at + d, (s) => {
+      switch (kind) {
+        case 'rock':
+          s.land += KINDS.rock.stats.power;
+          break;
+        case 'ice':
+          s.water += KINDS.ice.stats.power;
+          break;
+        case 'seed':
+          if (habitable(s)) s.life += KINDS.seed.stats.power;
+          break;
+        case 'magma':
+          s.heat += KINDS.magma.stats.power;
+          s.land += 1;
+          s.water -= 1;
+          break;
+        case 'storm':
+          s.water += KINDS.storm.stats.power;
+          break;
+        case 'sun':
+          if (habitable(s)) s.life += KINDS.sun.stats.power;
+          break;
+      }
+    });
+}
+
+/**
+ * Object Lab perks never change the terrain (so an upgrade can't spoil a goal);
+ * they add bonus life on top of the planet's own:
+ * Lv2 Bloom +2 per region it transforms · Lv3 Charge (Supernova meter 50% faster)
+ * Lv4 Magnet +6 per creature it brings · Lv5 Starfall +3 on every landing.
+ */
+export function labBonus(lv: number, changed: number, spawned: number) {
+  let b = 0;
+  if (lv >= 2) b += changed * 2;
+  if (lv >= 4) b += spawned * 6;
+  if (lv >= 5) b += 3;
+  return b;
+}
+
+/** Track first arrivals and each region's best land, even on a worse throw. */
+export function landingLabBonus(lv: number, result: ImpactResult, planet: Planet, regionBests: number[], arrived: Set<string>): number {
+  let newBests = 0;
+  for (const i of result.changed) {
+    const value = BIOMES[planet.sectors[i].biome].value;
+    if (value > regionBests[i]) newBests++;
+  }
+  planet.sectors.forEach((sector, i) => {
+    regionBests[i] = Math.max(regionBests[i] ?? 0, BIOMES[sector.biome].value);
+  });
+  let firstArrivals = 0;
+  for (const species of result.spawned) {
+    if (!arrived.has(species.id)) firstArrivals++;
+    arrived.add(species.id);
+  }
+  return result.after < result.before ? 0 : labBonus(lv, newBests, firstArrivals);
+}
+
+export function boostRadius(b: ImpactBoost = {}) {
+  return b.nova ? 1 : 0;
+}
+
+/** Supernova charge a landing earns (Lab Lv3+ objects charge 50% faster). */
+export function novaCharge(changed: number, spawned: number, lv = 1) {
+  const base = changed + spawned * 2;
+  return lv >= 3 ? Math.ceil(base * 1.5) : base;
+}
+
 /** Mutate sectors for an impact. `splash` = extra neighbour radius (upgrade). */
 function applyKind(p: Planet, kind: Kind, at: number, splash: number) {
-  const r = 1 + splash;
+  const r = KINDS[kind].stats.reach + splash;
   switch (kind) {
     case 'rock':
-      touch(p, at, (s) => (s.land += 2));
-      for (let d = 1; d <= r; d++) for (const j of [at - d, at + d]) touch(p, j, (s) => (s.land += 1));
+      touch(p, at, (s) => (s.land += KINDS.rock.stats.power));
+      for (let d = 1; d <= r; d++) for (const j of [at - d, at + d]) touch(p, j, (s) => (s.land += 2));
       break;
     case 'ice':
       touch(p, at, (s) => {
-        s.water += 2;
+        s.water += KINDS.ice.stats.power;
         s.heat -= 1;
       });
-      for (let d = 1; d <= r; d++) for (const j of [at - d, at + d]) touch(p, j, (s) => (s.water += 1));
+      for (let d = 1; d <= r; d++) for (const j of [at - d, at + d]) touch(p, j, (s) => (s.water += 2));
       break;
     case 'magma':
       touch(p, at, (s) => {
-        s.heat += 2;
+        s.heat += KINDS.magma.stats.power;
         s.land += 1;
         s.water -= 1;
       });
-      for (let d = 1; d <= r; d++) for (const j of [at - d, at + d]) touch(p, j, (s) => (s.heat += 1));
+      for (let d = 1; d <= r; d++)
+        for (const j of [at - d, at + d])
+          touch(p, j, (s) => {
+            s.heat += 1;
+            if (s.water === 0) s.land += 1;
+          });
       break;
     case 'seed':
       for (let d = -r; d <= r; d++)
         touch(p, at + d, (s) => {
-          if (habitable(s)) s.life += d === 0 ? 2 : 1;
+          if (habitable(s)) s.life += d === 0 ? KINDS.seed.stats.power : 1;
         });
       break;
     case 'storm':
-      for (let d = -(r + 2); d <= r + 2; d++)
+      for (let d = -r; d <= r; d++)
         touch(p, at + d, (s) => {
-          s.water += 1;
+          s.water += KINDS.storm.stats.power + Number(Math.abs(d) <= 1);
           if (s.heat > 0) s.heat -= 1;
           else if (s.heat < 0) s.heat += 1;
         });
       break;
     case 'sun':
-      for (let d = -(r + 2); d <= r + 2; d++)
+      for (let d = -r; d <= r; d++)
         touch(p, at + d, (s) => {
-          s.heat += 1;
-          if (habitable(s)) s.life += 1;
+          s.heat += KINDS.sun.stats.power;
+          if (Math.abs(d) < r && habitable(s)) s.life += KINDS.sun.stats.power;
         });
       break;
   }
@@ -316,6 +448,54 @@ export const SPECIES: SpeciesDef[] = [
 ];
 
 export const SPECIES_BY_ID: Record<string, SpeciesDef> = Object.fromEntries(SPECIES.map((s) => [s.id, s]));
+
+export type TraitId = 'fireproof' | 'swimmer' | 'weedproof' | 'frostproof' | 'calm';
+
+export const TRAITS: Record<TraitId, { name: string; rule: string; icon: string }> = {
+  fireproof: { name: 'Fireproof', rule: 'Fire and Dry Spell cannot dry its home.', icon: '🛡️' },
+  swimmer: { name: 'Swimmer', rule: 'Its home counts as water and stops fire and weeds.', icon: '🌊' },
+  weedproof: { name: 'Weedproof', rule: 'Weeds cannot tangle its home.', icon: '🍃' },
+  frostproof: { name: 'Frostproof', rule: 'Frost Creep stops at its home.', icon: '🧣' },
+  calm: { name: 'Calm', rule: 'The first Trouble waits one more throw.', icon: '✨' },
+};
+
+const TRAIT_BY_HOME: Partial<Record<BiomeId, TraitId>> = {
+  volcano: 'fireproof',
+  desert: 'fireproof',
+  savanna: 'fireproof',
+  springs: 'fireproof',
+  ocean: 'swimmer',
+  reef: 'swimmer',
+  marsh: 'swimmer',
+  swamp: 'swimmer',
+  forest: 'weedproof',
+  jungle: 'weedproof',
+  meadow: 'weedproof',
+  highland: 'weedproof',
+  tundra: 'frostproof',
+  taiga: 'frostproof',
+  icesheet: 'frostproof',
+  mountain: 'frostproof',
+};
+
+/** A creature's first recipe land is its home; planet-wide legendaries are Calm. */
+export function traitOf(species: string): TraitId | null {
+  const creature = SPECIES_BY_ID[species];
+  if (!creature) return null;
+  if (creature.rarity === 'legendary') return 'calm';
+  return creature.home?.[0] ? (TRAIT_BY_HOME[creature.home[0]] ?? null) : null;
+}
+
+/** The missing land in a creature's local habitat recipe. */
+export function neededHabitat(id: string, planet: Planet, sector: number): BiomeId | null {
+  const home = SPECIES_BY_ID[id]?.home;
+  if (!home?.length) return null;
+  if (planet.sectors[wrap(sector)].biome !== home[0]) return home[0];
+  const near = [planet.sectors[wrap(sector - 1)].biome, planet.sectors[wrap(sector + 1)].biome];
+  if (home.length === 2) return near.includes(home[1]) ? home[0] : home[1];
+  if (home.length === 3) return home.slice(1).find((biome) => !near.includes(biome)) ?? home[0];
+  return home[0];
+}
 export const RARITY_POINTS: Record<Rarity, number> = { common: 8, uncommon: 20, rare: 45, legendary: 120 };
 
 /** Recompute biomes and spawn/remove creatures. Returns creatures that newly appeared. */
@@ -373,10 +553,20 @@ export interface ImpactResult {
   lost: string[];
 }
 
-export function impact(p: Planet, kind: Kind, at: number, splash = 0): ImpactResult {
+export function impact(
+  p: Planet,
+  kind: Kind,
+  at: number,
+  splash = 0,
+  boost: ImpactBoost = {},
+  beforeSettle?: (planet: Planet) => void,
+): ImpactResult {
   const before = lifeScore(p);
   const prev = p.sectors.map((s) => s.biome);
-  applyKind(p, kind, wrap(at), splash);
+  const extra = boostRadius(boost);
+  applyKind(p, kind, wrap(at), splash + extra);
+  if (boost.nova) applyBoost(p, kind, wrap(at), splash);
+  beforeSettle?.(p);
   const { spawned, lost } = settle(p);
   const changed = p.sectors.map((s, i) => (s.biome !== prev[i] ? i : -1)).filter((i) => i >= 0);
   return { before, after: lifeScore(p), changed, spawned, lost };

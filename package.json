@@ -11,8 +11,16 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "icon": "node resources/render-art.cjs",
+    "music": "node resources/render-music.cjs",
     "ios:sync": "npm run build && npx cap sync ios",
-    "ios:open": "npx cap open ios"
+    "ios:open": "npx cap open ios",
+    "sim": "SIM=1 vitest run",
+    "sim:quick": "SIM=1 vitest run tests/sim/quick.sim.ts",
+    "sim:baseline": "SIM=1 BASELINE=write vitest run tests/sim/quick.sim.ts",
+    "e2e": "playwright test",
+    "e2e:quick": "LOCALE=en playwright test --project=chromium-390x844",
+    "e2e:install": "playwright install chromium webkit",
+    "sim:economy": "SIM=1 vitest run tests/economy.sim.ts"
   },
   "dependencies": {
     "@capacitor-community/in-app-review": "^8.0.0",
@@ -31,6 +39,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.2",
+    "@playwright/test": "^1.63.0",
     "prettier": "^3.9.9",
     "typescript": "^7.0.2",
     "vite": "^8.3.1",

@@ -1,0 +1,86 @@
+{
+  "about": "Store art v2 captions (production spec section 8). *word* marks the one accent span. Index = shot id in 'ids'. 'order' is the App Store upload order per locale (EN tile 1 is the App Preview). The Fusion chip label is read from src/locales at render time for the reaction that was captured. Shot 6 (world) is back in every order: the Homeworld translucency bug (homeworld.ts left globalAlpha at 0.7 after the lakes loop) was fixed on 30 Sep 2026.",
+  "ids": ["1", "2", "3", "4", "5", "5b", "6", "7", "8"],
+  "slugs": {
+    "1": "fling",
+    "2": "bloom",
+    "3": "friend",
+    "4": "fusion",
+    "5": "sky",
+    "5b": "care",
+    "6": "world",
+    "7": "creatures",
+    "8": "no-ads"
+  },
+  "en": [
+    "Fling a *comet*",
+    "Watch it *bloom*",
+    "Welcome a *friend*",
+    "Mix a *Fusion*",
+    "Read the *sky*",
+    "Friends *help out*",
+    "Build your *world*",
+    "Meet 36 *creatures*",
+    "Play with *no ads*"
+  ],
+  "es": [
+    "Lanza un *cometa*",
+    "Míralo *florecer*",
+    "Recibe a un *amigo*",
+    "Crea una *Fusión*",
+    "Lee el *cielo*",
+    "Los amigos *ayudan*",
+    "Crea tu *mundo*",
+    "Conoce 36 *criaturas*",
+    "Juega sin *anuncios*"
+  ],
+  "fr": [
+    "Lance une *comète*",
+    "Fais tout *fleurir*",
+    "Accueille un *ami*",
+    "Crée une *Fusion*",
+    "Lis le *ciel*",
+    "Les amis *aident*",
+    "Bâtis ton *monde*",
+    "Trouve 36 *créatures*",
+    "Joue sans *pub*"
+  ],
+  "de": [
+    "Wirf einen *Kometen*",
+    "Lass alles *erblühen*",
+    "Ein *Freund* zieht ein",
+    "Mach eine *Fusion*",
+    "Lies den *Himmel*",
+    "Freunde *helfen*",
+    "Bau deine *Welt*",
+    "Triff 36 *Wesen*",
+    "Spiel ohne *Werbung*"
+  ],
+  "pt": [
+    "Lance um *cometa*",
+    "Veja tudo *florescer*",
+    "Receba um *amigo*",
+    "Faça uma *Fusão*",
+    "Leia o *céu*",
+    "Amigos *ajudam*",
+    "Crie seu *mundo*",
+    "Ache 36 *criaturas*",
+    "Jogue sem *anúncios*"
+  ],
+  "ja": [
+    "すいせいを*投げよう*",
+    "わくせいが*そだつよ*",
+    "*なかま*をむかえよう",
+    "*フュージョン*しよう",
+    "*そら*をよもう",
+    "なかまが*たすける*よ",
+    "*せかい*をつくろう",
+    "*36ひき*とであおう",
+    "*広告なし*であそべる"
+  ],
+  "order": {
+    "en": ["2", "3", "4", "5", "6", "7", "8"],
+    "en+5b": ["2", "3", "4", "5", "5b", "6", "7", "8"],
+    "default": ["1", "2", "3", "4", "5", "6", "7", "8"]
+  }
+}

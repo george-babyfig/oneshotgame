@@ -1,0 +1,10 @@
+import { makeLevel, greedyPlan } from './levels.ts';
+import { play } from './proto.ts';
+const Ls = Array.from({ length: 40 }, (_, k) => makeLevel(20 + k));
+let t0 = performance.now();
+for (const L of Ls) greedyPlan(L.start, L.queue, L.throws);
+const a = (performance.now() - t0) / Ls.length;
+t0 = performance.now();
+for (const L of Ls) play(L.start, L.queue, L.throws, { fusion: true, glowTtl: 2, glowR: 2, hazard: { vents: [3, 15], every: 2 } }, { aware: true, swap: false, lookHazard: true });
+const b = (performance.now() - t0) / Ls.length;
+console.log(`per planet: today's greedyPlan ${a.toFixed(1)} ms | reaction+hazard-aware solver (prototype, unoptimised) ${b.toFixed(1)} ms`);

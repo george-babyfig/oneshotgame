@@ -1,53 +1,53 @@
-// Home: your galaxy, the stardust vault, the big Play button and navigation.
+// Play: one clear next step beside the galaxy.
 import { h, btn, fmt, toast } from '../dom';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
-import { makeLevel, TWISTS } from '../../core/levels';
-import { SPECIES } from '../../core/world';
-import { totalStars } from '../../meta/profile';
-import { collectDust, galaxyRate, pendingDust, planetRate, spendGems, vaultHours } from '../../meta/economy';
-import { DOUBLE_DUST_GEMS } from '../flows/offers';
-import { chapterOf, chestsReady, questsClaimable, roadReady } from '../../meta/progression';
-import { drawGalaxy } from './galaxy';
-import { ensureEvent, eventActive, eventReady } from '../../meta/events';
-import { rankReady } from '../../meta/rank';
-import { modesBadge } from '../flows/modes';
-import { PIGGY_FROM_LEVEL, PIGGY_MIN } from './shop';
+import { levelMeta, TWISTS } from '../../core/levels';
+import { collectDust, galaxyRate, pendingDust, planetRate, vaultHours } from '../../meta/economy';
+import { chapterOf } from '../../meta/progression';
+import { drawGalaxy } from '../art/galaxy';
+import { effectiveReduceMotion, flyReward, menuParticles } from '../motion';
 import type { App } from '../app';
-import { icon as iconEl } from '../icons';
-import { t, tp } from '../../i18n';
-
-export function navBtn(icon: string, label: string, badge: string | number, fn: () => void, cls = '') {
-  return h(
-    'button',
-    { class: `nav-btn ${cls}`, onclick: () => (sfx.click(), haptic.light(), fn()) },
-    h('span', { class: 'ni' }, iconEl(icon)),
-    h('span', { class: 'nl' }, label),
-    badge ? h('span', { class: `nb${typeof badge === 'number' ? ' dot' : ''}` }, String(badge)) : null,
-  );
-}
+import { planetName, t, tp } from '../../i18n';
+import { unlocked } from '../../meta/unlocks';
+import { nextUp } from '../../meta/nextup';
+import { STYLES_RELEASE } from '../../meta/cosmetics';
+import { currentLook } from '../../meta/cosmetics';
 
 export function showHome(app: App) {
   const p = app.p;
-  const next = makeLevel(p.level);
+  document.documentElement.classList.toggle('styles-new', p.stylesNewSeen !== STYLES_RELEASE);
+  const now = Date.now();
+  const next = levelMeta(p.level);
   const ch = chapterOf(p.level);
-  const pending = pendingDust(p);
+  const pending = pendingDust(p, now);
   const rate = galaxyRate(p);
-  const full = pending >= Math.floor(rate * vaultHours(p));
-  const canvas = h('canvas', { class: 'galaxy' });
-  const stars = totalStars(p);
-  const questBadge = questsClaimable(p);
-  const roadBadge = roadReady(p, stars).length + chestsReady(p).length;
-
+  const full = rate > 0 && pending >= Math.floor(rate * vaultHours(p));
+  const canvas = h('canvas', { class: 'galaxy', 'aria-label': t('Galaxy') });
+  const picked = nextUp(p, now);
   const collect = btn(
     h(
       'span',
       { class: 'stack' },
-      h('b', null, t('Collect ✨ {n}', { n: fmt(pending) })),
-      h('small', null, full ? t('Vault full! Upgrade it to store more') : t('{n} stardust / hour', { n: fmt(rate) })),
+      h('b', null, pending ? t('Collect all ✨ {n}', { n: fmt(pending) }) : t('Collect all')),
+      h(
+        'small',
+        null,
+        pending
+          ? full
+            ? t('Vault full! Upgrade it to store more')
+            : t('{n} stardust / hour', { n: fmt(rate) })
+          : t('Ready at {time}', {
+              time: new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(
+                new Date(p.lastCollect + (rate ? 3600000 / rate : 3600000)),
+              ),
+            }),
+      ),
     ),
     `dust-btn${full ? ' full' : ''}`,
     () => {
+      const rect = collect.getBoundingClientRect();
+      const from = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
       const d = collectDust(p);
       if (d) {
         sfx.coin();
@@ -55,87 +55,82 @@ export function showHome(app: App) {
         toast(t('+{n} stardust', { n: fmt(d) }), 'good');
         app.save();
       }
-      showHome(app);
+      app.showHome(true);
+      if (d) void flyReward(from, 'dust', d);
     },
   );
   collect.disabled = pending <= 0;
-
+  const nextAction = () => {
+    if (picked.action === 'missions') app.selectTab('missions');
+    else if (picked.action === 'homeworld') app.selectTab('homeworld');
+    else if (picked.action === 'collection') app.selectTab('collection');
+    else if (picked.action === 'starmap') app.showStarMap();
+    else if (picked.action === 'lifebook') app.showLifebook();
+    else if (picked.action === 'passport') app.showPassport();
+    else if (picked.action === 'styles') app.selectTab('styles');
+    else if (picked.action === 'inbox') {
+      app.selectTab('missions');
+      app.inbox();
+    } else if (picked.action === 'calendar') {
+      app.selectTab('missions');
+      app.daily();
+    } else if (picked.action === 'album') app.showAlbum();
+    else if (picked.action === 'sky') app.showSky();
+    else if (picked.action === 'road') app.showRoad();
+    else if (picked.action === 'voyage') app.showVoyage();
+    else if (picked.action === 'event') app.events();
+    else if (picked.action === 'festival') app.festival();
+    else if (picked.action === 'modes') app.modes();
+    else if (picked.action === 'upgrades') app.showUpgrades();
+    else if (p.level <= 3) app.startLevel(p.level);
+    else app.preLevel(p.level);
+  };
+  const modesOpen = (['daily', 'rush', 'zen', 'challenge'] as const).some((id) => unlocked(p, id));
   const el = h(
     'div',
     { class: 'screen home' },
-    app.topBar(),
-    h('div', { class: 'title' }, h('span', null, t('Pocket')), h('span', null, t('Planet'))),
+    menuParticles(),
+    app.topBar(false, true),
     h(
       'div',
-      { class: 'galaxy-wrap' },
-      canvas,
-      p.galaxy.length ? null : h('div', { class: 'galaxy-empty' }, t('Your galaxy is empty.\nFinish planets to fill it!')),
-      p.visitors.length
-        ? h(
-            'button',
-            { class: 'visit-chip', onclick: () => (sfx.click(), app.visitors()) },
-            tp(p.visitors.length, '🛸 {n} visitor left gifts!', '🛸 {n} visitors left gifts!'),
-          )
-        : null,
+      { class: 'home-body' },
+      h('div', { class: 'title' }, h('span', null, 'Comet'), h('span', null, 'Garden')),
       h(
         'div',
-        { class: 'side side-l' },
-        navBtn('scroll', t('Quests'), questBadge, () => app.quests(), 'side-btn'),
-        navBtn('road', t('Star Road'), roadBadge, () => app.showRoad(), 'side-btn'),
-        navBtn('medal', t('Rank {n}', { n: p.rank }), rankReady(p) ? 1 : 0, () => app.rank(), 'side-btn'),
+        { class: 'galaxy-wrap' },
+        canvas,
+        p.galaxy.length ? null : h('div', { class: 'galaxy-empty' }, t('Your galaxy is empty.\nFinish planets to fill it!')),
+        p.visitors.length
+          ? btn(tp(p.visitors.length, '🛸 {n} visitor left gifts!', '🛸 {n} visitors left gifts!'), 'visit-chip', () => app.visitors())
+          : null,
       ),
-      h(
-        'div',
-        { class: 'side side-r' },
-        navBtn('pad', t('Modes'), modesBadge(app), () => app.modes(), 'side-btn'),
-        eventActive(p) ? navBtn(ensureEvent(p).emoji, t('Event'), eventReady(p).length, () => app.events(), 'side-btn event-btn') : null,
-        p.level > PIGGY_FROM_LEVEL && p.piggy >= PIGGY_MIN ? navBtn('pig', `💎${p.piggy}`, '', () => app.showShop(), 'side-btn') : null,
+      p.galaxy.length ? h('div', { class: 'collect-row' }, collect) : null,
+      btn(
+        h('span', { class: 'stack' }, h('b', null, t('Next Up')), h('small', null, picked.title), h('small', null, picked.subtitle)),
+        'ghost wide next-up-card',
+        nextAction,
       ),
-    ),
-    p.galaxy.length
-      ? h(
-          'div',
-          { class: 'collect-row' },
-          collect,
-          pending >= 100
-            ? btn(h('span', { class: 'stack' }, h('b', null, '×2'), h('small', null, `💎${DOUBLE_DUST_GEMS}`)), 'gem double', () => {
-                if (!spendGems(p, DOUBLE_DUST_GEMS)) return app.needGems();
-                const d = collectDust(p, Date.now(), 2);
-                sfx.coin();
-                haptic.success();
-                toast(t('+{n} stardust (doubled!)', { n: fmt(d) }), 'good');
-                app.save();
-                showHome(app);
-              })
-            : null,
-        )
-      : null,
-    btn(
-      h(
-        'span',
-        { class: 'stack' },
-        h('b', null, t('▶ PLAY  Planet {n}', { n: p.level })),
-        h('small', null, `${t(ch.name)} · ${next.twist !== 'none' ? t(TWISTS[next.twist].name) : next.name}`),
+      btn(
+        h(
+          'span',
+          { class: 'stack' },
+          h('b', null, t('▶ PLAY  Planet {n}', { n: p.level })),
+          h('small', null, `${t(ch.name)} · ${next.twist !== 'none' ? t(TWISTS[next.twist].name) : planetName(next.name)}`),
+        ),
+        'primary big wide play',
+        () => (p.level <= 3 ? app.startLevel(p.level) : app.preLevel(p.level)),
       ),
-      'primary big wide play',
-      () => app.preLevel(p.level),
-    ),
-    h(
-      'div',
-      { class: 'nav' },
-      navBtn('map', t('Star Map'), `${stars}★`, () => app.showStarMap()),
-      navBtn('book', t('Lifebook'), `${p.seen.length}/${SPECIES.length}`, () => app.showLifebook()),
-      navBtn('up', t('Upgrades'), '', () => app.showUpgrades()),
-      navBtn('bag', t('Shop'), p.starter ? '' : t('OFFER'), () => app.showShop()),
+      modesOpen ? btn(t('More ways to play'), 'ghost wide more-play', () => app.modes()) : null,
     ),
   );
   const view = drawGalaxy(canvas, p.galaxy, {
-    reduceMotion: p.settings.reduceMotion,
+    reduceMotion: effectiveReduceMotion(p),
+    look: currentLook(p),
     onTap: (g) => {
       sfx.click();
-      toast(`${g.name} · ${'★'.repeat(g.stars)} · ✨${planetRate(g)}/h`);
+      toast(`${planetName(g.name)} · ${'★'.repeat(g.stars)} · ✨${planetRate(g)}/h`);
+      app.showStarMap();
     },
   });
   app.mount(el, 'home', view.stop);
-  if (!app.launched && p.tutorial) app.daily();
 }

@@ -19,20 +19,29 @@ public class GameCenterPlugin: CAPPlugin, CAPBridgedPlugin, GKGameCenterControll
             call.resolve(["authenticated": true])
             return
         }
+        let interactive = call.getBool("interactive") ?? false
         var resolved = false
-        GKLocalPlayer.local.authenticateHandler = { [weak self] viewController, error in
-            if let viewController = viewController {
-                DispatchQueue.main.async {
-                    self?.bridge?.viewController?.present(viewController, animated: true)
-                }
-                return
-            }
-            if resolved { return }
+        let finish: (Bool, String) -> Void = { authenticated, error in
+            guard !resolved else { return }
             resolved = true
-            call.resolve([
-                "authenticated": GKLocalPlayer.local.isAuthenticated,
-                "error": error?.localizedDescription ?? "",
-            ])
+            call.resolve(["authenticated": authenticated, "error": error])
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20) {
+            finish(false, "Game Center timed out")
+        }
+        GKLocalPlayer.local.authenticateHandler = { [weak self] viewController, error in
+            DispatchQueue.main.async {
+                guard !resolved else { return }
+                if let viewController = viewController {
+                    guard interactive, let presenter = self?.bridge?.viewController, presenter.presentedViewController == nil else {
+                        finish(false, "")
+                        return
+                    }
+                    presenter.present(viewController, animated: true)
+                    return
+                }
+                finish(GKLocalPlayer.local.isAuthenticated, error?.localizedDescription ?? "")
+            }
         }
     }
 

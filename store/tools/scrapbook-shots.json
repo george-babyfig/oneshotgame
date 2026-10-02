@@ -1,0 +1,333 @@
+{
+  "about": "Store art v2 geometry (production spec sections 2.4, 3 and 7), canvas px on 1320x2868. card: the set's paper recipe, the game's Photo-mode polaroid (homeworld.ts renderPhoto): border = top and side paper, lip = the heavy bottom strip, radius = outer corner, winRadius = window corner; any card may override a field. Each card tilts about its window centre. cards: window x/y/w/h, raw crop origin sx/sy at scale (<= 1), tilt rot, tape [x, y, width, angle] (colour from the slot). stickers: name in the sticker dir, display width w incl. backing, centre x/y, tilt rot. '@arrival' = the species that arrived in m3-friend; '@shot1' = bunny if a bunny lives on planet P at NEW-1, else frog. Shot 8 card 2 is cropped to the modal's box from m8b-gate.json; gateRadius is the modal's own corner radius in raw px (border-radius 24 CSS px x DPR 3), and the window corners take gateRadius x crop scale so the backdrop never shows in the corners (a mask, not a repaint). Shot 7: fitRows ends the window in the gap under Lifebook row 5 (per locale, from capture-log m7.cards), and the trio is placed yFromBottom of that window, so it is stuck across the bottom lip and covers no creature or text. Shot 8 card 1 ends in the gap under the Play time section (raw y 730): the toggle rows below it render as shrink-wrapped pills in the shipped CSS, so they stay out of frame until that game fix lands.",
+  "card": {
+    "border": 36,
+    "lip": 110,
+    "radius": 16,
+    "winRadius": 8
+  },
+  "ramp": {
+    "1": {
+      "name": "sunrise",
+      "accent": "#ff9a3d",
+      "a": "255,154,61",
+      "b": "255,111,159",
+      "tape": "rgba(196,160,255,.85)"
+    },
+    "2": {
+      "name": "morning",
+      "accent": "#ffc93d",
+      "a": "255,201,61",
+      "b": "255,154,61",
+      "tape": "rgba(255,201,61,.96)"
+    },
+    "3": {
+      "name": "late morning",
+      "accent": "#7ad7c7",
+      "a": "122,215,199",
+      "b": "181,140,255",
+      "tape": "rgba(150,226,212,.85)"
+    },
+    "4": {
+      "name": "noon",
+      "accent": "#5aa8ff",
+      "a": "90,168,255",
+      "b": "122,215,199",
+      "tape": "rgba(140,196,255,.85)"
+    },
+    "5": {
+      "name": "sunset",
+      "accent": "#ff6f6f",
+      "a": "255,111,111",
+      "b": "255,154,61",
+      "tape": "rgba(255,150,150,.85)"
+    },
+    "6": {
+      "name": "dusk",
+      "accent": "#b58cff",
+      "a": "181,140,255",
+      "b": "255,111,159",
+      "tape": "rgba(200,170,255,.85)"
+    },
+    "7": {
+      "name": "twilight",
+      "accent": "#a9a4d6",
+      "a": "169,164,214",
+      "b": "90,168,255",
+      "tape": "rgba(190,186,230,.88)"
+    },
+    "8": {
+      "name": "night",
+      "accent": "#ffd76e",
+      "a": "110,100,220",
+      "b": "90,168,255",
+      "tape": "rgba(190,186,230,.88)"
+    }
+  },
+  "shots": {
+    "1": {
+      "seed": 11,
+      "orbits": [[660, 1760, 860, 1320, -16]],
+      "cards": [
+        {
+          "raw": "m1-fling.png",
+          "x": 240,
+          "y": 516,
+          "w": 840,
+          "h": 2064,
+          "sx": 240,
+          "sy": 536,
+          "scale": 1,
+          "rot": -1.6,
+          "tape": [900, 500, 240, 20]
+        }
+      ],
+      "stickers": [
+        {
+          "id": "@shot1",
+          "w": 338,
+          "x": 238,
+          "y": 2040,
+          "rot": -8
+        }
+      ]
+    },
+    "2": {
+      "seed": 23,
+      "orbits": [[660, 1700, 900, 1250, 14]],
+      "cards": [
+        {
+          "raw": "m2a-bare.png",
+          "x": 150,
+          "y": 540,
+          "w": 760,
+          "h": 900,
+          "sx": 245,
+          "sy": 783,
+          "scale": 1,
+          "rot": -4,
+          "tape": [330, 540, 230, -18]
+        },
+        {
+          "raw": "m2b-lush.png",
+          "x": 290,
+          "y": 1390,
+          "w": 900,
+          "h": 1200,
+          "sx": 210,
+          "sy": 633,
+          "scale": 1,
+          "rot": 2.5,
+          "tape": [1010, 1382, 230, 16]
+        }
+      ],
+      "stickers": [
+        {
+          "id": "deer-happy",
+          "w": 338,
+          "x": 240,
+          "y": 2420,
+          "rot": -8
+        }
+      ]
+    },
+    "3": {
+      "seed": 37,
+      "orbits": [[660, 1600, 860, 1250, -10]],
+      "cards": [
+        {
+          "raw": "m3-friend.png",
+          "x": 155,
+          "y": 640,
+          "w": 1010,
+          "h": 1864,
+          "sx": 100,
+          "sy": 316,
+          "scale": 1,
+          "rot": 1.4,
+          "tape": [290, 622, 230, -18]
+        }
+      ],
+      "stickers": [
+        {
+          "id": "@arrival-wave",
+          "w": 344,
+          "x": 800,
+          "y": 2530,
+          "rot": 7
+        }
+      ]
+    },
+    "4": {
+      "seed": 41,
+      "orbits": [[660, 1700, 880, 1300, 12]],
+      "cards": [
+        {
+          "raw": "m4-fusion.png",
+          "x": 180,
+          "y": 516,
+          "w": 960,
+          "h": 2064,
+          "sx": 180,
+          "sy": 556,
+          "scale": 1,
+          "rot": -1.4,
+          "tape": [960, 500, 240, 20]
+        }
+      ],
+      "chips": [
+        {
+          "x": 660,
+          "y": 2690,
+          "rot": -2,
+          "html": "<img src='{a}'><i>+</i><img src='{b}'><i class='arrow'><svg viewBox='0 0 64 40' width='64' height='40'><path d='M6 20H54M40 7l14 13-14 13' fill='none' stroke='#6b62b8' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/></svg></i><span>{name}</span>"
+        }
+      ]
+    },
+    "5": {
+      "seed": 53,
+      "orbits": [[660, 1700, 900, 1250, -14]],
+      "cards": [
+        {
+          "raw": "m5-sky.png",
+          "x": 175,
+          "y": 516,
+          "w": 970,
+          "h": 2064,
+          "sx": 180,
+          "sy": 536,
+          "scale": 1,
+          "rot": 1.5,
+          "tape": [360, 500, 240, -22]
+        }
+      ]
+    },
+    "5b": {
+      "seed": 59,
+      "orbits": [[660, 1700, 860, 1320, -16]],
+      "cards": [
+        {
+          "raw": "m5b-troubles.png",
+          "x": 240,
+          "y": 516,
+          "w": 840,
+          "h": 2064,
+          "sx": 240,
+          "sy": 536,
+          "scale": 1,
+          "rot": -1.5,
+          "tape": [420, 500, 240, -20]
+        }
+      ]
+    },
+    "6": {
+      "seed": 67,
+      "orbits": [[660, 1900, 860, 1150, 10]],
+      "cards": [
+        {
+          "raw": "m6-homeworld.png",
+          "x": 130,
+          "y": 690,
+          "w": 1060,
+          "h": 1460,
+          "sx": 130,
+          "sy": 170,
+          "scale": 1,
+          "canvasFit": 16,
+          "rot": 1.2,
+          "tape": [330, 668, 240, -20]
+        }
+      ],
+      "stickers": [
+        {
+          "id": "keeper-lean",
+          "w": 278,
+          "x": 420,
+          "y": 2320,
+          "rot": -4
+        }
+      ]
+    },
+    "7": {
+      "seed": 79,
+      "orbits": [[660, 1600, 860, 1250, 10]],
+      "cards": [
+        {
+          "raw": "m7-lifebook.png",
+          "x": 130,
+          "y": 520,
+          "w": 1060,
+          "h": 1511,
+          "sx": 44,
+          "sy": 554,
+          "scale": 0.8618,
+          "rot": -1.2,
+          "tape": [990, 462, 240, 14],
+          "fitRows": 5,
+          "fitRowsH": 1888
+        }
+      ],
+      "stickers": [
+        {
+          "id": "crab-happy",
+          "w": 388,
+          "x": 300,
+          "yFromBottom": 120,
+          "rot": -10
+        },
+        {
+          "id": "penguin-happy",
+          "w": 408,
+          "x": 680,
+          "yFromBottom": 147,
+          "rot": 4
+        },
+        {
+          "id": "parrot-wave",
+          "w": 388,
+          "x": 1030,
+          "yFromBottom": 159,
+          "rot": 10
+        }
+      ]
+    },
+    "8": {
+      "seed": 83,
+      "orbits": [[660, 1900, 820, 1150, -10]],
+      "cards": [
+        {
+          "raw": "m8a-grownups.png",
+          "x": 130,
+          "y": 520,
+          "w": 1060,
+          "h": 446,
+          "sx": 30,
+          "sy": 200,
+          "scale": 0.8413,
+          "rot": -1.2,
+          "tape": [990, 502, 240, 20]
+        },
+        {
+          "raw": "m8b-gate.png",
+          "gate": "m8b-gate.json",
+          "gateRadius": 72,
+          "x": 420,
+          "y": 1130,
+          "w": 780,
+          "h": 1112,
+          "rot": 3,
+          "tape": null
+        }
+      ],
+      "stickers": [
+        {
+          "id": "keeper-idle",
+          "w": 258,
+          "x": 230,
+          "y": 2480,
+          "rot": -4
+        }
+      ]
+    }
+  }
+}

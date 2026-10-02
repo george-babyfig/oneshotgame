@@ -5,9 +5,10 @@ import { Share } from '@capacitor/share';
 import { SPECIES_BY_ID, type Planet } from '../core/world';
 import { renderPlanet } from './art/planet';
 import { drawCreature } from './art/critters';
-import { shareText } from './share';
+import { shareTextUngated } from './share';
 import { toast } from './dom';
 import { t } from '../i18n';
+import { parentalGate } from './flows/gate';
 
 export interface PostcardInfo {
   title: string;
@@ -68,37 +69,42 @@ export function renderPostcard(planet: Planet, info: PostcardInfo): HTMLCanvasEl
   }
   g.font = '700 46px Fredoka, ui-rounded, system-ui, sans-serif';
   g.fillStyle = '#5ef2b0';
-  g.fillText('Pocket Planet', W / 2, 1270);
+  g.fillText('Comet Garden', W / 2, 1270);
   return c;
 }
 
 export async function sharePostcard(planet: Planet, info: PostcardInfo, text: string) {
-  const canvas = renderPostcard(planet, info);
+  return shareCanvas(renderPostcard(planet, info), text);
+}
+
+/** Hand any rendered image to the share sheet (or download it on the web). */
+export async function shareCanvas(canvas: HTMLCanvasElement, text: string, name = 'pocket-planet') {
+  if (!(await parentalGate('share'))) return;
   const dataUrl = canvas.toDataURL('image/png');
   try {
     if (Capacitor.isNativePlatform()) {
       const file = await Filesystem.writeFile({
-        path: `postcard-${Date.now()}.png`,
+        path: `${name}-${Date.now()}.png`,
         data: dataUrl.split(',')[1],
         directory: Directory.Cache,
       });
-      await Share.share({ title: 'Pocket Planet', text, files: [file.uri] });
+      await Share.share({ title: 'Comet Garden', text, files: [file.uri] });
       return;
     }
     // build the file synchronously so the share keeps the tap's user activation
     const bytes = Uint8Array.from(atob(dataUrl.split(',')[1]), (c) => c.charCodeAt(0));
     const blob = new Blob([bytes], { type: 'image/png' });
-    const f = new File([blob], 'pocket-planet.png', { type: 'image/png' });
+    const f = new File([blob], `${name}.png`, { type: 'image/png' });
     if (navigator.canShare?.({ files: [f] })) {
       await navigator.share({ files: [f], text });
       return;
     }
     const a = document.createElement('a');
     a.href = dataUrl;
-    a.download = 'pocket-planet.png';
+    a.download = `${name}.png`;
     a.click();
-    toast(t('Postcard saved'), 'good');
+    toast(t('Image saved'), 'good');
   } catch (e) {
-    if (!/cancel|abort/i.test(String((e as Error)?.message ?? e))) shareText(text);
+    if (!/cancel|abort/i.test(String((e as Error)?.message ?? e))) await shareTextUngated(text);
   }
 }
