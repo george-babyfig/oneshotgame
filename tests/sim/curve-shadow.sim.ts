@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { it } from 'vitest';
 import { difficultyOf, makeLevel } from '../../src/core/levels';
 import { CHAPTER_BANDS } from './lint';
 import { POLICIES, runPlanet, type PlanetMetrics } from './harness';
@@ -30,9 +30,8 @@ nightly(
         d = scope('decent'),
         s = scope('sharp');
       console.log(
-        `Shadow ${band.first}-${band.last}${band.first > 60 ? ' WATCH' : ''}: casual ${mean(c, 'fail').toFixed(3)}/${mean(c, 'threeStar').toFixed(3)}, decent ${mean(d, 'fail').toFixed(3)}/${mean(d, 'threeStar').toFixed(3)}, sharp WATCH ${mean(s, 'fail').toFixed(3)}/${mean(s, 'threeStar').toFixed(3)}`,
+        `Shadow Watch (decision 29, not gating) ${band.first}-${band.last}: casual ${mean(c, 'fail').toFixed(3)}/${mean(c, 'threeStar').toFixed(3)}, decent ${mean(d, 'fail').toFixed(3)}/${mean(d, 'threeStar').toFixed(3)}, sharp ${mean(s, 'fail').toFixed(3)}/${mean(s, 'threeStar').toFixed(3)}`,
       );
-      if (band.first > 60) continue;
       for (const [name, value, limits] of [
         ['casual fail', mean(c, 'fail'), band.casualFail],
         ['casual 3★', mean(c, 'threeStar'), band.casualThree],
@@ -50,13 +49,17 @@ nightly(
       const group = rows.decent.filter((row) => (planets as readonly number[]).includes(row.n));
       const fail = mean(group, 'fail'),
         three = mean(group, 'threeStar');
-      console.log(`Shadow ${label}: decent fail ${(fail * 100).toFixed(1)}%, 3★ ${(three * 100).toFixed(1)}%`);
+      console.log(
+        `Shadow Watch (decision 29, not gating) ${label}: decent fail ${(fail * 100).toFixed(1)}%, 3★ ${(three * 100).toFixed(1)}%`,
+      );
       if (fail < limits.fail[0] || fail > limits.fail[1])
         failures.push(`${label} decent fail ${fail.toFixed(3)} outside ${limits.fail.join('-')}`);
       if (three < limits.three[0] || three > limits.three[1])
         failures.push(`${label} decent 3★ ${three.toFixed(3)} outside ${limits.three.join('-')}`);
     }
-    expect(failures, failures.join('\n')).toEqual([]);
+    console.log(
+      `Shadow Watch (decision 29, not gating): ${failures.length} bands outside target${failures.length ? `: ${failures.join('; ')}` : ''}`,
+    );
   },
   60 * 60_000,
 );

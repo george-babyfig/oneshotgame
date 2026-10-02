@@ -3,7 +3,8 @@ import { VOYAGE_REWARDS } from './tuning';
 // everyone, seeded by the ISO week). Planets unlock one after another, the last
 // one has a Comet Guardian, and finishing the whole trip counts toward Voyage
 // stickers. Difficulty follows your campaign progress, fixed for the week.
-import { makeLevel, type LevelDef } from '../core/levels';
+import { goalsMet, makeLevel, solve0, solve2, starsFor, type LevelDef } from '../core/levels';
+import { lifeScore } from '../core/world';
 import { rulesForLevel } from '../core/round';
 import type { Profile } from './profile';
 import { applyReward, type Reward } from './progression';
@@ -58,15 +59,43 @@ export function portName(week: string, i: number) {
   return PORTS[(weekNum(week) * 3 + i) % PORTS.length];
 }
 
+const stopCache = new Map<string, LevelDef>();
+
 /** Stop i (0-based): a little harder each stop; the last has a Comet Guardian. */
 export function voyageLevel(week: string, base: number, i: number, taught = base + i * 2): LevelDef {
-  const L = makeLevel(base + i * 2, `VOY-${week}-${i}`, {
+  const key = JSON.stringify([week, base, i, taught]);
+  const cached = stopCache.get(key);
+  if (cached) return structuredClone(cached);
+  const n = base + i * 2;
+  const options = {
     goals: true,
     boss: i === VOYAGE_LEN - 1,
-    rules: rulesForLevel(Math.min(base + i * 2, taught)),
+    rules: rulesForLevel(Math.min(n, taught)),
     obstacleCap: taught,
-  });
-  return { ...L, name: portName(week, i) };
+  };
+  const first = makeLevel(n, `VOY-${week}-${i}`, options);
+  let L = first;
+  // Keep trips already open to children fixed; later weeks redraw solver traps.
+  if (week > '2026-W43') {
+    for (let salt = 0; salt <= 256; salt++) {
+      if (salt) L = makeLevel(n, `VOY-${week}-${i}`, { ...options, salt });
+      const blind = solve0(L);
+      const aware = solve2(L);
+      if (
+        goalsMet(blind, L.goals) &&
+        starsFor(lifeScore(blind), L.stars) >= 1 &&
+        goalsMet(aware, L.goals) &&
+        starsFor(lifeScore(aware), L.stars) >= 1
+      )
+        break;
+      // Never break the Voyage screen: serve the first draw. The nightly pre-flight
+      // sweeps two years ahead, so a stop like this is caught long before it opens.
+      if (salt === 256) L = first;
+    }
+  }
+  const stop = { ...L, name: portName(week, i) };
+  stopCache.set(key, stop);
+  return structuredClone(stop);
 }
 
 export function voyageUnlocked(p: Profile, i: number) {

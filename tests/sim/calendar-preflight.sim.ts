@@ -34,7 +34,7 @@ export function calendarPreflight(days: number, weeks: number, start = new Date(
 }
 
 if (process.env.SIM === '1') {
-  const count = process.env.SIM_NIGHTLY === '1' ? { days: 90, weeks: 12 } : { days: 7, weeks: 1 };
+  const count = process.env.SIM_NIGHTLY === '1' ? { days: 90, weeks: 104 } : { days: 7, weeks: 1 };
   it(
     `pre-flights ${count.days} Daily Planets and ${count.weeks} Voyage weeks`,
     () => {
