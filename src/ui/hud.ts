@@ -25,6 +25,18 @@ import { marketingMode } from './devcapture';
 
 const roundDiscoveries = new WeakMap<LevelScene, string[]>();
 
+/** Shrinks a one-line label until it fits its box (long translated planet names at 320 px). */
+function fitOneLine(el: HTMLElement, min = 11): HTMLElement {
+  requestAnimationFrame(() => {
+    let size = parseFloat(getComputedStyle(el).fontSize);
+    while (el.scrollWidth > el.clientWidth && size > min) {
+      size = Math.max(min, size - 0.5);
+      el.style.fontSize = `${size}px`;
+    }
+  });
+  return el;
+}
+
 export function bannerTopFor(hudTop: number, goalsBottom: number, forecastBottom: number, twistBottom: number): number {
   return Math.max(112, Math.max(goalsBottom, forecastBottom, twistBottom) - hudTop + 8);
 }
@@ -96,7 +108,7 @@ export function buildHud(scene: LevelScene) {
         'div',
         { class: 'hud-title' },
         h('div', { class: 'hud-level' }, scene.o.label ?? t('Planet {n}', { n: scene.L.n })),
-        h('div', { class: 'hud-name' }, planetName(scene.L.name)),
+        fitOneLine(h('div', { class: 'hud-name' }, planetName(scene.L.name))),
         scene.L.difficulty !== 'normal'
           ? h('div', { class: `hud-diff ${scene.L.difficulty}` }, scene.L.difficulty === 'super' ? t('💀 SUPER HARD') : t('🔥 HARD'))
           : null,
