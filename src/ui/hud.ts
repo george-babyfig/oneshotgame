@@ -25,11 +25,19 @@ import { marketingMode } from './devcapture';
 
 const roundDiscoveries = new WeakMap<LevelScene, string[]>();
 
+/** Narrow phones: long names start smaller, so no font timing can push them past the edge. */
+function nameSize(name: string): string {
+  const n = [...name].length;
+  if (typeof window === 'undefined' || window.innerWidth > 360 || n < 16) return '';
+  return `font-size:${n >= 19 ? 11 : 12}px`;
+}
+
 /** Shrinks a one-line label until it fits its box (long translated planet names at 320 px). */
 function fitOneLine(el: HTMLElement, min = 11): HTMLElement {
+  const start = el.style.fontSize; // a size chosen up front (nameSize) is the ceiling
   const fit = () => {
     if (!el.isConnected) return;
-    el.style.fontSize = '';
+    el.style.fontSize = start;
     let size = parseFloat(getComputedStyle(el).fontSize);
     while (el.scrollWidth > el.clientWidth && size > min) {
       size = Math.max(min, size - 0.5);
@@ -114,7 +122,14 @@ export function buildHud(scene: LevelScene) {
         'div',
         { class: 'hud-title' },
         h('div', { class: 'hud-level' }, scene.o.label ?? t('Planet {n}', { n: scene.L.n })),
-        fitOneLine(h('div', { class: 'hud-name' }, planetName(scene.L.name))),
+        fitOneLine(
+          h(
+            'div',
+            // Long names get a smaller size up front; fitOneLine is the backup for fonts we can't predict.
+            { class: 'hud-name', style: nameSize(planetName(scene.L.name)) },
+            planetName(scene.L.name),
+          ),
+        ),
         scene.L.difficulty !== 'normal'
           ? h('div', { class: `hud-diff ${scene.L.difficulty}` }, scene.L.difficulty === 'super' ? t('💀 SUPER HARD') : t('🔥 HARD'))
           : null,
