@@ -14,7 +14,7 @@ import { FINISH_DUST_PER_THROW, type LevelResult } from '../game';
 import type { App } from '../app';
 import { sharePostcard } from '../postcard';
 import { addTokens, ensureEvent, eventActive, eventReady } from '../../meta/events';
-import { t, tp } from '../../i18n';
+import { planetName, t, tp } from '../../i18n';
 import { homeUnlocked, speedUpBuilds } from '../../meta/homeworld';
 import { MAT_EMOJI, addDrops, dropsFor, type Mat } from '../../meta/constellations';
 import { renderPlanet } from '../art/planet';
@@ -272,7 +272,7 @@ export function levelResults(app: App, r: LevelResult) {
             sharePostcard(
               r.planet,
               {
-                title: r.level.name,
+                title: planetName(r.level.name),
                 subtitle: tp(
                   r.planet.speciesFound.length,
                   'Planet {planet} · {n} creature · {score} life',
@@ -285,7 +285,7 @@ export function levelResults(app: App, r: LevelResult) {
                 stars: r.stars,
                 glow: app.skinGlow(),
               },
-              t('I grew {score} life on {name} in Comet Garden! ☄️', { score: r.score, name: r.level.name }),
+              t('I grew {score} life on {name} in Comet Garden! ☄️', { score: r.score, name: planetName(r.level.name) }),
             ),
           ),
       h(

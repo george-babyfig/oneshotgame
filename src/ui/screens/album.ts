@@ -141,8 +141,9 @@ function renderPage(app: App, pi: number, W: number): HTMLCanvasElement {
 function collection(app: App) {
   const p = app.p;
   const owned = ownedStickers(p).length;
+  const milestoneOwned = ownedStickers(p).filter((s) => !s.bonus).length;
   const ms = milestonesReady(p);
-  const next = (Math.floor(owned / MILESTONE_EVERY) + 1) * MILESTONE_EVERY;
+  const next = (Math.floor(milestoneOwned / MILESTONE_EVERY) + 1) * MILESTONE_EVERY;
   return [
     h(
       'div',
@@ -161,6 +162,7 @@ function collection(app: App) {
       : h('p', { class: 'muted' }, t('Every {n} stickers earns 💎10. Next bonus at {next}.', { n: MILESTONE_EVERY, next })),
     ...ALBUM_PAGES.map((pg) => {
       const list = pageStickers(pg.id);
+      const display = [...list, ...STICKERS.filter((s) => s.bonus && s.kind === pg.id)];
       const have = list.filter((s) => s.earned(p)).length;
       const done = pageDone(p, pg.id);
       const claimed = p.album.pagesClaimed.includes(pg.id);
@@ -182,7 +184,7 @@ function collection(app: App) {
         h(
           'div',
           { class: 'stk-grid' },
-          ...list.map((s) => {
+          ...display.map((s) => {
             const got = s.earned(p);
             return h(
               'button',

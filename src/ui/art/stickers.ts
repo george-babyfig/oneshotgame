@@ -63,6 +63,19 @@ function featIcon(g: G, id: string, r: number, t: number) {
   g.lineCap = 'round';
   g.lineJoin = 'round';
   switch (id) {
+    case 'remix_gold': {
+      g.strokeStyle = '#ffdd78';
+      g.lineWidth = u * 0.13;
+      g.beginPath();
+      g.ellipse(0, 0, u * 0.55, u * 0.33, -0.3, 0, Math.PI * 2);
+      g.stroke();
+      g.fillStyle = '#7353a8';
+      g.beginPath();
+      g.arc(0, 0, u * 0.34, 0, Math.PI * 2);
+      g.fill();
+      star(g, u * 0.42, -u * 0.44, u * 0.2, '#fff2a4');
+      break;
+    }
     case 'guardian': {
       const tail = g.createLinearGradient(-u * 0.6, u * 0.4, u * 0.1, -u * 0.1);
       tail.addColorStop(0, 'rgba(255,160,90,0)');

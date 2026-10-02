@@ -28,6 +28,7 @@ import { novaReady, roundState, stepRound } from '../src/core/round';
 import { NO_MODIFIERS } from '../src/core/modifiers';
 import { challengeLevel, dailyLevel, rushLevel, zenLevel } from '../src/meta/modes';
 import { VOYAGE_LEN, voyageBase, voyageLevel } from '../src/meta/voyage';
+import { remixLevel } from '../src/meta/remix';
 
 const DIR = join(dirname(fileURLToPath(import.meta.url)), '__snapshots__', 'levels');
 const UPDATE = process.env.UPDATE_FIXTURES === '1';
@@ -228,6 +229,28 @@ function constantRows(): Row[] {
 
 // ------------------------------------------------------------------ tests
 describe('level snapshot (M2 guard)', () => {
+  it('Remix planets 1-60 keep their final generated targets and layouts', () => {
+    checkRows(
+      'remix-RX.json',
+      Array.from({ length: 60 }, (_, index) => {
+        const L = remixLevel(index + 1);
+        return {
+          id: `RX-${L.n}`,
+          queue: L.queue.join(' '),
+          start: planetRow(L.start),
+          twist: L.twist,
+          shortKind: L.shortKind ?? null,
+          goals: L.goals.map((g) => [g.type, g.id, g.count]),
+          sky: L.sky,
+          spin: L.spin,
+          throws: L.throws,
+          difficulty: L.difficulty,
+          stars: L.stars,
+        };
+      }),
+    );
+  });
+
   it('campaign planets 1-120 (PP) are unchanged in every field', () => {
     checkRows('campaign-PP.json', campaignRows());
   });

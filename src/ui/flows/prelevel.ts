@@ -11,7 +11,7 @@ import { projectileCanvas } from '../art/projectiles';
 import { critterCanvas } from '../art/critters';
 import { sparkStart } from '../fx';
 import { ledger } from '../../meta/ledger';
-import { t } from '../../i18n';
+import { planetName, t } from '../../i18n';
 import type { App } from '../app';
 import type { LevelScene } from '../game';
 import { showGoalRecipe } from '../hud';
@@ -175,7 +175,7 @@ export function preLevel(app: App, n: number) {
   renderBoosters();
   panel.append(
     h('div', { class: 'm-sub' }, t('{chapter} · Planet {n}', { chapter: t(chapterOf(n).name), n })),
-    h('div', { class: 'm-title' }, L.name),
+    h('div', { class: 'm-title' }, planetName(L.name)),
     L.difficulty === 'normal'
       ? h('span')
       : h(
@@ -217,6 +217,45 @@ export function preLevel(app: App, n: number) {
     entranceGate.remove();
     if (panel.isConnected) panel.inert = false;
   }, 300);
+}
+
+/** Remix's first-throw card shows its whole twist and target without a shop. */
+export function remixPreLevel(app: App, n: number) {
+  app.startRemix(n);
+  const scene = app.scene!;
+  const L = scene.L;
+  const panel = h(
+    'div',
+    { class: 'level-info remix-prelevel', role: 'group', 'aria-label': t('Bonus Remix details') },
+    h('div', { class: 'm-sub' }, t('Remix · Bonus')),
+    h('div', { class: 'm-title' }, planetName(L.name)),
+    L.twist === 'boss'
+      ? h('div', { class: 'twist-chip' }, t('☄️ Comet Guardian — hit it 3 times!'))
+      : twistChip(L, app.p.settings.planetColours === 'clear'),
+    L.shortKind
+      ? h(
+          'div',
+          { class: 'short-kind', 'aria-label': t('Resting this planet: {name}', { name: t(KINDS[L.shortKind].name) }) },
+          h('span', { class: 'short-kind-icon', 'aria-hidden': 'true' }, projectileCanvas(L.shortKind, 36)),
+          h('span', null, t('Resting this planet: {name}', { name: t(KINDS[L.shortKind].name) })),
+        )
+      : null,
+    goalChips(L, scene),
+    h(
+      'div',
+      { class: 'targets' },
+      ...L.stars.map((target, i) =>
+        h('div', { class: 'tg' }, h('b', null, '★'.repeat(i + 1)), h('span', null, t('{n} life', { n: fmt(target) }))),
+      ),
+    ),
+    btn(t('Set off!'), 'primary wide', () => panel.remove()),
+  );
+  const originalThrow = scene.o.onThrow;
+  scene.o.onThrow = (kind) => {
+    panel.remove();
+    originalThrow?.(kind);
+  };
+  scene.el.append(panel);
 }
 
 /** The suggested resident helps this planet; Styles keeps the saved Buddy. */

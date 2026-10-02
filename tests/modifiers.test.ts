@@ -31,6 +31,10 @@ describe('round modifiers', () => {
     expect(modifiersFor('remix', { gentle: true }).gentle).toBe(true);
   });
 
+  it('strips every player-side bonus from Remix while retaining Gentle planets', () => {
+    expect(modifiersFor('remix', { ...bonuses, gentle: true })).toEqual({ ...NO_MODIFIERS, gentle: true });
+  });
+
   it('returns independent nested objects', () => {
     const first = modifiersFor('campaign', bonuses);
     first.lab.rock = 1;

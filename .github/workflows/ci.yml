@@ -47,7 +47,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: SIM=1 SIM_BALANCE=1 TROUBLE_RUNS=32 npx vitest run tests/sim/balance.sim.ts tests/sim/trouble-cost.sim.ts
+      - run: SIM=1 SIM_BALANCE=1 TROUBLE_RUNS=32 npx vitest run tests/sim/balance.sim.ts tests/sim/trouble-cost.sim.ts tests/sim/remix.sim.ts
 
   # Playwright journeys (J1-J7, prices, gate, overlap, showtime) — one job per browser
   # project so the three run in parallel and each stays well inside its time limit.

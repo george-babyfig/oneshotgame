@@ -7,7 +7,7 @@ import { critterCanvas } from './art/critters';
 import { projectileCanvas } from './art/projectiles';
 import { sfx } from './audio';
 import { haptic } from './haptics';
-import { t, tp } from '../i18n';
+import { planetName, t, tp } from '../i18n';
 import { OBSTACLES } from '../core/sky';
 import { rarityName } from './text';
 import { toast } from './dom';
@@ -74,7 +74,8 @@ export function buildHud(scene: LevelScene) {
   scene.goalsEl = h('div', { class: `goals${scene.L.goals.length ? '' : ' hidden'}`, style: 'pointer-events:auto' });
   scene.forecastEl = h('div', { class: 'trouble-forecast', style: 'display:flex;gap:5px;justify-content:center;pointer-events:auto' });
   scene.hintEl = h('div', { class: 'hint' }, h('div', null, t('Pull back & release to fling')), h('div', { class: 'hint-hand' }, '👆'));
-  const twist = scene.L.twist !== 'none' ? h('div', { class: 'twist' }, scene.twistLabel()) : null;
+  const twistText = scene.twistLabel();
+  const twist = twistText ? h('div', { class: 'twist' }, twistText) : null;
   scene.finishEl = h(
     'button',
     { class: 'finish hidden', onclick: () => scene.finishEarly() },
@@ -95,7 +96,7 @@ export function buildHud(scene: LevelScene) {
         'div',
         { class: 'hud-title' },
         h('div', { class: 'hud-level' }, scene.o.label ?? t('Planet {n}', { n: scene.L.n })),
-        h('div', { class: 'hud-name' }, scene.L.name),
+        h('div', { class: 'hud-name' }, planetName(scene.L.name)),
         scene.L.difficulty !== 'normal'
           ? h('div', { class: `hud-diff ${scene.L.difficulty}` }, scene.L.difficulty === 'super' ? t('💀 SUPER HARD') : t('🔥 HARD'))
           : null,
@@ -138,6 +139,7 @@ export function twistLabel(scene: LevelScene) {
     heavy: '', // Dense Core retired in M7.5; no planet draws it any more
     wobble: t('🌀 Wobbly Spin'),
     twin: t('🌑🌑 Twin Moons'),
+    short: t('◈ Short Supply'),
     rocks: `${OBSTACLES.rocks.icon} ${t(OBSTACLES.rocks.name)}`,
     bubble: `${OBSTACLES.bubble.icon} ${t(OBSTACLES.bubble.name)}`,
     mist: `${OBSTACLES.mist.icon} ${t(OBSTACLES.mist.name)}`,
@@ -498,6 +500,19 @@ export function flyCreaturePoints(scene: LevelScene, at: number, points: number)
   animation.finished.then(() => pip.remove()).catch(() => pip.remove());
 }
 
+/** Keeps the coach and discovery cards below the goals, forecast and twist rows. */
+function placeBanners(scene: LevelScene) {
+  const hud = scene.discoverEl.closest('.hud');
+  const banners = scene.discoverEl.parentElement;
+  if (!hud || !banners) return;
+  banners.style.top = `${bannerTopFor(
+    hud.getBoundingClientRect().top,
+    Math.max(scene.goalsEl.getBoundingClientRect().bottom, scene.el.querySelector('.life')?.getBoundingClientRect().bottom ?? 0) + 8,
+    scene.forecastEl.getBoundingClientRect().bottom,
+    scene.el.querySelector('.twist')?.getBoundingClientRect().bottom ?? 0,
+  )}px`;
+}
+
 export function showDiscover(scene: LevelScene) {
   if (scene.fusionDiscoverQueue.length) return showFusionDiscovery(scene);
   if (scene.discoverBusy || scene.ended || scene.aimFrom) return;
@@ -509,6 +524,7 @@ export function showDiscover(scene: LevelScene) {
   // dev-only store captures: no rarity word, no rarity styling and no gem reward on the card
   const store = marketingMode();
   const label = rarityName(sp.rarity);
+  placeBanners(scene);
   scene.discoverEl.className = `discover show r-${store ? 'common' : sp.rarity}`;
   scene.discoverEl.replaceChildren(
     h('div', { class: 'd-emoji' }, critterCanvas(sp.id, 56)),
@@ -536,16 +552,7 @@ export function showFusionDiscovery(scene: LevelScene, id?: ReactionId) {
   if (!next) return;
   scene.discoverBusy = true;
   const def = REACTIONS[next];
-  const hud = scene.discoverEl.closest('.hud');
-  const banners = scene.discoverEl.parentElement;
-  if (hud && banners) {
-    banners.style.top = `${bannerTopFor(
-      hud.getBoundingClientRect().top,
-      Math.max(scene.goalsEl.getBoundingClientRect().bottom, scene.el.querySelector('.life')?.getBoundingClientRect().bottom ?? 0) + 8,
-      scene.forecastEl.getBoundingClientRect().bottom,
-      scene.el.querySelector('.twist')?.getBoundingClientRect().bottom ?? 0,
-    )}px`;
-  }
+  placeBanners(scene);
   scene.discoverEl.className = `discover show ${def.kind === 'fusion' ? 'fusion-discover' : 'clash-discover'}`;
   scene.discoverEl.replaceChildren(
     h('div', { class: 'd-emoji' }, reactionCanvas(next, 48)),
@@ -614,16 +621,7 @@ export function showNovaHoldTip(scene: LevelScene) {
 }
 
 function revealCoach(scene: LevelScene) {
-  const hud = scene.coachEl.closest('.hud');
-  const banners = scene.coachEl.parentElement;
-  if (hud && banners) {
-    banners.style.top = `${bannerTopFor(
-      hud.getBoundingClientRect().top,
-      Math.max(scene.goalsEl.getBoundingClientRect().bottom, scene.el.querySelector('.life')?.getBoundingClientRect().bottom ?? 0) + 8,
-      scene.forecastEl.getBoundingClientRect().bottom,
-      scene.el.querySelector('.twist')?.getBoundingClientRect().bottom ?? 0,
-    )}px`;
-  }
+  placeBanners(scene);
   scene.coachEl.classList.add('show');
   clearTimeout(scene.coachTimer);
   scene.coachTimer = window.setTimeout(() => scene.coachEl.classList.remove('show'), 4000);

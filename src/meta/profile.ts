@@ -13,6 +13,7 @@ import type { ReactionId } from '../core/round';
 import { RULES_VERSION } from '../core/rules-version';
 import { STAR_SLING } from '../core/flight';
 import { rulesForLevel } from '../core/round';
+import { remixLevel, remixUnlocked, type RemixChapter } from './remix';
 
 export interface GalaxyPlanet {
   n: number;
@@ -56,6 +57,7 @@ export interface Settings {
 
 export interface RoundCheckpoint {
   n: number;
+  mode?: 'campaign' | 'remix';
   seedPrefix?: string;
   salt?: number;
   state: RoundState;
@@ -99,8 +101,8 @@ export interface RoundCheckpoint {
   practiceBonkUsed?: boolean;
 }
 
-function roundFingerprint(n: number, prefix = 'PP', salt?: number): string {
-  const level = makeLevel(n, prefix, { salt });
+function roundFingerprint(n: number, prefix = 'PP', salt?: number, p?: Profile, mode: 'campaign' | 'remix' = 'campaign'): string {
+  const level = mode === 'remix' && p ? remixLevel(n, p) : makeLevel(n, prefix, { salt });
   const source = JSON.stringify([
     level.queue,
     level.start,
@@ -123,7 +125,7 @@ export function saveInterruptedRound(p: Profile, checkpoint: RoundCheckpoint): v
   const { state, ...scene } = checkpoint;
   p.savedRound = JSON.stringify({
     format: 1,
-    fingerprint: roundFingerprint(checkpoint.n, checkpoint.seedPrefix, checkpoint.salt),
+    fingerprint: roundFingerprint(checkpoint.n, checkpoint.seedPrefix, checkpoint.salt, p, checkpoint.mode),
     round: serializeRound(state),
     scene,
   });
@@ -141,6 +143,9 @@ export function readInterruptedRound(p: Profile): RoundCheckpoint | null {
       !Number.isInteger(s.n) ||
       s.n < 1 ||
       s.n > p.level ||
+      (s.mode !== undefined && s.mode !== 'campaign' && s.mode !== 'remix') ||
+      (s.mode === 'remix' && (s.seedPrefix !== 'RX' || !remixUnlocked(p, Math.ceil(s.n / 10)))) ||
+      (s.seedPrefix === 'RX' && s.mode !== 'remix') ||
       !Number.isInteger(s.qi) ||
       s.qi < 0 ||
       !Number.isFinite(s.throwsLeft) ||
@@ -156,7 +161,7 @@ export function readInterruptedRound(p: Profile): RoundCheckpoint | null {
       (s.salt !== undefined && !Number.isInteger(s.salt))
     )
       throw new Error('Invalid round checkpoint');
-    if (saved.fingerprint !== roundFingerprint(s.n, s.seedPrefix, s.salt)) throw new Error('Level changed');
+    if (saved.fingerprint !== roundFingerprint(s.n, s.seedPrefix, s.salt, p, s.mode)) throw new Error('Level changed');
     return { ...s, state };
   } catch {
     p.savedRound = undefined;
@@ -199,6 +204,8 @@ export interface Profile {
   /** Highest unlocked level (the next one to beat). */
   level: number;
   stars: Record<number, number>;
+  /** Best stars in each finished chapter's separate Remix planets. */
+  remix: Record<number, RemixChapter>;
   /** Star Road progress, separate from campaign stars. */
   roadPoints: number;
   roadDay: { day: string; earned: number };
@@ -333,6 +340,7 @@ export function defaultProfile(now = Date.now()): Profile {
     dust: 0,
     level: 1,
     stars: {},
+    remix: {},
     roadPoints: 0,
     roadDay: { day: '', earned: 0 },
     seen: [],
@@ -462,6 +470,7 @@ function merge<T>(base: T, saved: unknown): T {
 /** Upgrade older save formats in place. */
 export function migrate(raw: Record<string, unknown>): Profile {
   const p = merge(defaultProfile(), raw);
+  if (!p.remix || typeof p.remix !== 'object' || Array.isArray(p.remix)) p.remix = {};
   if (!Object.hasOwn(raw, 'm4RankPaidThrough')) p.m4RankPaidThrough = Math.min(7, Math.max(0, p.rank - 1));
   if (!Object.hasOwn(raw, 'roadPoints'))
     p.roadPoints = Object.entries(p.stars).reduce((sum, [n, stars]) => sum + (+n > 0 ? stars : 0), 0) + (p.stars[0] ?? 0);

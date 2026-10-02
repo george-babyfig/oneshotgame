@@ -7,8 +7,12 @@ import { shade } from './color';
 type G = CanvasRenderingContext2D;
 
 let activePalette: PlanetPalette = 'classic';
+let remixRim = false;
 export function setPlanetPalette(palette: PlanetPalette): void {
   activePalette = palette;
+}
+export function setRemixRim(active: boolean): void {
+  remixRim = active;
 }
 
 const fullScreenFlashes: number[] = [];
@@ -337,6 +341,13 @@ export function renderPlanet(g: G, p: Planet, v: PlanetView) {
   g.beginPath();
   g.arc(cx, cy, R * 1.14, Math.PI * 1.05, Math.PI * 1.55);
   g.stroke();
+  if (remixRim) {
+    g.strokeStyle = 'rgba(255,211,110,0.9)';
+    g.lineWidth = Math.max(1.5, R * 0.016);
+    g.beginPath();
+    g.arc(cx, cy, R * 1.17, 0, Math.PI * 2);
+    g.stroke();
+  }
 
   // creatures are drawn after shading so they stay bright and readable
   if (v.creature) {

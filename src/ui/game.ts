@@ -8,7 +8,7 @@ import { BOSS_HP, type Goal, type LevelDef } from '../core/levels';
 import { h, type Modal } from './dom';
 import { roundIntro, type CoachEvent } from '../meta/coach';
 import { UNLOCKS } from '../meta/unlocks';
-import { surfaceK } from './art/planet';
+import { setRemixRim, surfaceK } from './art/planet';
 import { DEFAULT_LOOK, type Look } from '../meta/cosmetics';
 import {
   lifeSparkSectors,
@@ -105,6 +105,8 @@ export interface SceneOpts {
   competitive?: boolean;
   gentle?: boolean;
   clearPalette?: boolean;
+  /** Dusk backdrop and gold planet rim for a Bonus Remix round. */
+  remixPalette?: boolean;
   onSkySeen?: (id: ObstacleId) => void;
   /** Called after every landed throw (Zen saves the planet). */
   onPlanet?: (p: Planet) => void;
@@ -818,8 +820,13 @@ export class LevelScene {
   }
 
   drawPlanet() {
-    drawChapterBackdrop(this.g, this.chapterNumber, this.w, this.h, this.time, !!this.o.reduceMotion);
-    return fx.drawPlanet(this);
+    drawChapterBackdrop(this.g, this.chapterNumber, this.w, this.h, this.time, !!this.o.reduceMotion, !!this.o.remixPalette);
+    setRemixRim(!!this.o.remixPalette);
+    try {
+      return fx.drawPlanet(this);
+    } finally {
+      setRemixRim(false);
+    }
   }
 
   predictCache: {

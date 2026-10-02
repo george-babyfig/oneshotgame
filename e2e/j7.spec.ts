@@ -58,6 +58,62 @@ function storedSavedRound(page: Page) {
 }
 
 test.describe('J7 resume a round [en]', () => {
+  test('Remix survives a killed web view and finishes into Remix progress only', async ({ page }) => {
+    test.setTimeout(120_000);
+    const guard = watchErrors(page);
+    await freshInstall(page);
+    await midGame(page, { level: 11 });
+    await page.evaluate(() => (window as any).__app.startRemix(1));
+    await page.waitForFunction(() => (window as any).__app.scene?.L.seed.startsWith('RX') && !!(window as any).__scene);
+    await throwAt(page, 2);
+    const before = await roundSnapshot(page);
+    const classicStars = await page.evaluate(() => JSON.stringify((window as any).__app.p.stars));
+    expect(await storedSavedRound(page), 'a resolved Remix throw is checkpointed').not.toBeNull();
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await expect.poll(() => storedSavedRound(page)).not.toBeNull();
+    expect(await page.evaluate(() => JSON.parse((window as any).__app.p.savedRound).scene.mode)).toBe('remix');
+
+    await page.reload();
+    await page.waitForFunction(() => (window as any).__app?.screen === 'level' && !!(window as any).__app.scene);
+    const card = page.locator(OPEN_MODAL).filter({ hasText: 'Welcome back — your planet is waiting' });
+    await expect(card).toBeVisible();
+    const scene = await page.evaluate(() => {
+      const s = (window as any).__app.scene;
+      const dpr = s.canvas.width / s.w;
+      let goldSamples = 0;
+      for (let k = 0; k < 12; k++) {
+        const angle = (k * Math.PI) / 6;
+        const x = Math.round((s.cx + Math.cos(angle) * s.R * 1.17) * dpr);
+        const y = Math.round((s.cy + Math.sin(angle) * s.R * 1.17) * dpr);
+        const pixels = s.g.getImageData(x - 2, y - 2, 5, 5).data;
+        for (let i = 0; i < pixels.length; i += 4) {
+          if (pixels[i] > 145 && pixels[i] > pixels[i + 1] + 20 && pixels[i + 1] > pixels[i + 2] + 25) {
+            goldSamples++;
+            break;
+          }
+        }
+      }
+      return { label: s.o.label, palette: s.o.remixPalette, seed: s.L.seed, goldSamples };
+    });
+    expect(scene.label).toBe('Remix · Bonus');
+    expect(scene.palette).toBe(true);
+    expect(scene.seed).toMatch(/^RX-/);
+    expect(scene.goldSamples, 'the resumed planet has its gold rim').toBeGreaterThanOrEqual(6);
+    const restored = await roundSnapshot(page);
+    expect({ ...restored, rot: 0 }).toEqual({ ...before, rot: 0 });
+
+    await card.getByRole('button', { name: 'Resume' }).click();
+    await page.evaluate(() => (window as any).__app.scene.finish(2));
+    await expect(page.locator(`${OPEN_MODAL} .remix-result`)).toBeVisible();
+    expect(await page.evaluate(() => (window as any).__app.p.remix[1].best[0])).toBe(2);
+    expect(await page.evaluate(() => JSON.stringify((window as any).__app.p.stars))).toBe(classicStars);
+    expect(await page.evaluate(() => (window as any).__app.p.savedRound ?? null)).toBeNull();
+    expectNoErrors(guard);
+  });
+
   test(`planet ${PLANET}: 3 throws → background → web view killed → the same round resumes; finishing clears it`, async ({
     page,
   }, info) => {

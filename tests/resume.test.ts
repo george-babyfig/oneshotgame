@@ -3,6 +3,7 @@ import { NO_MODIFIERS } from '../src/core/modifiers';
 import { roundState, stepRound } from '../src/core/round';
 import { newPlanet } from '../src/core/world';
 import { restoreSceneTroubles } from '../src/ui/app';
+import { remixLevel } from '../src/meta/remix';
 import {
   clearInterruptedRound,
   defaultProfile,
@@ -46,6 +47,22 @@ function checkpoint(): RoundCheckpoint {
 }
 
 describe('interrupted campaign rounds', () => {
+  it('preserves a mode-tagged Remix round and validates its RX level', () => {
+    const p = defaultProfile(0);
+    p.level = 11;
+    const c = checkpoint();
+    c.n = 1;
+    c.mode = 'remix';
+    c.seedPrefix = 'RX';
+    c.state = roundState(remixLevel(1, p).start);
+    saveInterruptedRound(p, c);
+    const reopened = migrate(JSON.parse(JSON.stringify(p)));
+    expect(readInterruptedRound(reopened)).toEqual(c);
+    const saved = JSON.parse(reopened.savedRound!);
+    saved.scene.seedPrefix = 'PP';
+    reopened.savedRound = JSON.stringify(saved);
+    expect(readInterruptedRound(reopened)).toBeNull();
+  });
   it('restores a mid-round vent clock, a used Buddy shield, and a settled source into the scene', () => {
     const p = defaultProfile(0);
     p.level = 18;

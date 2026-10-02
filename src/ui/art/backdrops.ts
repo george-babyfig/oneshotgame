@@ -52,7 +52,7 @@ function paintChapterBackdrop(g: G, chapter: number, w: number, h: number): void
 const backdropCache = new Map<string, HTMLCanvasElement>();
 
 /** Draw on top of the star field but behind the planet. */
-export function drawChapterBackdrop(g: G, chapter: number, w: number, h: number, time = 0, reduceMotion = false): void {
+export function drawChapterBackdrop(g: G, chapter: number, w: number, h: number, time = 0, reduceMotion = false, remix = false): void {
   if (w <= 0 || h <= 0) return;
   const dpr = canvasDpr();
   const key = `${chapter}|${w}|${h}|${dpr}`;
@@ -69,6 +69,13 @@ export function drawChapterBackdrop(g: G, chapter: number, w: number, h: number,
   }
   const drift = reduceMotion ? 0 : Math.sin(time * 0.12) * Math.min(8, w * 0.02);
   g.drawImage(canvas, (16 - drift) * dpr, 0, w * dpr, h * dpr, 0, 0, w, h);
+  if (remix) {
+    const dusk = g.createLinearGradient(0, 0, 0, h);
+    dusk.addColorStop(0, 'rgba(27,13,64,0.58)');
+    dusk.addColorStop(1, 'rgba(83,39,78,0.35)');
+    g.fillStyle = dusk;
+    g.fillRect(0, 0, w, h);
+  }
 }
 
 const cardUrls = new Map<number, string>();

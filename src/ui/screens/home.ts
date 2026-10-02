@@ -8,7 +8,7 @@ import { chapterOf } from '../../meta/progression';
 import { drawGalaxy } from '../art/galaxy';
 import { effectiveReduceMotion, flyReward, menuParticles } from '../motion';
 import type { App } from '../app';
-import { t, tp } from '../../i18n';
+import { planetName, t, tp } from '../../i18n';
 import { unlocked } from '../../meta/unlocks';
 import { nextUp } from '../../meta/nextup';
 import { STYLES_RELEASE } from '../../meta/cosmetics';
@@ -115,7 +115,7 @@ export function showHome(app: App) {
           'span',
           { class: 'stack' },
           h('b', null, t('▶ PLAY  Planet {n}', { n: p.level })),
-          h('small', null, `${t(ch.name)} · ${next.twist !== 'none' ? t(TWISTS[next.twist].name) : next.name}`),
+          h('small', null, `${t(ch.name)} · ${next.twist !== 'none' ? t(TWISTS[next.twist].name) : planetName(next.name)}`),
         ),
         'primary big wide play',
         () => (p.level <= 3 ? app.startLevel(p.level) : app.preLevel(p.level)),
@@ -128,7 +128,7 @@ export function showHome(app: App) {
     look: currentLook(p),
     onTap: (g) => {
       sfx.click();
-      toast(`${g.name} · ${'★'.repeat(g.stars)} · ✨${planetRate(g)}/h`);
+      toast(`${planetName(g.name)} · ${'★'.repeat(g.stars)} · ✨${planetRate(g)}/h`);
       app.showStarMap();
     },
   });

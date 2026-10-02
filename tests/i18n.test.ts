@@ -20,6 +20,7 @@ import { ITEMS } from '../src/meta/visitors';
 import { COACH, COACH_EVENTS, PRACTICE_GIFT_LINE } from '../src/meta/coach';
 import { COSMETICS, EXPRESSION_NAMES, EYE_NAMES, FACE_NAMES, HAIR_NAMES, SLOT_NAMES } from '../src/meta/cosmetics';
 import { BANNERS, PORTRAIT_FRAMES } from '../src/meta/passport';
+import { REMIX_TITLES } from '../src/meta/remix';
 import { ACHIEVEMENTS } from '../src/meta/achievements';
 import { BUILDINGS } from '../src/meta/homeworld';
 import { FRAMES, REASON } from '../src/ui/screens/homeworld';
@@ -104,6 +105,7 @@ export function allKeys(): string[] {
   add('Star Captain');
   add('Little Chemist');
   add('Chain Maker');
+  REMIX_TITLES.forEach((x) => add(x.title));
   Object.values(BUILDINGS).forEach((b) => (add(b.name), add(b.desc)));
   Object.values(REASON).forEach(add);
   PAINTS.forEach((x) => add(x.name));

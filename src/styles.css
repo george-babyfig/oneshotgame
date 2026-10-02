@@ -76,6 +76,20 @@ button {
 .row > * {
   flex: 1;
 }
+.passport-actions > button {
+  min-width: 0;
+  padding-inline: 4px;
+  font-size: 12px;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+.passport-action-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
 .muted {
   color: var(--muted);
 }
@@ -348,6 +362,7 @@ button {
 }
 .hud-title {
   flex: 1;
+  min-width: 0;
   text-align: center;
 }
 .hud-level {
@@ -360,6 +375,14 @@ button {
 .hud-name {
   font-size: max(12px, calc(19px * var(--text-scale)));
   font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: -0.35px;
+  line-height: 1.1;
+}
+@media (max-width: 360px) {
+  .hud-name {
+    font-size: max(12px, calc(14px * var(--text-scale)));
+  }
 }
 .hud-throws {
   display: flex;
@@ -696,6 +719,18 @@ button {
   padding: 7px 10px;
   border-radius: 10px;
   background: rgba(255, 123, 147, 0.18);
+}
+.short-kind {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
+}
+.short-kind-icon {
+  opacity: 0.45;
+  filter: grayscale(0.7);
+  text-decoration: line-through;
 }
 .targets {
   display: flex;
@@ -1450,6 +1485,115 @@ button.lb {
 }
 .chest-btn {
   animation: breathe 1.2s ease-in-out infinite;
+}
+.remix-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.remix-toggle button {
+  min-height: 44px;
+  min-width: 0;
+  white-space: normal;
+}
+.chapter.remix-chapter {
+  background-color: #211936;
+  background-blend-mode: multiply;
+}
+.remix-frame-outline {
+  box-shadow: inset 0 0 0 2px #cba66c;
+}
+.remix-frame-silver {
+  box-shadow:
+    inset 0 0 0 3px #cbd6e5,
+    0 0 12px #b9c8df66;
+}
+.remix-frame-gold {
+  box-shadow:
+    inset 0 0 0 3px #ffd776,
+    0 0 18px #ffd77688;
+}
+.node.remix-node,
+.node.remix-node.hard,
+.node.remix-node.super {
+  background: radial-gradient(circle at 35% 30%, #9276ae, #392948);
+}
+.remix-node small {
+  color: #ffdd81;
+}
+.remix-twist-mark {
+  position: absolute;
+  top: -7px;
+  right: -8px;
+  font-size: 17px;
+}
+.remix-frame-label {
+  text-align: center;
+  color: #ffe2a1;
+  font-size: 13px;
+}
+.remix-prelevel {
+  border: 2px solid #d8ad66;
+  background: #261b41;
+}
+/* Remix's card has no shop, so it sizes to its content: the targets must show without scrolling. */
+.level-info.remix-prelevel {
+  height: auto;
+  max-height: min(70vh, 460px);
+  gap: 6px;
+  padding: 10px 12px;
+}
+.remix-result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 18px;
+  text-align: center;
+}
+.remix-result .m-title {
+  /* Japanese copy is spaced by phrase; break there, not inside a word. */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.remix-result-stars .on {
+  color: #ffdc78;
+  text-shadow: 0 0 12px #f5ba49;
+}
+.remix-gold-reveal {
+  animation: remixGold 0.6s ease-out both;
+}
+@keyframes remixGold {
+  from {
+    transform: scale(0.96);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+.passport-remix-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.passport-remix-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  border-radius: 14px;
+  padding: 10px;
+  background: #2d2347;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.passport-remix-frame small {
+  color: #ffe2a1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .remix-gold-reveal {
+    animation: none;
+  }
 }
 
 /* star road */

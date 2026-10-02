@@ -38,7 +38,7 @@ export function rngFrom(seed: string) {
 }
 
 export type Twist =
-  'none' | 'fast' | 'tiny' | 'moon' | 'hot' | 'frozen' | 'ocean' | 'wind' | 'heavy' | 'wobble' | 'twin' | 'boss' | ObstacleId;
+  'none' | 'fast' | 'tiny' | 'moon' | 'hot' | 'frozen' | 'ocean' | 'wind' | 'heavy' | 'wobble' | 'twin' | 'boss' | 'short' | ObstacleId;
 
 export const TWISTS: Record<Twist, { name: string; desc: string }> = {
   none: { name: '', desc: '' },
@@ -53,6 +53,7 @@ export const TWISTS: Record<Twist, { name: string; desc: string }> = {
   wobble: { name: 'Wobbly Spin', desc: 'The planet speeds up, slows and spins back' },
   twin: { name: 'Twin Moons', desc: 'Two moons orbit in opposite directions' },
   boss: { name: 'Comet Guardian', desc: 'A guardian comet blocks shots — hit it 3 times for a bonus' },
+  short: { name: 'Short Supply', desc: 'One object sits this planet out' },
   rocks: { name: OBSTACLES.rocks.name, desc: OBSTACLES.rocks.rule },
   bubble: { name: OBSTACLES.bubble.name, desc: OBSTACLES.bubble.rule },
   mist: { name: OBSTACLES.mist.name, desc: OBSTACLES.mist.rule },
@@ -92,6 +93,7 @@ export interface LevelDef {
   /** Extra goals that must be met (with at least 1★) to win. */
   goals: Goal[];
   troubles: { id: TroubleId; source: number }[];
+  shortKind?: Kind;
 }
 
 /** A level goal: have N regions of a land type, or a creature living on the planet. */
@@ -115,7 +117,7 @@ export function starsEarned(p: Planet, score: number, L: Pick<LevelDef, 'stars' 
   if (!goalsMet(p, L.goals)) return 0;
   const stars = starsFor(score, L.stars);
   if (stars < 3 || !('n' in L)) return stars;
-  if (L.n === 1) {
+  if (L.n === 1 && (L as Partial<LevelDef>).seed?.startsWith('PP-')) {
     const adjacent = p.sectors.some(
       (sector, index) =>
         (sector.biome === 'ocean' && p.sectors[(index + 1) % SECTORS].biome === 'mountain') ||
@@ -124,7 +126,13 @@ export function starsEarned(p: Planet, score: number, L: Pick<LevelDef, 'stars' 
     if (!adjacent) return 2;
   }
   const start = (L as Partial<LevelDef>).start;
-  if (L.n === 3 && start && !p.speciesFound.some((id) => !start.speciesFound.includes(id))) return 2;
+  if (
+    L.n === 3 &&
+    (L as Partial<LevelDef>).seed?.startsWith('PP-') &&
+    start &&
+    !p.speciesFound.some((id) => !start.speciesFound.includes(id))
+  )
+    return 2;
   return stars;
 }
 
@@ -135,6 +143,10 @@ export type Difficulty = 'normal' | 'hard' | 'super';
 
 /** The first Hard planet is 15; later chapters keep their established slots. */
 export function difficultyOf(n: number, seedPrefix = 'PP'): Difficulty {
+  if (seedPrefix === 'RX') {
+    if (n >= 19 && n % 10 === 9) return 'super';
+    return n % 10 === 5 ? 'hard' : 'normal';
+  }
   if (seedPrefix !== 'PP') return 'normal';
   if (n >= 19 && n % 10 === 9) return 'super';
   if (n >= 15 && n % 5 === 0) return 'hard';
@@ -259,7 +271,8 @@ export function greedyPlan(start: Planet, queue: Kind[], throws: number, splash 
   return solvePlan({ start, queue, throws, nova }, rules, splash ? { ...NO_MODIFIERS, splash } : NO_MODIFIERS);
 }
 
-type SolverLevel = Pick<LevelDef, 'start' | 'queue' | 'throws' | 'nova'> & Partial<Pick<LevelDef, 'n' | 'troubles' | 'difficulty'>>;
+type SolverLevel = Pick<LevelDef, 'start' | 'queue' | 'throws' | 'nova'> &
+  Partial<Pick<LevelDef, 'n' | 'troubles' | 'difficulty' | 'seed'>>;
 
 /** Today's perfect-aim, immediate-life choice, with automatic Supernovas. */
 export function solve2(level: SolverLevel, rules: RoundRules = rulesForLevel(level.n ?? 1)): Planet {
@@ -268,7 +281,10 @@ export function solve2(level: SolverLevel, rules: RoundRules = rulesForLevel(lev
 
 function solvePlan(level: SolverLevel, rules: RoundRules, mods: typeof NO_MODIFIERS, choiceRules = rules): Planet {
   let state = roundState(level.start, level.nova, level.troubles, level.difficulty === 'hard' || level.difficulty === 'super');
-  const queue = level.n === 2 && choiceRules !== ROUND_RULES_V0 ? [level.queue[1], level.queue[0], ...level.queue.slice(2)] : level.queue;
+  const queue =
+    level.n === 2 && !level.seed?.startsWith('RX-') && choiceRules !== ROUND_RULES_V0
+      ? [level.queue[1], level.queue[0], ...level.queue.slice(2)]
+      : level.queue;
   for (let turn = 0; turn < level.throws; turn++) {
     const kind = queue[turn];
     const nova = novaReady(state);
@@ -386,6 +402,7 @@ export interface LevelOptions {
   salt?: number;
   rules?: RoundRules;
   obstacleCap?: number;
+  remix?: boolean;
 }
 
 function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
@@ -395,7 +412,9 @@ function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
   const rnd = rngFrom(seed);
   const kinds = availableKinds(n);
   let twist: Twist = 'none';
-  if (n >= 5 && n % 5 === 0) {
+  if (o.remix) {
+    twist = chooseRemixTwist(n, kinds.length, rnd);
+  } else if (n >= 5 && n % 5 === 0) {
     const pool: Twist[] = ['fast', 'tiny', 'moon', 'hot', 'frozen', 'ocean', ...laterTwists(n, obstacleCap)];
     twist = pool[Math.floor(rnd() * pool.length)];
   } else if (n >= 8 && rnd() < 0.25) {
@@ -416,14 +435,14 @@ function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
   // weighted deal: new kinds show up a bit more on their debut level
   const weights = DEAL_WEIGHTS;
   const queue: Kind[] = [];
-  if (n === 1) queue.push('rock', 'ice', 'ice', 'rock', 'ice', 'rock');
-  if (n === 2) queue.push('ice', 'rock', 'seed', 'rock', 'seed', 'ice', 'seed', 'rock');
-  if (n === 8) queue.push('magma', 'ice');
-  if (n === 13) queue.push('seed', 'storm');
-  if (n === 22) queue.push('seed', 'sun');
-  if (n === 25) queue.push('rock', 'ice');
-  if (n === 32) queue.push('magma', 'sun');
-  if (n === 26) queue.push('magma', 'ice', 'storm');
+  if (!o.remix && n === 1) queue.push('rock', 'ice', 'ice', 'rock', 'ice', 'rock');
+  if (!o.remix && n === 2) queue.push('ice', 'rock', 'seed', 'rock', 'seed', 'ice', 'seed', 'rock');
+  if (!o.remix && n === 8) queue.push('magma', 'ice');
+  if (!o.remix && n === 13) queue.push('seed', 'storm');
+  if (!o.remix && n === 22) queue.push('seed', 'sun');
+  if (!o.remix && n === 25) queue.push('rock', 'ice');
+  if (!o.remix && n === 32) queue.push('magma', 'sun');
+  if (!o.remix && n === 26) queue.push('magma', 'ice', 'storm');
   if (seedPrefix === 'PP' && n === 14) queue.push('seed', 'ice', 'storm');
   if (seedPrefix === 'PP' && [16, 18].includes(n)) queue.push('seed', 'ice', 'storm');
   if (seedPrefix === 'PP' && n === 28) queue.push('seed', 'magma', 'seed');
@@ -442,11 +461,28 @@ function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
       }
     }
   }
+  let shortKind: Kind | undefined;
+  if (o.remix && twist === 'short') {
+    const shortRnd = rngFrom(`${seed}-short`);
+    shortKind = kinds[Math.floor(shortRnd() * kinds.length)];
+    const remaining = kinds.filter((kind) => kind !== shortKind);
+    // Replace every occurrence, including the opening deal, before solving.
+    for (let i = 0; i < queue.length; i++) if (queue[i] === shortKind) queue[i] = remaining[Math.floor(shortRnd() * remaining.length)];
+    // Put every remaining kind in the throws a player can actually reach.
+    for (const kind of remaining) {
+      if (queue.slice(0, throws).includes(kind)) continue;
+      const duplicates = queue
+        .slice(0, throws)
+        .flatMap((dealt, i) => (queue.slice(0, throws).filter((other) => other === dealt).length > 1 ? [i] : []));
+      queue[duplicates[Math.floor(shortRnd() * duplicates.length)]] = kind;
+    }
+  }
   const difficulty = difficultyOf(n, seedPrefix);
   const troubleRnd = rngFrom(`${seed}-troubles`);
   const campaignEligible = seedPrefix === 'PP' && n >= 14 && ![15, 19, 22, 26, 32, 33, 34, 37, 41, 46, 51, 57].includes(n);
   const otherTaught = (o.rules?.troubles ?? []).filter((id) => TROUBLES[id].debut <= n);
-  const otherEligible = seedPrefix !== 'PP' && twist !== 'boss' && !/^(ZEN|RUSH|REMIX)/.test(seedPrefix) && otherTaught.length > 0;
+  const otherEligible =
+    seedPrefix !== 'PP' && !o.remix && twist !== 'boss' && !/^(ZEN|RUSH|REMIX)/.test(seedPrefix) && otherTaught.length > 0;
   const eligible = campaignEligible || otherEligible;
   const guaranteed = [14, 16, 18, 28, 36].includes(n) || (difficulty !== 'normal' && n >= 20);
   const haveTrouble =
@@ -485,7 +521,7 @@ function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
   if (twist in OBSTACLES && troubles.length && n < OBSTACLES[twist as ObstacleId].debut + 10) twist = 'none';
   const afterHard = seedPrefix === 'PP' && n > 1 && (difficultyOf(n - 1) === 'hard' || difficultyOf(n - 1) === 'super');
   const budget = difficulty === 'super' ? 5 : difficulty === 'hard' ? 4 : (n <= 30 ? 2 : 3) - Number(afterHard);
-  if ((twistPressure[twist] ?? 0) + troubles.length * 2 + (troubles.length && n >= 25 ? 1 : 0) > budget) twist = 'none';
+  if (!o.remix && (twistPressure[twist] ?? 0) + troubles.length * 2 + (troubles.length && n >= 25 ? 1 : 0) > budget) twist = 'none';
   const start = startFor(twist, rnd);
   if (seedPrefix === 'PP' && [14, 16, 18, 28, 36].includes(n)) {
     const lesson = start.sectors[11];
@@ -494,22 +530,54 @@ function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
     lesson.life = [14, 16, 18].includes(n) ? 2 : 1;
     lesson.heat = n === 28 ? 2 : n === 36 ? 1 : 0;
   }
-  if (n === 8 || n === 26) {
+  if (!o.remix && (n === 8 || n === 26)) {
     start.sectors[12].water = 3;
     start.sectors[12].heat = -2;
   }
-  if (n === 26) start.sectors[18].life = 1;
+  if (!o.remix && n === 26) start.sectors[18].life = 1;
   settle(start); // creatures that already fit the starting planet are there from the start
   const spin = (twist === 'fast' ? 0.9 : 0.35 + Math.min(0.3, n * 0.012)) * (rnd() < 0.5 ? 1 : -1);
   const name = `${NAMES_A[Math.floor(rnd() * NAMES_A.length)]} ${NAMES_B[Math.floor(rnd() * NAMES_B.length)]}`;
   const hue = difficulty === 'super' ? 285 : difficulty === 'hard' ? 15 : 200 + Math.floor(rnd() * 110);
   let sky = skyFor(n, twist, seed, difficulty);
+  if (o.remix) sky = { ...sky, obstacle: null, gusty: false };
   sky.ringDirection = spin > 0 ? -1 : 1;
   for (let attempt = 1; attempt <= 32 && skyWall({ sky, size: twist === 'tiny' ? 0.72 : 1, spin, twist }); attempt++) {
     sky = skyFor(n, twist, `${seed}-sky-${attempt}`, difficulty);
     sky.ringDirection = spin > 0 ? -1 : 1;
   }
-  return { n, seed, throws, queue, twist, sky, spin, size: twist === 'tiny' ? 0.72 : 1, start, name, hue, difficulty, troubles };
+  return {
+    n,
+    seed,
+    throws,
+    queue,
+    twist,
+    sky,
+    spin,
+    size: twist === 'tiny' ? 0.72 : 1,
+    start,
+    name,
+    hue,
+    difficulty,
+    troubles,
+    ...(shortKind ? { shortKind } : {}),
+  };
+}
+
+/** Share the generator's first draw with the Star Map's cheap twist preview. */
+function chooseRemixTwist(n: number, kindCount: number, rnd: () => number): Twist {
+  const slot = ((n - 1) % 10) + 1;
+  if (slot === 10) return 'boss';
+  const pool: Twist[] = slot <= 4 ? ['hot', 'frozen', 'ocean', 'tiny', 'short'] : ['wind', 'wobble', 'twin', 'moon', 'fast', 'short'];
+  // A short deal must still have at least three unlocked kinds to play with.
+  let twist: Twist;
+  do twist = pool[Math.floor(rnd() * pool.length)];
+  while (twist === 'short' && kindCount < 4);
+  return twist;
+}
+
+export function remixTwist(n: number): Twist {
+  return chooseRemixTwist(n, availableKinds(n).length, rngFrom(`RX-${n}`));
 }
 
 export type LevelMeta = Pick<LevelDef, 'name' | 'hue' | 'twist' | 'difficulty'> & { boss: boolean; obstacle: ObstacleId | null };
@@ -545,7 +613,7 @@ function copyLevel(level: LevelDef): LevelDef {
 /** `o.goals` / `o.boss` give non-campaign planets (the weekly Voyage) goals and a Comet Guardian. */
 export function makeLevel(n: number, seedPrefix = 'PP', o: LevelOptions = {}): LevelDef {
   const salt = o.salt ?? (seedPrefix === 'PP' ? LEVEL_SALT[n] : undefined);
-  const key = JSON.stringify([n, seedPrefix, !!o.goals, !!o.boss, salt ?? null, o.rules ?? rulesForLevel(n), o.obstacleCap]);
+  const key = JSON.stringify([n, seedPrefix, !!o.goals, !!o.boss, !!o.remix, salt ?? null, o.rules ?? rulesForLevel(n), o.obstacleCap]);
   const cached = levelCache.get(key);
   if (cached) return copyLevel(cached);
   let level = buildLevel(n, seedPrefix, o);
@@ -560,7 +628,7 @@ export function makeLevel(n: number, seedPrefix = 'PP', o: LevelOptions = {}): L
 function buildLevel(n: number, seedPrefix: string, o: LevelOptions): LevelDef {
   const layout = levelLayout(n, seedPrefix, o);
   const { seed, throws, queue, twist, sky, spin, size, start, name, hue, difficulty, troubles } = layout;
-  const nova = seedPrefix !== 'PP' || n >= 9;
+  const nova = o.remix ? n >= 9 : seedPrefix !== 'PP' || n >= 9;
   const rules = o.rules ?? rulesForSeed(seed);
   const plan = solve2({ ...layout, nova }, rules);
   const blind = solve0({ ...layout, nova }, rules);
@@ -570,7 +638,7 @@ function buildLevel(n: number, seedPrefix: string, o: LevelOptions): LevelDef {
   // then a sawtooth inside every chapter (easier after a chest, harder near the end).
   const progress = Math.max(0, Math.min(1, (n - 1) / (TUNE.rampLevels - 1)));
   const ease = progress * progress * (3 - 2 * progress);
-  const saw = seedPrefix === 'PP' ? ((n - 1) % 10) / 9 : 0.5;
+  const saw = seedPrefix === 'PP' || o.remix ? ((n - 1) % 10) / 9 : 0.5;
   const bump = TUNE.bump[difficulty];
   const breather = seedPrefix === 'PP' && n > 1 && (difficultyOf(n - 1) === 'hard' || difficultyOf(n - 1) === 'super') ? 0.02 : 0;
   const obstacleLesson = seedPrefix === 'PP' && [33, 41, 46, 51, 57].includes(n);
@@ -595,7 +663,14 @@ function buildLevel(n: number, seedPrefix: string, o: LevelOptions): LevelDef {
     TUNE.f3[0] + TUNE.f3[1] * ease + bump[2] - (seedPrefix === 'PP' && n >= 21 ? 0.02 : 0) - breather - (obstacleLesson ? 0.05 : 0),
   );
   const t = (f: number) => Math.max(base + 5, Math.round((base + (best - base) * f) / 5) * 5);
-  const stars: [number, number, number] = [Math.min(t(f1), Math.floor(lifeScore(blind) / 5) * 5), t(f2), t(f3)];
+  // Remix's twist and required goal carry the challenge; its score bars use
+  // the classic shares on this seed, without campaign obstacle lesson relief.
+  const remixF1 = f2;
+  const remixF2 = (f2 + f3) / 2;
+  const remixF3 = f3;
+  const stars: [number, number, number] = o.remix
+    ? [t(remixF1), t(remixF2), t(remixF3)]
+    : [Math.min(t(f1), Math.floor(lifeScore(blind) / 5) * 5), t(f2), t(f3)];
   if (seedPrefix === 'PP' && n === 15) stars[0] += 25;
   if (seedPrefix === 'PP' && n === 20) stars[0] += 35;
   if (seedPrefix === 'PP' && n === 23) stars[0] += 15;
@@ -630,9 +705,19 @@ function buildLevel(n: number, seedPrefix: string, o: LevelOptions): LevelDef {
   if (seedPrefix === 'PP' && n === 23) stars[2] -= 10;
   if (seedPrefix === 'PP' && n === 24) stars[2] -= 5;
   if (seedPrefix === 'PP' && n === 28) stars[2] -= 15;
-  if (stars[1] <= stars[0]) stars[1] = stars[0] + 5;
-  if (stars[2] <= stars[1]) stars[2] = stars[1] + 5;
-  const goals = seedPrefix === 'PP' || o.goals ? pickGoals(n, difficulty, start, plan, blind, rngFrom(`${seed}-goals`)) : [];
+  if (o.remix) {
+    stars[2] = Math.min(stars[2], best);
+    stars[1] = Math.min(stars[1], stars[2] - 5);
+    stars[0] = Math.min(stars[0], stars[1] - 5);
+  } else {
+    if (stars[1] <= stars[0]) stars[1] = stars[0] + 5;
+    if (stars[2] <= stars[1]) stars[2] = stars[1] + 5;
+  }
+  const goals = o.remix
+    ? remixGoal(start, plan, rngFrom(`${seed}-goals`))
+    : seedPrefix === 'PP' || o.goals
+      ? pickGoals(n, difficulty, start, plan, blind, rngFrom(`${seed}-goals`))
+      : [];
   // The first goal is one Highland, supported by Rock Pebble in the opening deal.
   if (seedPrefix === 'PP' && n === 6) goals.splice(0, goals.length, { type: 'biome', id: 'highland', count: 1 });
   if (seedPrefix === 'PP' && n === 7) goals.splice(0, goals.length, { type: 'biome', id: 'ocean', count: 1 });
@@ -658,7 +743,34 @@ function buildLevel(n: number, seedPrefix: string, o: LevelOptions): LevelDef {
     nova,
     goals,
     troubles,
+    ...(layout.shortKind ? { shortKind: layout.shortKind } : {}),
   };
+}
+
+const REMIX_GOAL_SHARE = 1; // The campaign-scale gate needs the full planned goal count in early chapters.
+/** A single goal from the actual Remix solver result, including early planets. */
+function remixGoal(start: Planet, plan: Planet, rnd: () => number): Goal[] {
+  const counts = [...new Set(plan.sectors.map((sector) => sector.biome))]
+    .filter((id) => id !== 'barren')
+    .map((id) => ({
+      id,
+      have: plan.sectors.filter((sector) => sector.biome === id).length,
+      from: start.sectors.filter((sector) => sector.biome === id).length,
+    }))
+    .filter((row) => row.have > row.from);
+  const candidates = counts.length
+    ? counts
+    : [...new Set(plan.sectors.map((sector) => sector.biome))]
+        .filter((id) => id !== 'barren')
+        .map((id) => ({ id, have: plan.sectors.filter((sector) => sector.biome === id).length, from: 0 }));
+  const pick = candidates[Math.floor(rnd() * candidates.length)];
+  return [
+    {
+      type: 'biome',
+      id: pick?.id ?? 'barren',
+      count: Math.max(1, Math.min(pick?.have ?? 1, Math.max((pick?.from ?? 0) + 1, Math.round((pick?.have ?? 1) * REMIX_GOAL_SHARE)))),
+    },
+  ];
 }
 
 export function starsFor(score: number, stars: [number, number, number]): number {

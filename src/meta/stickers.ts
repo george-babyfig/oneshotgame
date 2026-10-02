@@ -10,6 +10,7 @@ import { FESTIVALS } from './festivals';
 import { STUDIED_AT } from './lore';
 import { applyReward, type Reward } from './progression';
 import { REACTIONS, type ReactionId } from '../core/round';
+import { remixFrame } from './remix';
 
 export type StickerKind = 'critter' | 'fest' | 'voyage' | 'feat' | 'fusion';
 
@@ -22,6 +23,8 @@ export interface Sticker {
   /** How to earn it: an English template and its values. */
   hint: [string, Record<string, string | number>?];
   earned: (p: Profile) => boolean;
+  /** Decorative bonus stickers never affect album rewards or milestones. */
+  bonus?: boolean;
 }
 
 export const VOYAGE_MARKS: { n: number; name: string }[] = [
@@ -38,9 +41,17 @@ interface Feat {
   hint: string;
   n?: number;
   earned: (p: Profile) => boolean;
+  bonus?: boolean;
 }
 
 const FEATS: Feat[] = [
+  {
+    id: 'remix_gold',
+    name: 'Remix Ribbon',
+    hint: 'Make your first gold Remix frame',
+    bonus: true,
+    earned: (p) => Object.keys(p.remix ?? {}).some((key) => remixFrame(p, Number(key)) === 'gold'),
+  },
   { id: 'guardian', name: 'Guardian Tamer', hint: 'Defeat a Comet Guardian', earned: (p) => p.bosses.length > 0 },
   { id: 'atlas', name: 'Stargazer', hint: 'Light a constellation', earned: (p) => p.constellations.length > 0 },
   { id: 'crown', name: 'Crown of Stars', hint: 'Light all six constellations', earned: (p) => p.constellations.length >= 6 },
@@ -127,6 +138,7 @@ export const STICKERS: Sticker[] = [
     art: f.id,
     hint: f.n ? [f.hint, { n: f.n }] : [f.hint],
     earned: f.earned,
+    bonus: f.bonus,
   })),
   ...REACTION_STICKERS,
   ...COMBO_STICKERS,
@@ -143,7 +155,8 @@ export interface AlbumPage {
 /** Collection pages; filling one pays its reward once. */
 export { ALBUM_PAGES } from './tuning';
 
-export const pageStickers = (kind: StickerKind) => STICKERS.filter((s) => s.kind === kind || (kind === 'feat' && s.kind === 'fusion'));
+export const pageStickers = (kind: StickerKind) =>
+  STICKERS.filter((s) => !s.bonus && (s.kind === kind || (kind === 'feat' && s.kind === 'fusion')));
 
 export function ownedStickers(p: Profile) {
   return STICKERS.filter((s) => s.earned(p));
@@ -156,7 +169,7 @@ export const MILESTONE_EVERY = 10;
 export { MILESTONE_REWARD } from './tuning';
 
 export function milestonesReady(p: Profile) {
-  return Math.max(0, Math.floor(ownedStickers(p).length / MILESTONE_EVERY) - p.album.milestones);
+  return Math.max(0, Math.floor(ownedStickers(p).filter((s) => !s.bonus).length / MILESTONE_EVERY) - p.album.milestones);
 }
 
 export function pageDone(p: Profile, kind: StickerKind) {

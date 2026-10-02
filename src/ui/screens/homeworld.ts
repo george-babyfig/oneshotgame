@@ -77,7 +77,7 @@ import { SEASON_EMOJI, SEASON_NAMES, nightness, seasonOf } from '../../meta/seas
 import { drawMeteors, drawSeason } from '../art/seasons';
 import { passportName } from '../../meta/passport';
 import type { App } from '../app';
-import { getLang, t, tp } from '../../i18n';
+import { getLang, planetName, t, tp } from '../../i18n';
 import { whenText } from '../../meta/dates';
 import { canvasDpr } from '../devcapture';
 
@@ -993,7 +993,7 @@ function expeditionSheet(app: App, after: () => void) {
     haptic.success();
     const sp = SPECIES_BY_ID[got.species];
     const planet = got.planet >= 0 ? p.galaxy[got.planet] : null;
-    const card = expeditionCard(got.species, planet?.name ?? t('deep space'), planet?.colors ?? [], passportName(p));
+    const card = expeditionCard(got.species, planet ? planetName(planet.name) : t('deep space'), planet?.colors ?? [], passportName(p));
     card.classList.add('hw-card');
     const m = modal([
       h('div', { class: 'm-title' }, t('{name} is back!', { name: t(sp.name) })),
@@ -1004,8 +1004,11 @@ function expeditionSheet(app: App, after: () => void) {
         { class: 'row' },
         btn(t('📮 Share postcard'), 'ghost', () =>
           shareCanvas(
-            expeditionCard(got.species, planet?.name ?? t('deep space'), planet?.colors ?? [], passportName(p), 1080),
-            t('{name} sent a postcard from {planet} 🪐 #CometGarden', { name: t(sp.name), planet: planet?.name ?? t('deep space') }),
+            expeditionCard(got.species, planet ? planetName(planet.name) : t('deep space'), planet?.colors ?? [], passportName(p), 1080),
+            t('{name} sent a postcard from {planet} 🪐 #CometGarden', {
+              name: t(sp.name),
+              planet: planet ? planetName(planet.name) : t('deep space'),
+            }),
             'expedition-postcard',
           ),
         ),

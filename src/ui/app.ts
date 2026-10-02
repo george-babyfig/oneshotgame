@@ -52,7 +52,9 @@ import { showShop } from './screens/shop';
 import { showStarMap } from './screens/starmap';
 import { showRoad } from './screens/road';
 import { dailyGiftFlow } from './flows/daily';
-import { preLevel } from './flows/prelevel';
+import { preLevel, remixPreLevel } from './flows/prelevel';
+import { remixResult } from './flows/remixResult';
+import { recordRemix, remixFrame, remixLevel, remixUnlocked } from '../meta/remix';
 import { levelResults } from './flows/results';
 import { settingsFlow, setTextSize } from './flows/settings';
 import { questsFlow } from './flows/quests';
@@ -93,6 +95,7 @@ import { wishClaimable } from '../meta/wishes';
 import { countUp, effectiveReduceMotion, screenTransition } from './motion';
 import { recordCombo, recordReaction } from '../meta/reactions';
 import type { RoundState } from '../core/round';
+import { rulesForLevel } from '../core/round';
 
 export function restoreSceneTroubles(scene: Pick<LevelScene, 'troubles' | 'buddyShieldUsed' | 'calmUsed'>, state: RoundState): void {
   scene.troubles = state.troubles ?? [];
@@ -251,7 +254,8 @@ export class App {
       .then(() => this.reconcilePurchases())
       .catch(() => {});
     const saved = readInterruptedRound(this.p);
-    if (saved) this.startLevel(saved.n, { resume: saved });
+    if (saved?.mode === 'remix') this.startRemix(saved.n, saved);
+    else if (saved) this.startLevel(saved.n, { resume: saved });
     else if (!this.p.tutorial) {
       if (this.p.meta.sessions === 1) titleBeat(this, () => this.startLevel(1, { tutorial: true }));
       else this.startLevel(1, { tutorial: true });
@@ -287,9 +291,11 @@ export class App {
 
   private checkpointRound(pause = false) {
     const scene = this.screen === 'level' ? this.scene : null;
-    if (!scene || scene.ended || scene.finishing || scene.o.competitive || scene.o.endless || scene.o.timeLimit) return;
+    if (!scene || scene.ended || scene.finishing || (scene.o.competitive && !scene.o.remixPalette) || scene.o.endless || scene.o.timeLimit)
+      return;
     saveInterruptedRound(this.p, {
       n: scene.L.n,
+      mode: scene.o.remixPalette ? 'remix' : 'campaign',
       seedPrefix: scene.L.seed.match(/^(.*)-(\d+)(?:~-?\d+)?$/)?.[1] ?? 'PP',
       salt: Number(scene.L.seed.match(/~(-?\d+)$/)?.[1]) || undefined,
       state: scene.roundState(),
@@ -606,9 +612,10 @@ export class App {
     if (this.screen !== 'shop') ledger.count('offer_shop');
     showShop(this);
   }
-  showStarMap() {
+  /** `remixChapter` opens that chapter's card on its Remix side. */
+  showStarMap(remixChapter = 0) {
     ledger.discover('star_map', this.p.level);
-    showStarMap(this);
+    showStarMap(this, remixChapter);
   }
   showRoad() {
     ledger.discover('star_road', this.p.level);
@@ -693,6 +700,66 @@ export class App {
   }
   preLevel(n: number) {
     preLevel(this, n);
+  }
+  preRemix(n: number) {
+    if (!remixUnlocked(this.p, Math.ceil(n / 10))) return this.showStarMap();
+    remixPreLevel(this, n);
+  }
+
+  /** Remix is its own route: only its chapter record changes at round end. */
+  startRemix(n: number, resume?: RoundCheckpoint) {
+    if (!remixUnlocked(this.p, Math.ceil(n / 10))) return;
+    if (!resume && this.p.savedRound) {
+      clearInterruptedRound(this.p);
+      this.save();
+    }
+    const level = remixLevel(n, this.p);
+    const opts = this.sceneOpts(
+      'remix',
+      {
+        label: t('Remix · Bonus'),
+        remixPalette: true,
+        competitive: true,
+        rules: rulesForLevel(n, 'remix', Math.max(1, this.p.level - 1)),
+        endLabel: t('See remix stars'),
+        onQuit: () => {
+          clearInterruptedRound(this.p);
+          this.save();
+          this.showStarMap(Math.ceil(n / 10));
+        },
+        onSpecies: () => {},
+        onThrow: () => {},
+        onReaction: () => ({ first: false }),
+        onCombo: () => {},
+        onPairTried: () => {},
+        onLand: () => 0,
+        onGustSeen: () => {},
+        onSkySeen: () => {},
+        spendGems: () => false,
+        buddy: null,
+        festAcc: undefined,
+        eventEmoji: undefined,
+        onEnd: (r) => {
+          clearInterruptedRound(this.p);
+          if (r.throwsUsed === -1) return this.preRemix(n);
+          const chapter = Math.ceil(n / 10);
+          const wasGold = remixFrame(this.p, chapter) === 'gold';
+          const result = recordRemix(this.p, n, r.stars);
+          this.save();
+          this.syncGameCenter();
+          remixResult(this, r, result.frame, !wasGold && result.frame === 'gold');
+        },
+      },
+      NO_BOOSTERS,
+    );
+    if (resume) this.applyCheckpointModifiers(opts, resume);
+    const scene = new LevelScene(level, opts);
+    if (resume) this.restoreCheckpointScene(scene, resume);
+    this.mount(scene.el, 'level');
+    this.scene = scene;
+    scene.onResolvedThrow = () => this.checkpointRound();
+    setMusicTheme(`remix:${chapterTheme(Math.ceil(n / 10))}`);
+    if (resume) this.showResumeCard(scene);
   }
 
   /** Shared top bar with currencies. */
@@ -907,113 +974,119 @@ export class App {
       opts.hintSectors = firstTargets(L);
       if (!o.resume) ledger.count('help_hint_try_used');
     }
-    if (o.resume) {
-      const m = o.resume.modifiers;
-      opts.scopeLevel = m.scopeLevel;
-      opts.splash = m.splash;
-      opts.extraThrows = m.extraThrows;
-      opts.boosters = m.boosters;
-      opts.lab = m.lab;
-      opts.momentum = m.momentum;
-      opts.shower = m.shower;
-      opts.gentle = m.gentle;
-      opts.buddy = m.buddy;
-      (opts as typeof opts & { buddyShield?: ReturnType<typeof buddyShieldFor> }).buddyShield =
-        (m as typeof m & { buddyShield?: ReturnType<typeof buddyShieldFor> }).buddyShield ?? null;
-      opts.allowIntro = () => false;
-      opts.coach = undefined;
-      opts.intro = undefined;
-    }
+    if (o.resume) this.applyCheckpointModifiers(opts, o.resume);
     const scene = new LevelScene(L, opts);
-    if (o.resume) {
-      const s = o.resume as RoundCheckpoint & {
-        roundLog?: typeof scene.roundLog;
-        skyState?: SkyState;
-        practiceBonkUsed?: boolean;
-        mistTipShown?: boolean;
-        gustTipShown?: boolean;
-      };
-      scene.skyState = restoredSkyState(s.skyState);
-      scene.practiceBonkUsed = !!s.practiceBonkUsed;
-      scene.mistTipShown = !!s.mistTipShown;
-      scene.gustTipShown = !!s.gustTipShown;
-      scene.planet = s.state.planet;
-      restoreSceneTroubles(scene, s.state);
-      scene.nova = s.state.nova;
-      scene.combo = s.state.combo;
-      scene.comboCharge = s.state.comboCharge;
-      scene.comboIconsCurrent = s.comboIconsCurrent ?? [];
-      scene.comboIconsBest = s.comboIconsBest ?? [];
-      scene.reactionEvents = s.reactionEvents ?? [];
-      if (
-        s.roundLog &&
-        Array.isArray(s.roundLog.troubles) &&
-        Array.isArray(s.roundLog.reactions) &&
-        Array.isArray(s.roundLog.bonks) &&
-        Array.isArray(s.roundLog.wandered)
-      )
-        scene.roundLog = s.roundLog;
-      scene.reactionsSeen = new Set(s.reactionsSeen ?? scene.reactionEvents);
-      scene.comboEvents = s.comboEvents ?? [];
-      scene.bonus = s.state.bonus;
-      scene.regionBests = s.state.regionBests;
-      scene.arrived = new Set(s.state.arrived);
-      scene.throwsLeft = s.throwsLeft;
-      scene.throwsUsed = s.throwsUsed;
-      scene.throwsTotal = s.throwsTotal;
-      scene.qi = s.qi;
-      scene.cur = s.cur;
-      scene.next = s.next;
-      scene.score = s.score;
-      scene.shownScore = s.shownScore;
-      scene.starsGot = s.starsGot;
-      scene.rot = s.rot;
-      scene.time = s.time;
-      scene.timeLeft = s.timeLeft;
-      scene.bossHp = s.bossHp;
-      scene.shot = s.shot;
-      if (
-        s.landedKinds?.length === scene.landedKinds.length &&
-        s.landedKinds.every((kind) => kind === null || (typeof kind === 'string' && kind in KINDS))
-      )
-        scene.landedKinds = [...s.landedKinds];
-      scene.practiceGifts = s.practiceGifts ?? 0;
-      scene.paused = true;
-    }
+    if (o.resume) this.restoreCheckpointScene(scene, o.resume);
     this.mount(scene.el, 'level');
     setMusicTheme(chapterTheme(chapterOf(n).n));
     this.scene = scene;
     scene.onResolvedThrow = () => this.checkpointRound();
-    if (o.resume) {
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
-          if (this.scene !== scene) return;
-          closeModals();
-          scene.modalOpen = null;
-          const card = modal(
-            [
-              h('div', { class: 'end-title' }, t('Welcome back — your planet is waiting')),
-              btn(t('Resume'), 'primary wide', () => card.close()),
-              btn(t('Leave to galaxy'), 'ghost wide', () => {
-                card.close();
-                scene.ended = true;
-                scene.o.onQuit();
-              }),
-            ],
-            {
-              dismiss: false,
-              onClose: () => {
-                scene.paused = false;
-                scene.modalOpen = null;
-                if (scene.over && !scene.ended) scene.checkEnd();
-              },
+    if (o.resume) this.showResumeCard(scene);
+  }
+
+  private applyCheckpointModifiers(opts: SceneOpts, resume: RoundCheckpoint) {
+    const m = resume.modifiers;
+    opts.scopeLevel = m.scopeLevel;
+    opts.splash = m.splash;
+    opts.extraThrows = m.extraThrows;
+    opts.boosters = m.boosters;
+    opts.lab = m.lab;
+    opts.momentum = m.momentum;
+    opts.shower = m.shower;
+    opts.gentle = m.gentle;
+    opts.buddy = m.buddy;
+    (opts as typeof opts & { buddyShield?: ReturnType<typeof buddyShieldFor> }).buddyShield =
+      (m as typeof m & { buddyShield?: ReturnType<typeof buddyShieldFor> }).buddyShield ?? null;
+    opts.allowIntro = () => false;
+    opts.coach = undefined;
+    opts.intro = undefined;
+  }
+
+  private restoreCheckpointScene(scene: LevelScene, saved: RoundCheckpoint) {
+    const s = saved as RoundCheckpoint & {
+      roundLog?: typeof scene.roundLog;
+      skyState?: SkyState;
+      practiceBonkUsed?: boolean;
+      mistTipShown?: boolean;
+      gustTipShown?: boolean;
+    };
+    scene.skyState = restoredSkyState(s.skyState);
+    scene.practiceBonkUsed = !!s.practiceBonkUsed;
+    scene.mistTipShown = !!s.mistTipShown;
+    scene.gustTipShown = !!s.gustTipShown;
+    scene.planet = s.state.planet;
+    restoreSceneTroubles(scene, s.state);
+    scene.nova = s.state.nova;
+    scene.combo = s.state.combo;
+    scene.comboCharge = s.state.comboCharge;
+    scene.comboIconsCurrent = s.comboIconsCurrent ?? [];
+    scene.comboIconsBest = s.comboIconsBest ?? [];
+    scene.reactionEvents = s.reactionEvents ?? [];
+    if (
+      s.roundLog &&
+      Array.isArray(s.roundLog.troubles) &&
+      Array.isArray(s.roundLog.reactions) &&
+      Array.isArray(s.roundLog.bonks) &&
+      Array.isArray(s.roundLog.wandered)
+    )
+      scene.roundLog = s.roundLog;
+    scene.reactionsSeen = new Set(s.reactionsSeen ?? scene.reactionEvents);
+    scene.comboEvents = s.comboEvents ?? [];
+    scene.bonus = s.state.bonus;
+    scene.regionBests = s.state.regionBests;
+    scene.arrived = new Set(s.state.arrived);
+    scene.throwsLeft = s.throwsLeft;
+    scene.throwsUsed = s.throwsUsed;
+    scene.throwsTotal = s.throwsTotal;
+    scene.qi = s.qi;
+    scene.cur = s.cur;
+    scene.next = s.next;
+    scene.score = s.score;
+    scene.shownScore = s.shownScore;
+    scene.starsGot = s.starsGot;
+    scene.rot = s.rot;
+    scene.time = s.time;
+    scene.timeLeft = s.timeLeft;
+    scene.bossHp = s.bossHp;
+    scene.shot = s.shot;
+    if (
+      s.landedKinds?.length === scene.landedKinds.length &&
+      s.landedKinds.every((kind) => kind === null || (typeof kind === 'string' && kind in KINDS))
+    )
+      scene.landedKinds = [...s.landedKinds];
+    scene.practiceGifts = s.practiceGifts ?? 0;
+    scene.paused = true;
+  }
+
+  private showResumeCard(scene: LevelScene) {
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        if (this.scene !== scene) return;
+        closeModals();
+        scene.modalOpen = null;
+        const card = modal(
+          [
+            h('div', { class: 'end-title' }, t('Welcome back — your planet is waiting')),
+            btn(t('Resume'), 'primary wide', () => card.close()),
+            btn(t('Leave to galaxy'), 'ghost wide', () => {
+              card.close();
+              scene.ended = true;
+              scene.o.onQuit();
+            }),
+          ],
+          {
+            dismiss: false,
+            onClose: () => {
+              scene.paused = false;
+              scene.modalOpen = null;
+              if (scene.over && !scene.ended) scene.checkEnd();
             },
-          );
-          scene.modalOpen = card;
-          scene.renderHud();
-        }),
-      );
-    }
+          },
+        );
+        scene.modalOpen = card;
+        scene.renderHud();
+      }),
+    );
   }
 
   private levelEnded(r: LevelResult) {

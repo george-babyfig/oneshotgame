@@ -8,6 +8,7 @@ import { recordTitles } from './records';
 import { t } from '../i18n';
 import { FUSION_IDS } from './reactions';
 import { ALL_COMBO_STAMPS } from './reactions';
+import { REMIX_TITLES, remixFrame, remixTotal } from './remix';
 
 // Names are proper nouns: they stay the same in every language, like a gamer tag.
 export const NAME_A = [
@@ -94,6 +95,13 @@ export function titlesOwned(p: Profile): TitleDef[] {
   for (const x of recordTitles(p)) out.push({ id: `rec:${x}`, text: x });
   if (FUSION_IDS.every((id) => p.fusionsFound.includes(id))) out.push({ id: 'reactions', text: 'Little Chemist' });
   if ((p.combo.stamps & ALL_COMBO_STAMPS) === ALL_COMBO_STAMPS) out.push({ id: 'combo', text: 'Chain Maker' });
+  for (const key of Object.keys(p.remix ?? {})) {
+    const chapter = Number(key);
+    if (remixFrame(p, chapter) === 'silver' || remixFrame(p, chapter) === 'gold')
+      out.push({ id: `remix:chapter:${chapter}`, text: t('Chapter {n} Remixed', { n: chapter }), gold: true });
+  }
+  const remixStars = remixTotal(p);
+  for (const row of REMIX_TITLES) if (remixStars >= row.stars) out.push({ id: `remix:total:${row.stars}`, text: row.title, gold: true });
   if (p.pass && !p.settings.hidePaidLooks) out.push({ id: 'pass', text: 'Star Captain', gold: true });
   return out;
 }
@@ -180,6 +188,11 @@ const BADGE_EMOJI: Record<string, string> = {
   festival_1: '🎪',
   stickers_30: '📒',
   buddy_1: '🐾',
+  remix_first: '🌟',
+  remix_boss: '☄️',
+  remix_gold_1: '🥇',
+  remix_gold_5: '🏅',
+  remix_gold_10: '🏆',
 };
 export const BADGE_SLOTS = 3;
 
@@ -222,6 +235,7 @@ export function passportStats(p: Profile): { label: string; value: number | stri
   const days = Math.max(1, Math.floor((Date.now() - p.meta.installed) / 86400000) + 1);
   return [
     { label: t('Stars'), value: totalStars(p) },
+    { label: t('Remix stars'), value: remixTotal(p) },
     { label: t('Planets finished'), value: p.stats.wins },
     { label: t('Three-star planets'), value: p.stats.threeStars },
     { label: t('Creatures found'), value: `${p.seen.length}/36` },

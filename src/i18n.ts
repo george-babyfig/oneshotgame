@@ -5,6 +5,7 @@ import fr from './locales/fr.json';
 import de from './locales/de.json';
 import pt from './locales/pt.json';
 import ja from './locales/ja.json';
+import { localPlanetName } from './i18n/planetNames';
 
 type PlayerLang = 'en' | 'es' | 'fr' | 'de' | 'pt' | 'ja';
 export type Lang = PlayerLang | 'pseudo';
@@ -85,6 +86,15 @@ export function t(key: string, vars?: Record<string, string | number>): string {
   let s = lang === 'pseudo' ? pseudo(key) : (DICTS[lang][key] ?? key);
   if (vars) for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
   return s;
+}
+
+/** A planet's display name. The English name stays in saves and codes. */
+export function planetName(name: string): string {
+  if (name.startsWith('Code ')) return t('Code {code}', { code: name.slice(5) });
+  if (lang === 'en' || lang === 'pseudo') return t(name);
+  if (name === 'Beat the clock!') return t('Beat the clock!');
+  if (name === 'Your garden') return t('Your garden');
+  return localPlanetName(name, lang) ?? t(name);
 }
 
 /** Plural helper: picks `one` when n === 1. */

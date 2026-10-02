@@ -24,7 +24,7 @@ import { drawCreature } from '../art/critters';
 import { SPECIES_BY_ID } from '../../core/world';
 import { goalChips, twistChip } from '../flows/prelevel';
 import { NO_BOOSTERS, type App } from '../app';
-import { getLang, t, tp } from '../../i18n';
+import { getLang, planetName, t, tp } from '../../i18n';
 import { rulesForLevel } from '../../core/round';
 import { untilText } from '../../meta/dates';
 
@@ -96,7 +96,7 @@ export function showVoyage(app: App) {
         },
       },
       thumb(L, 76, !open),
-      h('b', null, `${i + 1}. ${t(L.name)}`),
+      h('b', null, `${i + 1}. ${planetName(L.name)}`),
       h('small', null, open ? '★'.repeat(s) + '☆'.repeat(3 - s) : '🔒'),
       last ? h('span', { class: 'vboss' }, '☄️') : null,
     );
@@ -168,7 +168,7 @@ function stopSheet(app: App, i: number) {
   const first = i === v.cleared;
   const m = modal([
     h('div', { class: 'm-sub' }, t('{voyage} · Stop {n}', { voyage: t(voyageName(v.week)), n: i + 1 })),
-    h('div', { class: 'm-title' }, t(L.name)),
+    h('div', { class: 'm-title' }, planetName(L.name)),
     h('div', { class: 'vthumb' }, thumb(L, 120, false)),
     i === VOYAGE_LEN - 1 ? h('div', { class: 'twist-chip' }, t('☄️ Comet Guardian — hit it 3 times!')) : null,
     i === VOYAGE_LEN - 1 ? null : twistChip(L, p.settings.planetColours === 'clear'),

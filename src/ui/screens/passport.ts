@@ -36,8 +36,18 @@ import type { App } from '../app';
 import { t } from '../../i18n';
 import { celebrate } from '../celebrate';
 import { effectiveReduceMotion } from '../motion';
+import { remixFrame, remixStars, remixTotal } from '../../meta/remix';
 
 const festAcc = (p: App['p']) => (festivalActive(p) ? ensureFestival(p).acc : undefined);
+
+function passportAction(label: string, style: string, action: () => void) {
+  const [icon, ...words] = label.split(' ');
+  return btn(
+    h('span', { class: 'passport-action-content' }, h('span', { 'aria-hidden': 'true' }, icon), h('span', null, words.join(' '))),
+    style,
+    action,
+  );
+}
 
 /** The card itself (used on the Passport screen and in the setup sheet). */
 export function passportCard(app: App, compact = false) {
@@ -99,6 +109,20 @@ export function showPassport(app: App) {
     ),
   );
   const pinned = new Set(pinnedBadges(p).map((a) => a.id));
+  const remixFrames = Object.keys(p.remix ?? {})
+    .map(Number)
+    .sort((a, b) => a - b)
+    .map((chapter) => {
+      const frame = remixFrame(p, chapter);
+      const total = remixStars(p, chapter).reduce((a, b) => a + b, 0);
+      return h(
+        'div',
+        { class: `passport-remix-frame remix-frame-${frame}` },
+        h('b', null, t('Chapter {n}', { n: chapter })),
+        h('span', null, t('Remix {n}/30', { n: total })),
+        h('small', null, frame === 'gold' ? t('🥇 Gold frame') : frame === 'silver' ? t('🥈 Silver frame') : t('Frame in progress')),
+      );
+    });
   const trophies = h(
     'div',
     { class: 'trophies' },
@@ -134,13 +158,15 @@ export function showPassport(app: App) {
         card,
         h(
           'div',
-          { class: 'row' },
-          btn(t('✏️ Edit'), 'ghost', () => editPassport(app)),
-          btn(t('🧑‍🚀 Styles'), 'ghost', () => app.showStyles()),
-          btn(t('📤 Share'), 'primary', () => sharePassport(app)),
+          { class: 'row passport-actions' },
+          passportAction(t('✏️ Edit'), 'ghost', () => editPassport(app)),
+          passportAction(t('🧑‍🚀 Styles'), 'ghost', () => app.showStyles()),
+          passportAction(t('📤 Share'), 'primary', () => sharePassport(app)),
         ),
         h('div', { class: 'sec-title' }, t('Stats')),
         stats,
+        remixFrames.length ? h('div', { class: 'sec-title' }, t('Bonus Remix · {n}★', { n: remixTotal(p) })) : null,
+        remixFrames.length ? h('div', { class: 'passport-remix-list' }, ...remixFrames) : null,
         h('div', { class: 'sec-title' }, t('Trophies'), ' ', h('small', { class: 'muted' }, t('tap to pin up to {n}', { n: BADGE_SLOTS }))),
         trophies,
       ),

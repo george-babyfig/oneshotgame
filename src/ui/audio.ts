@@ -359,7 +359,11 @@ let theme: Theme = THEMES.home;
 
 /** Switch music theme; takes effect at the next chord. */
 export function setMusicTheme(name: string) {
-  theme = THEMES[name] ?? THEMES.home;
+  if (name.startsWith('remix:')) {
+    const base = THEMES[name.slice(6)] ?? THEMES.voyage;
+    // The chapter's own harmony returns with a quicker, lighter arpeggio.
+    theme = { ...base, len: base.len * 0.82, step: base.step * 0.5, bells: true };
+  } else theme = THEMES[name] ?? THEMES.home;
 }
 export function chapterTheme(chapter: number) {
   return CHAPTER_THEMES[(chapter - 1) % CHAPTER_THEMES.length];

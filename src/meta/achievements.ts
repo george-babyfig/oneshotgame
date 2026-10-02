@@ -2,8 +2,11 @@
 // IDs must match what you create in App Store Connect (see store/gamecenter.md).
 import type { Profile } from './profile';
 import { ownedStickers } from './stickers';
+import { remixFrame, remixStars } from './remix';
 
 const stickerCount = (p: Profile) => ownedStickers(p).length;
+const remixChapters = (p: Profile) => Object.keys(p.remix ?? {}).map(Number);
+const goldFrames = (p: Profile) => remixChapters(p).filter((chapter) => remixFrame(p, chapter) === 'gold').length;
 
 const PREFIX = 'com.pocketplanet.game.';
 
@@ -56,6 +59,11 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   a('festival_1', 'Party Planet', 15, (p) => p.album.fest.length >= 1),
   a('stickers_30', 'Sticker Star', 25, (p) => stickerCount(p) >= 30),
   a('buddy_1', 'Best Buddies', 10, (p) => !!p.buddy.species),
+  a('remix_first', 'First Remix', 10, (p) => remixChapters(p).some((chapter) => remixFrame(p, chapter) !== 'none')),
+  a('remix_boss', 'Remix a Comet Guardian', 10, (p) => remixChapters(p).some((chapter) => remixStars(p, chapter)[9] > 0)),
+  a('remix_gold_1', 'First Gold Frame', 10, (p) => goldFrames(p) >= 1),
+  a('remix_gold_5', 'Five Gold Frames', 15, (p) => goldFrames(p) >= 5),
+  a('remix_gold_10', 'Ten Gold Frames', 30, (p) => goldFrames(p) >= 10),
 ];
 
 /** Achievements newly earned but not yet reported. */

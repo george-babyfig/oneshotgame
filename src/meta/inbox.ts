@@ -8,6 +8,7 @@ import { applyReward, type Reward } from './progression';
 import { seasonOf, skyEventOn } from './seasons';
 import { chaptersDone, friendLevel, FRIEND_LEVELS } from './homeworld';
 import { UNLOCKS, unlocked } from './unlocks';
+import { remixUnlocked } from './remix';
 
 export interface Mail {
   id: string;
@@ -72,6 +73,15 @@ const RULES: Rule[] = [
       title: 'Chapter {n} complete!',
       body: 'Every planet in the chapter is alive and orbiting your galaxy. The crew is proud of you. Onward!',
       gift: INBOX_GIFTS.chapter,
+    }),
+  },
+  {
+    kind: 'remix',
+    key: (p) => (remixUnlocked(p, 1) ? 'remix-intro' : null),
+    letter: () => ({
+      from: MC,
+      title: 'A new angle on your chapter',
+      body: 'Bonus Remix is open on your finished chapters. Each planet has one playful twist and its own gold stars. Your classic journey stays just as it is.',
     }),
   },
   {
@@ -240,6 +250,14 @@ export function addIntroLetter(p: Profile, id: string, at = Date.now()): boolean
   if (!row || p.mailSeen.includes(`coach-${id}`) || p.mail.some((m) => m.id === `coach-${id}`)) return false;
   p.mail.unshift({ id: `coach-${id}`, kind: 'coach_intro', at, read: false, claimed: false, vars: { id } });
   p.mailSeen = [...p.mailSeen, `coach-${id}`];
+  return true;
+}
+
+/** The first finished chapter quietly adds the Bonus invitation to Inbox. */
+export function addRemixLetter(p: Profile, at = Date.now()): boolean {
+  if (!remixUnlocked(p, 1) || p.mailSeen.includes('remix-intro') || p.mail.some((mail) => mail.id === 'remix-intro')) return false;
+  p.mail.unshift({ id: 'remix-intro', kind: 'remix', at, read: false, claimed: false });
+  p.mailSeen.push('remix-intro');
   return true;
 }
 

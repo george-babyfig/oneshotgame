@@ -145,7 +145,7 @@ export function playLevel(
   retry = 0,
   maxLoadout = false,
 ): PlayResult {
-  if (level.n === 2) {
+  if (level.n === 2 && level.seed.startsWith('PP-')) {
     const chance = policy.name === 'sharp' ? 1 : policy.name === 'casual' ? 0.4 : policy.name === 'decent-blind' ? 0 : 0.7;
     if (random() < chance) level = { ...level, queue: [level.queue[1], level.queue[0], ...level.queue.slice(2)] };
   }
@@ -199,7 +199,7 @@ export function playLevel(
     const bestGain = { best: -Infinity };
     const awareBest = oneStep(
       { level, planet: state.planet, state, turn, nova, labLevel: policy.labLevel, random, modifiers },
-      rulesForLevel(level.n),
+      rules,
       bestGain,
     );
     if (blindBest !== awareBest) choiceDifferences++;
@@ -339,7 +339,12 @@ export function playLevel(
       firstClearLeft = Math.max(0, throws - turn - 1);
     starHistory.push(starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level));
     if (turn + 1 === Math.floor(level.throws / 2)) halfStars = starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level);
-    if (level.n <= 3 && turn + 1 === throws && starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level) === 0) {
+    if (
+      level.seed.startsWith('PP-') &&
+      level.n <= 3 &&
+      turn + 1 === throws &&
+      starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level) === 0
+    ) {
       if (gifts < 2) {
         gifts++;
         throws += 3;
