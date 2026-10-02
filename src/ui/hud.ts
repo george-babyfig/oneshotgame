@@ -27,13 +27,19 @@ const roundDiscoveries = new WeakMap<LevelScene, string[]>();
 
 /** Shrinks a one-line label until it fits its box (long translated planet names at 320 px). */
 function fitOneLine(el: HTMLElement, min = 11): HTMLElement {
-  requestAnimationFrame(() => {
+  const fit = () => {
+    if (!el.isConnected) return;
+    el.style.fontSize = '';
     let size = parseFloat(getComputedStyle(el).fontSize);
     while (el.scrollWidth > el.clientWidth && size > min) {
       size = Math.max(min, size - 0.5);
       el.style.fontSize = `${size}px`;
     }
-  });
+  };
+  // Measure again once the web font arrives (it is wider than the fallback) and when the box resizes.
+  requestAnimationFrame(fit);
+  void document.fonts?.ready.then(fit);
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => requestAnimationFrame(fit)).observe(el);
   return el;
 }
 
