@@ -25,7 +25,7 @@ describe('Remix planets', () => {
       expect([level.name, level.hue]).toEqual([classic.name, classic.hue]);
       expect(level.seed).toMatch(/^RX-/);
     }
-  });
+  }, 180_000); // 500 planets; CI runners are 2-3x slower than a Mac
 
   it('keeps every planet through chapter 50 solvable with one goal and one twist', () => {
     let shortCount = 0;
@@ -76,7 +76,7 @@ describe('Remix planets', () => {
       if (slot === 10) expect(level.twist).toBe('boss');
     }
     expect(shortCount).toBeGreaterThan(0);
-  });
+  }, 180_000); // 500 planets; CI runners are 2-3x slower than a Mac
 });
 
 describe('Remix records', () => {
