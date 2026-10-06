@@ -4,7 +4,6 @@ import {
   BOOSTERS,
   UPGRADES,
   SKINS,
-  STAR_ROAD,
   QUESTS,
   QUEST_BONUS,
   CALENDAR,
@@ -48,6 +47,7 @@ import {
   GALAXY_RATE,
   INBOX_GIFTS,
 } from '../src/meta/tuning';
+import { STAR_ROAD } from '../src/meta/starroad';
 import { VAULT_RATES, VAULT_STORAGE_HOURS, VAULT_UPGRADE_COSTS } from '../src/meta/economy';
 
 function total(value: unknown): number {

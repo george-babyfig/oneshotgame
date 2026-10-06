@@ -2,7 +2,8 @@
 import { h, btn, modal } from '../dom';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
-import { STAR_ROAD, claimRoad, rewardText, type Reward } from '../../meta/progression';
+import { rewardText, type Reward } from '../../meta/progression';
+import { STAR_ROAD, claimRoad } from '../../meta/starroad';
 import type { App } from '../app';
 import { t } from '../../i18n';
 import { currentLook, type Look } from '../../meta/cosmetics';

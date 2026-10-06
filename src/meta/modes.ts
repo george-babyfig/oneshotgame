@@ -20,7 +20,7 @@ import { TROUBLES, type TroubleId } from '../core/troubles';
 import { BIOMES, clonePlanet, lifeScore, settle, type Planet } from '../core/world';
 import { dayGap, type Profile } from './profile';
 import { t } from '../i18n';
-import { addRoadPoints } from './roadpoints';
+import { addRoadPoints } from './starroad';
 import { RULES_VERSION } from '../core/rules-version';
 
 export const DAILY_EPOCH = '2026-01-01';

@@ -10,7 +10,7 @@ import type { Profile } from './profile';
 import { applyReward, type Reward } from './progression';
 import { isoWeek, weekAtMostOneAhead } from './events';
 import { unlocked } from './unlocks';
-import { addRoadPoints } from './roadpoints';
+import { addRoadPoints } from './starroad';
 
 export const VOYAGE_LEN = 7;
 export { VOYAGE_UNLOCK_LEVEL } from './unlocks';

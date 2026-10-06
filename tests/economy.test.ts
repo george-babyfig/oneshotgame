@@ -15,7 +15,8 @@ import {
 } from '../src/meta/economy';
 import { CALENDAR_DAYS, stamp } from '../src/meta/calendar';
 import { STARDUST_COSMETICS, buyCosmetic, owns } from '../src/meta/cosmetics';
-import { chestsReady, claimRoad, openChest, roadReady, STAR_ROAD } from '../src/meta/progression';
+import { chestsReady, openChest } from '../src/meta/progression';
+import { claimRoad, roadReady, STAR_ROAD } from '../src/meta/starroad';
 import { makeLevel } from '../src/core/levels';
 import { clonePlanet } from '../src/core/world';
 import { clearFails } from '../src/meta/continues';

@@ -3,7 +3,8 @@ import { BOSS_REWARD } from '../../meta/tuning';
 import { h, btn, fmt, modal } from '../dom';
 import { sfx } from '../audio';
 import { applyLevelWin } from '../../meta/economy';
-import { applyReward, chestsReady, roadReady } from '../../meta/progression';
+import { applyReward, chestsReady } from '../../meta/progression';
+import { roadReady } from '../../meta/starroad';
 import { recordWishRound, wishClaimable } from '../../meta/wishes';
 import { today } from '../../meta/profile';
 

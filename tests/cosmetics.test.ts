@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultProfile } from '../src/meta/profile';
-import { STAR_ROAD } from '../src/meta/progression';
+import { STAR_ROAD } from '../src/meta/starroad';
 import {
   COSMETICS,
   COSMETIC_BY_ID,

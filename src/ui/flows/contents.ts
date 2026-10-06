@@ -1,7 +1,7 @@
 import { t } from '../../i18n';
 import type { ProductDef } from '../../meta/config';
 import { btn, h, modal } from '../dom';
-import { STAR_ROAD } from '../../meta/tuning';
+import { STAR_ROAD } from '../../meta/starroad';
 import { ledger } from '../../meta/ledger';
 
 /** Confirm the exact contents and local store price after the parent gate. */

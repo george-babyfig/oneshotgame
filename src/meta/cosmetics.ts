@@ -5,7 +5,7 @@ import { spend } from './wallet';
 // Ownership is derived from progress wherever possible, so unlocks are
 // retroactive and never need a save migration.
 import type { Profile } from './profile';
-import { STAR_ROAD } from './progression';
+import { STAR_ROAD } from './starroad';
 import { getLang, t } from '../i18n';
 import { HABITATS } from './habitats';
 import { dyeColors } from './dyes';

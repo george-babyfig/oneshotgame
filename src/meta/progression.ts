@@ -1,7 +1,6 @@
 import { CHAPTER_REWARD, CHAPTER_RANK_REWARD } from './tuning';
-import { STAR_ROAD } from './tuning';
 import { earn, type EarnSource } from './wallet';
-// Chapters and the Star Road reward track. Legacy quests are kept for save migration.
+// Chapter rewards and shared reward application. Legacy quests support save migration.
 import type { BoosterId } from './config';
 import type { Profile } from './profile';
 import { t } from '../i18n';
@@ -92,48 +91,6 @@ export function chestsReady(p: Profile): number[] {
   }
   return out;
 }
-
-// ------------------------------------------------------------------ Star Road
-export interface RoadTier {
-  stars: number;
-  /** Free lane. */
-  reward: Reward;
-  /** Cosmic Pass lane. */
-  pass: Reward;
-}
-
-export { STAR_ROAD } from './tuning';
-
-export function roadReady(p: Profile): number[] {
-  const out: number[] = [];
-  STAR_ROAD.forEach((t, i) => {
-    if (p.roadPoints < t.stars) return;
-    if (!p.road.includes(i)) out.push(i);
-    else if (p.pass && !p.roadPass.includes(i)) out.push(i);
-  });
-  return out;
-}
-
-/** Claim everything unlocked on tier i (free lane, plus pass lane if owned). */
-export function claimRoad(p: Profile, i: number): Reward[] {
-  const t = STAR_ROAD[i];
-  const got: Reward[] = [];
-  if (!t || p.roadPoints < t.stars) return got;
-  if (!p.road.includes(i)) {
-    p.road.push(i);
-    applyReward(p, t.reward, 'star_road');
-    got.push(t.reward);
-  }
-  if (p.pass && !p.roadPass.includes(i)) {
-    p.roadPass.push(i);
-    applyReward(p, t.pass, 'star_road');
-    got.push(t.pass);
-  }
-  return got;
-}
-
-/** The current pass lane contains looks only. */
-export const PASS_GEMS = STAR_ROAD.reduce((a, t) => a + (t.pass.gems ?? 0), 0);
 
 // Legacy quest shape supports save migration in wishes.ts.
 export type QuestEvent = 'throw' | 'win' | 'star' | 'creature' | 'three' | 'booster' | 'collect' | 'land' | 'voyage' | 'spot';

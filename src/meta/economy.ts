@@ -12,7 +12,7 @@ import { collectAll, pendingHomeProduction } from './homeworld';
 import { openVisitor } from './visitors';
 import { WELCOME_BACK_GEMS } from './tuning';
 import { t } from '../i18n';
-import { addRoadPoints } from './roadpoints';
+import { addRoadPoints } from './starroad';
 import { takeWonContinues } from './continues';
 
 /** Stardust per hour produced by one galaxy planet. */

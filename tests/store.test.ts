@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { PRODUCTS, PRODUCT_TEXT_KEYS, STAR_ROAD } from '../src/meta/tuning';
+import { PRODUCTS, PRODUCT_TEXT_KEYS } from '../src/meta/tuning';
+import { STAR_ROAD } from '../src/meta/starroad';
 import { defaultProfile } from '../src/meta/profile';
 import { grantProduct, refundQuietUntil, revokeProduct } from '../src/meta/economy';
 import { createIap, mockIapControls } from '../src/meta/iap';

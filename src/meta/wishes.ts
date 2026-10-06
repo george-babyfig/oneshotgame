@@ -7,7 +7,7 @@ import { QUESTS, QUEST_BONUS, WISH_REWARD } from './tuning';
 import { earn } from './wallet';
 import { unlocked } from './unlocks';
 import { addFriendship } from './homeworld';
-import { addRoadPoints } from './roadpoints';
+import { addRoadPoints } from './starroad';
 import { checkMail } from './inbox';
 import { REACTIONS, type ReactionId } from '../core/round';
 

@@ -13,23 +13,15 @@ export const PIGGY_PER_WIN = 4;
 export const PIGGY_MAX = 250;
 export const GEMS_PER_NEW_SPECIES = 3;
 
-export interface ProductDef {
-  key: string;
-  /** Must match the Product ID you create in App Store Connect. */
-  id: string;
-  title: string;
-  description: string;
-  /** Exact contents shown before checkout. */
-  contents: string[];
-  emoji: string;
-  gems: number;
-  consumable: boolean;
-  fallbackPrice: string;
-}
+import type { ProductDef } from './m12types';
+export type { ProductDef } from './m12types';
 
 export const PRODUCTS: ProductDef[] = [
   {
     key: 'gems_s',
+    kind: 'gem_pack',
+    familySharing: false,
+    cosmeticItemIds: [],
     id: 'com.pocketplanet.game.gems80',
     title: 'Handful of Gems',
     description: '80 gems',
@@ -41,6 +33,9 @@ export const PRODUCTS: ProductDef[] = [
   },
   {
     key: 'gems_m',
+    kind: 'gem_pack',
+    familySharing: false,
+    cosmeticItemIds: [],
     id: 'com.pocketplanet.game.gems500',
     title: 'Pouch of Gems',
     description: '500 gems',
@@ -52,6 +47,9 @@ export const PRODUCTS: ProductDef[] = [
   },
   {
     key: 'gems_l',
+    kind: 'gem_pack',
+    familySharing: false,
+    cosmeticItemIds: [],
     id: 'com.pocketplanet.game.gems1200',
     title: 'Chest of Gems',
     description: '1,200 gems',
@@ -63,6 +61,9 @@ export const PRODUCTS: ProductDef[] = [
   },
   {
     key: 'gems_xl',
+    kind: 'gem_pack',
+    familySharing: false,
+    cosmeticItemIds: [],
     id: 'com.pocketplanet.game.gems2800',
     title: 'Galaxy of Gems',
     description: '2,800 gems',
@@ -74,6 +75,9 @@ export const PRODUCTS: ProductDef[] = [
   },
   {
     key: 'piggy',
+    kind: 'piggy_bank',
+    familySharing: false,
+    cosmeticItemIds: [],
     id: 'com.pocketplanet.game.piggy',
     title: 'Gem Piggy Bank',
     description: 'The gems saved so far, up to 250',
@@ -85,6 +89,9 @@ export const PRODUCTS: ProductDef[] = [
   },
   {
     key: 'starter',
+    kind: 'cosmetic_bundle',
+    familySharing: true,
+    cosmeticItemIds: ['aurora', 'suit_aurora', 'tr_aurora_crew'],
     id: 'com.pocketplanet.game.startercrew',
     title: 'Starter Crew',
     description: 'Aurora atmosphere, Aurora Explorer suit, Aurora trail and Aurora Passport banner',
@@ -96,6 +103,9 @@ export const PRODUCTS: ProductDef[] = [
   },
   {
     key: 'pass',
+    kind: 'road_pass',
+    familySharing: true,
+    cosmeticItemIds: ['cosmic', 'l_orbit', 'hat_halo', 'tr_cosmic', 'suit_star'],
     id: 'com.pocketplanet.game.road00',
     title: 'Cosmic Pass: Cosmic Road',
     description: 'Cosmic Road looks, gold paints, Gilded Passport banner and Star Captain title',
@@ -179,30 +189,12 @@ export const LAB_FEATS = { fusion: 10, guard: 5 };
 export const FIRST_HOUR_REWARD = { dust: 100 };
 export const WELCOME_BACK_GEMS = 30;
 
-import type { Reward, RoadTier, QuestDef } from './progression';
+import type { Reward, QuestDef } from './progression';
 import type { BuildingType, BuildingDef } from './homeworld';
 import type { FestivalTier } from './festivals';
 import type { EventTier } from './events';
 import type { Constellation } from './constellations';
 import type { Dye } from './dyes';
-
-export const STAR_ROAD: RoadTier[] = [
-  { stars: 5, reward: { gems: 15 }, pass: { skin: 'cosmic', item: 'l_orbit' } },
-  { stars: 12, reward: { boosters: { shower: 2 }, gems: 40 }, pass: {} },
-  { stars: 20, reward: { dust: 400 }, pass: {} },
-  { stars: 30, reward: { skin: 'rose', gems: 10 }, pass: { item: 'hat_halo' } },
-  { stars: 42, reward: { gems: 30 }, pass: {} },
-  { stars: 55, reward: { boosters: { spark: 2, scope: 2 }, item: 'l_crystal' }, pass: {} },
-  { stars: 70, reward: { dust: 1200 }, pass: {} },
-  { stars: 85, reward: { skin: 'lime', gems: 20 }, pass: { item: 'tr_cosmic' } },
-  { stars: 100, reward: { gems: 50 }, pass: {} },
-  { stars: 120, reward: { boosters: { shower: 3, spark: 3, scope: 3 }, item: 'tr_rainbow' }, pass: {} },
-  { stars: 140, reward: { dust: 3000 }, pass: {} },
-  { stars: 165, reward: { skin: 'gold', gems: 40 }, pass: { item: 'suit_star' } },
-  { stars: 190, reward: { gems: 80, item: 'em_fireworks' }, pass: {} },
-  { stars: 220, reward: { dust: 6000, gems: 50, item: 'hat_crown' }, pass: {} },
-  { stars: 260, reward: { gems: 120 }, pass: {} },
-];
 
 export const QUESTS: QuestDef[] = [
   { id: 'throw25', event: 'throw', goal: 25, gems: 8, emoji: '🪨', text: (g) => t('Fling {n} objects', { n: g }) },

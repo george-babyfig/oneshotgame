@@ -1,7 +1,8 @@
 import { t } from '../i18n';
 import type { Profile } from './profile';
 import { UNLOCKS, unlocked } from './unlocks';
-import { chestsReady, roadReady } from './progression';
+import { chestsReady } from './progression';
+import { roadReady } from './starroad';
 import { wishClaimable, wishText, type WishCard } from './wishes';
 import { CONSTELLATIONS } from './tuning';
 import { habitatProgress, HABITATS } from './habitats';
