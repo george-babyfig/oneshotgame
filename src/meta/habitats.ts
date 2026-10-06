@@ -17,6 +17,11 @@ export function habitatProgress(p: Profile, h: Habitat) {
   return h.species.filter((s) => p.seen.includes(s)).length;
 }
 
+/** Completion is a discovery fact; claiming the separate reward is optional. */
+export function completedHabitatCount(p: Profile): number {
+  return HABITATS.filter((h) => habitatProgress(p, h) === h.species.length).length;
+}
+
 /** Claim a completed habitat once. */
 export function claimHabitat(p: Profile, id: string) {
   const h = HABITATS.find((x) => x.id === id);

@@ -1,6 +1,6 @@
 import { BIOMES, KINDS, SPECIES_BY_ID, TRAITS, traitOf, neededHabitat, settle, wrap, type Planet, type TraitId } from '../core/world';
 import { stepRound, previewStep, novaForThrow, novaReady, REACTIONS, REACTION_IDS, type RoundState, type StepResult } from '../core/round';
-import { fly, STAR_SLING, type FlightLaunch, type FlightWorld } from '../core/flight';
+import { flyWithLauncher, STAR_SLING, type FlightLaunch, type FlightWorld } from '../core/flight';
 import type { RoundModifiers } from '../core/modifiers';
 import { BOSS_HP } from '../core/levels';
 import { renderPlanet } from './art/planet';
@@ -8,6 +8,7 @@ import { drawCreature, drawStillCreature, drawWanderGhost } from './art/critters
 import { aimTagSize } from './aimtag';
 import { drawObjectFeelTrail, drawProjectile } from './art/projectiles';
 import { drawTrail } from './art/keeper';
+import { drawGameplayTrail } from './art/launchers';
 import { drawMeteors, drawSeason } from './art/seasons';
 import { sfx } from './audio';
 import { haptic } from './haptics';
@@ -20,6 +21,8 @@ import { drawSkyShape } from './art/sky';
 import { OBSTACLES, gustAt, skyShapesAt } from '../core/sky';
 import { bonkRefund, rockAfterBonk, surpriseBonk } from './feel';
 import { drawShieldPuff, drawTraitBadge } from './art/traits';
+import { SLING_SELECTION } from '../meta/launcherPick';
+import { launcherHelpReason, type LauncherHelpCredit } from '../meta/helped';
 
 import type { LevelScene, Shot } from './game';
 import type { TroubleEvent } from '../core/troubles';
@@ -34,11 +37,17 @@ function logFlightHit(scene: LevelScene, hit: { kind: 'bonk'; by: 'moon' | 'rock
   scene.roundLog.bonks.push(hit.kind === 'bonk' ? hit.by : hit.kind === 'fizzle' ? 'mist' : 'miss');
 }
 
+export function carryLauncherRoundState(scene: Pick<LevelScene, 'skipperBounces' | 'sparklerPlainUsed'>, state: RoundState): void {
+  scene.skipperBounces = state.skipperBounces ?? scene.skipperBounces;
+  scene.sparklerPlainUsed = !!state.sparklerPlainUsed;
+}
+
 function logRoundStep(scene: LevelScene, res: Pick<StepResult, 'troubleEvents' | 'reactions' | 'lost' | 'labEvents'>) {
   scene.roundLog.troubles.push(...res.troubleEvents);
   scene.roundLog.reactions.push(...res.reactions.map((event) => event.id));
   scene.roundLog.wandered.push(...res.lost.map((event) => event.species));
   scene.roundLog.lab.push(...res.labEvents);
+  scene.o.onPierStep?.(res);
 }
 
 function drawHintPulse(scene: LevelScene) {
@@ -297,6 +306,7 @@ export function draw(scene: LevelScene) {
     { cx: scene.cx, cy: scene.cy, R: scene.R, width: scene.w, height: scene.h, launcherY: scene.launch.y },
     scene.time,
   )) {
+    if (shape.kind === 'ring' && scene.ringBroken) continue;
     const wobble =
       shape.kind === 'rock' ? scene.rockWobbles.find((entry) => entry.index === shape.index && entry.until > scene.time) : undefined;
     const drawn =
@@ -310,6 +320,7 @@ export function draw(scene: LevelScene) {
   const sh = scene.shot;
   if (sh) {
     drawTrail(g, scene.look.trail, sh.trail, scene.time, KINDS[sh.kind].color);
+    drawGameplayTrail(g, scene.o.launcher.id, sh.trail, scene.combo.links);
     drawObjectFeelTrail(g, sh.kind, sh.trail, !!sh.nova, !!scene.o.reduceMotion);
     if (sh.nova && sh.trail.length > 1 && !scene.o.reduceMotion) {
       g.strokeStyle = '#ffe69b';
@@ -568,10 +579,13 @@ function applyTroubleState(scene: LevelScene, res: Pick<StepResult, 'state' | 't
 
 /** P1 cadence for a spent throw that never landed. */
 function tickTroublesAfterMiss(scene: LevelScene, sh: Shot) {
-  if (!scene.troubles.some((trouble) => !trouble.settled)) return;
+  if (!scene.troubles.some((trouble) => !trouble.settled)) {
+    if (scene.o.launcher.id === 'skipper' && sh.specialBounced) scene.skipperBounces++;
+    return;
+  }
   const res = stepRound(
     { ...scene.roundState(), throwsLeft: Number.isFinite(scene.throwsLeft) ? scene.throwsLeft + 1 : scene.throwsLeft },
-    { kind: sh.kind, sector: 0, outcome: 'miss' },
+    { kind: sh.kind, sector: 0, outcome: 'miss', bounced: !!sh.specialBounced },
     scene.roundModifiers(),
     scene.rules,
   );
@@ -580,6 +594,7 @@ function tickTroublesAfterMiss(scene: LevelScene, sh: Shot) {
   scene.labMarks = res.state.labMarks;
   applyTroubleState(scene, res);
   scene.nova = res.state.nova;
+  carryLauncherRoundState(scene, res.state);
   scene.score = res.after + scene.bonus;
   scene.predictCache = null;
   for (const lost of res.lost) {
@@ -620,13 +635,32 @@ export function update(scene: LevelScene, dt: number) {
   }
   const sh = scene.shot;
   if (sh) {
-    const launch: FlightLaunch = { x: sh.x, y: sh.y, vx: sh.vx, vy: sh.vy, elapsed: sh.t, carry: sh.carry, bounceCount: sh.bounceCount };
-    const path = fly(STAR_SLING, launch, scene.flightWorld(sh.rot0), sh.t0, dt);
+    const launch: FlightLaunch = {
+      x: sh.x,
+      y: sh.y,
+      vx: sh.vx,
+      vy: sh.vy,
+      elapsed: sh.t,
+      carry: sh.carry,
+      bounceCount: sh.bounceCount,
+      launcherApplied: sh.launcherApplied,
+      specialBounced: sh.specialBounced,
+      brokenRocks: sh.brokenRocks,
+      brokenRing: sh.brokenRing,
+    };
+    const path = flyWithLauncher(scene.o.launcher, launch, scene.flightWorld(sh.rot0), sh.t0, dt);
     for (const bounce of path.bounces) {
       scene.popup(bounce.x, bounce.y - 16, t('Boing!'), '#b9edff', 18);
       scene.ring(bounce.x, bounce.y, '#b9edff', 25);
       sfx.sky('boing');
-      haptic.sky();
+      if (bounce.special && scene.o.launcher.id === 'skipper') haptic.launcherBounce();
+      else haptic.sky();
+    }
+    for (const broken of path.breaks ?? []) {
+      if (broken.kind === 'rock' && broken.rock !== undefined && !scene.skyState.brokenRocks.includes(broken.rock))
+        scene.skyState.brokenRocks.push(broken.rock);
+      if (broken.kind === 'ring') scene.ringBroken = true;
+      scene.ring(broken.x, broken.y, '#c9a88b', 22);
     }
     Object.assign(sh, {
       x: path.state.x,
@@ -636,6 +670,10 @@ export function update(scene: LevelScene, dt: number) {
       t: path.state.elapsed,
       carry: path.state.carry ?? 0,
       bounceCount: path.state.bounceCount ?? sh.bounceCount ?? 0,
+      launcherApplied: path.state.launcherApplied,
+      specialBounced: path.state.specialBounced,
+      brokenRocks: path.state.brokenRocks,
+      brokenRing: path.state.brokenRing,
     });
     if (
       !scene.mistTipShown &&
@@ -774,22 +812,36 @@ export function update(scene: LevelScene, dt: number) {
 export function land(scene: LevelScene, sh: Shot, i: number) {
   scene.shot = null;
   const beforeReady = novaReady(scene.roundState());
+  const beforeState = scene.roundState();
+  const mods = scene.roundModifiers();
   const oldPlanet = scene.planet;
   const oldCombo = scene.combo;
   const res = stepRound(
     { ...scene.roundState(), throwsLeft: Number.isFinite(scene.throwsLeft) ? scene.throwsLeft + 1 : scene.throwsLeft },
-    { kind: sh.kind, sector: i, nova: sh.nova },
-    scene.roundModifiers(),
+    { kind: sh.kind, sector: i, nova: sh.nova, bounced: !!sh.specialBounced },
+    mods,
     scene.rules,
   );
   showTraitBlocks(scene, res.troubleEvents);
   logRoundStep(scene, res);
   scene.labSteps.push({ kind: sh.kind, reactions: res.reactions, troubleEvents: res.troubleEvents });
   scene.o.onLabStep?.({ kind: sh.kind, reactions: res.reactions, troubleEvents: res.troubleEvents });
+  if (scene.o.launcher.id !== 'sling') {
+    const slingStep = previewStep(
+      beforeState,
+      { kind: sh.kind, sector: i, nova: sh.nova },
+      { ...mods, launcher: SLING_SELECTION },
+      scene.rules,
+    );
+    const reason = launcherHelpReason(res, slingStep, sh.slingSector);
+    if (reason)
+      (scene.roundLog as typeof scene.roundLog & { launcher?: LauncherHelpCredit }).launcher = { id: scene.o.launcher.id, reason };
+  }
   scene.planet = res.state.planet;
   scene.nova = res.state.nova;
   scene.combo = res.state.combo;
   scene.comboCharge = res.state.comboCharge;
+  carryLauncherRoundState(scene, res.state);
   applyTroubleState(scene, res);
   scene.predictCache = null;
   const reaction = res.reactions[0];
@@ -873,10 +925,24 @@ export function land(scene: LevelScene, sh: Shot, i: number) {
     }
   }
   sfx.objectImpact(sh.kind);
+  sfx.launcherLanding(scene.o.launcher.id, !!sh.specialBounced, !!reaction);
   haptic.object(sh.kind);
-  scene.shake = scene.o.reduceMotion ? 0 : 10;
-  scene.burst(sh.x, sh.y, OBJECT_FEEL[sh.kind].burst, scene.o.reduceMotion ? 10 : 34, 7);
+  haptic.launcherLanding(scene.o.launcher.id, !!reaction);
+  scene.shake = scene.o.reduceMotion || scene.o.launcher.id === 'zip' ? 0 : scene.o.launcher.id === 'thumper' ? 13 : 10;
+  if (scene.o.launcher.id === 'thumper' && scene.o.reduceMotion) scene.flash.push({ i, t: 0.35 });
+  scene.burst(
+    sh.x,
+    sh.y,
+    OBJECT_FEEL[sh.kind].burst,
+    scene.o.reduceMotion ? 10 : scene.o.launcher.id === 'zip' || (scene.o.launcher.id === 'skipper' && sh.specialBounced) ? 16 : 34,
+    7,
+  );
   scene.ring(sh.x, sh.y, OBJECT_FEEL[sh.kind].burst, scene.R * 0.9);
+  if (scene.o.launcher.id === 'swoop') scene.ring(sh.x, sh.y, '#85c8dd', scene.R * 1.1);
+  if (scene.o.launcher.id === 'sparkler' && reaction) scene.ring(sh.x, sh.y, '#97d991', scene.R * 1.25);
+  if (scene.o.launcher.id === 'thumper') scene.ring(sh.x, sh.y, '#c9a88b', scene.R * 1.2);
+  if (scene.o.launcher.id === 'pinpoint') scene.ring(sh.x, sh.y, '#aab4ee', scene.R * 0.45);
+  if (scene.o.launcher.id === 'skipper' && sh.specialBounced) scene.ring(sh.x, sh.y, '#f2a8b6', scene.R * 0.5);
   const delta = res.after - res.before;
   const quality = delta + res.spawned.length * 6;
   const call = CALLOUTS.find(([min]) => quality >= min);
@@ -963,6 +1029,7 @@ export function flightWorld(scene: LevelScene, rotation: number): FlightWorld {
     bossActive: scene.bossHp > 0,
     sky: scene.L.sky,
     skyState: scene.skyState,
+    ringBroken: scene.ringBroken,
   };
 }
 
@@ -983,6 +1050,8 @@ export function roundState(scene: LevelScene): RoundState {
     buddyShieldUsed: scene.buddyShieldUsed,
     calmUsed: scene.calmUsed,
     labMarks: scene.labMarks,
+    skipperBounces: scene.skipperBounces,
+    sparklerPlainUsed: scene.sparklerPlainUsed,
   };
 }
 
@@ -999,6 +1068,7 @@ export function roundModifiers(scene: LevelScene): RoundModifiers {
     buddyShield: (scene.o as typeof scene.o & { buddyShield?: TraitId | null }).buddyShield ?? null,
     shower: !!scene.o.shower,
     gentle: !!scene.o.gentle,
+    launcher: scene.o.launcher,
   };
 }
 

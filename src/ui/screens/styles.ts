@@ -1,5 +1,5 @@
 // Styles: dress your Keeper and preview looks without changing the saved outfit.
-import { h, btn, fmt, toast } from '../dom';
+import { h, btn, toast } from '../dom';
 import { LAB_TEXT } from '../../meta/labcopy';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
@@ -35,7 +35,7 @@ import {
   HAIR_COLORS,
   type AvatarParts,
 } from '../../meta/cosmetics';
-import { drawKeeper, drawLauncher, drawTrail, itemCanvas, keeperHead } from '../art/keeper';
+import { drawKeeper, drawTrail, itemCanvas, keeperHead } from '../art/keeper';
 import { drawProjectile } from '../art/projectiles';
 import type { App } from '../app';
 import { t } from '../../i18n';
@@ -50,6 +50,8 @@ import { enterGrownups } from './grownups';
 import { SKINS } from '../../meta/tuning';
 import { skinSwatch } from './shop';
 import { effectiveReduceMotion } from '../motion';
+import { drawGameplayLauncher } from '../art/launchers';
+import type { LauncherId } from '../../core/launchers';
 
 type Tab = Slot | 'dye' | 'buddy' | 'atmosphere' | 'you';
 let lastSlot: Tab = 'suit';
@@ -146,6 +148,7 @@ function stage(
   canvas: HTMLCanvasElement,
   getLook: () => Look,
   reduceMotion: boolean,
+  gameplayLauncher: LauncherId,
   mastered: (id: string) => boolean,
   emoting = false,
   buddy: { species: string; acc: string } | null = null,
@@ -202,7 +205,17 @@ function stage(
       et: time,
       look: Math.atan2(py - hh * 0.5, px - w * 0.28),
     });
-    drawLauncher(g, look.launcher, lx, ly, time, { x: -pull * 14, y: pull * 22 }, '#c9c2ff', mastered(look.launcher));
+    drawGameplayLauncher(
+      g,
+      gameplayLauncher,
+      look.launcher,
+      lx,
+      ly,
+      time,
+      { x: -pull * 14, y: pull * 22 },
+      '#c9c2ff',
+      mastered(look.launcher),
+    );
     if (flying < 0) {
       drawProjectile(g, 'rock', lx - pull * 14, ly + pull * 22, 30, time);
     } else {
@@ -486,27 +499,7 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
   else if (item.source === 'road') action = h('div', { class: 'ws-state locked' }, sourceText(item));
   else action = h('div', { class: 'ws-state locked' }, `🔒 ${sourceText(item)}`);
 
-  const flings = p.mastery[worn.launcher] ?? 0;
-  const mLv = masteryLevel(flings);
-  const mastery =
-    slot === 'launcher'
-      ? h(
-          'div',
-          { class: 'ws-mastery' },
-          h('b', null, t('Mastery {stars}', { stars: '★'.repeat(mLv) + '☆'.repeat(MASTERY_STEPS.length - mLv) })),
-          h(
-            'small',
-            null,
-            mLv < MASTERY_STEPS.length
-              ? t('{n} / {goal} flings with {name}', {
-                  n: fmt(flings),
-                  goal: fmt(MASTERY_STEPS[mLv]),
-                  name: t(COSMETIC_BY_ID[worn.launcher].name),
-                })
-              : t('Mastered! Your launcher glows gold.'),
-          ),
-        )
-      : null;
+  const mastery = slot === 'launcher' ? h('p', { class: 'muted' }, t('Looks change colours only. Earn launchers by playing.')) : null;
 
   const tabs = h(
     'div',
@@ -560,7 +553,8 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
     canvas,
     () => preview,
     effectiveReduceMotion(p),
-    (id) => masteryLevel(p.mastery[id] ?? 0) >= MASTERY_STEPS.length,
+    p.launcher.selected,
+    () => masteryLevel(p.launcher.flings[p.launcher.selected] ?? 0) >= MASTERY_STEPS.length,
     slot === 'emote',
     currentBuddy(p, festivalActive(p) ? ensureFestival(p).acc : undefined),
     glow,

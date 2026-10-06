@@ -11,12 +11,29 @@ import { momentumActive, MOMENTUM_UNLOCK } from '../src/meta/momentum';
 import { defaultProfile, migrate } from '../src/meta/profile';
 import { unlocked as rankUnlocked } from '../src/meta/rank';
 import { GUSTY_WIND_TIP, UNLOCKS, debutsAt, unlocked } from '../src/meta/unlocks';
+import { pendingLauncherIntroAfterWin } from '../src/meta/launcherPick';
 import { voyageActive, VOYAGE_UNLOCK_LEVEL } from '../src/meta/voyage';
 
 // M3 must empty this list as it moves today's crowded Home debuts.
 const KNOWN_UNTIL_M3: number[] = [];
 
 describe('unlock ladder', () => {
+  it('has three shipped launcher introductions on distinct planets', () => {
+    const rows = UNLOCKS.filter((row) => row.id.startsWith('launcher_'));
+    expect(rows.map((row) => row.planet)).toEqual([31, 43, 48]);
+    expect(rows.every((row) => !!row.intro)).toBe(true);
+    for (const row of rows) expect(debutsAt(row.planet).filter((entry) => !!entry.intro)).toHaveLength(1);
+  });
+  it('waits for ownership and offers one late launcher card per won planet', () => {
+    const p = defaultProfile();
+    p.level = 54;
+    expect(pendingLauncherIntroAfterWin(p, 53)).toBeUndefined();
+    p.chapters.push(3, 5);
+    expect(pendingLauncherIntroAfterWin(p, 53)?.id).toBe('launcher_swoop');
+    p.mailSeen.push('coach-launcher_swoop', 'launcher-intro-planet:53');
+    expect(pendingLauncherIntroAfterWin(p, 53)).toBeUndefined();
+    expect(pendingLauncherIntroAfterWin(p, 54)).toBeUndefined();
+  });
   it('preserves old gates while fresh players follow the new ladder', () => {
     const fresh = defaultProfile();
     fresh.level = 12;

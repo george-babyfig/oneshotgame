@@ -31,7 +31,7 @@ import { unlocked } from './unlocks';
 const H = 3600e3;
 
 export type BuildingType =
-  'lab' | 'mill' | 'greenhouse' | 'grove' | 'den' | 'tower' | 'observatory' | 'fountain' | 'lantern' | 'flowers' | 'statue';
+  'lab' | 'mill' | 'greenhouse' | 'grove' | 'den' | 'launch_bay' | 'observatory' | 'fountain' | 'lantern' | 'flowers' | 'statue';
 
 export interface BuildingDef {
   type: BuildingType;
@@ -270,6 +270,7 @@ export function homeUnlocked(p: Profile) {
 
 // ------------------------------------------------------------------ building
 export function buildCost(type: BuildingType, lv: number) {
+  if (type === 'launch_bay') return [0, 800, 2000, 4800, 11200, 24000][lv] ?? 0;
   const d = BUILDINGS[type];
   return Math.round((d.cost * COST_K[lv]) / 10) * 10;
 }
@@ -614,13 +615,16 @@ export function requestsWaiting(h: HomeState, now = Date.now()) {
 // ------------------------------------------------------------------ expeditions
 export { EXPEDITION_HOURS } from './tuning';
 
-export function towerLevel(h: HomeState, now = Date.now()) {
-  const t = h.plots.find((b) => b?.type === 'tower');
+export function bayLevel(h: HomeState, now = Date.now()) {
+  const t = h.plots.find((b) => b?.type === 'launch_bay');
   return t ? Math.max(0, effLevel(t, now)) : 0;
 }
 
+/** Legacy name retained for callers of the existing expedition flow. */
+export const towerLevel = bayLevel;
+
 export function expeditionOptions(h: HomeState) {
-  const lv = towerLevel(h);
+  const lv = bayLevel(h);
   return EXPEDITION_HOURS.filter((_, i) => lv >= [1, 2, 3][i]);
 }
 
@@ -657,7 +661,7 @@ export function finishExpedition(p: Profile, now = Date.now()) {
   const h = p.home;
   const e = h.expedition;
   if (!e || e.ends > now || now < (h.lastTick ?? 0)) return null;
-  const loot = expeditionLoot(e.hours, towerLevel(h), e.species);
+  const loot = expeditionLoot(e.hours, bayLevel(h), e.species);
   earn(p, 'dust', loot.dust, 'expedition');
   earn(p, 'gems', loot.gems, 'expedition');
   for (const [k, v] of Object.entries(loot.boosters)) p.boosters[k as BoosterId] += v ?? 0;

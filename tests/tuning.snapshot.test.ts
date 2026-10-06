@@ -119,7 +119,7 @@ it('pins totals of every central balance table', () => {
       "BASE_CAP_HOURS": 6,
       "BOOSTERS": 510,
       "BOSS_REWARD": 530,
-      "BUILDINGS": 12653,
+      "BUILDINGS": 12553,
       "BUILD_TIME": 23730000,
       "CALENDAR": 4950,
       "CALENDAR_REPEAT_ITEM_GEMS": 40,

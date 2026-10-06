@@ -44,6 +44,8 @@ export type SpendSink =
   | 'booster'
   | 'upgrade'
   | 'lab'
+  | 'launcher_tune'
+  | 'comet_pier'
   | 'build'
   | 'cosmetic'
   | 'atmosphere'

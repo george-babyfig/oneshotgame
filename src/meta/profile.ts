@@ -7,7 +7,7 @@ import type { Mail } from './inbox';
 import { UNLOCKS } from './unlocks';
 import { restoreRound, serializeRound, type RoundState } from '../core/round';
 import type { FeatId } from '../core/labperks';
-import { LEVEL_SALT, makeLevel } from '../core/levels';
+import { LEVEL_SALT, makeLevel, type GenerationProfile } from '../core/levels';
 import type { RoundModifiers } from '../core/modifiers';
 import { DEFAULT_AVATAR, type AvatarParts } from './cosmetics';
 import type { ReactionId } from '../core/round';
@@ -15,6 +15,10 @@ import { RULES_VERSION } from '../core/rules-version';
 import { STAR_SLING } from '../core/flight';
 import { rulesForLevel } from '../core/round';
 import { remixLevel, remixUnlocked, type RemixChapter } from './remix';
+import type { LauncherId, Tune } from '../core/launchers';
+import { isLauncherId, launcherBay } from './launchbay';
+import { isLaunchRosterId } from '../core/launchers';
+import { defaultCometPier, type CometPierProgress } from './landmarks';
 
 export interface GalaxyPlanet {
   n: number;
@@ -61,6 +65,7 @@ export interface RoundCheckpoint {
   mode?: 'campaign' | 'remix';
   seedPrefix?: string;
   salt?: number;
+  generationProfile?: GenerationProfile;
   state: RoundState;
   modifiers: RoundModifiers;
   labSteps?: (Pick<import('../core/round').StepResult, 'reactions' | 'troubleEvents'> & { kind: Kind })[];
@@ -103,8 +108,15 @@ export interface RoundCheckpoint {
   practiceBonkUsed?: boolean;
 }
 
-function roundFingerprint(n: number, prefix = 'PP', salt?: number, p?: Profile, mode: 'campaign' | 'remix' = 'campaign'): string {
-  const level = mode === 'remix' && p ? remixLevel(n, p) : makeLevel(n, prefix, { salt });
+function roundFingerprint(
+  n: number,
+  prefix = 'PP',
+  salt?: number,
+  p?: Profile,
+  mode: 'campaign' | 'remix' = 'campaign',
+  profile?: GenerationProfile,
+): string {
+  const level = mode === 'remix' && p ? remixLevel(n, p) : makeLevel(n, prefix, { salt, profile });
   const source = JSON.stringify([
     level.queue,
     level.start,
@@ -127,7 +139,7 @@ export function saveInterruptedRound(p: Profile, checkpoint: RoundCheckpoint): v
   const { state, ...scene } = checkpoint;
   p.savedRound = JSON.stringify({
     format: 1,
-    fingerprint: roundFingerprint(checkpoint.n, checkpoint.seedPrefix, checkpoint.salt, p, checkpoint.mode),
+    fingerprint: roundFingerprint(checkpoint.n, checkpoint.seedPrefix, checkpoint.salt, p, checkpoint.mode, checkpoint.generationProfile),
     round: serializeRound(state),
     scene,
   });
@@ -160,10 +172,34 @@ export function readInterruptedRound(p: Profile): RoundCheckpoint | null {
       typeof s.next !== 'string' ||
       !s.modifiers ||
       (s.seedPrefix !== undefined && (!/^[a-z0-9_-]{1,40}$/i.test(s.seedPrefix) || s.seedPrefix.includes('..'))) ||
-      (s.salt !== undefined && !Number.isInteger(s.salt))
+      (s.salt !== undefined && !Number.isInteger(s.salt)) ||
+      (s.generationProfile !== undefined && s.generationProfile !== 'reviewed-v1' && s.generationProfile !== 'raw-v2')
     )
       throw new Error('Invalid round checkpoint');
-    if (saved.fingerprint !== roundFingerprint(s.n, s.seedPrefix, s.salt, p, s.mode)) throw new Error('Level changed');
+    // Older checkpoints predate gameplay launchers and always used the Sling.
+    if (!s.modifiers.launcher) s.modifiers.launcher = { id: 'sling', tune: 1 };
+    const selection = s.modifiers.launcher;
+    if (
+      !isLauncherId(selection.id) ||
+      !isLaunchRosterId(selection.id) ||
+      ![1, 2, 3, 4].includes(selection.tune) ||
+      (selection.id !== 'sling' &&
+        (launcherBay.availability(p, selection.id).kind !== 'owned' || launcherBay.tune(p, selection.id) < selection.tune))
+    )
+      throw new Error('Invalid launcher checkpoint');
+    if (saved.fingerprint !== roundFingerprint(s.n, s.seedPrefix, s.salt, p, s.mode, s.generationProfile)) {
+      // Only an unsalted PP61-120 checkpoint can predate the raw-v2 cutover.
+      const legacyCampaign =
+        s.generationProfile === undefined &&
+        s.mode !== 'remix' &&
+        (s.seedPrefix ?? 'PP') === 'PP' &&
+        s.salt === undefined &&
+        s.n >= 61 &&
+        s.n <= 120;
+      if (!legacyCampaign || saved.fingerprint !== roundFingerprint(s.n, s.seedPrefix, s.salt, p, s.mode, 'reviewed-v1'))
+        throw new Error('Level changed');
+      s.generationProfile = 'reviewed-v1';
+    }
     return { ...s, state };
   } catch {
     p.savedRound = undefined;
@@ -197,6 +233,14 @@ export interface VisitorGift {
   gems: number;
   /** Memento id (= species id) if this visitor left its keepsake. */
   memento: string | null;
+}
+
+export interface LauncherProgress {
+  selected: LauncherId;
+  tunes: Partial<Record<LauncherId, Tune>>;
+  flings: Partial<Record<LauncherId, number>>;
+  completedRounds: Partial<Record<LauncherId, number>>;
+  comboThreePlanets: string[];
 }
 
 export interface Profile {
@@ -274,8 +318,13 @@ export interface Profile {
   wardrobe: string[];
   favourites: string[];
   stylesNewSeen: string;
-  /** Flings per launcher, for launcher mastery. */
+  /** Legacy flings per cosmetic look; gameplay mastery lives in launcher.flings. */
   mastery: Record<string, number>;
+  /** Gameplay launchers are independent of cosmetic look mastery. */
+  launcher: LauncherProgress;
+  /** The Pier feat persists before its M11.5 site is built. */
+  cometPier: CometPierProgress;
+  m105Migrated: boolean;
   /** Planet Passport: name parts, title, banner and pinned badges. */
   passport: {
     first: number;
@@ -426,6 +475,9 @@ export function defaultProfile(now = Date.now()): Profile {
     favourites: [],
     stylesNewSeen: '',
     mastery: {},
+    launcher: { selected: 'sling', tunes: {}, flings: {}, completedRounds: {}, comboThreePlanets: [] },
+    cometPier: defaultCometPier(),
+    m105Migrated: true,
     passport: { first: -1, second: -1, set: false, title: '', banner: 0, frame: 0, badges: [], badgesSet: false },
     home: defaultHome(now),
     lab: {},
@@ -482,6 +534,54 @@ function merge<T>(base: T, saved: unknown): T {
 export function migrate(raw: Record<string, unknown>): Profile {
   if (typeof raw.v === 'number' && raw.v > PROFILE_VERSION) throw new NewerProfileError();
   const p = merge(defaultProfile(), raw);
+  // Preserve the occupied plot, build timer and independent expedition record.
+  if (raw.m105Migrated !== true) {
+    for (const building of p.home.plots) {
+      if (building && (building.type as string) === 'tower') building.type = 'launch_bay';
+    }
+    p.m105Migrated = true;
+  }
+  const source = (raw.launcher && typeof raw.launcher === 'object' && !Array.isArray(raw.launcher) ? raw.launcher : {}) as Record<
+    string,
+    unknown
+  >;
+  const cleanCounts = (value: unknown, limit: number) => {
+    const out: Partial<Record<LauncherId, number>> = {};
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return out;
+    for (const [id, n] of Object.entries(value))
+      if (isLauncherId(id) && typeof n === 'number' && Number.isFinite(n)) out[id] = Math.min(limit, Math.max(0, Math.floor(n)));
+    return out;
+  };
+  const savedTunes =
+    source.tunes && typeof source.tunes === 'object' && !Array.isArray(source.tunes) ? (source.tunes as Record<string, unknown>) : {};
+  p.launcher = {
+    selected: isLauncherId(source.selected) ? source.selected : 'sling',
+    tunes: {},
+    flings: cleanCounts(source.flings, Number.MAX_SAFE_INTEGER),
+    completedRounds: cleanCounts(source.completedRounds, 3),
+    comboThreePlanets: Array.isArray(source.comboThreePlanets)
+      ? [
+          ...new Set(
+            source.comboThreePlanets.filter((key): key is string => typeof key === 'string' && /^[a-z]+:[a-z0-9_~-]{1,60}$/i.test(key)),
+          ),
+        ].slice(0, 1000)
+      : [],
+  };
+  for (const [id, value] of Object.entries(savedTunes)) {
+    if (isLauncherId(id) && id !== 'sling' && typeof value === 'number' && Number.isFinite(value))
+      p.launcher.tunes[id] = Math.max(1, Math.min(4, Math.floor(value))) as Tune;
+  }
+  // Preserve a valid hidden selection in the save; round setup resolves it to Sling.
+  if (isLaunchRosterId(p.launcher.selected) && launcherBay.availability(p, p.launcher.selected).kind !== 'owned')
+    p.launcher.selected = 'sling';
+  const pier = p.cometPier;
+  for (const key of ['hardWins', 'normalThreeStars', 'troubles', 'fusions'] as const)
+    pier[key] = Number.isFinite(pier[key]) ? Math.max(0, Math.floor(pier[key])) : 0;
+  for (const key of ['hardPlanets', 'normalPlanets'] as const)
+    pier[key] = Array.isArray(pier[key])
+      ? [...new Set(pier[key].filter((value): value is string => typeof value === 'string' && value.length <= 80))]
+      : [];
+  pier.stage = Number.isFinite(pier.stage) ? (Math.max(0, Math.min(4, Math.floor(pier.stage))) as CometPierProgress['stage']) : 0;
   const oldHome = raw.home as Partial<HomeState> | undefined;
   if (oldHome && !Object.hasOwn(oldHome, 'firstHour') && (p.home.intro || p.home.plots.some(Boolean))) p.home.firstHour = 2;
   if (!p.remix || typeof p.remix !== 'object' || Array.isArray(p.remix)) p.remix = {};
@@ -515,7 +615,7 @@ export function migrate(raw: Record<string, unknown>): Profile {
     if (p.tutorial) p.legacyUnlocks.push('star_calendar');
     if (Object.values(p.sightings).some((count) => count >= 5)) p.legacyUnlocks.push('buddy');
     for (const row of UNLOCKS) {
-      if (row.intro && (p.legacyUnlocks.includes(row.id) || (row.planet > 0 && p.level > row.planet))) {
+      if (row.intro && !row.id.startsWith('launcher_') && (p.legacyUnlocks.includes(row.id) || (row.planet > 0 && p.level > row.planet))) {
         const key = `coach-${row.id}`;
         if (!p.mailSeen.includes(key)) p.mailSeen.push(key);
       }

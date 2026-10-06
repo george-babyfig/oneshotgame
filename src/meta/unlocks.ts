@@ -4,6 +4,7 @@ import { OBSTACLES, type ObstacleId } from '../core/sky';
 import { KINDS, type Kind } from '../core/world';
 import type { Profile } from './profile';
 import { LAB_TEXT } from './labcopy';
+import { LAUNCHERS, LAUNCH_ROSTER, type LauncherId } from '../core/launchers';
 
 export const HOME_UNLOCK_LEVEL = 5;
 export const MOMENTUM_UNLOCK = 17;
@@ -54,13 +55,19 @@ export type UnlockId =
   | 'vent'
   | 'vine'
   | 'frost'
+  | 'launcher_swoop'
+  | 'launcher_sparkler'
+  | 'launcher_zip'
+  | 'launcher_thumper'
+  | 'launcher_pinpoint'
+  | 'launcher_skipper'
   | ObstacleId;
 
 export interface Unlock {
   id: UnlockId;
   /** Campaign p.level; 0 means an achievement gate. */
   planet: number;
-  placement: 'round' | 'home' | 'homeworld' | 'missions' | 'modes' | 'collection';
+  placement: 'round' | 'home' | 'homeworld' | 'missions' | 'modes' | 'collection' | 'launcher';
   intro?: { title: string; body: string; icon?: string };
   letter?: string;
   /** A newly visible entry point, even when there is no card. */
@@ -75,6 +82,15 @@ const objectRows: Unlock[] = (Object.values(KINDS) as (typeof KINDS)[Kind][]).ma
 }));
 
 export const GUSTY_WIND_TIP = 'Solar Wind has gentle puffs now. Wait for a calm moment.';
+
+const LAUNCHER_INTROS: Readonly<Record<Exclude<LauncherId, 'sling'>, { body: string; icon: string }>> = {
+  swoop: { body: 'Swoop bends around moons to reach your planet.', icon: '◌' },
+  sparkler: { body: 'Sparkler makes Fusions reach farther and fills Supernova faster.', icon: '✧' },
+  zip: { body: 'Zip flies fast and straight through wind and mist.', icon: '⌁' },
+  thumper: { body: 'Thumper lands wide and breaks through rocks.', icon: '■' },
+  pinpoint: { body: 'Pinpoint lands small. Its long aim line shows where.', icon: '⊙' },
+  skipper: { body: 'Skipper bounces once from moons and rocks.', icon: '〽' },
+};
 
 export const UNLOCKS: readonly Unlock[] = [
   ...objectRows,
@@ -107,6 +123,12 @@ export const UNLOCKS: readonly Unlock[] = [
     intro: { title: 'Glacier', body: 'Ice Comet finds a mountain and makes a Glacier!', icon: '❄️' },
   },
   { id: 'combo', planet: 26, placement: 'round', intro: { title: 'Combo', body: 'Make Fusions together to grow a Combo!', icon: '✨' } },
+  ...LAUNCH_ROSTER.filter((id): id is Exclude<LauncherId, 'sling'> => id !== 'sling').map((id): Unlock => ({
+    id: `launcher_${id}`,
+    planet: LAUNCHERS[id].debut,
+    placement: 'launcher',
+    intro: { title: LAUNCHERS[id].name, ...LAUNCHER_INTROS[id] },
+  })),
   {
     id: 'vent',
     planet: 14,

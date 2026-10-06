@@ -21,6 +21,9 @@ import { skyIconCanvas } from '../art/sky';
 import { buddyChipAvailable, buddyEligible, buddyShieldFor, nextPlanetBuddy, planetBuddyFor } from '../../meta/buddy';
 import { traitBadge } from '../art/traits';
 import { haptic } from '../haptics';
+import { LAUNCHERS, type LauncherId } from '../../core/launchers';
+import { launcherBay } from '../../meta/launchbay';
+import { goodHere, needsSlingGhost } from '../../meta/launcherPick';
 
 export function goalChips(L: LevelDef, scene?: LevelScene) {
   if (!L.goals.length) return null;
@@ -60,6 +63,7 @@ export function preLevel(app: App, n: number) {
   const p = app.p;
   const L = scene.L;
   const buddyChip = preLevelBuddyChip(app, scene, L);
+  const launcherChip = n >= 31 ? preLevelLauncherChip(app, scene, L) : null;
   const chosen = { shower: false, spark: false, scope: false };
   const fromInventory = { shower: false, spark: false, scope: false };
   const explained = new Set<BoosterId>();
@@ -186,7 +190,7 @@ export function preLevel(app: App, n: number) {
             : t('🔥 Hard planet · ×{n} stardust', { n: DIFFICULTY_DUST.hard }),
         ),
     twistChip(L, p.settings.planetColours === 'clear'),
-    buddyChip ?? h('span'),
+    buddyChip || launcherChip ? h('div', { class: 'pre-choice-row' }, buddyChip, launcherChip) : h('span'),
     goalChips(L, scene) ?? h('span'),
     h(
       'div',
@@ -240,6 +244,7 @@ export function remixPreLevel(app: App, n: number) {
           h('span', null, t('Resting this planet: {name}', { name: t(KINDS[L.shortKind].name) })),
         )
       : null,
+    forcedLauncherChip(),
     goalChips(L, scene),
     h(
       'div',
@@ -256,6 +261,81 @@ export function remixPreLevel(app: App, n: number) {
     originalThrow?.(kind);
   };
   scene.el.append(panel);
+}
+
+export function forcedLauncherChip(): HTMLElement {
+  return h(
+    'div',
+    { class: 'twist-chip launcher-chip locked', role: 'note', 'aria-label': t('Everyone uses the Star Sling here') },
+    h('span', { class: 'launcher-emblem', 'aria-hidden': 'true' }, LAUNCHERS.sling.emblem),
+    h('span', null, h('b', null, t('Star Sling')), h('small', null, t('Everyone uses the Star Sling here'))),
+    h('span', { 'aria-hidden': 'true' }, '🔒'),
+  );
+}
+
+function preLevelLauncherChip(app: App, scene: LevelScene, level: LevelDef): HTMLElement {
+  const tray = h('div', { class: 'launcher-tray', role: 'group', 'aria-label': t('Choose a launcher') });
+  tray.hidden = true;
+  const chip = h('button', { class: 'twist-chip launcher-chip', type: 'button' });
+  const selected = () => scene.o.launcher.id;
+  const update = () => {
+    const id = selected();
+    const def = LAUNCHERS[id];
+    chip.replaceChildren(
+      h('span', { class: 'launcher-emblem', 'aria-hidden': 'true', style: `--launcher-band:${def.bandColor}` }, def.emblem),
+      h(
+        'span',
+        { class: 'launcher-chip-copy' },
+        h('b', null, t(def.name)),
+        h('small', null, t('Tune {n} · {job}', { n: scene.o.launcher.tune, job: t(def.job) })),
+      ),
+      h('span', { 'aria-hidden': 'true' }, '▾'),
+    );
+    chip.setAttribute('aria-label', t('Launcher {name}, Tune {n}. Tap to choose.', { name: t(def.name), n: scene.o.launcher.tune }));
+    chip.setAttribute('aria-expanded', String(!tray.hidden));
+    tray.replaceChildren(
+      ...launcherBay.owned(app.p).map((ownedId: LauncherId) => {
+        const row = LAUNCHERS[ownedId];
+        const tune = launcherBay.tune(app.p, ownedId);
+        const badge = goodHere(ownedId, level);
+        const labelVars = { name: t(row.name), n: tune, job: t(row.job) };
+        return h(
+          'button',
+          {
+            class: `launcher-option${ownedId === id ? ' selected' : ''}`,
+            type: 'button',
+            'aria-pressed': String(ownedId === id),
+            'aria-label': badge ? t('{name}, Tune {n}, {job}. Good here', labelVars) : t('{name}, Tune {n}, {job}', labelVars),
+            onclick: () => {
+              if (!launcherBay.select(app.p, ownedId)) return;
+              scene.o.launcher = { id: ownedId, tune };
+              scene.o.mastered = (app.p.launcher.flings[ownedId] ?? 0) >= 2000;
+              scene.o.showSlingGhost = needsSlingGhost(ownedId, app.p.launcher.completedRounds[ownedId] ?? 0);
+              scene.predictCache = null;
+              scene.drawnAim = null;
+              app.save();
+              sfx.click();
+              haptic.light();
+              tray.hidden = true;
+              update();
+            },
+          },
+          h('span', { class: 'launcher-emblem', 'aria-hidden': 'true', style: `--launcher-band:${row.bandColor}` }, row.emblem),
+          h('b', null, t(row.name)),
+          h('small', null, t(row.job)),
+          h('small', null, t('Tune {n}', { n: tune })),
+          badge ? h('span', { class: 'launcher-good' }, `🍃 ${t('Good here')}`) : null,
+        );
+      }),
+    );
+  };
+  chip.addEventListener('click', () => {
+    tray.hidden = !tray.hidden;
+    sfx.click();
+    update();
+  });
+  update();
+  return h('div', { class: 'launcher-choice' }, chip, tray);
 }
 
 /** The suggested resident helps this planet; Styles keeps the saved Buddy. */

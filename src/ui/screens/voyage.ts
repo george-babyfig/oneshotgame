@@ -238,14 +238,14 @@ function ended(app: App, i: number, week: string, r: LevelResult) {
   sfx.win();
   haptic.success();
   const next = i + 1 < VOYAGE_LEN && voyageUnlocked(p, i + 1);
+  // Read the helped line before showVoyage() replaces the finished scene.
+  const helped = app.scene ? helpedLine(p, app.scene.roundLog, 'voyage') : null;
   showVoyage(app);
   const m = modal([
     h('div', { class: 'm-title' }, res.done ? t('Voyage complete! 🚀') : t('Stop cleared!')),
     h('div', { class: 'end-stars' }, ...[0, 1, 2].map((k) => h('span', { class: k < r.stars ? 'on' : '' }, '★'))),
     h('div', { class: 'end-score' }, t('{n} life', { n: fmt(r.score) })),
-    app.scene && helpedLine(p, app.scene.roundLog, 'voyage')
-      ? h('p', { class: 'homeworld-helped' }, t('Homeworld helped: {line}', { line: helpedLine(p, app.scene.roundLog, 'voyage')! }))
-      : null,
+    helped ? h('p', { class: 'homeworld-helped' }, t('Homeworld helped: {line}', { line: helped })) : null,
     res.reward ? h('div', { class: 'reward-list' }, ...rewardText(res.reward).map((x) => h('span', null, x))) : null,
     r.boss ? h('div', { class: 'nudge boss' }, t('☄️ Guardian defeated!')) : null,
     res.done

@@ -1,4 +1,5 @@
 import type { Kind } from './world';
+import { STAR_SLING_SELECTION, isLaunchRosterId, type LauncherSelection } from './launchers';
 import type { TraitId } from './world';
 import { LAB_MAX } from './labperks';
 import { KINDS } from './world';
@@ -6,6 +7,7 @@ import { KINDS } from './world';
 export type RoundMode = 'campaign' | 'voyage' | 'zen' | 'daily' | 'rush' | 'challenge' | 'remix';
 
 export interface RoundModifiers {
+  launcher: LauncherSelection;
   extraThrows: number;
   splash: number;
   scopeLevel: number;
@@ -20,6 +22,7 @@ export interface RoundModifiers {
 }
 
 export const NO_MODIFIERS: RoundModifiers = {
+  launcher: STAR_SLING_SELECTION,
   extraThrows: 0,
   splash: 0,
   scopeLevel: 0,
@@ -44,6 +47,8 @@ export function modifiersFor(mode: RoundMode, profileBonuses: Partial<RoundModif
     lab: { ...profileBonuses.lab },
     forms: { ...profileBonuses.forms },
     boosters: { ...NO_MODIFIERS.boosters, ...profileBonuses.boosters },
+    launcher:
+      profileBonuses.launcher && isLaunchRosterId(profileBonuses.launcher.id) ? { ...profileBonuses.launcher } : STAR_SLING_SELECTION,
   };
 }
 

@@ -188,12 +188,35 @@ export function drawStructure(
       pennant(g, s * 0.28, -s * 0.2, s, lv, t);
       break;
     }
-    case 'tower': {
-      rr(g, -s * 0.12, -s * 0.8, s * 0.24, s * 0.8, s * 0.04, '#c9d2ea');
-      for (let i = 1; i < 4; i++) rr(g, -s * 0.16, -s * 0.2 * i, s * 0.32, s * 0.035, s * 0.02, '#8a93b5');
-      // rocket waiting on top
+    case 'launch_bay': {
+      // The widening pad and added fittings make each Bay level recognizable.
+      rr(g, -s * 0.38, -s * 0.12, s * 0.76, s * 0.12, s * 0.04, '#677590');
+      rr(g, -s * 0.3, -s * 0.16, s * 0.6, s * 0.05, s * 0.02, '#d8e4ff');
+      rr(g, -s * 0.32, -s * 0.67, s * 0.07, s * 0.52, s * 0.025, '#a4b1cb');
+      rr(g, -s * 0.3, -s * 0.67, s * 0.3, s * 0.06, s * 0.02, '#a4b1cb');
+      rr(g, -s * 0.22, -s * 0.45, s * 0.1, s * 0.28, s * 0.02, '#d9b46b');
+      if (lv >= 2) {
+        rr(g, s * 0.17, -s * 0.34, s * 0.12, s * 0.18, s * 0.02, '#d9b46b');
+        for (let i = 0; i < 3; i++)
+          circ(g, -s * 0.19 + i * s * 0.18, -s * 0.18, s * 0.018, Math.sin(t * 3 + i) > 0 ? '#ffe87c' : '#b4a466');
+      }
+      if (lv >= 3) {
+        // Keep the booth left of both the rocket and second rack.
+        rr(g, -s * 0.45, -s * 0.43, s * 0.14, s * 0.3, s * 0.03, '#8fb9d6');
+        rr(g, -s * 0.43, -s * 0.39, s * 0.1, s * 0.1, s * 0.015, '#dff6ff');
+      }
+      if (lv >= 4) {
+        rr(g, s * 0.34, -s * 0.53, s * 0.05, s * 0.36, s * 0.02, '#b8c4da');
+        circ(g, s * 0.365, -s * 0.55, s * 0.085, '#d8e4ff');
+        rr(g, s * 0.38, -s * 0.24, s * 0.09, s * 0.16, s * 0.02, '#52657b');
+      }
+      if (lv >= 5) {
+        rr(g, -s * 0.38, -s * 0.12, s * 0.76, s * 0.025, s * 0.01, '#b9f6ee');
+        star(g, s * 0.365, -s * 0.55, s * 0.045, '#fff3b2');
+      }
+      // An expedition rocket remains on its pad.
       g.save();
-      g.translate(0, -s * 0.8);
+      g.translate(0, -s * 0.16);
       rr(g, -s * 0.07, -s * 0.3, s * 0.14, s * 0.28, s * 0.07, '#ffffff');
       g.fillStyle = '#ff6a7a';
       g.beginPath();
@@ -202,7 +225,7 @@ export function drawStructure(
       g.fill();
       circ(g, 0, -s * 0.16, s * 0.035, '#6ec8ff');
       g.restore();
-      pennant(g, s * 0.16, -s * 0.5, s, lv, t);
+      pennant(g, -s * 0.3, -s * 0.67, s * 0.7, lv, t);
       break;
     }
     case 'observatory': {

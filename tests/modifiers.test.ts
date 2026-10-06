@@ -3,6 +3,7 @@ import { NO_MODIFIERS, modifiersFor } from '../src/core/modifiers';
 
 describe('round modifiers', () => {
   const bonuses = {
+    launcher: { id: 'zip' as const, tune: 3 as const },
     extraThrows: 2,
     splash: 1,
     scopeLevel: 3,
@@ -41,8 +42,10 @@ describe('round modifiers', () => {
     first.lab.rock = 1;
     first.forms.rock = false;
     first.boosters.shower = false;
+    (first.launcher as { id: string }).id = 'sling';
     expect(bonuses.lab.rock).toBe(5);
     expect(bonuses.forms.rock).toBe(true);
     expect(bonuses.boosters.shower).toBe(true);
+    expect(bonuses.launcher.id).toBe('zip');
   });
 });

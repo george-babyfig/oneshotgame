@@ -1,5 +1,6 @@
 // All sounds are synthesised with WebAudio — no audio files to ship.
 import type { Kind } from '../core/world';
+import type { LauncherId } from '../core/launchers';
 import { OBJECT_FEEL } from './feel';
 let ctx: AudioContext | null = null;
 let sfxBus: GainNode | null = null;
@@ -106,6 +107,25 @@ const semi = (base: number, n: number) => base * Math.pow(2, n / 12);
 const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
 
 export const sfx = {
+  launcherRelease: (id: LauncherId) => {
+    if (id === 'swoop') tone(410, 0.34, 'sine', 0.045, 0, 850);
+    if (id === 'sparkler') {
+      noise(0.15, 0.045, 3500);
+      tone(1030, 0.15, 'triangle', 0.035, 0.04, 1500);
+    }
+    if (id === 'zip') noise(0.1, 0.06, 4100, 1.2);
+    if (id === 'thumper') tone(145, 0.28, 'sine', 0.11, 0, 65);
+    if (id === 'pinpoint') tone(1250, 0.2, 'sine', 0.055, 0, 1600);
+    if (id === 'skipper') tone(360, 0.22, 'sine', 0.05, 0, 620);
+  },
+  launcherLanding: (id: LauncherId, bounced: boolean, fusion: boolean) => {
+    if (id === 'swoop') tone(670, 0.18, 'sine', 0.035, 0, 400);
+    if (id === 'sparkler' && fusion) [0, 5, 9].forEach((step, i) => tone(semi(790, step), 0.17, 'triangle', 0.04, i * 0.04));
+    if (id === 'zip') noise(0.13, 0.04, 1500);
+    if (id === 'thumper') noise(0.26, 0.09, 420, 0.7, 0, 'lowpass');
+    if (id === 'pinpoint') tone(1050, 0.12, 'sine', 0.035);
+    if (id === 'skipper' && bounced) tone(330, 0.16, 'sine', 0.03, 0, 500);
+  },
   trouble: (kind: 'act' | 'blocked' | 'settled' | 'spread') => {
     if (kind === 'settled') [0, 4, 7].forEach((step, i) => tone(semi(659, step), 0.2, 'sine', 0.04, i * 0.06));
     else if (kind === 'blocked') tone(580, 0.16, 'sine', 0.04, 0, 760);

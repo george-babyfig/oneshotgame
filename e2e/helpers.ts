@@ -548,6 +548,26 @@ export async function planetFiveHomeworld(page: Page, opts: { reduceMotion?: boo
   await waitScreen(page, 'homeworld');
 }
 
+/** Mid-game fixture for the Bay journey; Swoop is earned and Zip still shows its channel. */
+export async function launcherBayReady(page: Page) {
+  await midGame(page, { level: 64 });
+  await page.evaluate(() => {
+    const a = (window as any).__app;
+    const p = a.p;
+    p.home.firstHour = 2;
+    p.home.intro = true;
+    p.home.ring = 2;
+    p.home.plots[0] = { type: 'launch_bay', lv: 2, since: Date.now() };
+    p.chapters = [1, 2, 3, 4, 5, 6];
+    p.launcher.flings.swoop = 120;
+    p.dust = 5000;
+    p.mats.dew = 20;
+    a.save();
+    a.showHomeworld();
+  });
+  await waitScreen(page, 'homeworld');
+}
+
 export const screenName = (page: Page) => page.evaluate(() => (window as any).__app.screen as string);
 
 /**

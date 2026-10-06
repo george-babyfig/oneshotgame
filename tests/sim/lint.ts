@@ -2,12 +2,41 @@ import { budgetFor, makeLevel, pressureOf, skyWall } from '../../src/core/levels
 import type { PlanetMetrics } from './harness';
 
 export type LintFlag =
-  'WALL' | 'CLIFF' | 'GOAL-TRAP' | 'STACK' | 'BONK-HEAVY' | 'EASY' | 'TRIVIAL' | 'EASY-EARLY' | 'FLAT' | 'SLACK' | 'GOAL-RAMP' | 'TEACH';
+  | 'WALL'
+  | 'CLIFF'
+  | 'GOAL-TRAP'
+  | 'STACK'
+  | 'BONK-HEAVY'
+  | 'EASY'
+  | 'TRIVIAL'
+  | 'EASY-EARLY'
+  | 'FLAT'
+  | 'SLACK'
+  | 'GOAL-RAMP'
+  | 'TEACH'
+  | 'LAUNCHER-LOCK';
 export interface LintIssue {
   flag: LintFlag;
   planet: number;
   detail: string;
   fix: string;
+}
+
+/** Require a quarter of paired runs of separation, with at most one Sling win in 24. */
+export function classifyLauncherLock(
+  planet: number,
+  slingWins: number,
+  launcher: string,
+  launcherWins: number,
+  runs: number,
+): LintIssue | null {
+  if (slingWins > Math.floor(runs / 24) || launcherWins - slingWins < Math.max(3, Math.ceil(runs / 4))) return null;
+  return {
+    flag: 'LAUNCHER-LOCK',
+    planet,
+    detail: `paired physical 3★: Sling ${slingWins}/${runs}, ${launcher} ${launcherWins}/${runs}`,
+    fix: 'Restore a Sling route or change this launcher-sensitive planet.',
+  };
 }
 
 export const CHAPTER_BANDS = [

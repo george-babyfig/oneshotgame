@@ -6,6 +6,7 @@ import type { BoosterId } from './config';
 import type { Profile } from './profile';
 import { t } from '../i18n';
 import { COSMETIC_BY_ID } from './cosmetics';
+import { LAUNCHERS, LAUNCH_ROSTER, type LauncherId } from '../core/launchers';
 
 // ------------------------------------------------------------------ chapters
 export const LEVELS_PER_CHAPTER = 10;
@@ -48,6 +49,13 @@ export interface Reward {
   skin?: string;
   /** Keeper cosmetic (ownership is derived from the claimed tier, see cosmetics.ts). */
   item?: string;
+  /** Display only: gameplay ownership comes from the opened chapter record. */
+  launcher?: LauncherId;
+}
+
+export function chestLauncher(n: number): LauncherId | null {
+  const id = ({ 3: 'swoop', 5: 'pinpoint', 6: 'skipper' } as Partial<Record<number, LauncherId>>)[n];
+  return id && LAUNCH_ROSTER.includes(id) ? id : null;
 }
 
 export function chapterReward(n: number, p?: Profile): Reward {
@@ -61,6 +69,7 @@ export function chapterReward(n: number, p?: Profile): Reward {
     gems: CHAPTER_REWARD.baseGems + n * CHAPTER_REWARD.gemsPerChapter + rankGems,
     dust: CHAPTER_REWARD.dustPerChapter * n + rankDust,
     boosters: { shower: 1, spark: 1, scope: 1 },
+    ...(chestLauncher(n) ? { launcher: chestLauncher(n)! } : {}),
   };
 }
 
@@ -156,5 +165,11 @@ export function rewardText(r: Reward): string[] {
   for (const [k, v] of Object.entries(r.boosters ?? {})) if (v) out.push(`${bEmoji[k]} ×${v}`);
   if (r.skin) out.push(t('🌈 New atmosphere'));
   if (r.item) out.push(t('🧑‍🚀 {name}', { name: t(COSMETIC_BY_ID[r.item]?.name ?? '') }));
+  if (r.launcher)
+    out.push(
+      r.launcher === 'swoop'
+        ? t('🚀 {name} launcher', { name: t(LAUNCHERS[r.launcher].name) })
+        : t('🚀 {name} arrives at planet {n}', { name: t(LAUNCHERS[r.launcher].name), n: LAUNCHERS[r.launcher].debut }),
+    );
   return out;
 }

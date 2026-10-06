@@ -5168,6 +5168,133 @@ button.lb {
 .trait-badge > span:first-child {
   white-space: nowrap;
 }
+.pre-choice-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  align-items: stretch;
+}
+.pre-choice-row > .buddy-chip:only-child,
+.pre-choice-row > .launcher-choice:only-child {
+  grid-column: 1 / -1;
+}
+.pre-choice-row > .launcher-choice:only-child > .launcher-chip {
+  grid-column: 1 / -1;
+}
+.launcher-choice {
+  display: contents;
+}
+.launcher-chip {
+  width: 100%;
+  min-height: 48px;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px;
+  min-width: 0;
+}
+.launcher-chip-copy,
+.launcher-chip > span:nth-child(2) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.launcher-chip small {
+  line-height: 1.15;
+}
+.launcher-chip.locked {
+  opacity: 0.8;
+}
+.launcher-emblem {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--launcher-band, #f5cb70);
+  border-radius: 50%;
+  color: #fff;
+  background: #25254b;
+  font-size: 20px;
+}
+.launcher-tray {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+  scroll-snap-type: x proximity;
+}
+.launcher-tray[hidden] {
+  display: none;
+}
+.launcher-option {
+  flex: 0 0 120px;
+  min-height: 106px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  color: #fff;
+  background: #292550;
+  padding: 6px;
+  scroll-snap-align: start;
+}
+.launcher-option.selected {
+  border-color: #ffe38a;
+}
+.launcher-option small {
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+.launcher-good {
+  color: #bcf0ad;
+  font-size: 11px;
+  font-weight: 700;
+}
+.practice-exit {
+  position: absolute;
+  top: calc(var(--st) + 126px);
+  left: 8px;
+  z-index: 8;
+  min-height: 44px;
+  padding: 8px 12px;
+}
+.pinpoint-landing-card {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: calc(var(--sb) + 225px);
+  z-index: 7;
+  max-width: 310px;
+  margin-inline: auto;
+  padding: 7px 10px;
+  border: 2px solid #aab4ee;
+  border-radius: 12px;
+  background: rgba(24, 20, 56, 0.95);
+  color: #fff;
+  font-size: max(12px, calc(13px * var(--text-scale)));
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.forced-launcher-note {
+  align-self: center;
+  max-width: calc(100% - 24px);
+  padding: 3px 8px;
+  border: 1px solid #a8a2ce;
+  border-radius: 99px;
+  background: rgba(26, 24, 63, 0.9);
+  color: #eee9ff;
+  font-size: max(10px, calc(11px * var(--text-scale)));
+  text-align: center;
+}
 .end .btn,
 .trouble-beat {
   min-height: 44px;

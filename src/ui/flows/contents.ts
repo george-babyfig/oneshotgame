@@ -15,7 +15,13 @@ export function contentsSheet(product: ProductDef, price: string, piggyGems = 0,
       sheet.close();
       resolve(buy);
     };
-    const roadContents = new Set(['Cosmic atmosphere', 'Golden Orbit launcher', 'Halo Ring hat', 'Comet Tail trail', 'Star Captain suit']);
+    const roadContents = new Set([
+      'Cosmic atmosphere',
+      'Golden Orbit launcher look',
+      'Halo Ring hat',
+      'Comet Tail trail',
+      'Star Captain suit',
+    ]);
     const items =
       product.key === 'piggy'
         ? [t('{n} gems saved', { n: piggyGems })]

@@ -1,11 +1,13 @@
-import { KINDS, SECTORS } from '../core/world';
+import { BIOMES, KINDS, SECTORS, SPECIES_BY_ID } from '../core/world';
 import { drawCreature, drawWanderGhost } from './art/critters';
 import { drawProjectile } from './art/projectiles';
-import { drawKeeper, drawLauncher } from './art/keeper';
+import { drawKeeper } from './art/keeper';
+import { drawGameplayLauncher } from './art/launchers';
 import { novaForThrow, previewStep } from '../core/round';
-import { flyFull, STAR_SLING } from '../core/flight';
+import { fly, flyFull, flyFullWithLauncher, STAR_SLING } from '../core/flight';
+import { launcherAtTune } from '../core/launchers';
 import { needsBonkBadge } from './feel';
-import { t } from '../i18n';
+import { t, tp } from '../i18n';
 import {
   aimTagFacts,
   aimTagRing,
@@ -18,10 +20,29 @@ import {
   type Rect,
 } from './aimtag';
 import { speak } from './hud';
+import { h } from './dom';
+import { haptic } from './haptics';
 import type { LevelScene } from './game';
 
 export const MAX_PULL = 150;
 export const PULL_TO_SPEED = 6.2;
+export const SCOPE_STEPS = [16, 28, 44, 90] as const;
+/** Paid Aim Guide levels retain their visible value until the upgrade retires. */
+export function visibleAimSteps(
+  id: import('../core/launchers').LauncherId,
+  tune: import('../core/launchers').Tune,
+  scopeLevel: number,
+  full = false,
+): number {
+  if (full || scopeLevel >= 3) return 90;
+  return Math.max(12, launcherAtTune(id, tune).aimSteps + SCOPE_STEPS[Math.max(0, Math.min(2, Math.floor(scopeLevel)))] - 28);
+}
+
+export function aimStepsWithBounce(steps: number, path: ReturnType<typeof flyFull>, skipper: boolean): number {
+  if (!skipper) return steps;
+  const bounce = path.bounces.find((item) => item.special);
+  return bounce ? Math.max(steps, Math.min(150, Math.ceil(bounce.elapsed * 30) + 8)) : steps;
+}
 export interface DrawnAim {
   vx: number;
   vy: number;
@@ -29,18 +50,17 @@ export interface DrawnAim {
   rotation: number;
   badge: boolean;
 }
-const SCOPE_STEPS = [16, 28, 44, 90];
 const flightCache = new WeakMap<LevelScene, { key: string; path: ReturnType<typeof flyFull> }>();
 
 export const safeTroubleText = () => t('Safe!');
 
 export function predictFlight(scene: LevelScene, vx: number, vy: number) {
-  const key = `${vx}|${vy}|${scene.rot}|${scene.time}|${scene.w}|${scene.h}|${scene.throwsUsed}|${scene.bossHp}|${scene.skyState.brokenRocks.join(',')}`;
+  const key = `${scene.o.launcher.id}|${scene.o.launcher.tune}|${vx}|${vy}|${scene.rot}|${scene.time}|${scene.w}|${scene.h}|${scene.throwsUsed}|${scene.bossHp}|${scene.skyState.brokenRocks.join(',')}`;
   let cached = flightCache.get(scene);
   if (cached?.key !== key) {
     cached = {
       key,
-      path: flyFull(STAR_SLING, { ...scene.launch, vx, vy, elapsed: 0 }, scene.flightWorld(scene.rot), scene.time),
+      path: flyFullWithLauncher(scene.o.launcher, { ...scene.launch, vx, vy, elapsed: 0 }, scene.flightWorld(scene.rot), scene.time),
     };
     flightCache.set(scene, cached);
   }
@@ -88,7 +108,11 @@ export function aimTagReserved(scene: LevelScene, path?: ReturnType<typeof flyFu
     zones.push({ x: x - 28, y: y - 28, width: 56, height: 56 });
   }
   if (path) {
-    const steps = SCOPE_STEPS[scene.o.boosters.scope ? 3 : scene.o.scopeLevel];
+    const steps = aimStepsWithBounce(
+      visibleAimSteps(scene.o.launcher.id, scene.o.launcher.tune, scene.o.scopeLevel, scene.o.boosters.scope),
+      path,
+      scene.o.launcher.id === 'skipper' && !scene.o.boosters.scope && scene.o.scopeLevel < 3,
+    );
     const visibleCount = Math.min(steps, Math.ceil(path.points.length / 8));
     for (let k = 0; k < visibleCount; k++) {
       const point = path.points[Math.min(path.points.length - 1, (k + 1) * 8 - 1)];
@@ -140,15 +164,36 @@ export function aimTagRect(scene: LevelScene, i: number, path?: ReturnType<typeo
 
 /** The full-flight prediction is unchanged; only its compact drawing follows the landing sector. */
 export function drawLanding(scene: LevelScene, i: number, path?: ReturnType<typeof flyFull>) {
-  const key = `${i}|${scene.cur}|${scene.throwsUsed}|${scene.nova.charge}|${scene.nova.held}|${scene.combo.links}|${scene.combo.rest}|${scene.o.buddy?.species ?? ''}|${scene.roundModifiers().buddyShield ?? ''}|${scene.troubles.map((v) => `${v.id}:${v.nextIn}:${v.settled}`).join(',')}`;
+  const key = `${i}|${scene.cur}|${scene.o.launcher.id}|${scene.o.launcher.tune}|${!!path?.specialBounced}|${scene.throwsUsed}|${scene.nova.charge}|${scene.nova.held}|${scene.combo.links}|${scene.combo.rest}|${scene.o.buddy?.species ?? ''}|${scene.roundModifiers().buddyShield ?? ''}|${scene.troubles.map((v) => `${v.id}:${v.nextIn}:${v.settled}`).join(',')}`;
   if (scene.predictCache?.key !== key) {
+    if (scene.o.launcher.id === 'pinpoint' && scene.predictCache?.key.split('|')[0] !== String(i)) haptic.tick();
     const state = scene.roundState();
-    const res = previewStep(state, { kind: scene.cur, sector: i, nova: novaForThrow(state) }, scene.roundModifiers(), scene.rules);
+    const res = previewStep(
+      state,
+      { kind: scene.cur, sector: i, nova: novaForThrow(state), bounced: !!path?.specialBounced },
+      scene.roundModifiers(),
+      scene.rules,
+    );
     const land = res.state.planet.sectors[i].biome;
     const facts = aimTagFacts(res, land);
     const title = aimTagSummary(facts);
     scene.predictCache = { key, title, facts, changed: res.changed };
-    if (scene.liveEl) speak(scene, title);
+    let announcement = title;
+    if (scene.o.launcher.id === 'pinpoint') {
+      const card = h('div', { class: 'pinpoint-landing-card', role: 'note' });
+      const lands = res.changed.map((sector) => t(BIOMES[res.state.planet.sectors[sector].biome].name)).join(', ');
+      const creatures = facts.lost.length
+        ? facts.lost.map((lost) => t('{creature} wanders off', { creature: t(SPECIES_BY_ID[lost.species].name) })).join(' · ')
+        : t('Everyone stays');
+      const places = res.changed.length
+        ? tp(res.changed.length, 'Changes one place: {lands}.', 'Changes {n} places: {lands}.', { lands })
+        : t('No land changes.');
+      card.textContent = `${places} ${creatures}`;
+      scene.el.querySelector('.pinpoint-landing-card')?.remove();
+      scene.el.append(card);
+      announcement = card.textContent;
+    }
+    if (scene.liveEl) speak(scene, announcement);
   }
   const { facts, changed } = scene.predictCache;
   for (const sector of changed) outline(scene, sector, '#ffffff', scene.o.reduceMotion ? 0.9 : 0.65 + Math.sin(scene.time * 8) * 0.2);
@@ -311,6 +356,10 @@ export function drawAim(scene: LevelScene) {
   const aiming = !scene.shot && !scene.ended;
   const p = scene.pull();
   if (!aiming || !scene.aimFrom || p.len < 18) scene.drawnAim = null;
+  if (!aiming || !scene.aimFrom || p.len < 18) {
+    scene.el.querySelector('.pinpoint-landing-card')?.remove();
+    scene.predictCache = null;
+  }
   const ox = aiming && scene.aimFrom ? -p.vx / PULL_TO_SPEED / 3 : 0;
   const oy = aiming && scene.aimFrom ? -p.vy / PULL_TO_SPEED / 3 : 0;
   const kx = L.x - Math.min(96, scene.w * 0.24);
@@ -332,7 +381,17 @@ export function drawAim(scene: LevelScene) {
     emote: scene.emoteAt >= 0 && scene.time - scene.emoteAt < 6,
     et: scene.time - scene.emoteAt,
   });
-  drawLauncher(g, scene.look.launcher, L.x, L.y, scene.time, { x: ox, y: oy }, KINDS[scene.cur].color, scene.o.mastered);
+  drawGameplayLauncher(
+    g,
+    scene.o.launcher.id,
+    scene.look.launcher,
+    L.x,
+    L.y,
+    scene.time,
+    { x: ox, y: oy },
+    KINDS[scene.cur].color,
+    !!scene.o.mastered,
+  );
   scene.drawNovaMeter(L.x, L.y, aiming);
   if (scene.focusTarget && scene.time < scene.focusTarget.until) {
     const point = scene.focusTarget.kind === 'ring' ? { x: L.x, y: L.y, r: 58 } : { ...queuePositions(scene)[0], r: 29 };
@@ -347,14 +406,38 @@ export function drawAim(scene: LevelScene) {
     drawProjectile(g, scene.cur, L.x + ox, L.y + oy + bounce, 36, scene.o.reduceMotion ? 0 : scene.time);
     drawQueue(scene);
     if (scene.aimFrom && p.len >= 18) {
-      const steps = SCOPE_STEPS[scene.o.boosters.scope ? 3 : scene.o.scopeLevel];
       const path = predictFlight(scene, p.vx, p.vy);
+      const baseSteps = visibleAimSteps(scene.o.launcher.id, scene.o.launcher.tune, scene.o.scopeLevel, scene.o.boosters.scope);
+      const steps = aimStepsWithBounce(
+        baseSteps,
+        path,
+        scene.o.launcher.id === 'skipper' && !scene.o.boosters.scope && scene.o.scopeLevel < 3,
+      );
       scene.drawnAim = { vx: p.vx, vy: p.vy, roundTime: scene.time, rotation: scene.rot, badge: needsBonkBadge(path.hit) };
       if (path.sector === null) {
         scene.predictCache = null;
         scene.aimTagPosition = null;
       }
       g.fillStyle = '#ffffff';
+      if (scene.o.showSlingGhost) {
+        const ghost = fly(
+          STAR_SLING,
+          { ...scene.launch, vx: p.vx, vy: p.vy, elapsed: 0 },
+          scene.flightWorld(scene.rot),
+          scene.time,
+          steps / 30,
+        );
+        g.fillStyle = '#b8b8c7';
+        for (let k = 0; k < Math.min(steps, Math.ceil(ghost.points.length / 8)); k++) {
+          const point = ghost.points[Math.min(ghost.points.length - 1, (k + 1) * 8 - 1)];
+          if (!point) continue;
+          g.globalAlpha = 0.36 * (1 - k / steps);
+          g.beginPath();
+          g.arc(point.x, point.y, 2, 0, Math.PI * 2);
+          g.fill();
+        }
+        g.fillStyle = '#ffffff';
+      }
       const visibleCount = Math.min(steps, Math.ceil(path.points.length / 8));
       for (let k = 0; k < visibleCount; k++) {
         const s = path.points[Math.min(path.points.length - 1, (k + 1) * 8 - 1)];
@@ -376,6 +459,19 @@ export function drawAim(scene: LevelScene) {
         drawBonkBadge(g, L.x + 40, L.y - 40);
       }
       if (path.sector !== null) scene.drawLanding(path.sector, path);
+      else scene.el.querySelector('.pinpoint-landing-card')?.remove();
+      if (
+        launcherAtTune(scene.o.launcher.id, scene.o.launcher.tune).overPullTip &&
+        scene.aimTo &&
+        scene.aimFrom &&
+        Math.hypot(scene.aimFrom.x - scene.aimTo.x, scene.aimFrom.y - scene.aimTo.y) >
+          launcherAtTune(scene.o.launcher.id, scene.o.launcher.tune).maxPull
+      ) {
+        g.fillStyle = '#ff8d95';
+        g.font = 'bold 16px Fredoka, system-ui';
+        g.textAlign = 'center';
+        g.fillText(t('Too far'), L.x, L.y - 66);
+      }
       g.globalAlpha = 1;
     }
   }
@@ -386,12 +482,13 @@ export function aimAt(scene: LevelScene, sector: number, clearSky = false) {
   const launch = scene.launch;
   const world = scene.flightWorld(scene.rot);
   if (clearSky) world.sky = undefined;
-  for (const speed of [420, 560, 700, 840, 930]) {
+  const maxSpeed = launcherAtTune(scene.o.launcher.id, scene.o.launcher.tune).maxPull * PULL_TO_SPEED;
+  for (const speed of [420, 560, 700, 840, maxSpeed].filter((value) => value <= maxSpeed)) {
     for (let i = 0; i < 180; i++) {
       const angle = -Math.PI + (i / 179) * Math.PI;
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
-      if (flyFull(STAR_SLING, { ...launch, vx, vy, elapsed: 0 }, world, scene.time).sector === target) return { vx, vy };
+      if (flyFullWithLauncher(scene.o.launcher, { ...launch, vx, vy, elapsed: 0 }, world, scene.time).sector === target) return { vx, vy };
     }
   }
   const angle = scene.rot + (target + 0.5) * ((Math.PI * 2) / SECTORS);

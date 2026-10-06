@@ -1,8 +1,11 @@
 import { SECTORS } from './world';
+import { launcherAtTune, type LauncherId, type LauncherSelection } from './launchers';
 import { EMPTY_SKY_STATE, gustAt, skyShapesAt, type SkyDef, type SkyState } from './sky';
 
 export interface FlightParams {
-  launcher: 'sling';
+  launcher: LauncherId;
+  speedMultiplier?: number;
+  curveMultiplier?: number;
   gravity: number;
   step: number;
   maxTime: number;
@@ -28,6 +31,10 @@ export interface FlightPoint {
 export interface FlightLaunch extends FlightPoint {
   carry?: number;
   bounceCount?: number;
+  launcherApplied?: boolean;
+  specialBounced?: boolean;
+  brokenRocks?: number[];
+  brokenRing?: boolean;
 }
 
 export interface FlightWorld {
@@ -44,6 +51,7 @@ export interface FlightWorld {
   height: number;
   launcherY: number;
   bossActive?: boolean;
+  ringBroken?: boolean;
   sky?: SkyDef;
   skyState?: SkyState;
 }
@@ -59,7 +67,30 @@ export interface FlightResult {
   state: FlightLaunch;
   hit: FlightHit | null;
   sector: number | null;
-  bounces: { x: number; y: number; elapsed: number }[];
+  bounces: { x: number; y: number; elapsed: number; special?: boolean }[];
+  breaks?: { kind: 'rock' | 'ring'; rock?: number; x: number; y: number }[];
+  specialBounced?: boolean;
+}
+
+/** The same parameters drive live flight, preview, hints, bots, and reach sweeps. */
+export function flightParamsForLauncher(selection: LauncherSelection): Readonly<FlightParams> {
+  if (selection.id === 'sling') return STAR_SLING;
+  const def = launcherAtTune(selection.id, selection.tune);
+  return { ...STAR_SLING, launcher: def.id, speedMultiplier: def.speedMultiplier, curveMultiplier: def.curveMultiplier };
+}
+
+export function flyWithLauncher(
+  selection: LauncherSelection,
+  launch: FlightLaunch,
+  world: FlightWorld,
+  t0: number,
+  dt: number,
+): FlightResult {
+  return fly(flightParamsForLauncher(selection), launch, world, t0, dt);
+}
+
+export function flyFullWithLauncher(selection: LauncherSelection, launch: FlightLaunch, world: FlightWorld, t0: number): FlightResult {
+  return flyFull(flightParamsForLauncher(selection), launch, world, t0);
 }
 
 function moonPositions(w: FlightWorld, time: number) {
@@ -92,24 +123,47 @@ function rotationAt(w: FlightWorld, t0: number, elapsed: number) {
 /** Advance a shot with a fixed physics step; carry keeps caller frame rate out of the path. */
 export function fly(params: FlightParams, launch: FlightLaunch, world: FlightWorld, t0: number, dt: number): FlightResult {
   const state = { ...launch, carry: (launch.carry ?? 0) + Math.max(0, dt) };
+  if (params.launcher !== 'sling' && !state.launcherApplied) {
+    state.vx *= params.speedMultiplier ?? 1;
+    state.vy *= params.speedMultiplier ?? 1;
+    state.launcherApplied = true;
+  }
   const points: FlightPoint[] = [];
   const bounces: FlightResult['bounces'] = [];
+  const breaks: NonNullable<FlightResult['breaks']> = [];
   let bounceCount = state.bounceCount ?? 0;
   let hit: FlightHit | null = null;
   const step = params.step;
+  const specialRebound = (x: number, y: number, nx: number, ny: number, radius: number) => {
+    const dot = state.vx * nx + state.vy * ny;
+    if (dot >= 0 || state.specialBounced) return false;
+    state.vx = (state.vx - 2 * dot * nx) * 0.9;
+    state.vy = (state.vy - 2 * dot * ny) * 0.9;
+    state.x = x + nx * (radius + params.collisionPadding + 0.01);
+    state.y = y + ny * (radius + params.collisionPadding + 0.01);
+    points[points.length - 1] = { x: state.x, y: state.y, vx: state.vx, vy: state.vy, elapsed: state.elapsed };
+    bounces.push({ x: state.x, y: state.y, elapsed: state.elapsed, special: true });
+    state.specialBounced = true;
+    return true;
+  };
   while (state.carry + 1e-10 >= step && !hit) {
     state.carry -= step;
     const dx = world.cx - state.x;
     const dy = world.cy - state.y;
     const r2 = Math.max(dx * dx + dy * dy, 400);
     const r = Math.sqrt(r2);
-    const gravity = world.gravity ?? params.gravity;
+    const baseGravity = world.gravity ?? params.gravity;
+    const gravity =
+      params.launcher === 'sling' ? (world.gravity ?? params.gravity) : (world.gravity ?? params.gravity) * (params.curveMultiplier ?? 1);
     const a = (world.twist === 'heavy' ? gravity * 1.45 : gravity) / r2;
-    if (world.twist === 'wind') state.vx += world.wind * (world.sky ? gustAt(world.sky, t0 + state.elapsed).mult : 1) * step;
+    if (world.twist === 'wind')
+      state.vx += world.wind * (world.sky ? gustAt(world.sky, t0 + state.elapsed).mult : 1) * step * (params.launcher === 'zip' ? 0.5 : 1);
     const shapes = world.sky?.obstacle
       ? skyShapesAt(
           world.sky,
-          world.skyState ?? EMPTY_SKY_STATE,
+          state.brokenRocks?.length
+            ? { brokenRocks: [...(world.skyState?.brokenRocks ?? []), ...state.brokenRocks] }
+            : (world.skyState ?? EMPTY_SKY_STATE),
           { cx: world.cx, cy: world.cy, R: world.radius, width: world.width, height: world.height, launcherY: world.launcherY },
           t0 + state.elapsed,
         )
@@ -118,13 +172,13 @@ export function fly(params: FlightParams, launch: FlightLaunch, world: FlightWor
       if (shape.kind === 'mist' && Math.hypot(state.x - shape.x, state.y - shape.y) < shape.r) {
         const { vx, vy } = state;
         const speed = Math.hypot(vx, vy) || 1;
-        state.vx += (-vy / speed) * 260 * shape.curl * step;
-        state.vy += (vx / speed) * 260 * shape.curl * step;
+        state.vx += (-vy / speed) * 260 * shape.curl * step * (params.launcher === 'zip' ? 0.5 : 1);
+        state.vy += (vx / speed) * 260 * shape.curl * step * (params.launcher === 'zip' ? 0.5 : 1);
       } else if (shape.kind === 'tug') {
         const tx = shape.x - state.x;
         const ty = shape.y - state.y;
         const tr2 = Math.max(tx * tx + ty * ty, 30 * 30);
-        const ta = (((0.3 * gravity) / tr2) * step) / Math.sqrt(tr2);
+        const ta = (((0.3 * (params.launcher === 'sling' ? gravity : baseGravity)) / tr2) * step) / Math.sqrt(tr2);
         state.vx += tx * ta;
         state.vy += ty * ta;
       }
@@ -139,17 +193,34 @@ export function fly(params: FlightParams, launch: FlightLaunch, world: FlightWor
     const collisionShapes = world.sky?.obstacle
       ? skyShapesAt(
           world.sky,
-          world.skyState ?? EMPTY_SKY_STATE,
+          state.brokenRocks?.length
+            ? { brokenRocks: [...(world.skyState?.brokenRocks ?? []), ...state.brokenRocks] }
+            : (world.skyState ?? EMPTY_SKY_STATE),
           { cx: world.cx, cy: world.cy, R: world.radius, width: world.width, height: world.height, launcherY: world.launcherY },
           time,
         )
       : [];
     const moon = moonPositions(world, time).find((m) => Math.hypot(state.x - m.x, state.y - m.y) < m.r + 8);
-    if (moon) hit = world.twist === 'boss' ? { kind: 'boss' } : { kind: 'bonk', by: 'moon', x: state.x, y: state.y };
-    else {
+    if (moon) {
+      const distance = Math.hypot(state.x - moon.x, state.y - moon.y) || 1;
+      if (
+        params.launcher !== 'skipper' ||
+        !specialRebound(moon.x, moon.y, (state.x - moon.x) / distance, (state.y - moon.y) / distance, moon.r + 8 - params.collisionPadding)
+      )
+        hit =
+          world.twist === 'boss' && params.launcher !== 'skipper' ? { kind: 'boss' } : { kind: 'bonk', by: 'moon', x: state.x, y: state.y };
+    } else {
       for (const shape of collisionShapes) {
-        if (shape.kind === 'rock' && Math.hypot(state.x - shape.x, state.y - shape.y) < shape.r + params.collisionPadding)
-          hit = { kind: 'bonk', by: 'rock', x: state.x, y: state.y, rock: shape.index };
+        if (shape.kind === 'rock' && Math.hypot(state.x - shape.x, state.y - shape.y) < shape.r + params.collisionPadding) {
+          if (params.launcher === 'thumper') {
+            state.brokenRocks = [...(state.brokenRocks ?? []), shape.index];
+            breaks.push({ kind: 'rock', rock: shape.index, x: state.x, y: state.y });
+          } else if (params.launcher === 'skipper' && !state.specialBounced) {
+            const distance = Math.hypot(state.x - shape.x, state.y - shape.y) || 1;
+            if (!specialRebound(shape.x, shape.y, (state.x - shape.x) / distance, (state.y - shape.y) / distance, shape.r))
+              hit = { kind: 'bonk', by: 'rock', x: state.x, y: state.y, rock: shape.index };
+          } else hit = { kind: 'bonk', by: 'rock', x: state.x, y: state.y, rock: shape.index };
+        }
         if (shape.kind === 'tug' && Math.hypot(state.x - shape.x, state.y - shape.y) < shape.coreR)
           hit = { kind: 'fizzle', x: state.x, y: state.y };
         if (
@@ -158,7 +229,25 @@ export function fly(params: FlightParams, launch: FlightLaunch, world: FlightWor
         ) {
           const angle = ((Math.atan2(state.y - shape.cy, state.x - shape.cx) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
           const inGap = shape.gaps.some((gap) => (angle - gap.start + Math.PI * 2) % (Math.PI * 2) < gap.width);
-          if (!inGap) hit = { kind: 'bonk', by: 'ring', x: state.x, y: state.y };
+          if (!inGap && !state.brokenRing && !world.ringBroken) {
+            if (params.launcher === 'thumper') {
+              state.brokenRing = true;
+              breaks.push({ kind: 'ring', x: state.x, y: state.y });
+            } else if (params.launcher === 'skipper' && !state.specialBounced) {
+              const distance = Math.hypot(state.x - shape.cx, state.y - shape.cy) || 1;
+              const sign = distance >= shape.r ? 1 : -1;
+              const ux = (state.x - shape.cx) / distance;
+              const uy = (state.y - shape.cy) / distance;
+              if (specialRebound(shape.cx, shape.cy, sign * ux, sign * uy, shape.r)) {
+                // Put the shot on its incoming side of the ring after reflection.
+                const clearRadius = shape.r + sign * (shape.thickness / 2 + params.collisionPadding + 0.01);
+                state.x = shape.cx + ux * clearRadius;
+                state.y = shape.cy + uy * clearRadius;
+                points[points.length - 1] = { x: state.x, y: state.y, vx: state.vx, vy: state.vy, elapsed: state.elapsed };
+                bounces[bounces.length - 1] = { x: state.x, y: state.y, elapsed: state.elapsed, special: true };
+              } else hit = { kind: 'bonk', by: 'ring', x: state.x, y: state.y };
+            } else hit = { kind: 'bonk', by: 'ring', x: state.x, y: state.y };
+          }
         }
         if (shape.kind === 'bubble' && Math.hypot(state.x - shape.x, state.y - shape.y) < shape.r + params.collisionPadding) {
           const dist = Math.hypot(state.x - shape.x, state.y - shape.y) || 1;
@@ -194,7 +283,14 @@ export function fly(params: FlightParams, launch: FlightLaunch, world: FlightWor
         hit = { kind: 'miss' };
     }
   }
-  return { points, state, hit, sector: hit?.kind === 'land' ? hit.sector : null, bounces };
+  return {
+    points,
+    state,
+    hit,
+    sector: hit?.kind === 'land' ? hit.sector : null,
+    bounces,
+    ...(params.launcher !== 'sling' ? { breaks, specialBounced: !!state.specialBounced } : {}),
+  };
 }
 
 /** Simulate one launch to contact or the time limit. */

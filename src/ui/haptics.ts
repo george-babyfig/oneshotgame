@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import type { Kind } from '../core/world';
+import type { LauncherId } from '../core/launchers';
 import { COMBO_HAPTIC, OBJECT_FEEL, REACTION_HAPTIC, type FeelHaptic } from './feel';
 
 let on = true;
@@ -15,6 +16,31 @@ const allowed = () => {
 const impactStyle = (feel: FeelHaptic) => (feel === 'medium' ? ImpactStyle.Medium : ImpactStyle.Light);
 
 export const haptic = {
+  launcherRelease: (id: LauncherId) => {
+    if (id === 'sling') return;
+    const style = id === 'thumper' ? ImpactStyle.Heavy : ImpactStyle.Light;
+    if (allowed()) Haptics.impact({ style }).catch(() => {});
+    if (id === 'swoop')
+      window.setTimeout(() => {
+        if (allowed()) Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+      }, 170);
+  },
+  launcherBounce: () => {
+    if (allowed()) Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+    window.setTimeout(() => {
+      if (allowed()) Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+    }, 170);
+  },
+  launcherLanding: (id: LauncherId, fusion: boolean) => {
+    if (id === 'thumper')
+      window.setTimeout(() => {
+        if (allowed()) Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+      }, 170);
+    if (id === 'sparkler' && fusion)
+      window.setTimeout(() => {
+        if (allowed()) Haptics.notification({ type: NotificationType.Success }).catch(() => {});
+      }, 170);
+  },
   trouble: (kind: 'act' | 'blocked' | 'settled' | 'spread') => {
     if (!allowed()) return;
     Haptics.impact({ style: kind === 'settled' ? ImpactStyle.Medium : ImpactStyle.Light }).catch(() => {});

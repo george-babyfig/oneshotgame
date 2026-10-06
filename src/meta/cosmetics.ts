@@ -102,18 +102,28 @@ export const SHOWTIME_COSMETICS: Cosmetic[] = [
     tier: 'fancy',
     colors: ['#e8dc89', '#88d7a3'],
   },
-  { id: 'l_bloom', slot: 'launcher', name: 'Bloom Sling', source: 'chapter', unlock: 4, tier: 'fancy', colors: ['#79b68e', '#ffc1d2'] },
+  { id: 'l_bloom', slot: 'launcher', name: 'Blossom', source: 'chapter', unlock: 4, tier: 'fancy', colors: ['#79b68e', '#ffc1d2'] },
   {
     id: 'l_moonbeam',
     slot: 'launcher',
-    name: 'Moonbeam Sling',
+    name: 'Moonbeam',
     source: 'habitat',
     unlock: 'frost',
     tier: 'fancy',
     colors: ['#a6adf0', '#fff0b8'],
   },
 ];
-export const COSMETICS: Cosmetic[] = [...BASE_COSMETICS, ...SHOWTIME_COSMETICS];
+// Look IDs and sources stay stable for saved outfits and paid entitlements.
+const LOOK_NAMES: Record<string, string> = {
+  l_pad: 'Classic',
+  l_twig: 'Twig',
+  l_petal: 'Petal',
+  l_cannon: 'Comet Rail',
+};
+export const COSMETICS: Cosmetic[] = [
+  ...BASE_COSMETICS.map((item) => ({ ...item, name: LOOK_NAMES[item.id] ?? item.name })),
+  ...SHOWTIME_COSMETICS,
+];
 
 export const COSMETIC_BY_ID: Record<string, Cosmetic> = Object.fromEntries(COSMETICS.map((x) => [x.id, x]));
 export const STYLES_RELEASE = 'm6.5';
@@ -255,7 +265,7 @@ export function sourceText(x: Cosmetic): string {
   }
 }
 
-export const SLOT_NAMES: Record<Slot, string> = { suit: 'Suit', hat: 'Hat', launcher: 'Launcher', trail: 'Trail', emote: 'Emote' };
+export const SLOT_NAMES: Record<Slot, string> = { suit: 'Suit', hat: 'Hat', launcher: 'Launcher looks', trail: 'Trail', emote: 'Emote' };
 
 /** Launcher mastery: flings needed for each mastery star. */
 export const MASTERY_STEPS = [100, 500, 2000];

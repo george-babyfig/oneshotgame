@@ -213,6 +213,28 @@ export const LEVEL_SALT: Partial<Record<number, number>> = {
   60: 4,
 };
 
+/** Selected raw-v2 campaign salts for lint outliers in unshipped planets 61-120. */
+export const RAW_LEVEL_SALT: Partial<Record<number, number>> = {
+  68: 4,
+  70: 9,
+  75: 14,
+  76: 9,
+  77: 2,
+  80: 6,
+  90: 6,
+  93: 12,
+  95: 1,
+  99: 13,
+  101: 1,
+  102: 4,
+  104: 6,
+  111: 3,
+  114: 1,
+  115: 2,
+  119: 15,
+  120: 8,
+};
+
 const NAMES_A = [
   'Pebble',
   'Mossy',
@@ -362,12 +384,36 @@ export const TUNE = {
   bump: { normal: [0, 0, 0], hard: [0, 0, 0], super: [0, 0, 0] } as Record<Difficulty, number[]>,
 };
 
+/** Only the raw profile's target adjustments; the reviewed fractions are frozen. */
+function rawTargetOffsets(n: number, difficulty: Difficulty): readonly [number, number] {
+  if (difficulty === 'super') return [0.03, 0.045];
+  if (difficulty === 'hard') {
+    if (n === 15) return [-0.005, 0];
+    if (n === 20) return [-0.035, 0.015];
+    return [n >= 61 ? 0.025 : 0.01, n >= 61 ? 0.03 : 0.01];
+  }
+  if (n <= 3) return [0, 0.05];
+  if (n <= 10) return [0.005, 0.01];
+  if (n <= 20) return [0, 0.01];
+  if (n <= 30) return [-0.11, 0.035];
+  if (n <= 60) return [-0.07, 0];
+  return [-0.135, -0.02];
+}
+
 /**
  * Goals are taken from what the greedy solver actually built, so the level stays
  * beatable: a land type it grew (asking for a bit less than it made) and a
  * creature that moved in.
  */
-function pickGoals(n: number, difficulty: Difficulty, start: Planet, plan: Planet, blind: Planet, rnd: () => number): Goal[] {
+function pickGoals(
+  n: number,
+  difficulty: Difficulty,
+  start: Planet,
+  plan: Planet,
+  blind: Planet,
+  rnd: () => number,
+  profile: GenerationProfile = 'reviewed-v1',
+): Goal[] {
   if (n < GOALS_FROM) return [];
   const goalRate = n <= 10 ? 0.3 : n <= 20 ? 0.45 : 0.6;
   const want = difficulty === 'super' ? 2 : difficulty === 'hard' ? 1 : rnd() < goalRate ? 1 : 0;
@@ -392,21 +438,26 @@ function pickGoals(n: number, difficulty: Difficulty, start: Planet, plan: Plane
     if (!biomes.length) return;
     // Later Hard goals name a land the deal can build by several paths.
     const index =
-      difficulty === 'hard' && n >= 25
+      (difficulty === 'hard' && n >= 25) || (profile === 'raw-v2' && difficulty === 'normal' && n <= 20)
         ? biomes.reduce((best, b, i) => (b.have - b.from > biomes[best].have - biomes[best].from ? i : best), 0)
         : Math.floor(rnd() * biomes.length);
     const b = biomes.splice(index, 1)[0];
-    const k = difficulty === 'super' ? 0.65 : difficulty === 'hard' && n >= 25 ? 0.4 : difficulty === 'hard' ? 0.65 : 0.55;
+    let k = difficulty === 'super' ? 0.65 : difficulty === 'hard' && n >= 25 ? 0.4 : difficulty === 'hard' ? 0.65 : 0.55;
+    if (profile === 'raw-v2' && difficulty === 'normal') k = n <= 20 ? 0.3 : n >= 61 ? 0.9 : 0.35;
+    if (profile === 'raw-v2' && difficulty === 'hard' && n <= 20) k = 0.8;
     out.push({ type: 'biome', id: b.id, count: Math.max(b.from + 1, Math.round(b.have * k)) });
   };
   if (difficulty === 'hard' && n >= 25) takeBiome();
   else if (want >= 2) {
     takeSpecies();
     takeBiome();
-  } else if (rnd() < (difficulty === 'hard' ? 0.3 : 0.15)) takeSpecies();
-  else takeBiome();
+  } else {
+    const speciesRate = difficulty === 'hard' ? (profile === 'raw-v2' && n === 20 ? 1 : 0.3) : profile === 'raw-v2' && n <= 20 ? 0 : 0.15;
+    if (rnd() < speciesRate) takeSpecies();
+    else takeBiome();
+  }
   if (!out.length) takeBiome();
-  if (n >= 25 && difficulty !== 'hard' && rnd() < 0.15) {
+  if (n >= 25 && difficulty !== 'hard' && profile !== 'raw-v2' && rnd() < 0.15) {
     const source = ['tundra', 'icesheet', 'taiga', 'volcano', 'desert', 'savanna'] as const;
     const eligible = source.filter((id) => Math.min(count(plan, id), count(blind, id)) > count(start, id));
     if (eligible.length) {
@@ -418,10 +469,80 @@ function pickGoals(n: number, difficulty: Difficulty, start: Planet, plan: Plane
   return out;
 }
 
+export type GenerationProfile = 'reviewed-v1' | 'raw-v2';
+
+/** Keep old public seeds stable. A raw seed stores its version in the numeric
+ * salt so an interrupted round can reconstruct it from LevelDef.seed. */
+const RAW_SALT_OFFSET = 1_000_000;
+const DAILY_RAW_CUTOVER = '2026-10-14';
+
+/** Offline Solver-0 and shadow-lint salt selections avoid retry builds on
+ * the fixed shadow window. */
+const RAW_SELECTED_SALT: Partial<Record<number, Record<number, number>>> = {
+  4: { 1005: 1015 },
+  5: { 1008: 1032, 1010: 1019 },
+  6: { 1001: 1018, 1003: 1032 },
+  7: { 1007: 1017, 1008: 1040 },
+  8: { 1001: 1049, 1004: 1031 },
+  9: { 1008: 1023, 1009: 1020 },
+  10: { 1002: 1012, 1010: 1021 },
+  12: { 1004: 1005, 1006: 1007, 1008: 1009 },
+  13: { 1006: 1023, 1008: 1050 },
+  14: { 1005: 1006, 1008: 1009, 1012: 1014 },
+  15: { 1014: 1015 },
+  17: { 1008: 1014 },
+  18: { 1003: 1035 },
+  21: { 1003: 1005, 1004: 1005, 1006: 1008, 1007: 1008 },
+  25: { 1021: 1023, 1022: 1023, 1032: 1033, 200026: 200027 },
+  31: { 1005: 1020 },
+  33: { 1007: 1026, 1009: 1025 },
+  34: { 1008: 1085, 1010: 1073 },
+  35: { 1020: 1021, 1022: 1023 },
+  37: { 1005: 1012, 1007: 1019 },
+  39: { 1013: 1014, 1019: 1020, 1023: 1024 },
+  44: { 1005: 1080 },
+  46: { 1005: 1041 },
+  48: { 1002: 1070 },
+  49: { 1002: 1005, 1003: 1005, 1004: 1005, 1019: 1020, 1022: 1024, 1023: 1024 },
+  52: { 1003: 1037, 1004: 1023, 1005: 1022, 1006: 1018 },
+  54: { 1007: 1099 },
+  55: { 1002: 1003, 1004: 1005, 1007: 1008, 1013: 1014, 1024: 1025, 1028: 1029, 1029: 1032 },
+  56: { 1004: 1052 },
+  57: { 1002: 1014 },
+  61: { 1007: 1043 },
+  62: { 1008: 1042 },
+  64: { 1003: 1044 },
+  67: { 1002: 1031, 1005: 1025, 1006: 1045, 1009: 1014 },
+  78: { 1005: 1040, 1010: 1044 },
+  82: { 1005: 1018 },
+  94: { 1004: 1034, 1007: 1037 },
+  96: { 1007: 1049 },
+  102: { 1008: 1025 },
+  108: { 1003: 1020, 1005: 1030, 1006: 1031, 1009: 1041 },
+  113: { 1009: 1027 },
+  114: { 1001: 1047 },
+};
+
+function generationProfile(n: number, seedPrefix: string, o: LevelOptions): GenerationProfile {
+  if (o.profile) return o.profile;
+  if (o.salt !== undefined && o.salt >= RAW_SALT_OFFSET) return 'raw-v2';
+  if (seedPrefix === 'PP') return n > 60 || (o.salt !== undefined && o.salt >= 1001) ? 'raw-v2' : 'reviewed-v1';
+  if (seedPrefix.startsWith('DAY-')) return seedPrefix.slice(4) >= DAILY_RAW_CUTOVER ? 'raw-v2' : 'reviewed-v1';
+  if (seedPrefix.startsWith('VOY-')) return seedPrefix.slice(4, 12) > '2026-W44' ? 'raw-v2' : 'reviewed-v1';
+  // Challenge codes have no generator-version field. Every version-1 code
+  // continues to use the layout it originally encoded.
+  return 'reviewed-v1';
+}
+
+function effectiveSalt(salt: number | undefined, profile: GenerationProfile): number | undefined {
+  return profile === 'raw-v2' && salt !== undefined && salt >= RAW_SALT_OFFSET ? salt - RAW_SALT_OFFSET : salt;
+}
+
 export interface LevelOptions {
   goals?: boolean;
   boss?: boolean;
   salt?: number;
+  profile?: GenerationProfile;
   rules?: RoundRules;
   obstacleCap?: number;
   remix?: boolean;
@@ -429,9 +550,12 @@ export interface LevelOptions {
 
 function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
   const obstacleCap = o.obstacleCap ?? (seedPrefix === 'PP' ? Infinity : 0);
-  const salt = o.salt ?? (seedPrefix === 'PP' ? LEVEL_SALT[n] : undefined);
-  const seed = `${seedPrefix}-${n}${salt ? `~${salt}` : ''}`;
-  const rnd = rngFrom(seed);
+  const profile = generationProfile(n, seedPrefix, o);
+  const defaultSalt = seedPrefix === 'PP' ? (profile === 'reviewed-v1' ? LEVEL_SALT[n] : RAW_LEVEL_SALT[n]) : undefined;
+  const salt = effectiveSalt(o.salt ?? defaultSalt, profile);
+  const seed = `${seedPrefix}-${n}${profile === 'raw-v2' ? `~${RAW_SALT_OFFSET + (salt ?? 0)}` : salt ? `~${salt}` : ''}`;
+  const randomSeed = `${seedPrefix}-${n}${salt ? `~${salt}` : ''}`;
+  const rnd = rngFrom(randomSeed);
   const kinds = availableKinds(n);
   let twist: Twist = 'none';
   if (o.remix) {
@@ -485,7 +609,7 @@ function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
   }
   let shortKind: Kind | undefined;
   if (o.remix && twist === 'short') {
-    const shortRnd = rngFrom(`${seed}-short`);
+    const shortRnd = rngFrom(`${randomSeed}-short`);
     shortKind = kinds[Math.floor(shortRnd() * kinds.length)];
     const remaining = kinds.filter((kind) => kind !== shortKind);
     // Replace every occurrence, including the opening deal, before solving.
@@ -500,7 +624,7 @@ function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
     }
   }
   const difficulty = difficultyOf(n, seedPrefix);
-  const troubleRnd = rngFrom(`${seed}-troubles`);
+  const troubleRnd = rngFrom(`${randomSeed}-troubles`);
   const campaignEligible = seedPrefix === 'PP' && n >= 14 && ![15, 19, 22, 26, 32, 33, 34, 37, 41, 46, 51, 57].includes(n);
   const otherTaught = (o.rules?.troubles ?? []).filter((id) => TROUBLES[id].debut <= n);
   const otherEligible =
@@ -561,16 +685,17 @@ function levelLayout(n: number, seedPrefix: string, o: LevelOptions) {
   const spin = (twist === 'fast' ? 0.9 : 0.35 + Math.min(0.3, n * 0.012)) * (rnd() < 0.5 ? 1 : -1);
   const name = `${NAMES_A[Math.floor(rnd() * NAMES_A.length)]} ${NAMES_B[Math.floor(rnd() * NAMES_B.length)]}`;
   const hue = difficulty === 'super' ? 285 : difficulty === 'hard' ? 15 : 200 + Math.floor(rnd() * 110);
-  let sky = skyFor(n, twist, seed, difficulty);
+  let sky = skyFor(n, twist, randomSeed, difficulty);
   if (o.remix) sky = { ...sky, obstacle: null, gusty: false };
   sky.ringDirection = spin > 0 ? -1 : 1;
   for (let attempt = 1; attempt <= 32 && skyWall({ sky, size: twist === 'tiny' ? 0.72 : 1, spin, twist }); attempt++) {
-    sky = skyFor(n, twist, `${seed}-sky-${attempt}`, difficulty);
+    sky = skyFor(n, twist, `${randomSeed}-sky-${attempt}`, difficulty);
     sky.ringDirection = spin > 0 ? -1 : 1;
   }
   return {
     n,
     seed,
+    randomSeed,
     throws,
     queue,
     twist,
@@ -606,7 +731,23 @@ export type LevelMeta = Pick<LevelDef, 'name' | 'hue' | 'twist' | 'difficulty'> 
 
 /** Preview metadata without running either solver. */
 export function levelMeta(n: number, seedPrefix = 'PP'): LevelMeta {
-  const { name, hue, twist, difficulty, sky } = levelLayout(n, seedPrefix, {});
+  const profile = generationProfile(n, seedPrefix, {});
+  const salt = seedPrefix === 'PP' ? (profile === 'reviewed-v1' ? LEVEL_SALT[n] : RAW_LEVEL_SALT[n]) : undefined;
+  const key = JSON.stringify([n, seedPrefix, profile, false, false, false, salt ?? null, rulesForLevel(n), undefined]);
+  const cached = levelCache.get(key);
+  if (cached)
+    return {
+      name: cached.name,
+      hue: cached.hue,
+      twist: cached.twist,
+      difficulty: cached.difficulty,
+      boss: cached.twist === 'boss',
+      obstacle: cached.sky.obstacle,
+    };
+  let layout = levelLayout(n, seedPrefix, { profile, salt });
+  for (let attempt = 1; attempt <= 32 && (pressureOf({ ...layout, goals: [] }) > budgetFor(layout) || skyWall(layout)); attempt++)
+    layout = levelLayout(n, seedPrefix, { profile, salt: (salt ?? 0) + attempt });
+  const { name, hue, twist, difficulty, sky } = layout;
   return { name, hue, twist, difficulty, boss: twist === 'boss', obstacle: sky.obstacle };
 }
 
@@ -634,22 +775,59 @@ function copyLevel(level: LevelDef): LevelDef {
 
 /** `o.goals` / `o.boss` give non-campaign planets (the weekly Voyage) goals and a Comet Guardian. */
 export function makeLevel(n: number, seedPrefix = 'PP', o: LevelOptions = {}): LevelDef {
-  const salt = o.salt ?? (seedPrefix === 'PP' ? LEVEL_SALT[n] : undefined);
-  const key = JSON.stringify([n, seedPrefix, !!o.goals, !!o.boss, !!o.remix, salt ?? null, o.rules ?? rulesForLevel(n), o.obstacleCap]);
+  const profile = generationProfile(n, seedPrefix, o);
+  const defaultSalt = seedPrefix === 'PP' ? (profile === 'reviewed-v1' ? LEVEL_SALT[n] : RAW_LEVEL_SALT[n]) : undefined;
+  const encodedRawSalt = profile === 'raw-v2' && o.salt !== undefined && o.salt >= RAW_SALT_OFFSET;
+  const normalizedSalt = effectiveSalt(o.salt ?? defaultSalt, profile);
+  const preselectedSalt =
+    profile === 'raw-v2' && seedPrefix === 'PP' && normalizedSalt !== undefined && !encodedRawSalt
+      ? RAW_SELECTED_SALT[n]?.[normalizedSalt]
+      : undefined;
+  const salt =
+    profile === 'raw-v2' && seedPrefix === 'PP' && normalizedSalt !== undefined ? (preselectedSalt ?? normalizedSalt) : normalizedSalt;
+  const options = { ...o, profile, salt };
+  const key = JSON.stringify([
+    n,
+    seedPrefix,
+    profile,
+    !!o.goals,
+    !!o.boss,
+    !!o.remix,
+    salt ?? null,
+    o.rules ?? rulesForLevel(n),
+    o.obstacleCap,
+  ]);
   const cached = levelCache.get(key);
   if (cached) return copyLevel(cached);
-  let level = buildLevel(n, seedPrefix, o);
-  for (let attempt = 1; attempt <= 32 && (pressureOf(level) > budgetFor(level) || skyWall(level)); attempt++)
-    level = buildLevel(n, seedPrefix, { ...o, salt: (salt ?? 0) + attempt });
-  if (pressureOf(level) > budgetFor(level) || skyWall(level)) throw new Error(`No safe sky layout for planet ${n}`);
+  let { level, blind } = buildLevel(n, seedPrefix, options);
+  const valid = (candidate: LevelDef, blindResult: Planet) => {
+    if (pressureOf(candidate) > budgetFor(candidate) || skyWall(candidate)) return false;
+    if (
+      profile === 'raw-v2' &&
+      n <= 60 &&
+      preselectedSalt === undefined &&
+      !encodedRawSalt &&
+      (seedPrefix === 'PP' || candidate.goals.length > 0)
+    ) {
+      if (starsEarned(blindResult, lifeScore(blindResult), candidate) < 1) return false;
+    }
+    return true;
+  };
+  let isValid = valid(level, blind);
+  for (let attempt = 1; attempt <= 32 && !isValid; attempt++) {
+    ({ level, blind } = buildLevel(n, seedPrefix, { ...options, salt: (salt ?? 0) + attempt }));
+    isValid = valid(level, blind);
+  }
+  if (!isValid) throw new Error(`No feasible layout for planet ${n}`);
   if (levelCache.size >= LEVEL_CACHE_LIMIT) levelCache.delete(levelCache.keys().next().value!);
   levelCache.set(key, level);
   return copyLevel(level);
 }
 
-function buildLevel(n: number, seedPrefix: string, o: LevelOptions): LevelDef {
+function buildLevel(n: number, seedPrefix: string, o: LevelOptions): { level: LevelDef; blind: Planet } {
   const layout = levelLayout(n, seedPrefix, o);
-  const { seed, throws, queue, twist, sky, spin, size, start, name, hue, difficulty, troubles } = layout;
+  const { seed, randomSeed, throws, queue, twist, sky, spin, size, start, name, hue, difficulty, troubles } = layout;
+  const raw = o.profile === 'raw-v2';
   const nova = o.remix ? n >= 9 : seedPrefix !== 'PP' || n >= 9;
   const rules = o.rules ?? rulesForSeed(seed);
   const plan = solve2({ ...layout, nova }, rules);
@@ -677,12 +855,19 @@ function buildLevel(n: number, seedPrefix: string, o: LevelOptions): LevelDef {
               : 0.04
             : 0
       : 0;
-  const f1 = TUNE.f1[0] + TUNE.f1[1] * ease + TUNE.saw * saw + bump[0] + chapterOneStar - breather - teachingFloor;
+  const [rawOne, rawThree] = raw ? rawTargetOffsets(n, difficulty) : [0, 0];
+  const f1 = TUNE.f1[0] + TUNE.f1[1] * ease + TUNE.saw * saw + bump[0] + chapterOneStar - breather - teachingFloor + rawOne;
   const f2 = TUNE.f2[0] + TUNE.f2[1] * ease + TUNE.saw * 0.7 * saw + bump[1] - breather - (obstacleLesson ? 0.08 : 0);
   // The middle chapter needs a small lift to keep sharp clears inside its ceiling.
   const f3 = Math.min(
     0.97,
-    TUNE.f3[0] + TUNE.f3[1] * ease + bump[2] - (seedPrefix === 'PP' && n >= 21 ? 0.02 : 0) - breather - (obstacleLesson ? 0.05 : 0),
+    TUNE.f3[0] +
+      TUNE.f3[1] * ease +
+      bump[2] -
+      (seedPrefix === 'PP' && n >= 21 ? 0.02 : 0) -
+      breather -
+      (obstacleLesson ? 0.05 : 0) +
+      rawThree,
   );
   const t = (f: number) => Math.max(base + 5, Math.round((base + (best - base) * f) / 5) * 5);
   // Remix's twist and required goal carry the challenge; its score bars use
@@ -736,9 +921,9 @@ function buildLevel(n: number, seedPrefix: string, o: LevelOptions): LevelDef {
     if (stars[2] <= stars[1]) stars[2] = stars[1] + 5;
   }
   const goals = o.remix
-    ? remixGoal(start, plan, rngFrom(`${seed}-goals`))
+    ? remixGoal(start, plan, rngFrom(`${randomSeed}-goals`))
     : seedPrefix === 'PP' || o.goals
-      ? pickGoals(n, difficulty, start, plan, blind, rngFrom(`${seed}-goals`))
+      ? pickGoals(n, difficulty, start, plan, blind, rngFrom(`${randomSeed}-goals`), o.profile)
       : [];
   // The first goal is one Highland, supported by Rock Pebble in the opening deal.
   if (seedPrefix === 'PP' && n === 6) goals.splice(0, goals.length, { type: 'biome', id: 'highland', count: 1 });
@@ -749,23 +934,26 @@ function buildLevel(n: number, seedPrefix: string, o: LevelOptions): LevelDef {
   if (seedPrefix === 'PP' && n === 14) goals.splice(0, goals.length, { type: 'biome', id: 'ocean', count: 3 });
   if ([16, 18, 33, 41, 46, 51, 57].includes(n) && seedPrefix === 'PP') goals.length = 0;
   return {
-    n,
-    seed,
-    throws,
-    queue,
-    twist,
-    sky,
-    spin,
-    size,
-    stars,
-    start,
-    name,
-    hue,
-    difficulty,
-    nova,
-    goals,
-    troubles,
-    ...(layout.shortKind ? { shortKind: layout.shortKind } : {}),
+    level: {
+      n,
+      seed,
+      throws,
+      queue,
+      twist,
+      sky,
+      spin,
+      size,
+      stars,
+      start,
+      name,
+      hue,
+      difficulty,
+      nova,
+      goals,
+      troubles,
+      ...(layout.shortKind ? { shortKind: layout.shortKind } : {}),
+    },
+    blind,
   };
 }
 
@@ -818,10 +1006,10 @@ const twistPressure: Partial<Record<Twist, number>> = {
   ring: 2,
   tug: 2,
 };
-export function pressureOf(level: LevelDef): number {
+export function pressureOf(level: Pick<LevelDef, 'sky' | 'twist' | 'troubles' | 'goals'>): number {
   return (level.sky.gusty ? 2 : (twistPressure[level.twist] ?? 0)) + level.troubles.length * 2 + Math.max(0, level.goals.length - 1);
 }
-export function budgetFor(level: LevelDef): number {
+export function budgetFor(level: Pick<LevelDef, 'seed' | 'n' | 'difficulty' | 'sky'>): number {
   if (level.seed.startsWith('PP-') && [16, 18].includes(level.n)) return 2;
   if ([33, 41, 46, 51, 57].includes(level.n) && level.sky.obstacle) return OBSTACLES[level.sky.obstacle].pressure;
   if (level.difficulty === 'super') return 5;

@@ -1,4 +1,5 @@
-import { flyFull, sceneGeometry, STAR_SLING, type FlightHit, type FlightWorld } from '../../src/core/flight';
+import { flyFull, flightParamsForLauncher, sceneGeometry, type FlightHit, type FlightWorld } from '../../src/core/flight';
+import { launcherAtTune, STAR_SLING_SELECTION, type LauncherSelection } from '../../src/core/launchers';
 import { EMPTY_SKY_STATE, type SkyState } from '../../src/core/sky';
 import type { LevelDef } from '../../src/core/levels';
 import type { Planet } from '../../src/core/world';
@@ -54,20 +55,26 @@ export interface Pull {
 
 const seedCache = new Map<string, Map<number, Pull>>();
 /** Reuse unobstructed Sling solutions as guesses across throws and runs. */
-export function seedPulls(key: string, launch: { x: number; y: number }, world: FlightWorld): Map<number, Pull> {
-  const cached = seedCache.get(key);
+export function seedPulls(
+  key: string,
+  launch: { x: number; y: number },
+  world: FlightWorld,
+  selection: LauncherSelection = STAR_SLING_SELECTION,
+): Map<number, Pull> {
+  const cacheKey = `${key}:${selection.id}:${selection.tune}`;
+  const cached = seedCache.get(cacheKey);
   if (cached) return cached;
   const found = new Map<number, Pull>();
   const clear = { ...world, sky: undefined };
   for (const p of [76, 60, 92, 44, 100, 28]) {
     for (let a = -180; a < 180; a += 4) {
       const pull = { angle: a * DEG, power: p / 100 };
-      const sector = flyPull(pull, 0, launch, clear).sector;
+      const sector = flyPull(pull, 0, launch, clear, selection).sector;
       if (sector !== null && !found.has(sector)) found.set(sector, pull);
     }
     if (found.size === 24) break;
   }
-  seedCache.set(key, found);
+  seedCache.set(cacheKey, found);
   return found;
 }
 
@@ -76,9 +83,20 @@ export function seedHint(hints: Map<number, Pull>, sector: number, world: Flight
   return hints.get((((sector + shift) % 24) + 24) % 24);
 }
 
-export function flyPull(pull: Pull, at: number, launch: { x: number; y: number }, world: FlightWorld) {
-  const speed = MAX_PULL * PULL_TO_SPEED * pull.power;
-  return flyFull(STAR_SLING, { ...launch, vx: Math.cos(pull.angle) * speed, vy: Math.sin(pull.angle) * speed, elapsed: 0 }, world, at);
+export function flyPull(
+  pull: Pull,
+  at: number,
+  launch: { x: number; y: number },
+  world: FlightWorld,
+  selection: LauncherSelection = STAR_SLING_SELECTION,
+) {
+  const speed = launcherAtTune(selection.id, selection.tune).maxPull * PULL_TO_SPEED * pull.power;
+  return flyFull(
+    flightParamsForLauncher(selection),
+    { ...launch, vx: Math.cos(pull.angle) * speed, vy: Math.sin(pull.angle) * speed, elapsed: 0 },
+    world,
+    at,
+  );
 }
 
 export function isBonk(hit: FlightHit | null) {
@@ -93,6 +111,7 @@ export function findPull(
   world: FlightWorld,
   hint?: Pull,
   quick = false,
+  selection: LauncherSelection = STAR_SLING_SELECTION,
 ): Pull | null {
   const tried = new Set<string>();
   const tryOne = (a: number, p: number): Pull | null => {
@@ -100,7 +119,7 @@ export function findPull(
     const key = `${a}:${p}`;
     if (tried.has(key)) return null;
     tried.add(key);
-    const result = flyPull({ angle: a * DEG, power: p / 100 }, at, launch, world);
+    const result = flyPull({ angle: a * DEG, power: p / 100 }, at, launch, world, selection);
     return result.sector === target ? { angle: a * DEG, power: p / 100 } : null;
   };
   if (hint) {

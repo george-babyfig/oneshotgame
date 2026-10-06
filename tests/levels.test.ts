@@ -134,6 +134,35 @@ describe('level generator', () => {
     }
   });
 
+  it('versions raw layouts without moving reviewed and shipped seeds', () => {
+    for (const n of [1, 24, 60]) expect(makeLevel(n)).toEqual(makeLevel(n, 'PP', { profile: 'reviewed-v1' }));
+    const old = makeLevel(61, 'PP', { profile: 'reviewed-v1' });
+    const raw = makeLevel(61);
+    expect(raw.seed).toBe('PP-61~1000000');
+    expect(raw.seed).not.toBe(old.seed);
+    expect(makeLevel(61, 'PP', { salt: 1000000 })).toEqual(raw);
+    const shadow = makeLevel(24, 'PP', { salt: 1001 });
+    expect(shadow.seed).toBe('PP-24~1001001');
+    expect(makeLevel(24, 'PP', { salt: 1001001 })).toEqual(shadow);
+    const rejected = makeLevel(12, 'PP', { salt: 1004 });
+    expect(rejected.seed).not.toBe('PP-12~1001004');
+    expect(makeLevel(12, 'PP', { salt: Number(rejected.seed.split('~')[1]) })).toEqual(rejected);
+    expect(makeLevel(67, 'PP', { salt: 1002 }).seed).toBe('PP-67~1001031');
+    expect(makeLevel(6, 'PP', { salt: 1003 }).seed).toBe('PP-6~1001032');
+    expect(makeLevel(14, 'PP', { salt: 1012 }).seed).toBe('PP-14~1001014');
+    expect(makeLevel(25, 'PP', { salt: 1032 }).seed).toBe('PP-25~1001033');
+    for (const requested of [1028, 1029]) {
+      const selected = makeLevel(55, 'PP', { salt: requested });
+      if (requested === 1029) expect(selected.seed).toBe('PP-55~1001032');
+      expect(makeLevel(55, 'PP', { salt: Number(selected.seed.split('~')[1]) })).toEqual(selected);
+    }
+    expect(makeLevel(24, 'PP', { salt: 1001, profile: 'reviewed-v1' }).seed).toBe('PP-24~1001');
+    for (const prefix of ['DAY-2026-10-13', 'VOY-2026-W44-0', 'CH-K7M2Q', 'RX'])
+      expect(makeLevel(16, prefix)).toEqual(makeLevel(16, prefix, { profile: 'reviewed-v1' }));
+    expect(makeLevel(16, 'DAY-2026-10-14').seed).toBe('DAY-2026-10-14-16~1000000');
+    expect(makeLevel(16, 'VOY-2026-W45-0').seed).toBe('VOY-2026-W45-0-16~1000000');
+  });
+
   it('keeps sky obstacles on their ladder and within the pressure budget', () => {
     const levels = Array.from({ length: 120 }, (_, i) => makeLevel(i + 1));
     for (const [n, id] of [

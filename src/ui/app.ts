@@ -9,9 +9,11 @@ import { h, btn, modal, fmt, mountOverlays, closeModals, toast } from './dom';
 import { sfx, setAudio, unlockAudio, pauseAudio, setMusicTheme, chapterTheme } from './audio';
 import { haptic, setHaptics } from './haptics';
 import { LevelScene, type LevelResult, type SceneOpts } from './game';
+import type { LauncherId, Tune } from '../core/launchers';
+import { LAUNCHERS } from '../core/launchers';
 import { makeLevel, type LevelDef } from '../core/levels';
 import { modifiersFor, type RoundMode } from '../core/modifiers';
-import { KINDS, type Kind } from '../core/world';
+import { KINDS, SPECIES_BY_ID, type Kind } from '../core/world';
 import {
   clearInterruptedRound,
   loadProfile,
@@ -63,13 +65,14 @@ import { COACH, pendingIntroAfterWin } from '../meta/coach';
 import { addIntroLetter } from '../meta/inbox';
 import { gcSignIn, gcSync } from './gamecenter';
 import { fixClock } from '../meta/economy';
-import { currentLook, masteryLevel, MASTERY_STEPS } from '../meta/cosmetics';
+import { currentLook, MASTERY_STEPS } from '../meta/cosmetics';
 import { showStyles } from './screens/styles';
 import { showMissions } from './screens/missions';
 import { showCollection } from './screens/collection';
 import { showFieldGuide } from './screens/fieldguide';
 import { showPassport } from './screens/passport';
 import { showHomeworld } from './screens/homeworld';
+import { showLaunchBay } from './screens/launchbay';
 import { bindGateProfile, parentalGate } from './flows/gate';
 import { contentsSheet } from './flows/contents';
 import { receiptCard } from './flows/receipt';
@@ -81,6 +84,9 @@ import { showAlbum } from './screens/album';
 import { festivalFlow } from './flows/festival';
 import { ensureFestival, festivalActive, festivalLive, spotFestival } from '../meta/festivals';
 import { tickHome } from '../meta/homeworld';
+import { needsSlingGhost, pendingLauncherIntroAfterWin, resolveLauncher, SLING_SELECTION } from '../meta/launcherPick';
+import { launcherBay, recordLauncherFling, recordLauncherRound } from '../meta/launchbay';
+import { recordCometPierStep, recordCometPierWin } from '../meta/landmarks';
 import { activeForms, labLevels, recordLabEvents } from '../meta/labs';
 import { showFormReveal } from './flows/labmoments';
 import { addFling } from '../meta/records';
@@ -119,6 +125,7 @@ export type ScreenName =
   | 'fieldguide'
   | 'passport'
   | 'homeworld'
+  | 'launchbay'
   | 'sky'
   | 'voyage'
   | 'album'
@@ -161,6 +168,8 @@ export class App {
   private homeSeenThisOpen = false;
   private popupShownThisOpen = false;
   private roundFirstCampaignClear = false;
+  private roundGenerationProfile: RoundCheckpoint['generationProfile'];
+  private launcherIntroWinPlanet: number | null = null;
   private screenStack = new ScreenHistory();
   private returning = false;
   private lastReceipt: Promise<void> | null = null;
@@ -292,13 +301,22 @@ export class App {
 
   private checkpointRound(pause = false) {
     const scene = this.screen === 'level' ? this.scene : null;
-    if (!scene || scene.ended || scene.finishing || (scene.o.competitive && !scene.o.remixPalette) || scene.o.endless || scene.o.timeLimit)
+    if (
+      !scene ||
+      scene.ended ||
+      scene.finishing ||
+      scene.o.roundMode === 'practice' ||
+      (scene.o.competitive && !scene.o.remixPalette) ||
+      scene.o.endless ||
+      scene.o.timeLimit
+    )
       return;
     saveInterruptedRound(this.p, {
       n: scene.L.n,
       mode: scene.o.remixPalette ? 'remix' : 'campaign',
       seedPrefix: scene.L.seed.match(/^(.*)-(\d+)(?:~-?\d+)?$/)?.[1] ?? 'PP',
       salt: Number(scene.L.seed.match(/~(-?\d+)$/)?.[1]) || undefined,
+      generationProfile: scene.o.remixPalette ? undefined : this.roundGenerationProfile,
       state: scene.roundState(),
       modifiers: scene.roundModifiers(),
       throwsLeft: scene.throwsLeft,
@@ -326,7 +344,7 @@ export class App {
       warmup: !!scene.o.practice,
       practiceFirstClear: !!scene.o.practiceFirstClear,
       practiceGifts: scene.practiceGifts,
-      skyState: { brokenRocks: [...scene.skyState.brokenRocks] },
+      skyState: { brokenRocks: [...scene.skyState.brokenRocks], ringBroken: scene.ringBroken },
       practiceBonkUsed: scene.practiceBonkUsed,
       mistTipShown: scene.mistTipShown,
       gustTipShown: scene.gustTipShown,
@@ -353,7 +371,7 @@ export class App {
       if (pill) previousPills.set(kind, Number(pill.textContent?.replace(/[^\d]/g, '') ?? 0));
     }
     if (!this.refreshing && !this.returning) this.screenStack.visit(this.screen, name);
-    if (MAIN_TABS.includes(name as MainTab) && this.screenStack.length) {
+    if ((MAIN_TABS.includes(name as MainTab) || name === 'launchbay') && this.screenStack.length) {
       const first = el.querySelector('.topbar .icon');
       first?.replaceWith(
         h('button', { class: 'icon', 'aria-label': t('Back'), onclick: () => (sfx.click(), this.back()) }, icon('back', 24)),
@@ -410,6 +428,7 @@ export class App {
       workshop: () => this.showStyles(),
       passport: () => this.showPassport(),
       homeworld: () => this.showHomeworld(),
+      launchbay: () => showLaunchBay(this),
       sky: () => this.showSky(),
       voyage: () => this.showVoyage(),
       album: () => this.showAlbum(),
@@ -504,6 +523,7 @@ export class App {
       home: () => this.showHome(true),
       missions: () => this.showMissions(),
       homeworld: () => this.showHomeworld(),
+      launchbay: () => showLaunchBay(this),
       collection: () => this.showCollection(),
       styles: () => this.showStyles(),
       fieldguide: () => this.showFieldGuide(),
@@ -564,8 +584,14 @@ export class App {
       awayFlow(this, this.awayMs);
       return;
     }
-    const intro = pendingIntroAfterWin(this.p);
+    const launcherIntro =
+      this.launcherIntroWinPlanet === null ? undefined : pendingLauncherIntroAfterWin(this.p, this.launcherIntroWinPlanet);
+    const intro = launcherIntro ?? pendingIntroAfterWin(this.p);
     if (intro?.intro && this.autoPopup('intro')) {
+      if (launcherIntro) {
+        this.p.mailSeen.push(`launcher-intro-planet:${this.launcherIntroWinPlanet}`);
+        this.launcherIntroWinPlanet = null;
+      }
       addIntroLetter(this.p, intro.id);
       this.save();
       const target: Record<string, string> = {
@@ -703,14 +729,20 @@ export class App {
   preLevel(n: number) {
     preLevel(this, n);
   }
+  startLauncherPractice(id: LauncherId, tune: Tune) {
+    startLauncherPractice(this, id, tune);
+  }
   preRemix(n: number) {
     if (!remixUnlocked(this.p, Math.ceil(n / 10))) return this.showStarMap();
     remixPreLevel(this, n);
+    if (this.p.level < 31 && launcherBay.owned(this.p).length === 1)
+      this.scene?.el.querySelector('.remix-prelevel .launcher-chip.locked')?.remove();
   }
 
   /** Remix is its own route: only its chapter record changes at round end. */
   startRemix(n: number, resume?: RoundCheckpoint) {
     if (!remixUnlocked(this.p, Math.ceil(n / 10))) return;
+    this.roundGenerationProfile = undefined;
     if (!resume && this.p.savedRound) {
       clearInterruptedRound(this.p);
       this.save();
@@ -802,7 +834,15 @@ export class App {
     const earnedForms: Kind[] = [];
     const skin = SKINS.find((s) => s.id === this.p.skin && (!this.p.settings.hidePaidLooks || (!s.starter && !s.pass))) ?? SKINS[0];
     const look = currentLook(this.p);
+    const chosenLauncher = resolveLauncher(
+      mode === 'tutorial' ? 'campaign' : mode,
+      this.p.level,
+      this.p.launcher.selected,
+      launcherBay.owned(this.p),
+      (id) => launcherBay.tune(this.p, id),
+    );
     const mods = modifiersFor(mode === 'tutorial' ? 'campaign' : mode, {
+      launcher: chosenLauncher,
       scopeLevel: tutorial ? 3 : this.p.upgrades.scope,
       splash: this.p.upgrades.splash,
       extraThrows: this.p.upgrades.throws,
@@ -816,8 +856,12 @@ export class App {
     });
     if (mode === 'remix') mods.gentle = !!this.p.settings.gentle;
     return {
+      forcedLauncher:
+        (mode === 'daily' || mode === 'rush' || mode === 'challenge' || mode === 'remix') &&
+        (this.p.level >= 31 || launcherBay.owned(this.p).length > 1),
+      showSlingGhost: needsSlingGhost(mods.launcher.id, this.p.launcher.completedRounds[mods.launcher.id] ?? 0),
       look,
-      mastered: masteryLevel(this.p.mastery[look.launcher] ?? 0) >= MASTERY_STEPS.length,
+      mastered: (this.p.launcher.flings[mods.launcher.id] ?? 0) >= MASTERY_STEPS[MASTERY_STEPS.length - 1],
       ...mods,
       clearPalette: this.p.settings.planetColours === 'clear',
       gustTip: this.p.gustSeen ? undefined : GUSTY_WIND_TIP,
@@ -858,8 +902,10 @@ export class App {
         this.p.stats.throws++;
         const star = addFling(this.p, kind);
         if (star) toast(t('{name} record: {stars}', { name: t(KINDS[kind].name), stars: '★'.repeat(star) }), 'good');
-        const l = currentLook(this.p).launcher;
-        this.p.mastery[l] = (this.p.mastery[l] ?? 0) + 1;
+      },
+      onLauncherFling: () => {
+        if (mode === 'campaign' || mode === 'tutorial' || mode === 'voyage' || mode === 'zen')
+          recordLauncherFling(this.p, this.scene?.o.launcher.id ?? 'sling');
       },
       onReaction: (id) => {
         const result = recordReaction(this.p, id, mode === 'tutorial' ? 'campaign' : mode);
@@ -869,6 +915,10 @@ export class App {
       onLabStep: (step) => {
         if (mode !== 'campaign' && mode !== 'tutorial' && mode !== 'voyage' && mode !== 'zen') return;
         earnedForms.push(...recordLabEvents(this.p, step, mode === 'tutorial' ? 'campaign' : mode));
+        this.saveNow();
+      },
+      onPierStep: (step) => {
+        recordCometPierStep(this.p, step, mode === 'tutorial' ? 'campaign' : mode);
         this.saveNow();
       },
       onCombo: (links, reaction, superFusion) => {
@@ -903,6 +953,16 @@ export class App {
       ...extra,
       onEnd: (result) => {
         result.labEvents = this.scene?.roundLog.lab ?? [];
+        if (result.won && result.throwsUsed >= 0)
+          recordCometPierWin(
+            this.p,
+            mode === 'tutorial' ? 'campaign' : mode,
+            this.scene?.L.seed ?? result.level.n,
+            result.level.difficulty !== 'normal',
+            result.stars,
+          );
+        if (result.throwsUsed >= 0 && (mode === 'campaign' || mode === 'tutorial' || mode === 'voyage' || mode === 'zen'))
+          recordLauncherRound(this.p, this.scene?.o.launcher.id ?? 'sling');
         if (result.throwsUsed !== -1 && !extra.endless) {
           this.roundsThisSession++;
           const breakAfter = this.p.settings.breakAfterRounds;
@@ -924,11 +984,12 @@ export class App {
   }
 
   startLevel(n: number, o: { tutorial?: boolean; warmup?: boolean; boosters?: Boosters; level?: LevelDef; resume?: RoundCheckpoint } = {}) {
+    this.roundGenerationProfile = o.resume?.generationProfile;
     if (!o.resume && this.p.savedRound) {
       clearInterruptedRound(this.p);
       this.save();
     }
-    const L = o.level ?? makeLevel(n, o.resume?.seedPrefix ?? 'PP', { salt: o.resume?.salt });
+    const L = o.level ?? makeLevel(n, o.resume?.seedPrefix ?? 'PP', { salt: o.resume?.salt, profile: o.resume?.generationProfile });
     const warmup = o.resume?.warmup ?? o.warmup;
     this.roundFirstCampaignClear = o.resume?.practiceFirstClear ?? (!warmup && n === this.p.level && !this.p.stars[n]);
     const boosters = o.resume?.modifiers.boosters ?? o.boosters ?? NO_BOOSTERS;
@@ -974,6 +1035,13 @@ export class App {
       !!o.tutorial || n === 1,
     );
     (opts as typeof opts & { buddyShield?: ReturnType<typeof buddyShieldFor> }).buddyShield = buddyShieldFor(this.p, 'campaign', n);
+    if (!o.resume) {
+      opts.launcher = resolveLauncher('campaign', n, this.p.launcher.selected, launcherBay.owned(this.p), (id) =>
+        launcherBay.tune(this.p, id),
+      );
+      opts.showSlingGhost = needsSlingGhost(opts.launcher.id, this.p.launcher.completedRounds[opts.launcher.id] ?? 0);
+      opts.mastered = (this.p.launcher.flings[opts.launcher.id] ?? 0) >= MASTERY_STEPS[MASTERY_STEPS.length - 1];
+    }
     opts.extraThrows += perk.throws;
     const help = helpFor(this.p, n, o.tutorial || n === 1 ? 'daily' : 'campaign');
     opts.helpForFail = (used, total) =>
@@ -999,6 +1067,9 @@ export class App {
 
   private applyCheckpointModifiers(opts: SceneOpts, resume: RoundCheckpoint) {
     const m = resume.modifiers;
+    opts.launcher = m.launcher ?? SLING_SELECTION;
+    opts.showSlingGhost = needsSlingGhost(opts.launcher.id, this.p.launcher.completedRounds[opts.launcher.id] ?? 0);
+    opts.mastered = (this.p.launcher.flings[opts.launcher.id] ?? 0) >= MASTERY_STEPS[MASTERY_STEPS.length - 1];
     opts.scopeLevel = m.scopeLevel;
     opts.splash = m.splash;
     opts.extraThrows = m.extraThrows;
@@ -1025,6 +1096,7 @@ export class App {
       gustTipShown?: boolean;
     };
     scene.skyState = restoredSkyState(s.skyState);
+    scene.ringBroken = !!(s.skyState as (SkyState & { ringBroken?: boolean }) | undefined)?.ringBroken;
     scene.practiceBonkUsed = !!s.practiceBonkUsed;
     scene.mistTipShown = !!s.mistTipShown;
     scene.gustTipShown = !!s.gustTipShown;
@@ -1035,6 +1107,8 @@ export class App {
     scene.nova = s.state.nova;
     scene.combo = s.state.combo;
     scene.comboCharge = s.state.comboCharge;
+    scene.skipperBounces = s.state.skipperBounces ?? 0;
+    scene.sparklerPlainUsed = !!s.state.sparklerPlainUsed;
     scene.comboIconsCurrent = s.comboIconsCurrent ?? [];
     scene.comboIconsBest = s.comboIconsBest ?? [];
     scene.reactionEvents = s.reactionEvents ?? [];
@@ -1116,7 +1190,7 @@ export class App {
       const res = momentumLoss(this.p, today(), this.roundFirstCampaignClear);
       this.save();
       // campaign retries go through the pre-level sheet, where boosters can help
-      if (r.level.n === this.p.level && r.level.n >= 4) {
+      if ((r.level.n === this.p.level && r.level.n >= 4) || r.level.n >= 31) {
         this.showHome(true);
         this.preLevel(r.level.n);
       } else this.startLevel(r.level.n);
@@ -1126,6 +1200,7 @@ export class App {
     }
     clearFails(this.p, r.level.n);
     momentumWin(this.p, this.roundFirstCampaignClear);
+    this.launcherIntroWinPlanet = r.level.n;
     levelResults(this, r);
   }
 
@@ -1338,4 +1413,43 @@ export class App {
     else toast(this.iap.kind === 'native' ? t('Nothing to restore') : t('Restore works in the iOS app'));
     this.refresh();
   }
+}
+
+/** The Bay lends a launcher without touching the player's round or progress state. */
+export function startLauncherPractice(app: App, id: LauncherId, tune: Tune): void {
+  if (!LAUNCHERS[id] || !launcherBay.owned(app.p).includes(id) || !Number.isInteger(tune) || tune < 1 || tune > 4) return;
+  const base = makeLevel(1);
+  const level: LevelDef = {
+    ...base,
+    throws: 8,
+    queue: Array.from({ length: 16 }, (_, i) => base.queue[i % base.queue.length]),
+  };
+  const back = () => showLaunchBay(app);
+  const opts: SceneOpts = {
+    launcher: { id, tune },
+    roundMode: 'practice',
+    rules: rulesForLevel(1),
+    scopeLevel: 0,
+    look: currentLook(app.p),
+    splash: 0,
+    extraThrows: 0,
+    boosters: { ...NO_BOOSTERS },
+    glow: app.skinGlow(),
+    seen: new Set(Object.keys(SPECIES_BY_ID)),
+    tutorial: false,
+    reduceMotion: effectiveReduceMotion(app.p),
+    label: t('Launch Bay practice'),
+    competitive: false,
+    gentle: false,
+    gems: () => 0,
+    spendGems: () => false,
+    onNewSpecies: () => {},
+    onReaction: () => ({ first: false }),
+    onEnd: back,
+    onQuit: back,
+  };
+  const scene = new LevelScene(level, opts);
+  scene.el.append(btn(t('Exit practice'), 'practice-exit', back));
+  app.mount(scene.el, 'level');
+  app.scene = scene;
 }

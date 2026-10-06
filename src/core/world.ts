@@ -208,11 +208,14 @@ export interface ImpactBoost {
   power?: number;
   novaReach?: number;
   form?: boolean;
+  reachDelta?: -1 | 0 | 1;
+  centerPowerLoss?: boolean;
+  reachCap?: number;
 }
 
 /** Repeat the object's main effect across its expanded Supernova reach. */
 function applyBoost(p: Planet, kind: Kind, at: number, splash: number, boost: ImpactBoost) {
-  const baseRadius = Math.min(4, KINDS[kind].stats.reach + splash + 1);
+  const baseRadius = Math.min(4, KINDS[kind].stats.reach + splash + (boost.reachDelta ?? 0) + 1);
   const r = Math.min(4, baseRadius + (boost.novaReach ?? 0));
   for (let d = -r; d <= r; d++) {
     const index = wrap(at + d);
@@ -265,23 +268,24 @@ export function novaCharge(changed: number, spawned: number) {
 /** Mutate sectors for an impact. `splash` = extra neighbour radius (upgrade). */
 function applyKind(p: Planet, kind: Kind, at: number, splash: number, boost: ImpactBoost): void {
   const r = KINDS[kind].stats.reach + splash;
+  const centrePower = Math.max(1, KINDS[kind].stats.power - (boost.centerPowerLoss ? 1 : 0));
   const form = !!boost.form;
   switch (kind) {
     case 'rock':
-      touch(p, at, (s) => (s.land += KINDS.rock.stats.power));
+      touch(p, at, (s) => (s.land += centrePower));
       for (let d = 1; d <= r; d++) for (const j of [at - d, at + d]) touch(p, j, (s) => (s.land += 2));
       if (form) for (const d of [-3, 3]) touch(p, at + d, (s) => (s.land += 1));
       break;
     case 'ice':
       touch(p, at, (s) => {
-        s.water += KINDS.ice.stats.power;
+        s.water += centrePower;
         s.heat = form ? Math.min(s.heat - 1, -2) : s.heat - 1;
       });
       for (let d = 1; d <= r; d++) for (const j of [at - d, at + d]) touch(p, j, (s) => (s.water += form ? 1 : 2));
       break;
     case 'magma':
       touch(p, at, (s) => {
-        s.heat += KINDS.magma.stats.power;
+        s.heat += centrePower;
         s.land += 1;
         if (!form) s.water -= 1;
       });
@@ -295,13 +299,16 @@ function applyKind(p: Planet, kind: Kind, at: number, splash: number, boost: Imp
     case 'seed':
       for (let d = -r; d <= r; d++)
         touch(p, at + d, (s) => {
-          if (habitable(s)) s.life += d === 0 ? KINDS.seed.stats.power + (form ? 1 : 0) : form ? 2 : 1;
+          if (habitable(s)) s.life += d === 0 ? centrePower + (form ? 1 : 0) : form ? 2 : 1;
         });
       break;
     case 'storm':
       for (let d = -r; d <= r; d++)
         touch(p, at + d, (s) => {
-          s.water += KINDS.storm.stats.power + Number(Math.abs(d) <= 1);
+          s.water +=
+            d === 0
+              ? Math.max(1, KINDS.storm.stats.power + 1 - Number(!!boost.centerPowerLoss))
+              : KINDS.storm.stats.power + Number(Math.abs(d) <= 1);
           if (form && s.water >= 2 && habitable(s)) s.life += 1;
           if (s.heat > 0) s.heat -= 1;
           else if (s.heat < 0) s.heat += 1;
@@ -311,8 +318,8 @@ function applyKind(p: Planet, kind: Kind, at: number, splash: number, boost: Imp
       for (let d = -r; d <= r; d++)
         touch(p, at + d, (s) => {
           const hadPlants = s.life >= 2;
-          if (!form || hadPlants) s.heat += KINDS.sun.stats.power;
-          if (Math.abs(d) < r && habitable(s)) s.life += KINDS.sun.stats.power;
+          if (!form || hadPlants) s.heat += d === 0 ? centrePower : KINDS.sun.stats.power;
+          if (Math.abs(d) < r && habitable(s)) s.life += d === 0 ? centrePower : KINDS.sun.stats.power;
         });
       break;
   }
@@ -551,7 +558,10 @@ export function impact(
   const before = lifeScore(p);
   const prev = p.sectors.map((s) => s.biome);
   const extra = boostRadius(boost);
-  const baseReach = KINDS[kind].stats.reach + splash + extra;
+  const baseReach =
+    boost.reachCap === undefined
+      ? KINDS[kind].stats.reach + splash + extra
+      : Math.min(boost.reachCap, KINDS[kind].stats.reach + splash + extra + (boost.reachDelta ?? 0));
   const labReach = boost.nova ? Math.min(4, baseReach + (boost.novaReach ?? 0)) : baseReach;
   const beforeLabReach = labReach > baseReach ? clonePlanet(p) : null;
   if (beforeLabReach) applyKind(beforeLabReach, kind, wrap(at), baseReach - KINDS[kind].stats.reach, { ...boost, novaReach: 0 });

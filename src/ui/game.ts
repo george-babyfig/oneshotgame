@@ -20,7 +20,8 @@ import {
   type RoundState,
 } from '../core/round';
 import { feedbackState, type FeedbackState, type FeedbackItem } from './feel';
-import { flyFull, sceneGeometry, STAR_SLING, type FlightHit, type FlightWorld } from '../core/flight';
+import { flyFull, flyFullWithLauncher, sceneGeometry, STAR_SLING, type FlightHit, type FlightWorld } from '../core/flight';
+import { launcherAtTune } from '../core/launchers';
 import { EMPTY_SKY_STATE, type ObstacleId, type SkyState } from '../core/sky';
 import type { RoundModifiers } from '../core/modifiers';
 import type { Season } from '../meta/seasons';
@@ -35,6 +36,7 @@ import { emptyRoundLog, type HelpRung, type RoundEventLog } from '../meta/help';
 import { helpEndModal } from './flows/results';
 import { PRACTICE_GIFT_LINE } from '../meta/coach';
 import { t } from '../i18n';
+import type { LauncherSelection } from '../meta/launcherPick';
 
 export function shouldShowRoundIntro(id: string, gentle: boolean): boolean {
   return !gentle || !['vent', 'vine', 'frost', 'traits_intro', 'buddy'].includes(id);
@@ -60,6 +62,11 @@ export function roundIntroCandidates(
 }
 
 export interface SceneOpts {
+  launcher: LauncherSelection;
+  showSlingGhost?: boolean;
+  /** Bay practice is an isolated round; the first-clear aid remains `practice`. */
+  roundMode?: 'practice';
+  forcedLauncher?: boolean;
   rules?: RoundRules;
   scopeLevel: number; // 0..3 aim guide length
   /** The player's Keeper outfit, launcher and trail. */
@@ -122,12 +129,14 @@ export interface SceneOpts {
   onNewSpecies: (id: string) => void;
   onSpecies?: (id: string) => void;
   onThrow?: (kind: Kind) => void;
+  onLauncherFling?: () => void;
   onTransform?: (regions: number) => void;
   /** Weekly event hook: returns event tokens earned by this landing. */
   onLand?: (changed: BiomeId[], spawned: number) => number;
   /** The owner records first discoveries and pays their fixed reward. */
   onReaction?: (id: ReactionId) => { first: boolean };
   onLabStep?: (step: Pick<import('../core/round').StepResult, 'reactions' | 'troubleEvents'> & { kind: Kind }) => void;
+  onPierStep?: (step: Pick<import('../core/round').StepResult, 'reactions' | 'troubleEvents'>) => void;
   onCombo?: (links: number, reaction?: ReactionId, superFusion?: boolean) => void;
   onPairTried?: (first: Kind, second: Kind) => void;
   eventEmoji?: string;
@@ -206,6 +215,11 @@ export interface Shot {
   nova?: boolean;
   warnedBonk?: boolean;
   bounceCount?: number;
+  launcherApplied?: boolean;
+  specialBounced?: boolean;
+  brokenRocks?: number[];
+  brokenRing?: boolean;
+  slingSector?: number | null;
 }
 
 export class LevelScene {
@@ -229,6 +243,7 @@ export class LevelScene {
   }
   shot: Shot | null = null;
   skyState: SkyState = { ...EMPTY_SKY_STATE, brokenRocks: [] };
+  ringBroken = false;
   rockWobbles: { index: number; until: number }[] = [];
   practiceBonkUsed = false;
   mistTipShown = false;
@@ -310,6 +325,8 @@ export class LevelScene {
   roundLog: RoundEventLog = emptyRoundLog();
   labSteps: (Pick<import('../core/round').StepResult, 'reactions' | 'troubleEvents'> & { kind: Kind })[] = [];
   labMarks: RoundState['labMarks'] = { rock: [], seed: [] };
+  skipperBounces = 0;
+  sparklerPlainUsed = false;
   firstCreaturePointsShown = false;
   liveTimer = 0;
   coachTimer = 0;
@@ -320,7 +337,7 @@ export class LevelScene {
   startedAt = performance.now();
 
   constructor(level: LevelDef, opts: SceneOpts) {
-    if (!opts.endless) ledger.count('round_started');
+    if (!opts.endless && opts.roundMode !== 'practice') ledger.count('round_started');
     this.L = level;
     if (level.sky.obstacle) opts.onSkySeen?.(level.sky.obstacle);
     this.chapterNumber = chapterOf(level.n).n;
@@ -361,7 +378,7 @@ export class LevelScene {
           this.drawAim();
           const drawn = this.drawnAim;
           const clearWorld = { ...this.flightWorld(this.rot), sky: undefined };
-          const clear = flyFull(STAR_SLING, { ...this.launch, ...vector, elapsed: 0 }, clearWorld, this.time);
+          const clear = flyFullWithLauncher(this.o.launcher, { ...this.launch, ...vector, elapsed: 0 }, clearWorld, this.time);
           return { drawn, clear, predicted: this.predict(vector.vx, vector.vy) };
         },
         fire: (vector) => {
@@ -389,9 +406,11 @@ export class LevelScene {
       this.renderHud();
       this.showCoach(0);
       const candidates =
-        opts.intro || (!opts.competitive && !opts.endless && !opts.timeLimit)
-          ? roundIntroCandidates(level.n, opts.intro, !!opts.gentle, level.troubles.length > 0, level.troubles.length > 0 && !!opts.buddy)
-          : [];
+        opts.roundMode === 'practice'
+          ? []
+          : opts.intro || (!opts.competitive && !opts.endless && !opts.timeLimit)
+            ? roundIntroCandidates(level.n, opts.intro, !!opts.gentle, level.troubles.length > 0, level.troubles.length > 0 && !!opts.buddy)
+            : [];
       for (const row of candidates) {
         if (this.introCard(row.id)) break;
       }
@@ -611,11 +630,12 @@ export class LevelScene {
     let dx = this.aimFrom.x - this.aimTo.x;
     let dy = this.aimFrom.y - this.aimTo.y;
     const len = Math.hypot(dx, dy);
-    if (len > MAX_PULL) {
-      dx *= MAX_PULL / len;
-      dy *= MAX_PULL / len;
+    const cap = Math.min(MAX_PULL, launcherAtTune(this.o.launcher.id, this.o.launcher.tune).maxPull);
+    if (len > cap) {
+      dx *= cap / len;
+      dy *= cap / len;
     }
-    const l = Math.min(len, MAX_PULL);
+    const l = Math.min(len, cap);
     return { vx: dx * PULL_TO_SPEED, vy: dy * PULL_TO_SPEED, len: l };
   }
 
@@ -629,6 +649,12 @@ export class LevelScene {
     const { x, y } = this.launch;
     const nova = novaForThrow(this.roundState());
     const warnedBonk = drawn?.badge ?? needsBonkBadge(this.predict(vx, vy).hit);
+    const t0 = drawn?.roundTime ?? this.time;
+    const rot0 = drawn?.rotation ?? this.rot;
+    const slingSector =
+      this.o.launcher.id === 'sling'
+        ? null
+        : flyFull(STAR_SLING, { ...this.launch, vx, vy, elapsed: 0 }, this.flightWorld(rot0), t0).sector;
     this.shot = {
       kind: this.cur,
       x,
@@ -637,12 +663,15 @@ export class LevelScene {
       vy,
       t: 0,
       carry: 0,
-      t0: drawn?.roundTime ?? this.time,
-      rot0: drawn?.rotation ?? this.rot,
+      t0,
+      rot0,
       trail: [],
       nova,
       warnedBonk,
       bounceCount: 0,
+      launcherApplied: false,
+      specialBounced: false,
+      slingSector,
     };
     if (nova) {
       sfx.combo(6);
@@ -653,9 +682,12 @@ export class LevelScene {
     this.coachEl.classList.remove('show');
     clearTimeout(this.coachTimer);
     sfx.objectLaunch(this.shot.kind);
-    haptic.object(this.shot.kind);
+    sfx.launcherRelease(this.o.launcher.id);
+    if (this.o.launcher.id === 'sling') haptic.object(this.shot.kind);
+    else haptic.launcherRelease(this.o.launcher.id);
     this.o.onThrow?.(this.shot.kind);
-    if (this.throwsUsed === 1 && this.L.n === 1) this.showCoach(1);
+    this.o.onLauncherFling?.();
+    if (this.o.roundMode !== 'practice' && this.throwsUsed === 1 && this.L.n === 1) this.showCoach(1);
     if (this.hintShown) {
       this.hintShown = false;
       this.hintEl.remove();

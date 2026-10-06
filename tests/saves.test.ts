@@ -13,13 +13,14 @@
 //                          settings.gameCenter, home.started instead of home.lastTick, notifications: true
 //   d-round4.v2.json       v2 (round 4): no mailSeen / festival / voyage / album / buddy / home.friends
 //   e-pre-m3.v3.json       v3 before the M3 unlock ladder, with Pass and mode progress
+//   g-pre-m105.v3.json     Tower at level 3, build timer, active expedition and cosmetic mastery
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { defaultProfile, migrate, PROFILE_VERSION, readInterruptedRound, type Profile } from '../src/meta/profile';
 import { labBuildCost, labCap, labLevel } from '../src/meta/labs';
 import { unlocked } from '../src/meta/unlocks';
-import { BUILDINGS, canBuild } from '../src/meta/homeworld';
+import { BUILDINGS, canBuild, finishExpedition } from '../src/meta/homeworld';
 
 const DIR = 'tests/fixtures/saves';
 const FILES = readdirSync(DIR)
@@ -60,6 +61,7 @@ describe('save goldens', () => {
       'd-round4.v2.json',
       'e-pre-m3.v3.json',
       'f-pre-m10.v3.json',
+      'g-pre-m105.v3.json',
     ]);
   });
 
@@ -91,7 +93,9 @@ describe('save goldens', () => {
         expect(p.processedTx).toEqual(raw.processedTx);
         expect(p.pass).toBe(raw.pass);
         expect(p.skins).toEqual(raw.skins);
-        expect(p.home.plots).toEqual((raw.home as Raw).plots);
+        expect(p.home.plots).toEqual(
+          ((raw.home as Raw).plots as (Raw | null)[]).map((b) => (b?.type === 'tower' ? { ...b, type: 'launch_bay' } : b)),
+        );
         expect(p.home.residents).toEqual((raw.home as Raw).residents);
       });
 
@@ -105,10 +109,94 @@ describe('save goldens', () => {
 });
 
 describe('save goldens: specific migrations', () => {
+  it('keeps a hidden selection and tune even when its old earn channel is absent', () => {
+    const raw = load('g-pre-m105.v3.json');
+    raw.launcher = {
+      selected: 'pinpoint',
+      tunes: { pinpoint: 3 },
+      flings: { pinpoint: 511 },
+      completedRounds: { pinpoint: 2 },
+      comboThreePlanets: [],
+    };
+    raw.chapters = [];
+    const p = migrate(raw);
+    expect(p.launcher).toMatchObject({
+      selected: 'pinpoint',
+      tunes: { pinpoint: 3 },
+      flings: { pinpoint: 511 },
+      completedRounds: { pinpoint: 2 },
+    });
+    expect(migrate(JSON.parse(JSON.stringify(p)) as Raw).launcher).toEqual(p.launcher);
+  });
+  it('retains distinct Combo 3 feats from salted Voyage seeds across a save round trip', () => {
+    const raw = load('g-pre-m105.v3.json');
+    raw.level = 40;
+    raw.launcher = {
+      selected: 'sparkler',
+      tunes: {},
+      flings: {},
+      completedRounds: {},
+      comboThreePlanets: ['voyage:VOY-2026-W44-0-38~17', 'voyage:VOY-2026-W44-1-38~-9', 'campaign:37'],
+    };
+    const p = migrate(raw);
+    expect(p.launcher.comboThreePlanets).toHaveLength(3);
+    expect(p.launcher.selected).toBe('sparkler');
+    expect(migrate(JSON.parse(JSON.stringify(p)) as Raw).launcher).toEqual(p.launcher);
+  });
+  it('g-pre-m105 converts the Tower but keeps its level, timer, active trip and paid looks', () => {
+    const raw = load('g-pre-m105.v3.json');
+    const p = loadSave('g-pre-m105.v3.json');
+    const tower = ((raw.home as Raw).plots as (Raw | null)[]).find((b) => b?.type === 'tower')!;
+    const bay = p.home.plots.find((b) => b?.type === 'launch_bay')!;
+    expect(bay).toEqual({ ...tower, type: 'launch_bay' });
+    expect(p.home.expedition).toEqual((raw.home as Raw).expedition);
+    expect(p.mastery.l_pad).toBe(2800);
+    expect(p.launcher.flings).toEqual({});
+    expect(p.m105Migrated).toBe(true);
+    expect(migrate(JSON.parse(JSON.stringify(p)) as Raw)).toEqual(p);
+    const trip = finishExpedition(p, p.home.expedition!.ends);
+    expect(trip?.species).toBe('otter');
+    expect(p.home.expedition).toBeNull();
+  });
+
+  it('clamps malformed gameplay IDs, tune levels and feat counters', () => {
+    const raw = load('g-pre-m105.v3.json');
+    raw.launcher = {
+      selected: 'l_pad',
+      tunes: { swoop: 99, zip: -2, mystery: 3 },
+      flings: { swoop: -10, zip: Infinity },
+      completedRounds: { swoop: 100 },
+      comboThreePlanets: ['campaign:31', 'campaign:31', '../bad'],
+    };
+    raw.cometPier = { hardWins: -4, normalThreeStars: 0, troubles: -1, fusions: 0, stage: 99 };
+    const p = migrate(raw);
+    expect(p.launcher).toEqual({
+      selected: 'sling',
+      tunes: { swoop: 4, zip: 1 },
+      flings: { swoop: 0 },
+      completedRounds: { swoop: 3 },
+      comboThreePlanets: ['campaign:31'],
+    });
+    expect(p.cometPier.stage).toBe(4);
+    expect(p.cometPier.hardWins).toBe(0);
+  });
+
+  it('restores old checkpoints as the untuned Sling and rejects malformed launcher rules', () => {
+    const p = loadSave('f-pre-m10.v3.json');
+    const saved = JSON.parse(p.savedRound!) as { scene: { modifiers: Record<string, unknown> } };
+    delete saved.scene.modifiers.launcher;
+    p.savedRound = JSON.stringify(saved);
+    expect(readInterruptedRound(p)?.modifiers.launcher).toEqual({ id: 'sling', tune: 1 });
+    saved.scene.modifiers.launcher = { id: 'l_pad', tune: 4 };
+    p.savedRound = JSON.stringify(saved);
+    expect(readInterruptedRound(p)).toBeNull();
+  });
   it('f-pre-m10 keeps paid Lab levels, full plots, wallet and old checkpoint', () => {
     const raw = load('f-pre-m10.v3.json');
     const p = loadSave('f-pre-m10.v3.json');
-    expect(p.home.plots).toEqual((raw.home as Raw).plots);
+    expect(p.home.plots).toEqual(
+      ((raw.home as Raw).plots as (Raw | null)[]).map((b) => (b?.type === 'tower' ? { ...b, type: 'launch_bay' } : b)),
+    );
     expect(p.mats).toEqual(raw.mats);
     expect(p.lab).toEqual(raw.lab);
     expect(p.home.firstHour).toBe(2);

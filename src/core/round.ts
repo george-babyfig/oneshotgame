@@ -6,6 +6,7 @@ import type { LevelDef } from './levels';
 import { TROUBLES, firebreakBy, troubleTarget, type TroubleEvent, type TroubleId, type TroubleState } from './troubles';
 import { traitOf } from './world';
 import { RULES_VERSION } from './rules-version';
+import { launcherReach, skipperLosesPower } from './launchers';
 
 export const NOVA_CHARGE = 12;
 export const LATER_NOVA_CHARGE = 18;
@@ -66,6 +67,8 @@ export interface RoundState {
   buddyShieldUsed?: boolean;
   calmUsed?: boolean;
   labMarks?: { rock: number[]; seed: number[] };
+  skipperBounces?: number;
+  sparklerPlainUsed?: boolean;
 }
 
 export interface RoundAction {
@@ -74,6 +77,8 @@ export interface RoundAction {
   nova?: boolean;
   guardianHit?: boolean;
   outcome?: 'bonk' | 'fizzle' | 'miss';
+  /** Only a Skipper special rebound; ordinary Bubble Moon bounces do not count. */
+  bounced?: boolean;
 }
 
 export interface StepResult {
@@ -233,8 +238,12 @@ function advanceTroubles(
     if (t.settled) return t;
     const d = ringDistance(action.sector, t.source);
     const guard = labGuard(action.kind, mods.lab[action.kind] ?? 1);
+    // Rinse follows the actual Rain Cloud footprint; Trouble source counters remain centred on the landing.
     const rainBaseReach = KINDS.storm.stats.reach + mods.splash + (nova ? 1 : 0);
-    const rainReach = Math.max(rainBaseReach, Math.min(4, rainBaseReach + (nova ? labNovaReach(mods.lab.storm ?? 1) : 0)));
+    const launcherRainReach = launcherReach(mods.launcher ?? NO_MODIFIERS.launcher, 'storm');
+    const rainReach = launcherRainReach
+      ? Math.min(4, rainBaseReach + launcherRainReach + (nova ? labNovaReach(mods.lab.storm ?? 1) : 0))
+      : Math.max(rainBaseReach, Math.min(4, rainBaseReach + (nova ? labNovaReach(mods.lab.storm ?? 1) : 0)));
     const rinseVine =
       t.id === 'vine' &&
       action.kind === 'storm' &&
@@ -353,6 +362,7 @@ export function stepRound(
       state: {
         ...state,
         planet,
+        ...(mods.launcher?.id === 'skipper' ? { skipperBounces: (state.skipperBounces ?? 0) + Number(!!action.bounced) } : {}),
         troubles: trouble.troubles,
         buddyShieldUsed: trouble.buddyShieldUsed,
         calmUsed: trouble.calmUsed,
@@ -404,15 +414,26 @@ export function stepRound(
   const step = fusion && comboEnabled && reached >= 2 ? Math.min(4, reached) : 0;
   const level = mods.lab[action.kind] ?? 1;
   const comboReach = fusion && comboEnabled && oldCombo.links < 3 && reached >= 3 ? 1 : 0;
-  const extraReach = comboReach + (fusion ? labFusionReach(level) : 0);
+  // Sparkler's extra two Fusion sectors still share the reach-four cap.
+  const extraReach = comboReach + (fusion ? labFusionReach(level) + 2 * Number(mods.launcher?.id === 'sparkler') : 0);
   let affected: number[] = [];
   const form = !!mods.forms?.[action.kind] && level >= 5;
+  const reachDelta = launcherReach(mods.launcher ?? NO_MODIFIERS.launcher, action.kind);
+  const skipperBounceNumber = (state.skipperBounces ?? 0) + Number(!!action.bounced && mods.launcher?.id === 'skipper');
+  const centerPowerLoss = !!action.bounced && skipperLosesPower(mods.launcher ?? NO_MODIFIERS.launcher, action.kind, skipperBounceNumber);
   const result = impact(
     planet,
     action.kind,
     action.sector,
     mods.splash,
-    { nova, power: labPower(level), novaReach: labNovaReach(level), form },
+    {
+      nova,
+      power: labPower(level),
+      novaReach: labNovaReach(level),
+      form,
+      ...(reachDelta ? { reachDelta, reachCap: 4 } : {}),
+      ...(centerPowerLoss ? { centerPowerLoss: true } : {}),
+    },
     (land) => {
       if (reaction)
         affected = applyReaction(
@@ -420,14 +441,16 @@ export function stepRound(
           reaction.id,
           reaction.at,
           extraReach,
-          (reaction.id === 'rainGarden' ? 3 : reaction.id === 'glacier' ? 1 : 2) + comboReach,
+          (reaction.id === 'rainGarden' ? 3 : reaction.id === 'glacier' ? 1 : 2) +
+            comboReach +
+            2 * Number(mods.launcher?.id === 'sparkler' && fusion),
         );
       if (fusion && comboEnabled && reached >= 4) comboBloom(land, action.sector);
     },
   );
   const labMarks = { rock: [...(state.labMarks?.rock ?? [])], seed: [...(state.labMarks?.seed ?? [])] };
   if ((mods.lab[action.kind] ?? 1) >= 4 && (action.kind === 'rock' || action.kind === 'seed')) {
-    const reach = Math.min(4, KINDS[action.kind].stats.reach + mods.splash + (nova ? 1 + labNovaReach(level) : 0));
+    const reach = Math.min(4, KINDS[action.kind].stats.reach + mods.splash + reachDelta + (nova ? 1 + labNovaReach(level) : 0));
     for (let d = -reach; d <= reach; d++) {
       const at = wrap(action.sector + d);
       if (action.kind === 'seed' || planet.sectors[at].land >= 3) {
@@ -503,7 +526,17 @@ export function stepRound(
   const fusionGain = state.novaEnabled && fusion && betterThrow ? 3 : 0;
   const threshold = nova ? LATER_NOVA_CHARGE : meter.threshold;
   const troubleGain = state.novaEnabled && betterThrow ? trouble.events.filter((event) => event.kind === 'settled').length * 3 : 0;
-  const charge = state.novaEnabled ? Math.min(threshold, (nova ? 0 : meter.charge + gain) + fusionGain + comboGain + troubleGain) : 0;
+  const settledTrouble = trouble.events.some((event) => event.kind === 'settled');
+  const raisedLand = planet.sectors.some((sector, i) => sector.land > state.planet.sectors[i].land);
+  const plainSparkler = mods.launcher?.id === 'sparkler' && !fusion && !settledTrouble;
+  const skipPenalty =
+    ((mods.launcher?.tune ?? 1) >= 2 && firstArrivals.length > 0) ||
+    ((mods.launcher?.tune ?? 1) >= 3 && raisedLand) ||
+    ((mods.launcher?.tune ?? 1) >= 4 && !state.sparklerPlainUsed);
+  const sparklerAdjustment = mods.launcher?.id === 'sparkler' && betterThrow ? (fusion ? 2 : plainSparkler && !skipPenalty ? -1 : 0) : 0;
+  const rawGain = gain + fusionGain + comboGain + troubleGain;
+  const effectiveGain = Math.max(0, rawGain + sparklerAdjustment);
+  const charge = state.novaEnabled ? Math.min(threshold, (nova ? 0 : meter.charge) + effectiveGain) : 0;
   const novaState = { charge, threshold, fired: meter.fired + Number(nova), held: nova ? false : meter.held };
   const totalBonus = state.bonus;
   const next: RoundState = {
@@ -516,6 +549,8 @@ export function stepRound(
     nova: novaState,
     combo,
     comboCharge: (state.comboCharge ?? 0) + comboGain,
+    ...(mods.launcher?.id === 'sparkler' ? { sparklerPlainUsed: !!state.sparklerPlainUsed || !!plainSparkler } : {}),
+    ...(mods.launcher?.id === 'skipper' ? { skipperBounces: skipperBounceNumber } : {}),
     troubles: trouble.troubles,
     labMarks,
     buddyShieldUsed: trouble.buddyShieldUsed,
@@ -538,7 +573,7 @@ export function stepRound(
     newRegionBests,
     labEvents,
     novaCharge: nova ? charge : charge - meter.charge,
-    novaGain: gain + fusionGain + comboGain + troubleGain,
+    novaGain: effectiveGain,
     novaFired: nova,
     reactions: reaction ? [{ ...reaction, sectors: affected }] : [],
     combo: comboResult,

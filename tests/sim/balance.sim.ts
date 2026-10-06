@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
-import { difficultyOf, makeLevel } from '../../src/core/levels';
+import { difficultyOf } from '../../src/core/levels';
 import { CHAPTER_BANDS, lintCampaign } from './lint';
 import { POLICIES, runPlanet, type PlanetMetrics } from './harness';
 
@@ -46,11 +46,10 @@ const pool = (sets: PlanetMetrics[][]): PlanetMetrics[] =>
   });
 
 measured(
-  'gates the campaign curve with two independent master seeds and shadow layouts',
+  'gates the reviewed campaign curve with two independent master seeds',
   () => {
     const started = performance.now();
     const runs = Number(process.env.BALANCE_RUNS ?? 96);
-    const shadowRuns = Number(process.env.SHADOW_RUNS ?? 2);
     const failures: string[] = [];
     const flagSets: Set<string>[] = [];
     let firstRows: PlanetMetrics[][] = [];
@@ -89,8 +88,8 @@ measured(
       }
       for (const [name, numbers] of [
         ['first Hard', [15, 20]],
-        ['Hard 25+', Array.from({ length: 8 }, (_, i) => 25 + 5 * i)],
-        ['Super', [19, 29, 39, 49, 59]],
+        ['Hard 25+', Array.from({ length: 36 }, (_, i) => i + 25).filter((n) => difficultyOf(n) === 'hard')],
+        ['Super', Array.from({ length: 60 }, (_, i) => i + 1).filter((n) => difficultyOf(n) === 'super')],
       ] as const) {
         const c = rows[0].filter((row) => (numbers as readonly number[]).includes(row.n));
         const d = rows[1].filter((row) => (numbers as readonly number[]).includes(row.n));
@@ -121,8 +120,8 @@ measured(
     }
     for (const [name, numbers, failBand, threeBand, casualMax] of [
       ['first Hard', [15, 20], [0.18, 0.32], [0.25, 0.45], 0.4],
-      ['Hard 25+', Array.from({ length: 8 }, (_, i) => 25 + 5 * i), [0.12, 0.45], [0.25, 0.45], 0.5],
-      ['Super', [19, 29, 39, 49, 59], [0.25, 0.6], [0.15, 0.35], 0.7],
+      ['Hard 25+', Array.from({ length: 36 }, (_, i) => i + 25).filter((n) => difficultyOf(n) === 'hard'), [0.12, 0.45], [0.25, 0.45], 0.5],
+      ['Super', Array.from({ length: 60 }, (_, i) => i + 1).filter((n) => difficultyOf(n) === 'super'), [0.25, 0.6], [0.15, 0.35], 0.7],
     ] as const) {
       const c = pooled[0].filter((row) => (numbers as readonly number[]).includes(row.n));
       const d = pooled[1].filter((row) => (numbers as readonly number[]).includes(row.n));
@@ -148,55 +147,9 @@ measured(
       )}`,
     );
 
-    // Section 4.7 measures the design on distinct layouts, not just the shipping salt.
-    // Owner decision 29 (30 Sep 2026): shadow layouts are a Watch until the generator is brought into band (before M12);
-    // the reviewed campaign layouts and the Daily/Voyage pre-flight are the gates.
-    const shadowWatch: string[] = [];
-    const shadow: Record<string, PlanetMetrics[]> = { casual: [], decent: [], sharp: [] };
-    for (let n = 1; n <= 60; n++) {
-      const needed = difficultyOf(n) === 'normal' ? 10 : 30;
-      const seen = new Set<string>();
-      for (let salt = 1001; seen.size < needed; salt++) {
-        const actual = makeLevel(n, 'PP', { salt }).seed;
-        if (seen.has(actual)) continue;
-        seen.add(actual);
-        for (const policy of policies) shadow[policy.name].push(runPlanet(n, policy, shadowRuns, salt));
-      }
-    }
-    for (const band of CHAPTER_BANDS.filter((entry) => entry.last <= 60)) {
-      const subset = policies.map((policy) =>
-        shadow[policy.name].filter((row) => row.n >= band.first && row.n <= band.last && row.difficulty === 'normal'),
-      );
-      const label = `shadow ${band.first}-${band.last}`;
-      console.log(
-        `${label}: C ${mean(subset[0], 'fail').toFixed(3)}/${mean(subset[0], 'threeStar').toFixed(3)} D ${mean(subset[1], 'fail').toFixed(3)}/${mean(subset[1], 'threeStar').toFixed(3)} S ${mean(subset[2], 'fail').toFixed(3)}/${mean(subset[2], 'threeStar').toFixed(3)}`,
-      );
-      for (const [name, value, [min, max]] of [
-        ['C fail', mean(subset[0], 'fail'), band.casualFail],
-        ['C 3★', mean(subset[0], 'threeStar'), band.casualThree],
-        ['D fail', mean(subset[1], 'fail'), band.decentFail],
-        ['D 3★', mean(subset[1], 'threeStar'), band.decentThree],
-      ] as const)
-        if (value < min || value > max) shadowWatch.push(`${label} ${name} ${value.toFixed(3)} outside ${min}-${max}`);
-    }
-    for (const [name, numbers, failBand, threeBand] of [
-      ['first Hard', [15, 20], [0.18, 0.32], [0.25, 0.45]],
-      ['Hard 25+', Array.from({ length: 8 }, (_, i) => 25 + 5 * i), [0.12, 0.45], [0.25, 0.45]],
-      ['Super', [19, 29, 39, 49, 59], [0.25, 0.6], [0.15, 0.35]],
-    ] as const) {
-      const group = shadow.decent.filter((row) => (numbers as readonly number[]).includes(row.n));
-      const fail = mean(group, 'fail');
-      const three = mean(group, 'threeStar');
-      console.log(`shadow ${name}: D ${fail.toFixed(3)}/${three.toFixed(3)}`);
-      if (fail < failBand[0] || fail > failBand[1]) shadowWatch.push(`shadow ${name} D fail ${fail.toFixed(3)}`);
-      if (three < threeBand[0] || three > threeBand[1]) shadowWatch.push(`shadow ${name} D 3★ ${three.toFixed(3)}`);
-    }
-    console.log(`Shadow watch (decision 29, not gating): ${shadowWatch.length ? shadowWatch.join('; ') : 'all in band'}`);
-    console.log(
-      `Balance measurement ${((performance.now() - started) / 1000).toFixed(1)}s; ${runs} runs × 2 masters and ${shadowRuns} runs × 10/30 shadows per slot`,
-    );
+    console.log(`Balance measurement ${((performance.now() - started) / 1000).toFixed(1)}s; ${runs} runs × 2 masters`);
     if (process.env.BALANCE_REPORT)
-      writeFileSync(process.env.BALANCE_REPORT, JSON.stringify({ pooled, pooledLint, watches, shadowWatch, failures }, null, 2) + '\n');
+      writeFileSync(process.env.BALANCE_REPORT, JSON.stringify({ pooled, pooledLint, watches, failures }, null, 2) + '\n');
     expect(failures, failures.join('\n')).toEqual([]);
   },
   1_500_000, // the GitHub runner is ~1.5-2x slower than a dev Mac

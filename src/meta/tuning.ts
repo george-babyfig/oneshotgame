@@ -101,7 +101,7 @@ export const PRODUCTS: ProductDef[] = [
     description: 'Cosmic Road looks, gold paints, Gilded Passport banner and Star Captain title',
     contents: [
       'Cosmic atmosphere',
-      'Golden Orbit launcher',
+      'Golden Orbit launcher look',
       'Halo Ring hat',
       'Comet Tail trail',
       'Star Captain suit',
@@ -314,7 +314,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   mill: { type: 'mill', name: 'Stardust Mill', desc: 'Makes stardust while you are away', ring: 1, cost: 150, max: 3 },
   den: { type: 'den', name: 'Critter Den', desc: 'A home for creatures from your Lifebook', ring: 1, cost: 250, max: 2 },
   greenhouse: { type: 'greenhouse', name: 'Greenhouse', desc: 'Grows boosters for your levels', ring: 2, cost: 600, max: 2 },
-  tower: { type: 'tower', name: 'Launch Tower', desc: 'Sends residents on expeditions', ring: 2, cost: 900, max: 1 },
+  launch_bay: { type: 'launch_bay', name: 'Launch Bay', desc: 'Choose, tune and try your launchers', ring: 2, cost: 800, max: 1 },
   grove: { type: 'grove', name: 'Crystal Grove', desc: 'Slowly grows gems', ring: 3, cost: 2000, max: 2 },
   observatory: {
     type: 'observatory',
@@ -658,9 +658,9 @@ export const COSMETICS: Cosmetic[] = [
   c({ id: 'hat_halo', slot: 'hat', name: 'Halo Ring', source: 'pass', tier: 'epic', colors: ['#ffe58a'], set: 'captain' }),
   // launchers
   c({ id: 'l_pad', slot: 'launcher', name: 'Launch Pad', source: 'free', tier: 'basic', colors: ['#c9c2ff'] }),
-  c({ id: 'l_twig', slot: 'launcher', name: 'Twig Sling', source: 'chapter', unlock: 1, tier: 'basic', colors: ['#a0743a', '#e0b050'] }),
-  c({ id: 'l_petal', slot: 'launcher', name: 'Petal Sling', source: 'gems', gems: 200, tier: 'fancy', colors: ['#ff8fc8', '#5ecf5a'] }),
-  c({ id: 'l_cannon', slot: 'launcher', name: 'Comet Cannon', source: 'gems', gems: 250, tier: 'fancy', colors: ['#6e8cff', '#ffd24a'] }),
+  c({ id: 'l_twig', slot: 'launcher', name: 'Twig', source: 'chapter', unlock: 1, tier: 'basic', colors: ['#a0743a', '#e0b050'] }),
+  c({ id: 'l_petal', slot: 'launcher', name: 'Petal', source: 'gems', gems: 200, tier: 'fancy', colors: ['#ff8fc8', '#5ecf5a'] }),
+  c({ id: 'l_cannon', slot: 'launcher', name: 'Comet Rail', source: 'gems', gems: 250, tier: 'fancy', colors: ['#6e8cff', '#ffd24a'] }),
   c({
     id: 'l_tree',
     slot: 'launcher',

@@ -1,7 +1,7 @@
-// Frozen level generator (M2 guard). The M2 refactor (Solver 2.0 / Solver 0,
-// memoised makeLevel, levelMeta) must leave every generated planet identical.
-// This file records full LevelDefs for the campaign and every mode's seed family,
-// plus the greedy solver's line of play, and compares them with the committed fixtures.
+// Full generated-level fixtures. Reviewed PP 1-60 and legacy 61-120 are frozen;
+// raw-v2 campaign 61-120 can move only with an explicit reviewed fixture diff.
+// Mode fixtures keep shipped Voyage/Daily/challenge layouts and the old future
+// Daily samples as a legacy reference.
 //
 // Regenerate (only for an intended generator change): UPDATE_FIXTURES=1 npx vitest run tests/levels.snapshot.test.ts
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -21,14 +21,17 @@ import {
   greedyPlan,
   greedyScore,
   makeLevel,
+  rngFrom,
+  rulesForLevel,
   type LevelDef,
 } from '../src/core/levels';
 import { SECTORS, lifeScore, type Kind, type Planet } from '../src/core/world';
 import { novaReady, roundState, stepRound } from '../src/core/round';
 import { NO_MODIFIERS } from '../src/core/modifiers';
-import { challengeLevel, dailyLevel, rushLevel, zenLevel } from '../src/meta/modes';
+import { challengeLevel, dailyLevel, dailyPreflight, rushLevel, zenLevel } from '../src/meta/modes';
 import { VOYAGE_LEN, voyageBase, voyageLevel } from '../src/meta/voyage';
 import { remixLevel } from '../src/meta/remix';
+import { TROUBLES, type TroubleId } from '../src/core/troubles';
 
 const DIR = join(dirname(fileURLToPath(import.meta.url)), '__snapshots__', 'levels');
 const UPDATE = process.env.UPDATE_FIXTURES === '1';
@@ -46,6 +49,13 @@ function checkRows(name: string, rows: Row[]) {
   const file = join(DIR, name);
   const actual = rows.map((r) => JSON.parse(JSON.stringify(r)) as Row);
   if (UPDATE) {
+    if ((name === 'campaign-PP.json' || name === 'legacy-PP-61-120.json') && existsSync(file)) {
+      const previous = JSON.parse(readFileSync(file, 'utf8')) as Row[];
+      for (let i = 0; i < 60; i++)
+        expect(JSON.stringify(actual[i]), `frozen PP-${name === 'campaign-PP.json' ? i + 1 : i + 61} must remain byte-identical`).toBe(
+          JSON.stringify(previous[i]),
+        );
+    }
     writeRows(file, actual);
     return;
   }
@@ -157,7 +167,8 @@ function modeRows(): Row[] {
     }
   }
   // the mode wrappers exactly as the app calls them
-  for (const day of ['2026-01-01', '2026-09-28', '2027-02-28', '2028-12-31']) rows.push(levelRow(`dailyLevel(${day})`, dailyLevel(day)));
+  for (const day of ['2026-01-01', '2026-09-28', '2027-02-28', '2028-12-31'])
+    rows.push(levelRow(`dailyLevel(${day})`, day < '2026-10-14' ? dailyLevel(day) : legacyDailyLevel(day)));
   for (const seed of ['K7M2Q', '22222', 'ZZZZZ']) {
     rows.push(levelRow(`rushLevel(${seed})`, rushLevel(seed)));
     rows.push(levelRow(`challengeLevel(${seed})`, challengeLevel(seed)));
@@ -169,6 +180,21 @@ function modeRows(): Row[] {
       for (let i = 0; i < VOYAGE_LEN; i++) rows.push(levelRow(`voyageLevel(${week},${base},${i})`, voyageLevel(week, base, i)));
     }
   return rows;
+}
+
+/** Hold the old future-date fixture as a compatibility reference. */
+function legacyDailyLevel(day: string): LevelDef {
+  const L = makeLevel(16, `DAY-${day}`, { rules: rulesForLevel(16), profile: 'reviewed-v1' });
+  const available = (Object.keys(TROUBLES) as TroubleId[]).filter((id) => TROUBLES[id].debut <= 16);
+  if (L.troubles.length && available.length) {
+    const first = Math.floor(rngFrom(`DAY-${day}-weather`)() * available.length);
+    for (let offset = 0; offset < available.length; offset++) {
+      const id = available[(first + offset) % available.length];
+      const candidate = { ...L, troubles: L.troubles.map((trouble) => ({ ...trouble, id })) };
+      if (dailyPreflight(candidate)) return candidate;
+    }
+  }
+  return L;
 }
 
 /**
@@ -251,8 +277,18 @@ describe('level snapshot (M2 guard)', () => {
     );
   });
 
-  it('campaign planets 1-120 (PP) are unchanged in every field', () => {
+  it('reviewed PP 1-60 and reviewed raw-v2 PP 61-120 match their fixtures', () => {
     checkRows('campaign-PP.json', campaignRows());
+  });
+
+  it('legacy generation for interrupted 61-120 rounds stays byte-identical', () => {
+    checkRows(
+      'legacy-PP-61-120.json',
+      Array.from({ length: 60 }, (_, i) => {
+        const n = i + 61;
+        return levelRow(`PP-${n}`, makeLevel(n, 'PP', { profile: 'reviewed-v1' }));
+      }),
+    );
   });
 
   it('every mode seed family (Voyage, Daily, Rush, Zen, Challenge) is unchanged', () => {

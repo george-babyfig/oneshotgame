@@ -6,6 +6,8 @@ import {
   RING_PLOTS,
   WIN_SPEEDUP,
   build,
+  buildCost,
+  bayLevel,
   busyDrones,
   canExpand,
   canUpgrade,
@@ -39,6 +41,18 @@ function rich() {
 }
 
 describe('homeworld', () => {
+  it('builds the Bay at Ring 2 with its exact level costs and timers', () => {
+    const p = rich();
+    expect([1, 2, 3, 4, 5].map((lv) => buildCost('launch_bay', lv))).toEqual([800, 2000, 4800, 11200, 24000]);
+    expect(BUILD_TIME).toEqual([0, 30_000, 300_000, 1_800_000, 7_200_000, 14_400_000]);
+    expect(build(p, 0, 'launch_bay', T0)).toBe('ring');
+    p.home.ring = 2;
+    expect(build(p, 0, 'launch_bay', T0)).toBe('ok');
+    expect(p.dust).toBe(1e6 - 800);
+    expect(bayLevel(p.home, T0)).toBe(0);
+    tickBuilds(p.home, T0 + BUILD_TIME[1]);
+    expect(bayLevel(p.home, T0 + BUILD_TIME[1])).toBe(1);
+  });
   it('builds with a drone and finishes on time', () => {
     const p = rich();
     expect(build(p, 0, 'den', T0)).toBe('ok');
@@ -53,7 +67,7 @@ describe('homeworld', () => {
     const p = rich();
     p.home.ring = 2;
     build(p, 0, 'den', T0);
-    build(p, 1, 'tower', T0);
+    build(p, 1, 'launch_bay', T0);
     expect(build(p, 2, 'greenhouse', T0)).toBe('drones');
     expect(build(p, 2, 'lantern', T0)).toBe('ok');
     p.pass = true;
@@ -141,7 +155,7 @@ describe('homeworld', () => {
     p.seen = ['otter'];
     expand(p);
     build(p, 0, 'den', T0);
-    build(p, 1, 'tower', T0);
+    build(p, 1, 'launch_bay', T0);
     tickBuilds(p.home, T0 + H);
     invite(p, 'otter');
     expect(startExpedition(p, 'otter', 4, T0 + H)).toBe(false); // tower lv1: 1h only

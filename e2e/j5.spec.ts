@@ -1,11 +1,13 @@
 // J5 — M10 Homeworld Labs at 320×568 in every shipped language.
 import { expect, test, type Page } from '@playwright/test';
+import { LAUNCHER_IDS, LAUNCHERS, LAUNCH_ROSTER } from '../src/core/launchers';
 import {
   BROWSER_LOCALE,
   OPEN_MODAL,
   expectKidSafe,
   expectNoErrors,
   freshInstall,
+  launcherBayReady,
   localesToRun,
   planetFiveHomeworld,
   snap,
@@ -151,5 +153,137 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
         await expectNoErrors(guard);
       });
     }
+
+    test('Launch Bay: choose, tune, free practice and forced Sling chip', async ({ page }, info) => {
+      test.skip(info.project.name !== 'chromium-320x568', 'J5 locale matrix runs at 320×568');
+      const guard = watchErrors(page);
+      await freshInstall(page, { title: 'tap' });
+      await launcherBayReady(page);
+      await selectPlot(page, 0);
+      expect(await page.locator('.hw-actions').evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+      await page
+        .locator('.hw-actions')
+        .getByRole('button', { name: tr(loc, 'Launch Bay') })
+        .click();
+      await expect(page.locator('.launch-bay')).toBeVisible();
+      for (const id of LAUNCHER_IDS.filter((id) => !LAUNCH_ROSTER.includes(id)))
+        await expect(page.locator(`.bay-card[data-launcher="${id}"]`)).toHaveCount(0);
+      await snap(page, info, guard, 'j5-launch-bay');
+      await expectKidSafe(page, loc);
+      await expect(page.locator('.bay-card[data-launcher="sling"] .bay-effect')).toHaveCount(0);
+      const bayNameSize = await page
+        .locator('.bay-name')
+        .first()
+        .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+      await page.evaluate(() => document.documentElement.style.setProperty('--text-scale', '1.36'));
+      // The size can settle a frame later (card transitions), so wait for it rather than reading once.
+      await expect
+        .poll(() =>
+          page
+            .locator('.bay-name')
+            .first()
+            .evaluate((el) => parseFloat(getComputedStyle(el).fontSize)),
+        )
+        .toBeGreaterThan(bayNameSize);
+      await page.evaluate(() => document.documentElement.style.setProperty('--text-scale', '1'));
+      await expect(page.locator('.bay-card[data-launcher="zip"]')).not.toContainText(
+        tr(loc, 'After that, arrives at planet {n}', { n: 43 }),
+      );
+      const swoop = page.locator('.bay-card[data-launcher="swoop"]');
+      await expect(swoop).toContainText(tr(loc, 'Swoop'));
+      await swoop.getByRole('button', { name: tr(loc, 'Choose {name}', { name: tr(loc, 'Swoop') }) }).click();
+      expect((await state(page)).launcher.selected).toBe('swoop');
+      await expect(swoop.locator('.bay-state[tabindex]')).toBeFocused();
+      await swoop.getByRole('button', { name: tr(loc, 'Tune {name} to {n}', { name: tr(loc, 'Swoop'), n: 2 }) }).click();
+      expect((await state(page)).launcher.tunes.swoop).toBe(2);
+      await expect(swoop.locator('button[data-action="tune"]')).toBeFocused();
+      await expect(swoop.locator('button[data-action="tune"]')).toHaveAttribute('aria-disabled', 'true');
+      await swoop.locator('button[data-action="tune"]').dispatchEvent('click');
+      await expect(page.locator('.toast').last()).toBeVisible();
+      await expect(page.locator('.bay-card[data-launcher="zip"]')).toHaveClass(/locked/);
+      await snap(page, info, guard, 'j5-launch-bay-tuned');
+      const practiceFacts = (p: any) =>
+        JSON.stringify({
+          dust: p.dust,
+          gems: p.gems,
+          mats: p.mats,
+          stars: p.stars,
+          launcher: p.launcher,
+          stats: p.stats,
+          feats: p.feats,
+          seen: p.seen,
+        });
+      const beforePractice = practiceFacts(await state(page));
+      await swoop.getByRole('button', { name: tr(loc, 'Try {name} for free', { name: tr(loc, 'Swoop') }) }).click();
+      await expect(page.locator('.practice-exit')).toBeVisible();
+      await snap(page, info, guard, 'j5-launch-bay-practice');
+      await page.locator('.practice-exit').click();
+      expect(practiceFacts(await state(page))).toBe(beforePractice);
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.plots[0] = { type: 'launch_bay', lv: 1, since: Date.now(), done: Date.now() + 300000 };
+        a.showHomeworld();
+      });
+      await selectPlot(page, 0);
+      await page
+        .locator('.hw-actions')
+        .getByRole('button', { name: tr(loc, 'Launch Bay') })
+        .click();
+      await expect(page.locator('.launch-bay .page-title')).toContainText(tr(loc, 'Level {n}', { n: 0 }));
+      await expect(page.locator('.bay-card[data-launcher="sling"]')).toContainText(tr(loc, 'Try it'));
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.ring = 4;
+        a.p.home.plots[0] = { type: 'launch_bay', lv: 3, since: Date.now(), done: Date.now() + 300000 };
+        a.p.cometPier.stage = 3;
+        a.p.launcher.tunes.swoop = 1;
+        a.p.mats.leaf = 45;
+        a.p.mats.dew = 60;
+        a.save();
+        a.showHomeworld();
+      });
+      await selectPlot(page, 0);
+      const actions = page.locator('.hw-actions');
+      await expect(actions.getByRole('button', { name: tr(loc, 'Launch Bay') })).toBeVisible();
+      expect(await actions.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+      await snap(page, info, guard, 'j5-launch-bay-building-panel');
+      await actions.getByRole('button', { name: tr(loc, 'Launch Bay') }).click();
+      await expect(page.locator('.launch-bay .page-title')).toContainText(tr(loc, 'Level {n}', { n: 2 }));
+      await expect(swoop.locator('button[data-action="tune"]')).toHaveAttribute('aria-disabled', 'false');
+      await swoop.getByRole('button', { name: tr(loc, 'Tune {name} to {n}', { name: tr(loc, 'Swoop'), n: 2 }) }).click();
+      expect((await state(page)).launcher.tunes.swoop).toBe(2);
+      const zip = page.locator('.bay-card[data-launcher="zip"]');
+      await expect(zip).toContainText(tr(loc, 'Leaf {leaf} of 40 · Dew {dew} of 30', { leaf: '45', dew: '45' }));
+      await zip.getByRole('button', { name: tr(loc, 'Finish Comet Pier') }).click();
+      expect((await state(page)).cometPier.stage).toBe(4);
+      await expect(zip).not.toHaveClass(/locked/);
+      await snap(page, info, guard, 'j5-launch-bay-zip-earned');
+      await zip.evaluate((el) => el.scrollIntoView());
+      const scrollBefore = await page.locator('.launch-bay .scroll').evaluate((el) => el.scrollTop);
+      await zip.getByRole('button', { name: tr(loc, 'Try {name} for free', { name: tr(loc, 'Zip') }) }).click();
+      await page.locator('.practice-exit').click();
+      expect(await page.locator('.launch-bay .scroll').evaluate((el) => el.scrollTop)).toBe(scrollBefore);
+      await page.evaluate(() => (window as any).__app.preRemix(31));
+      const lockedChip = page.locator('.launcher-chip.locked');
+      await expect(lockedChip).toBeVisible();
+      await expect(lockedChip).toHaveAttribute('aria-label', tr(loc, 'Everyone uses the Star Sling here'));
+      await snap(page, info, guard, 'j5-launch-bay-forced-sling');
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.level = 70;
+        a.p.launcher.selected = 'pinpoint';
+        a.p.launcher.tunes.pinpoint = 3;
+        a.save();
+        a.preLevel(70);
+      });
+      await expect(page.locator('.launcher-chip:not(.locked)')).toContainText(tr(loc, 'Star Sling'));
+      expect((await state(page)).launcher.selected).toBe('pinpoint');
+      await page.locator('.launcher-chip:not(.locked)').click();
+      const tray = page.locator('.launcher-tray');
+      await expect(tray.locator('.launcher-option')).toHaveCount(3);
+      for (const id of LAUNCHER_IDS.filter((id) => !LAUNCH_ROSTER.includes(id)))
+        await expect(tray).not.toContainText(tr(loc, LAUNCHERS[id].name));
+      await expectNoErrors(guard);
+    });
   });
 }

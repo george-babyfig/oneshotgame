@@ -87,6 +87,7 @@ import { firstHourStep, firstHourLab, firstHourFriend } from '../../meta/firstho
 import { LAB_NAME, LAB_TEXT, LAB_FIRST_COPY, ESSENCE_NAME } from '../../meta/labcopy';
 import { labCard } from './labcard';
 import { showFirstFriend } from '../flows/labmoments';
+import { showLaunchBay } from './launchbay';
 
 const TAU = Math.PI * 2;
 
@@ -830,7 +831,7 @@ export function showHomeworld(app: App) {
           ),
         );
       } else if (b.type === 'den') kids.push(h('div', { class: 'hw-prod' }, t('Room for {n} residents', { n: b.lv + 1 })));
-      else if (b.type === 'tower')
+      else if (b.type === 'launch_bay')
         kids.push(
           h(
             'div',
@@ -873,15 +874,23 @@ export function showHomeworld(app: App) {
         } else if (b.lv >= MAX_LEVEL) row.push(h('div', { class: 'ws-state' }, t('✓ Max level')));
       }
       if (b.type === 'den') row.push(btn(t('Residents'), 'ghost', () => residentsSheet(app, renderPanel)));
-      if (b.type === 'tower' && !building)
-        row.push(
-          liveText(
-            btn(expeditionLabel(), 'ghost', () => expeditionSheet(app, renderPanel)),
-            expeditionLabel,
-          ),
-        );
+      if (b.type === 'launch_bay') {
+        row.push(btn(t('Launch Bay'), 'primary', () => showLaunchBay(app)));
+        if (!building)
+          row.push(
+            liveText(
+              btn(expeditionLabel(), 'ghost', () => expeditionSheet(app, renderPanel)),
+              expeditionLabel,
+            ),
+          );
+      }
       row.push(btn(t('Move'), 'ghost', () => ((moving = i), renderPanel())));
-      kids.push(h('div', { class: 'row hw-actions' }, ...row));
+      if (b.type === 'launch_bay')
+        row.forEach((action) => {
+          action.style.flex = '1 1 96px';
+          action.style.minWidth = '0';
+        });
+      kids.push(h('div', { class: 'row hw-actions', style: b.type === 'launch_bay' ? 'flex-wrap:wrap' : undefined }, ...row));
     }
     panel.replaceChildren(...kids.filter((x): x is HTMLElement => !!x));
   }
@@ -1239,7 +1248,7 @@ function expeditionSheet(app: App, after: () => void) {
   if (!opts.length) {
     modal([
       h('div', { class: 'm-title' }, t('Expedition')),
-      h('p', { class: 'muted' }, t('Build a Launch Tower (Ring 2) to send residents on expeditions.')),
+      h('p', { class: 'muted' }, t('Build a Launch Bay (Ring 2) to send residents on expeditions.')),
     ]);
     return;
   }

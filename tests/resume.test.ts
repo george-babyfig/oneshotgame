@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { NO_MODIFIERS } from '../src/core/modifiers';
+import { makeLevel } from '../src/core/levels';
 import { roundState, stepRound } from '../src/core/round';
 import { newPlanet } from '../src/core/world';
 import { restoreSceneTroubles } from '../src/ui/app';
@@ -47,6 +48,76 @@ function checkpoint(): RoundCheckpoint {
 }
 
 describe('interrupted campaign rounds', () => {
+  it('discards a hidden-launcher checkpoint while retaining its saved selection and tune', () => {
+    const p = defaultProfile(0);
+    p.level = 70;
+    p.chapters.push(5);
+    p.launcher.selected = 'pinpoint';
+    p.launcher.tunes.pinpoint = 3;
+    const c = checkpoint();
+    c.n = 53;
+    c.modifiers = { ...NO_MODIFIERS, launcher: { id: 'pinpoint', tune: 3 } };
+    saveInterruptedRound(p, c);
+    const loaded = migrate(JSON.parse(JSON.stringify(p)));
+    expect(loaded.launcher.selected).toBe('pinpoint');
+    expect(loaded.launcher.tunes.pinpoint).toBe(3);
+    expect(readInterruptedRound(loaded)).toBeNull();
+  });
+  it.each([61, 80, 120])('restores old unsalted PP%d only on its reviewed fingerprint and keeps it after re-save', (n) => {
+    const p = defaultProfile(0);
+    p.level = n;
+    const c = checkpoint();
+    c.n = n;
+    c.generationProfile = 'reviewed-v1';
+    saveInterruptedRound(p, c);
+    const historical = JSON.parse(p.savedRound!);
+    delete historical.scene.generationProfile;
+    p.savedRound = JSON.stringify(historical);
+    const reopened = migrate(JSON.parse(JSON.stringify(p)));
+    const restored = readInterruptedRound(reopened);
+    expect(restored?.generationProfile).toBe('reviewed-v1');
+    expect(makeLevel(n, 'PP', { profile: restored?.generationProfile }).seed).not.toBe(makeLevel(n).seed);
+    saveInterruptedRound(reopened, restored!);
+    const savedAgain = JSON.parse(reopened.savedRound!);
+    expect(savedAgain.fingerprint).toBe(historical.fingerprint);
+    expect(savedAgain.scene.generationProfile).toBe('reviewed-v1');
+    expect(readInterruptedRound(reopened)?.generationProfile).toBe('reviewed-v1');
+
+    historical.fingerprint = 'different-level';
+    reopened.savedRound = JSON.stringify(historical);
+    expect(readInterruptedRound(reopened)).toBeNull();
+  });
+
+  it('keeps a new raw-v2 PP61-120 checkpoint on its encoded salt', () => {
+    const p = defaultProfile(0);
+    p.level = 80;
+    const c = checkpoint();
+    c.n = 80;
+    c.salt = Number(makeLevel(80).seed.match(/~(\d+)$/)?.[1]);
+    expect(c.salt).toBeGreaterThanOrEqual(1_000_000);
+    saveInterruptedRound(p, c);
+    const fingerprint = JSON.parse(p.savedRound!).fingerprint;
+    const restored = readInterruptedRound(p);
+    expect(restored?.generationProfile).toBeUndefined();
+    expect(makeLevel(80, 'PP', { salt: restored?.salt })).toEqual(makeLevel(80));
+    saveInterruptedRound(p, restored!);
+    expect(JSON.parse(p.savedRound!).fingerprint).toBe(fingerprint);
+  });
+
+  it('does not reinterpret a salted PP61-120 checkpoint as the unsalted legacy campaign', () => {
+    const p = defaultProfile(0);
+    p.level = 80;
+    const c = checkpoint();
+    c.n = 80;
+    c.salt = 777;
+    c.generationProfile = 'reviewed-v1';
+    saveInterruptedRound(p, c);
+    const historical = JSON.parse(p.savedRound!);
+    delete historical.scene.generationProfile;
+    p.savedRound = JSON.stringify(historical);
+    expect(readInterruptedRound(p)).toBeNull();
+  });
+
   it('preserves a mode-tagged Remix round and validates its RX level', () => {
     const p = defaultProfile(0);
     p.level = 11;

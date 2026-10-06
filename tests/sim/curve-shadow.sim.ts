@@ -1,65 +1,83 @@
-import { it } from 'vitest';
+import { expect, it } from 'vitest';
 import { difficultyOf, makeLevel } from '../../src/core/levels';
 import { CHAPTER_BANDS } from './lint';
 import { POLICIES, runPlanet, type PlanetMetrics } from './harness';
 
-const nightly = process.env.SIM_NIGHTLY === '1' ? it : it.skip;
+const gate = process.env.SIM_SHADOW_GATE === '1' || process.env.SIM_NIGHTLY === '1' ? it : it.skip;
+const masters = ['curve-a', 'curve-b'];
+const policies = [POLICIES.casual, POLICIES.decent, POLICIES.sharp];
+const rate = (rows: PlanetMetrics[], field: 'fail' | 'threeStar') => {
+  const attempts = rows.reduce((sum, row) => sum + row.runs, 0);
+  const count = rows.reduce((sum, row) => sum + row[field] * row.runs, 0);
+  return { count, attempts, value: count / attempts };
+};
 
-nightly(
-  'measures chapter curves on 10 Normal and 30 Hard/Super shadow seeds per slot',
+// A shard must cover complete chapter bands; the default measures all 120 planets.
+const first = Number(process.env.SHADOW_FIRST ?? 1);
+const last = Number(process.env.SHADOW_LAST ?? 120);
+
+gate(
+  'gates the generator curve on two master seeds and distinct shadow layouts',
   () => {
-    const runs = Number(process.env.SHADOW_RUNS ?? 2);
+    const started = performance.now();
+    const runs = Number(process.env.SHADOW_RUNS ?? 8);
     const rows: Record<string, PlanetMetrics[]> = { casual: [], decent: [], sharp: [] };
-    const policies = [POLICIES.casual, POLICIES.decent, POLICIES.sharp];
-    for (let n = 1; n <= 120; n++) {
+    for (let n = first; n <= last; n++) {
       const needed = difficultyOf(n) === 'normal' ? 10 : 30;
       const seen = new Set<string>();
       for (let salt = 1001; seen.size < needed; salt++) {
         const actual = makeLevel(n, 'PP', { salt }).seed;
         if (seen.has(actual)) continue;
         seen.add(actual);
-        for (const policy of policies) rows[policy.name].push(runPlanet(n, policy, runs, salt));
+        for (const master of masters)
+          for (const policy of policies) rows[policy.name].push(runPlanet(n, policy, runs, salt, undefined, master));
       }
+      if (n % 10 === 0) console.log(`Shadow completed planet ${n} in ${((performance.now() - started) / 1000).toFixed(1)}s`);
     }
     const failures: string[] = [];
-    const mean = (group: PlanetMetrics[], field: 'fail' | 'threeStar') => group.reduce((sum, row) => sum + row[field], 0) / group.length;
-    for (const band of CHAPTER_BANDS) {
+    const report = (
+      label: string,
+      name: string,
+      rows: PlanetMetrics[],
+      field: 'fail' | 'threeStar',
+      limits: readonly number[],
+      watch = false,
+    ) => {
+      const result = rate(rows, field);
+      const message = `${label} ${name} ${result.value.toFixed(3)} (${result.count.toFixed(0)}/${result.attempts}) target ${limits.join('-')}`;
+      console.log(`${watch ? 'Shadow Watch' : 'Shadow Gate'} ${message}`);
+      if (!watch && (result.value < limits[0] || result.value > limits[1])) failures.push(message);
+    };
+    for (const band of CHAPTER_BANDS.filter((entry) => entry.first >= first && entry.last <= last)) {
       const scope = (policy: string) =>
-        rows[policy].filter((row) => row.n >= band.first && row.n <= band.last && row.difficulty === 'normal');
-      const c = scope('casual'),
-        d = scope('decent'),
-        s = scope('sharp');
-      console.log(
-        `Shadow Watch (decision 29, not gating) ${band.first}-${band.last}: casual ${mean(c, 'fail').toFixed(3)}/${mean(c, 'threeStar').toFixed(3)}, decent ${mean(d, 'fail').toFixed(3)}/${mean(d, 'threeStar').toFixed(3)}, sharp ${mean(s, 'fail').toFixed(3)}/${mean(s, 'threeStar').toFixed(3)}`,
-      );
-      for (const [name, value, limits] of [
-        ['casual fail', mean(c, 'fail'), band.casualFail],
-        ['casual 3★', mean(c, 'threeStar'), band.casualThree],
-        ['decent fail', mean(d, 'fail'), band.decentFail],
-        ['decent 3★', mean(d, 'threeStar'), band.decentThree],
-      ] as const)
-        if (value < limits[0] || value > limits[1])
-          failures.push(`${band.first}-${band.last} ${name} ${value.toFixed(3)} outside ${limits.join('-')}`);
+        rows[policy].filter((row) => row.n >= band.first && row.n <= band.last && difficultyOf(row.n) === 'normal');
+      const label = `${band.first}-${band.last}`;
+      report(label, 'casual fail', scope('casual'), 'fail', band.casualFail);
+      report(label, 'casual 3★', scope('casual'), 'threeStar', band.casualThree);
+      report(label, 'decent fail', scope('decent'), 'fail', band.decentFail);
+      report(label, 'decent 3★', scope('decent'), 'threeStar', band.decentThree);
+      report(label, 'sharp fail', scope('sharp'), 'fail', band.sharpFail, true);
+      report(label, 'sharp 3★', scope('sharp'), 'threeStar', band.sharpThree, true);
     }
-    for (const [label, planets, limits] of [
-      ['first Hard', [15, 20], { fail: [0.18, 0.32], three: [0.25, 0.45] }],
-      ['Hard', Array.from({ length: 8 }, (_, i) => 25 + i * 5), { fail: [0.25, 0.45], three: [0.25, 0.45] }],
-      ['Super Hard', [19, 29, 39, 49, 59], { fail: [0.35, 0.6], three: [0.15, 0.35] }],
+    for (const [label, includes, casualMax, failBand, threeBand] of [
+      ['first Hard', (n: number) => n === 15 || n === 20, 0.4, [0.18, 0.32], [0.25, 0.45]],
+      ['Hard 25+', (n: number) => n >= 25 && difficultyOf(n) === 'hard', 0.5, [0.12, 0.45], [0.25, 0.45]],
+      ['Super Hard', (n: number) => difficultyOf(n) === 'super', 0.7, [0.25, 0.6], [0.15, 0.35]],
     ] as const) {
-      const group = rows.decent.filter((row) => (planets as readonly number[]).includes(row.n));
-      const fail = mean(group, 'fail'),
-        three = mean(group, 'threeStar');
-      console.log(
-        `Shadow Watch (decision 29, not gating) ${label}: decent fail ${(fail * 100).toFixed(1)}%, 3★ ${(three * 100).toFixed(1)}%`,
-      );
-      if (fail < limits.fail[0] || fail > limits.fail[1])
-        failures.push(`${label} decent fail ${fail.toFixed(3)} outside ${limits.fail.join('-')}`);
-      if (three < limits.three[0] || three > limits.three[1])
-        failures.push(`${label} decent 3★ ${three.toFixed(3)} outside ${limits.three.join('-')}`);
+      const casual = rows.casual.filter((row) => includes(row.n));
+      const decent = rows.decent.filter((row) => includes(row.n));
+      if (!casual.length) continue;
+      report(label, 'casual fail', casual, 'fail', [0, casualMax]);
+      report(label, 'decent fail', decent, 'fail', failBand);
+      report(label, 'decent 3★', decent, 'threeStar', threeBand);
     }
+    const attempts = Object.values(rows)
+      .flat()
+      .reduce((sum, row) => sum + row.runs, 0);
     console.log(
-      `Shadow Watch (decision 29, not gating): ${failures.length} bands outside target${failures.length ? `: ${failures.join('; ')}` : ''}`,
+      `Shadow ${first}-${last}: ${attempts} policy attempts across ${masters.length} masters in ${((performance.now() - started) / 1000).toFixed(1)}s; ${failures.length} gate failures`,
     );
+    expect(failures, failures.join('\n')).toEqual([]);
   },
   60 * 60_000,
 );

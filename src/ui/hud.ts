@@ -103,7 +103,7 @@ export function buildHud(scene: LevelScene) {
   scene.hudScore = h('div', { class: 'life-score' });
   const bar = h('div', { class: 'life-bar' }, scene.hudFill);
   const max = scene.barMax();
-  scene.hudStars = scene.L.stars.map((t) => {
+  scene.hudStars = (scene.o.roundMode === 'practice' ? [] : scene.L.stars).map((t) => {
     const s = h('div', { class: 'life-star', style: `left:${(t / max) * 100}%` }, '★');
     bar.append(s);
     return s;
@@ -157,6 +157,14 @@ export function buildHud(scene: LevelScene) {
       scene.hudThrows,
     ),
     h('div', { class: 'life' }, bar, scene.hudScore),
+    scene.o.forcedLauncher
+      ? h(
+          'div',
+          { class: 'forced-launcher-note', role: 'note', 'aria-label': t('Everyone uses the Star Sling here') },
+          '🔒 ',
+          t('Everyone uses the Star Sling here'),
+        )
+      : null,
     scene.goalsEl,
     scene.forecastEl,
     twist,
@@ -312,6 +320,7 @@ export function checkStars(scene: LevelScene) {
 }
 
 export function starsNow(scene: LevelScene, score = scene.score) {
+  if (scene.o.roundMode === 'practice') return 0;
   return starsEarned(scene.planet, score, scene.L);
 }
 
@@ -413,7 +422,7 @@ export function renderGoals(scene: LevelScene) {
 }
 
 export function renderFinish(scene: LevelScene) {
-  if (scene.o.competitive || scene.o.endless || scene.o.timeLimit) {
+  if (scene.o.roundMode === 'practice' || scene.o.competitive || scene.o.endless || scene.o.timeLimit) {
     scene.finishEl.classList.add('hidden');
     return;
   }
@@ -425,7 +434,7 @@ export function renderFinish(scene: LevelScene) {
 }
 
 export function finishEarly(scene: LevelScene) {
-  if (scene.shot || scene.ended || scene.finishing || scene.modalOpen || scene.starsNow() === 0) return;
+  if (scene.o.roundMode === 'practice' || scene.shot || scene.ended || scene.finishing || scene.modalOpen || scene.starsNow() === 0) return;
   scene.finishing = true;
   scene.goalsEl.style.pointerEvents = 'none';
   clearTimeout(scene.endTimer);
@@ -747,6 +756,22 @@ export function introCard(scene: LevelScene, row: Unlock) {
 }
 
 export function endModal(scene: LevelScene, stars: number) {
+  if (scene.o.roundMode === 'practice') {
+    const card = modal(
+      [
+        h('div', { class: 'end-title' }, t('Practice complete')),
+        h('p', null, t('Your throws stay here in the Launch Bay.')),
+        btn(t('Back to Launch Bay'), 'primary wide', () => {
+          card.close();
+          scene.modalOpen = null;
+          scene.finish(stars);
+        }),
+      ],
+      { dismiss: false, cls: 'end' },
+    );
+    scene.modalOpen = card;
+    return;
+  }
   const won = stars > 0;
   const canCont = scene.leftover === 0 && !!scene.o.continueOk?.(won);
   const finish = () => {
@@ -835,7 +860,7 @@ export function finish(scene: LevelScene, stars: number) {
   if (scene.ended) return;
   scene.ended = true;
   scene.goalsEl.style.pointerEvents = 'none';
-  if (!scene.o.endless) {
+  if (!scene.o.endless && scene.o.roundMode !== 'practice') {
     if (stars === 0) ledger.count('round_failed');
     ledger.count(
       stars > 0
@@ -866,7 +891,7 @@ export function finish(scene: LevelScene, stars: number) {
       reactionRecorded: !!scene.o.onReaction,
       comboRecorded: !!scene.o.onCombo,
     });
-  if (stars === 0 || scene.o.reduceMotion || scene.o.endless) return send();
+  if (stars === 0 || scene.o.reduceMotion || scene.o.endless || scene.o.roundMode === 'practice') return send();
   // The finished planet and its creatures travel home together.
   sfx.whoosh();
   scene.el.querySelector('.hud')?.classList.add('fade-out');
@@ -899,23 +924,25 @@ export function pause(scene: LevelScene) {
     [
       h('div', { class: 'end-title' }, t('Paused')),
       btn(t('Resume'), 'primary wide', () => m.close()),
-      btn(t('Restart planet'), 'ghost wide', () => {
-        if (scene.ended) return;
-        m.close();
-        scene.ended = true;
-        if (!scene.o.endless) ledger.count('round_restarted');
-        scene.o.onEnd({
-          level: scene.L,
-          score: 0,
-          stars: 0,
-          planet: scene.planet,
-          won: false,
-          throwsUsed: -1,
-          throwsTotal: scene.throwsTotal,
-          leftover: 0,
-        });
-      }),
-      btn(t('Leave to galaxy'), 'ghost wide', () => {
+      scene.o.roundMode === 'practice'
+        ? null
+        : btn(t('Restart planet'), 'ghost wide', () => {
+            if (scene.ended) return;
+            m.close();
+            scene.ended = true;
+            if (!scene.o.endless && scene.o.roundMode !== 'practice') ledger.count('round_restarted');
+            scene.o.onEnd({
+              level: scene.L,
+              score: 0,
+              stars: 0,
+              planet: scene.planet,
+              won: false,
+              throwsUsed: -1,
+              throwsTotal: scene.throwsTotal,
+              leftover: 0,
+            });
+          }),
+      btn(scene.o.roundMode === 'practice' ? t('Back to Launch Bay') : t('Leave to galaxy'), 'ghost wide', () => {
         if (scene.ended) return;
         m.close();
         scene.ended = true;
@@ -954,7 +981,7 @@ export function checkEnd(scene: LevelScene) {
   scene.renderScore();
   const stars = scene.starsNow();
   const help =
-    !scene.o.competitive && !scene.o.timeLimit && !scene.o.endless
+    scene.o.roundMode !== 'practice' && !scene.o.competitive && !scene.o.timeLimit && !scene.o.endless
       ? practiceHelp(scene.L.n, !!scene.o.practice, stars, scene.practiceGifts, !!scene.o.practiceFirstClear)
       : 'none';
   if (help !== 'none') {

@@ -25,7 +25,16 @@ import {
 import { emptySkyState, findPull, flightWorld, flyPull, isBonk, noise, PHONES, seedHint, seedPulls, type Phone, type Pull } from './flying';
 import { OBSTACLES } from '../../src/core/sky';
 import { bonkRefund, rockAfterBonk } from '../../src/ui/feel';
-import { fly, STAR_SLING, type FlightWorld, type FlightHit } from '../../src/core/flight';
+import { fly, flightParamsForLauncher, type FlightWorld, type FlightHit } from '../../src/core/flight';
+import {
+  LAUNCHERS,
+  LAUNCH_ROSTER,
+  STAR_SLING_SELECTION,
+  launcherAtTune,
+  type LauncherId,
+  type LauncherSelection,
+} from '../../src/core/launchers';
+import { PULL_TO_SPEED } from './flying';
 import { forecastTroubles } from '../../src/core/troubles';
 
 export interface BotContext {
@@ -101,7 +110,79 @@ export const POLICIES = {
   'decent-blind': aimingPolicy('decent-blind', 0.25, 0.1),
   'decent-aware': aimingPolicy('decent-aware', 0.25, 0.1, true),
   sharp: aimingPolicy('sharp', 0.1, 0, true),
+  sling: aimingPolicy('sling', 0.25, 0.1, true),
+  'best-launcher': aimingPolicy('best-launcher', 0.25, 0.1, true),
 } satisfies Record<string, BotPolicy>;
+
+/** A visibility hypothesis for T0: 28 steps is unchanged, 90 helps ~17%, 16 hurts ~9%. */
+export function aimNoiseForSteps(visibleSteps: number): number {
+  return Math.pow(28 / visibleSteps, 0.16);
+}
+
+/** Fixed player advice; the offline choice sweep evaluates every owned launcher. */
+export function goodHere(level: LevelDef, id: LauncherId): boolean {
+  if (id === 'swoop') return level.twist === 'moon' || level.twist === 'twin';
+  if (id === 'zip') return ['fast', 'wobble', 'wind'].includes(level.twist) || level.sky.obstacle === 'mist';
+  if (id === 'thumper') return level.sky.obstacle === 'rocks' || level.sky.obstacle === 'ring';
+  return false;
+}
+
+const bestLauncherCache = new Map<string, LauncherId>();
+export const PICK_RUNS = 16;
+export function bestLauncherFor(level: LevelDef, masterSeed = 'pick-a', loadout?: Loadout): LauncherId {
+  const tune = loadout ? 4 : 1;
+  const key = `${level.seed}:${level.n}:${masterSeed}:${tune}:${loadout ? JSON.stringify(loadout) : 'base'}`;
+  const cached = bestLauncherCache.get(key);
+  if (cached) return cached;
+  const available = LAUNCH_ROSTER.filter((id) => LAUNCHERS[id].debut <= level.n);
+  let best: LauncherId = 'sling';
+  let score = -Infinity;
+  const samples = new Map<LauncherId, number[]>();
+  for (const id of available) {
+    const points: number[] = [];
+    for (let run = 0; run < PICK_RUNS; run++) {
+      const result = playLevel(
+        level,
+        POLICIES['decent-aware'],
+        rngFrom(`launcher-pick:${level.seed}:${level.n}:${masterSeed}:${run}`),
+        undefined,
+        { phone: PHONES[0], timed: true },
+        0,
+        loadout,
+        { id, tune: id === 'sling' ? 1 : tune },
+      );
+      points.push(result.stars * 100 + result.score / Math.max(1, level.stars[2]));
+    }
+    samples.set(id, points);
+    const total = points.reduce((sum, value) => sum + value, 0);
+    if (total > score) {
+      score = total;
+      best = id;
+    }
+  }
+  const leader = samples.get(best)!;
+  const tied = available.filter((id) => {
+    const other = samples.get(id)!;
+    const deltas = leader.map((value, run) => value - other[run]);
+    const mean = deltas.reduce((sum, value) => sum + value, 0) / PICK_RUNS;
+    const variance = deltas.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (PICK_RUNS - 1);
+    return mean <= 1.96 * Math.sqrt(variance / PICK_RUNS) + 1e-9;
+  });
+  // Badge advice wins statistical ties. Without a badge, require one paired
+  // standard error of evidence before replacing the familiar Sling.
+  const badged = tied.filter((id) => goodHere(level, id));
+  if (badged.length)
+    best = badged.sort((a, b) => samples.get(b)!.reduce((x, y) => x + y, 0) - samples.get(a)!.reduce((x, y) => x + y, 0))[0];
+  else if (best !== 'sling' && tied.includes('sling')) {
+    const sling = samples.get('sling')!;
+    const deltas = leader.map((value, run) => value - sling[run]);
+    const mean = deltas.reduce((sum, value) => sum + value, 0) / PICK_RUNS;
+    const variance = deltas.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (PICK_RUNS - 1);
+    if (mean <= Math.sqrt(variance / PICK_RUNS)) best = 'sling';
+  }
+  bestLauncherCache.set(key, best);
+  return best;
+}
 
 export interface Loadout {
   mods: RoundModifiers;
@@ -111,7 +192,7 @@ export interface Loadout {
 }
 
 /** M11 will retire splash and Extra Throws; keep both configurations measurable. */
-export function maxLegalLoadout(level: LevelDef, opts: { retiringUpgrades?: boolean } = {}): Loadout {
+export function maxLegalLoadout(level: LevelDef, opts: { retiringUpgrades?: boolean; masterSeed?: string } = {}): Loadout {
   const shield: TraitId | null =
     level.n < 18
       ? null
@@ -123,7 +204,7 @@ export function maxLegalLoadout(level: LevelDef, opts: { retiringUpgrades?: bool
             ? 'frostproof'
             : null;
   const species = shield ? (SPECIES.find((candidate) => traitOf(candidate.id) === shield)?.id ?? null) : null;
-  return {
+  const result: Loadout = {
     mods: {
       ...NO_MODIFIERS,
       ...maxLabModifiers(),
@@ -134,10 +215,18 @@ export function maxLegalLoadout(level: LevelDef, opts: { retiringUpgrades?: bool
       buddy: species ? { species, acc: '' } : null,
       buddyShield: species ? shield : null,
       boosters: { shower: true, spark: true, scope: true },
+      launcher: STAR_SLING_SELECTION,
     },
-    extraThrows: opts.retiringUpgrades ? 10 : 5,
+    // Decision 35 gates the post-M11 loadout; retiring Extra Throws stay in the full-loadout Watch.
+    extraThrows: opts.retiringUpgrades ? 10 : 0,
     lifeSpark: true,
   };
+  // The retiring-upgrades configuration is a Watch; carry the gated pick into it.
+  const bestLauncher = opts.retiringUpgrades
+    ? maxLegalLoadout(level, { masterSeed: opts.masterSeed }).mods.launcher.id
+    : bestLauncherFor(level, opts.masterSeed ?? 'pick-max', result);
+  result.mods.launcher = { id: bestLauncher, tune: bestLauncher === 'sling' ? 1 : 4 };
+  return result;
 }
 
 export interface PlayResult {
@@ -175,11 +264,17 @@ export interface PlayResult {
 const levelKinds = ['rock', 'ice', 'magma', 'seed', 'storm', 'sun'] as const;
 
 /** The scene advances the held aim in frames; this independently checks the full-path badge. */
-function heldFlightHit(base: Pull, at: number, launch: { x: number; y: number }, world: FlightWorld): FlightHit | null {
-  const speed = 930 * base.power;
+function heldFlightHit(
+  base: Pull,
+  at: number,
+  launch: { x: number; y: number },
+  world: FlightWorld,
+  selection: LauncherSelection,
+): FlightHit | null {
+  const speed = launcherAtTune(selection.id, selection.tune).maxPull * PULL_TO_SPEED * base.power;
   let state = { ...launch, vx: Math.cos(base.angle) * speed, vy: Math.sin(base.angle) * speed, elapsed: 0 };
   for (let frame = 0; frame < 300; frame++) {
-    const step = fly(STAR_SLING, state, world, at, 1 / 60);
+    const step = fly(flightParamsForLauncher(selection), state, world, at, 1 / 60);
     if (step.hit) return step.hit;
     state = step.state;
   }
@@ -194,6 +289,7 @@ export function playLevel(
   flight?: { phone: Phone; timed?: boolean; badgeAware?: boolean; retry?: number },
   retry = 0,
   loadout?: Loadout,
+  launcher?: LauncherSelection,
 ): PlayResult {
   if (level.n === 2 && level.seed.startsWith('PP-')) {
     const chance = policy.name === 'sharp' ? 1 : policy.name === 'casual' ? 0.4 : policy.name === 'decent-blind' ? 0 : 0.7;
@@ -205,9 +301,14 @@ export function playLevel(
     settle(start);
   }
   let state = roundState(start, level.nova, level.troubles, level.difficulty !== 'normal');
+  const selectedLauncher =
+    launcher ??
+    loadout?.mods.launcher ??
+    (policy.name === 'best-launcher' ? { id: bestLauncherFor(level), tune: 1 } : STAR_SLING_SELECTION);
   const rawModifiers = loadout?.mods ?? NO_MODIFIERS;
   const modifiers: RoundModifiers = {
     ...rawModifiers,
+    launcher: selectedLauncher,
     buddyShield: rawModifiers.buddy && traitOf(rawModifiers.buddy.species) === rawModifiers.buddyShield ? rawModifiers.buddyShield : null,
   };
   let halfStars = 0;
@@ -241,11 +342,16 @@ export function playLevel(
   let priorPull: Pull | undefined;
   let priorSector = -1;
   retry = flight?.retry ?? retry;
-  const noiseScale = policy.name === 'casual' ? [4, 6, 0.25, 3] : policy.name === 'sharp' ? [1, 2, 0.05, 5] : [2.5, 4, 0.15, 4];
+  const baseNoise = policy.name === 'casual' ? [4, 6, 0.25, 3] : policy.name === 'sharp' ? [1, 2, 0.05, 5] : [2.5, 4, 0.15, 4];
+  const visibleSteps =
+    modifiers.boosters.scope || modifiers.scopeLevel === 3 ? 90 : launcherAtTune(selectedLauncher.id, selectedLauncher.tune).aimSteps;
+  // Conservative visibility hypothesis pending child T0; only hand angle and power noise change.
+  const precision = aimNoiseForSteps(visibleSteps);
+  const noiseScale = [baseNoise[0] * precision, baseNoise[1] * precision, baseNoise[2], baseNoise[3]];
   const seeded = flight
     ? (() => {
         const { world, launch } = flightWorld(level, state.planet, skyState, flight.phone, 0);
-        return seedPulls(`${level.seed}:${flight.phone.width}x${flight.phone.height}`, launch, world);
+        return seedPulls(`${level.seed}:${flight.phone.width}x${flight.phone.height}`, launch, world, selectedLauncher);
       })()
     : undefined;
   for (let turn = 0; turn < throws; turn++) {
@@ -268,6 +374,7 @@ export function playLevel(
       modifiers,
     });
     let sector = ((aim % SECTORS) + SECTORS) % SECTORS;
+    let bounced = false;
     if (flight) {
       const timed = flight.timed ?? policy.name !== 'casual';
       const badgeAware = (flight.badgeAware ?? policy.name === 'casual') && !!level.sky.obstacle;
@@ -289,19 +396,20 @@ export function playLevel(
       // The badge-aware bot uses its preview while aiming. An untimed comparison
       // bot ignores obstacles, preserving a meaningful timing control.
       const aimingWorld = timed || badgeAware ? start.world : { ...start.world, sky: undefined };
-      planned = findPull(sector, startAt, start.launch, aimingWorld, hint);
-      if (badgeAware && !planned) planned = findPull(sector, startAt, start.launch, { ...start.world, sky: undefined }, hint);
-      if (badgeAware && planned && isBonk(flyPull(planned, startAt, start.launch, start.world).hit) && random() < 0.6) {
+      planned = findPull(sector, startAt, start.launch, aimingWorld, hint, false, selectedLauncher);
+      if (badgeAware && !planned)
+        planned = findPull(sector, startAt, start.launch, { ...start.world, sky: undefined }, hint, false, selectedLauncher);
+      if (badgeAware && planned && isBonk(flyPull(planned, startAt, start.launch, start.world, selectedLauncher).hit) && random() < 0.6) {
         for (let tick = 4; tick <= 19; tick++) {
           const at = startAt + tick * 0.1;
           const candidateWorld = flightWorld(level, state.planet, skyState, flight.phone, at);
-          if (!isBonk(flyPull(planned, at, candidateWorld.launch, candidateWorld.world).hit)) {
+          if (!isBonk(flyPull(planned, at, candidateWorld.launch, candidateWorld.world, selectedLauncher).hit)) {
             wait = tick * 0.1;
             break;
           }
           if (tick === 4) {
             const guess = seeded ? seedHint(seeded, sector, candidateWorld.world) : undefined;
-            const candidate = findPull(sector, at, candidateWorld.launch, candidateWorld.world, guess);
+            const candidate = findPull(sector, at, candidateWorld.launch, candidateWorld.world, guess, false, selectedLauncher);
             if (candidate) {
               planned = candidate;
               wait = tick * 0.1;
@@ -311,13 +419,13 @@ export function playLevel(
         }
         if (!wait) wait = 1.9;
       }
-      if (timed && (!planned || flyPull(planned, startAt, start.launch, start.world).hit?.kind !== 'land')) {
+      if (timed && (!planned || flyPull(planned, startAt, start.launch, start.world, selectedLauncher).hit?.kind !== 'land')) {
         for (let tick = 1; tick <= 30; tick++) {
           const at = startAt + tick * 0.1;
           const { world, launch } = flightWorld(level, state.planet, skyState, flight.phone, at);
           const guess = seeded ? seedHint(seeded, sector, world) : undefined;
-          const candidate = findPull(sector, at, launch, world, guess, tick % 5 !== 0);
-          if (candidate && flyPull(candidate, at, launch, world).hit?.kind === 'land') {
+          const candidate = findPull(sector, at, launch, world, guess, tick % 5 !== 0, selectedLauncher);
+          if (candidate && flyPull(candidate, at, launch, world, selectedLauncher).hit?.kind === 'land') {
             planned = candidate;
             wait = tick * 0.1;
             break;
@@ -334,10 +442,12 @@ export function playLevel(
       priorSector = sector;
       // The held preview is fixed before hand noise. The game fires that exact
       // preview; a bonk introduced by a slipped hand is reported separately.
-      const predicted = flyPull(base, intendedAt, intended.launch, intended.world);
-      if (isBonk(heldFlightHit(base, intendedAt, intended.launch, intended.world)) && !isBonk(predicted.hit)) flightStats.surpriseBonks++;
+      const predicted = flyPull(base, intendedAt, intended.launch, intended.world, selectedLauncher);
+      if (isBonk(heldFlightHit(base, intendedAt, intended.launch, intended.world, selectedLauncher)) && !isBonk(predicted.hit))
+        flightStats.surpriseBonks++;
       const pull = noisy(base);
-      const actual = flyPull(pull, at, launch, world);
+      const actual = flyPull(pull, at, launch, world, selectedLauncher);
+      bounced = !!actual.specialBounced;
       if (isBonk(actual.hit) && !isBonk(predicted.hit)) flightStats.noiseBonks++;
       const teaching = !!level.sky.obstacle && level.n === OBSTACLES[level.sky.obstacle].debut;
       const refund: { refund: boolean; practiceUsed: boolean } = isBonk(actual.hit)
@@ -366,7 +476,7 @@ export function playLevel(
       sector = actual.hit.sector;
     }
     const thrownKind = level.queue[turn % level.queue.length];
-    const step = stepRound(state, { kind: thrownKind, sector, nova }, modifiers, rules);
+    const step = stepRound(state, { kind: thrownKind, sector, nova, bounced }, modifiers, rules);
     state = step.state;
     labSteps.push({ kind: thrownKind, reactions: step.reactions, troubleEvents: step.troubleEvents });
     for (const index of step.changed) regions.push(state.planet.sectors[index].biome);
