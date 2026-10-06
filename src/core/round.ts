@@ -1,4 +1,5 @@
-import { BIOMES, biomeOf, clonePlanet, impact, labBonus, lifeScore, novaCharge, settle, wrap, type Kind, type Planet } from './world';
+import { BIOMES, KINDS, biomeOf, clonePlanet, impact, lifeScore, novaCharge, settle, wrap, type Kind, type Planet } from './world';
+import { FORM_OF, GUARD_OF, labFusionReach, labGuard, labNovaReach, labPower, type LabEvent } from './labperks';
 import { NO_MODIFIERS, type RoundMode, type RoundModifiers } from './modifiers';
 import { SECTORS, SPECIES_BY_ID, type BiomeId } from './world';
 import type { LevelDef } from './levels';
@@ -64,6 +65,7 @@ export interface RoundState {
   troubles: TroubleState[];
   buddyShieldUsed?: boolean;
   calmUsed?: boolean;
+  labMarks?: { rock: number[]; seed: number[] };
 }
 
 export interface RoundAction {
@@ -85,7 +87,7 @@ export interface StepResult {
   cameBack: { species: string; sector: number }[];
   firstArrivals: string[];
   newRegionBests: number[];
-  labBonus: number;
+  labEvents: LabEvent[];
   novaCharge: number;
   novaGain: number;
   novaFired: boolean;
@@ -124,6 +126,7 @@ export function roundState(
     })),
     buddyShieldUsed: false,
     calmUsed: false,
+    labMarks: { rock: [], seed: [] },
   };
 }
 
@@ -160,12 +163,14 @@ function reactionAt(planet: Planet, kind: Kind, sector: number, rules: RoundRule
   return null;
 }
 
-function applyReaction(planet: Planet, id: ReactionId, at: number, extraReach: number): number[] {
-  const radius = Math.min(4, (id === 'rainGarden' ? 3 : id === 'glacier' ? 1 : 2) + extraReach);
+function applyReaction(planet: Planet, id: ReactionId, at: number, extraReach: number, safeAfterRadius = 4): number[] {
+  const baseRadius = id === 'rainGarden' ? 3 : id === 'glacier' ? 1 : 2;
+  const radius = Math.min(4, baseRadius + extraReach);
   const sectors: number[] = [];
   for (let distance = -radius; distance <= radius; distance++) {
     const index = wrap(at + distance);
     const s = planet.sectors[index];
+    const beforeExtra = Math.abs(distance) > safeAfterRadius ? { ...s } : null;
     if (id === 'steam') {
       if (distance === 0) {
         s.land = Math.min(4, s.land);
@@ -187,6 +192,7 @@ function applyReaction(planet: Planet, id: ReactionId, at: number, extraReach: n
       s.life = Math.max(0, s.life - 1);
       s.heat = Math.min(3, s.heat + 1);
     }
+    if (beforeExtra && biomeOf(s) !== biomeOf(beforeExtra)) Object.assign(s, beforeExtra);
     s.biome = biomeOf(s);
     sectors.push(index);
   }
@@ -226,18 +232,40 @@ function advanceTroubles(
     const t = { ...old, tangled: old.tangled ? [...old.tangled] : undefined };
     if (t.settled) return t;
     const d = ringDistance(action.sector, t.source);
+    const guard = labGuard(action.kind, mods.lab[action.kind] ?? 1);
+    const rainBaseReach = KINDS.storm.stats.reach + mods.splash + (nova ? 1 : 0);
+    const rainReach = Math.max(rainBaseReach, Math.min(4, rainBaseReach + (nova ? labNovaReach(mods.lab.storm ?? 1) : 0)));
+    const rinseVine =
+      t.id === 'vine' &&
+      action.kind === 'storm' &&
+      guard === 'rinse' &&
+      (t.tangled ?? []).some((at) => ringDistance(action.sector, at) <= rainReach);
     const cleared =
       landed &&
       ((action.kind === 'storm' && nova && d <= 3) ||
         (t.id === 'vent' &&
-          ((action.kind === 'ice' && d <= 1) || (action.kind === 'storm' && d <= 3) || (reaction === 'steam' && d <= 2))) ||
-        (t.id === 'vine' && action.kind === 'magma' && (d <= 1 || !!t.tangled?.includes(wrap(action.sector)))) ||
-        (t.id === 'frost' && ((action.kind === 'magma' && d <= 1) || (action.kind === 'sun' && d <= 3))));
+          ((action.kind === 'ice' && d <= (guard === 'ventCooler' ? 2 : 1)) ||
+            (action.kind === 'storm' && d <= 3) ||
+            (reaction === 'steam' && d <= 2))) ||
+        (t.id === 'vine' &&
+          ((action.kind === 'magma' && (d <= (guard === 'weedBurner' ? 2 : 1) || !!t.tangled?.includes(wrap(action.sector)))) ||
+            rinseVine)) ||
+        (t.id === 'frost' && ((action.kind === 'magma' && d <= 1) || (action.kind === 'sun' && d <= (guard === 'frostMelter' ? 4 : 3)))));
     if (cleared) {
       t.settled = true;
       t.tangled = [];
       if (t.id === 'vine') settle(planet);
-      events.push({ id: t.id, kind: 'settled', sector: t.source });
+      const perk =
+        t.id === 'vent' && action.kind === 'ice' && d === 2 && reaction !== 'steam' && guard === 'ventCooler'
+          ? guard
+          : t.id === 'vine' && action.kind === 'magma' && d === 2 && !t.tangled?.includes(wrap(action.sector)) && guard === 'weedBurner'
+            ? guard
+            : t.id === 'vine' && rinseVine && !(nova && d <= 3)
+              ? (guard ?? undefined)
+              : t.id === 'frost' && action.kind === 'sun' && d === 4 && guard === 'frostMelter'
+                ? guard
+                : undefined;
+      events.push({ id: t.id, kind: 'settled', sector: t.source, clearedByThrow: true, ...(perk ? { perk } : {}) });
       return t;
     }
     t.nextIn -= 1;
@@ -249,6 +277,7 @@ function advanceTroubles(
       if (calmBuddy) buddyShieldUsed = true;
       t.delayed = true;
       t.nextIn = 1;
+      if (calmBuddy) events.push({ id: t.id, kind: 'blocked', sector: t.source, by: 'calm', buddy: true });
       return t;
     }
     t.nextIn = t.every;
@@ -258,7 +287,7 @@ function advanceTroubles(
       events.push({ id: t.id, kind: 'settled', sector: t.source });
       return t;
     }
-    const by = firebreakBy(planet, at, t.id);
+    const by = firebreakBy(planet, at, t.id, { lab: mods.lab, marks: previous.labMarks });
     const buddy = mods.buddyShield;
     const matchesBuddy =
       buddy &&
@@ -271,7 +300,7 @@ function advanceTroubles(
     // the Buddy remains ready for a later beat instead of stacking here.
     if (by || (!buddyShieldUsed && matchesBuddy)) {
       if (!by && matchesBuddy) buddyShieldUsed = true;
-      events.push({ id: t.id, kind: 'blocked', sector: at, by: by ?? buddy! });
+      events.push({ id: t.id, kind: 'blocked', sector: at, by: by ?? buddy!, ...(!by && matchesBuddy ? { buddy: true } : {}) });
       return t;
     }
     const s = planet.sectors[at];
@@ -343,7 +372,7 @@ export function stepRound(
       cameBack: [],
       firstArrivals: [],
       newRegionBests: [],
-      labBonus: 0,
+      labEvents: [],
       novaCharge: settledGain,
       novaGain: settledGain,
       novaFired: false,
@@ -358,20 +387,56 @@ export function stepRound(
   const priorPresent = new Set(priorSpecies.filter((id): id is string => !!id));
   const meter = state.nova ?? { charge: state.charge, threshold: NOVA_CHARGE, fired: 0, held: false };
   const nova = state.novaEnabled && meter.charge >= meter.threshold && (action.nova ?? !meter.held);
-  const reaction = reactionAt(state.planet, action.kind, action.sector, rules, mods.gentle);
+  const candidateReaction = reactionAt(state.planet, action.kind, action.sector, rules, mods.gentle);
+  // Weed Burner clears the vine before a simultaneous Dry Spell can scorch life.
+  const burnsVine =
+    action.kind === 'magma' &&
+    labGuard('magma', mods.lab.magma ?? 1) === 'weedBurner' &&
+    (state.troubles ?? []).some(
+      (t) => t.id === 'vine' && !t.settled && (ringDistance(action.sector, t.source) <= 2 || !!t.tangled?.includes(wrap(action.sector))),
+    );
+  const reaction = candidateReaction?.id === 'scorch' && burnsVine ? null : candidateReaction;
   const oldCombo = state.combo ?? { links: 0, rest: false, best: 0 };
   const fusion = reaction !== null && REACTIONS[reaction.id].kind === 'fusion';
   const comboEnabled = rules.combo !== false;
   const linkCount = fusion && comboEnabled ? (nova ? 2 : 1) : 0;
   const reached = oldCombo.links + linkCount;
   const step = fusion && comboEnabled && reached >= 2 ? Math.min(4, reached) : 0;
-  const extraReach = fusion && comboEnabled && oldCombo.links < 3 && reached >= 3 ? 1 : 0;
+  const level = mods.lab[action.kind] ?? 1;
+  const comboReach = fusion && comboEnabled && oldCombo.links < 3 && reached >= 3 ? 1 : 0;
+  const extraReach = comboReach + (fusion ? labFusionReach(level) : 0);
   let affected: number[] = [];
-  const result = impact(planet, action.kind, action.sector, mods.splash, { nova }, (land) => {
-    if (reaction) affected = applyReaction(land, reaction.id, reaction.at, extraReach);
-    if (fusion && comboEnabled && reached >= 4) comboBloom(land, action.sector);
-  });
-  const trouble = advanceTroubles(planet, state, action, reaction?.id, nova, mods);
+  const form = !!mods.forms?.[action.kind] && level >= 5;
+  const result = impact(
+    planet,
+    action.kind,
+    action.sector,
+    mods.splash,
+    { nova, power: labPower(level), novaReach: labNovaReach(level), form },
+    (land) => {
+      if (reaction)
+        affected = applyReaction(
+          land,
+          reaction.id,
+          reaction.at,
+          extraReach,
+          (reaction.id === 'rainGarden' ? 3 : reaction.id === 'glacier' ? 1 : 2) + comboReach,
+        );
+      if (fusion && comboEnabled && reached >= 4) comboBloom(land, action.sector);
+    },
+  );
+  const labMarks = { rock: [...(state.labMarks?.rock ?? [])], seed: [...(state.labMarks?.seed ?? [])] };
+  if ((mods.lab[action.kind] ?? 1) >= 4 && (action.kind === 'rock' || action.kind === 'seed')) {
+    const reach = Math.min(4, KINDS[action.kind].stats.reach + mods.splash + (nova ? 1 + labNovaReach(level) : 0));
+    for (let d = -reach; d <= reach; d++) {
+      const at = wrap(action.sector + d);
+      if (action.kind === 'seed' || planet.sectors[at].land >= 3) {
+        const marks = labMarks[action.kind];
+        if (!marks.includes(at)) marks.push(at);
+      }
+    }
+  }
+  const trouble = advanceTroubles(planet, { ...state, labMarks }, action, reaction?.id, nova, mods);
   const finalAfter = lifeScore(planet);
   const changed = planet.sectors.map((s, i) => (s.biome !== priorBiomes[i] ? i : -1)).filter((i) => i >= 0);
   const spawned = result.spawned.filter((entry) => planet.sectors[entry.at].species === entry.id);
@@ -392,9 +457,23 @@ export function stepRound(
     else if (!priorPresent.has(species.id)) cameBack.push({ species: species.id, sector: species.at });
     arrived.add(species.id);
   }
-  const level = mods.lab[action.kind] ?? 1;
   const betterThrow = finalAfter >= result.before;
-  const bonus = betterThrow ? labBonus(level, newRegionBests.length, firstArrivals.length) : 0;
+  const labEvents: LabEvent[] = [];
+  if (result.powerApplied && betterThrow) labEvents.push({ type: 'power', kind: action.kind, level, sector: wrap(action.sector) });
+  if (form)
+    labEvents.push({ type: 'form', kind: action.kind, form: FORM_OF[action.kind], sector: wrap(action.sector), changed: changed.length });
+  for (const event of trouble.events)
+    if (event.perk || event.by === 'firewall' || event.by === 'labRoots') {
+      const kind: Kind = event.by === 'firewall' ? 'rock' : event.by === 'labRoots' ? 'seed' : action.kind;
+      labEvents.push({
+        type: 'guard',
+        kind,
+        perk: event.perk ?? GUARD_OF[kind],
+        trouble: event.id,
+        sector: event.sector,
+        how: event.kind === 'blocked' ? 'blocked' : 'settled',
+      });
+    }
   const comboEnds = !betterThrow || (reaction !== null && !fusion);
   let combo = { ...oldCombo };
   let comboResult: StepResult['combo'];
@@ -426,7 +505,7 @@ export function stepRound(
   const troubleGain = state.novaEnabled && betterThrow ? trouble.events.filter((event) => event.kind === 'settled').length * 3 : 0;
   const charge = state.novaEnabled ? Math.min(threshold, (nova ? 0 : meter.charge + gain) + fusionGain + comboGain + troubleGain) : 0;
   const novaState = { charge, threshold, fired: meter.fired + Number(nova), held: nova ? false : meter.held };
-  const totalBonus = state.bonus + bonus;
+  const totalBonus = state.bonus;
   const next: RoundState = {
     ...state,
     planet,
@@ -438,6 +517,7 @@ export function stepRound(
     combo,
     comboCharge: (state.comboCharge ?? 0) + comboGain,
     troubles: trouble.troubles,
+    labMarks,
     buddyShieldUsed: trouble.buddyShieldUsed,
     calmUsed: trouble.calmUsed,
     queueIndex: state.queueIndex === undefined ? undefined : state.queueIndex + 1,
@@ -456,7 +536,7 @@ export function stepRound(
     cameBack,
     firstArrivals,
     newRegionBests,
-    labBonus: bonus,
+    labEvents,
     novaCharge: nova ? charge : charge - meter.charge,
     novaGain: gain + fusionGain + comboGain + troubleGain,
     novaFired: nova,
@@ -498,6 +578,7 @@ export function restoreRound(json: string): RoundState | null {
       state.comboCharge = 0;
     }
     if (!Array.isArray(state.troubles)) state.troubles = [];
+    if (!state.labMarks) state.labMarks = { rock: [], seed: [] };
     if (typeof state.buddyShieldUsed !== 'boolean') state.buddyShieldUsed = false;
     if (typeof state.calmUsed !== 'boolean') state.calmUsed = false;
     if (

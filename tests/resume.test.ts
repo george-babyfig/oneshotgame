@@ -108,6 +108,27 @@ describe('interrupted campaign rounds', () => {
     expect(readInterruptedRound(reopened)).toEqual(before);
   });
 
+  it('preserves new form switches and accepts an old checkpoint without them', () => {
+    const p = defaultProfile(0);
+    p.level = 3;
+    const current = checkpoint();
+    current.modifiers = { ...NO_MODIFIERS, lab: { rock: 5 }, forms: { rock: true } };
+    current.labSteps = [{ kind: 'ice', reactions: [{ id: 'glacier', at: 0, partner: 1, sectors: [0] }], troubleEvents: [] }];
+    saveInterruptedRound(p, current);
+    expect(readInterruptedRound(p)?.modifiers.forms).toEqual({ rock: true });
+    expect(readInterruptedRound(p)?.labSteps).toEqual(current.labSteps);
+    const saved = JSON.parse(p.savedRound!);
+    delete saved.scene.modifiers.forms;
+    delete saved.scene.labSteps;
+    const round = JSON.parse(saved.round);
+    delete round.state.labMarks;
+    saved.round = JSON.stringify(round);
+    p.savedRound = JSON.stringify(saved);
+    expect(readInterruptedRound(p)?.modifiers.forms).toBeUndefined();
+    expect(readInterruptedRound(p)?.labSteps).toBeUndefined();
+    expect(readInterruptedRound(p)?.state.labMarks).toEqual({ rock: [], seed: [] });
+  });
+
   it('accepts a checkpoint from before reaction history was saved', () => {
     const p = defaultProfile(0);
     p.level = 3;

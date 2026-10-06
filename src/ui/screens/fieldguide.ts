@@ -8,6 +8,9 @@ import { reactionCanvas } from '../art/reactions';
 import { FUSION_IDS } from '../../meta/reactions';
 import { OBSTACLES, type ObstacleId } from '../../core/sky';
 import { skyIconCanvas } from '../art/sky';
+import { labLevel, labPlot, perkTaught } from '../../meta/labs';
+import { homeUnlocked } from '../../meta/homeworld';
+import { LAB_NAME, LAB_LEVEL, LAB_TEXT } from '../../meta/labcopy';
 
 // The i18n inventory reads these data strings until its key list moves to KindDef.
 export const FACTS = Object.fromEntries(Object.values(KINDS).map((kind) => [kind.id, kind.stats])) as Record<
@@ -24,12 +27,17 @@ const ELEMENT_ICON: Record<(typeof KINDS)[Kind]['stats']['element'], string> = {
   light: '☀️',
 };
 
-function statBar(label: string, icon: string, value: number) {
+function statBar(label: string, icon: string, value: number, bonus = 0) {
+  const max = Math.max(4, value + bonus);
   return h(
     'div',
-    { class: 'guide-stat', 'aria-label': t('{stat} {value} of 3', { stat: label, value }) },
+    { class: 'guide-stat', 'aria-label': t('{stat} {value} of {max}', { stat: label, value: value + bonus, max }) },
     h('span', { class: 'guide-stat-label' }, icon, ' ', label),
-    h('span', { class: 'guide-stat-pips', 'aria-hidden': 'true' }, ...[0, 1, 2].map((i) => h('i', { class: i < value ? 'filled' : '' }))),
+    h(
+      'span',
+      { class: 'guide-stat-pips', 'aria-hidden': 'true' },
+      ...Array.from({ length: max }, (_, i) => h('i', { class: i < value ? 'filled' : i < value + bonus ? 'gold' : '' })),
+    ),
   );
 }
 
@@ -88,6 +96,8 @@ export function showFieldGuide(app: App, page: GuidePage = 'basics') {
       .filter((kind) => kind.unlock <= app.p.level)
       .map((kind) => {
         const { stats } = kind;
+        const lv = labLevel(app.p, kind.id);
+        const built = labPlot(app.p, kind.id) >= 0;
         return h(
           'div',
           { class: 'guide-object' },
@@ -98,8 +108,24 @@ export function showFieldGuide(app: App, page: GuidePage = 'basics') {
             h('b', null, t(kind.name)),
             h('small', { class: 'guide-element' }, ELEMENT_ICON[stats.element], ' ', t(stats.element)),
             h('p', null, t(stats.job)),
-            statBar(t('Power'), '✦', stats.power),
-            statBar(t('Reach'), '◎', stats.reach),
+            statBar(t('Power'), '✦', stats.power, lv >= 2 ? 1 : 0),
+            statBar(t('Reach'), '◎', stats.reach, lv >= 5 && kind.id !== 'storm' && kind.id !== 'sun' ? 1 : 0),
+            !homeUnlocked(app.p)
+              ? null
+              : built
+                ? h(
+                    'div',
+                    { class: 'guide-lab' },
+                    h('b', null, t(LAB_NAME[kind.id]), ' ', t('Lv {n}', { n: lv })),
+                    ...([2, 3, 4, 5] as const).map((n) =>
+                      h(
+                        'small',
+                        { class: n <= lv ? 'got' : 'muted' },
+                        n > lv && !perkTaught(app.p, kind.id, n) ? t(LAB_TEXT.later) : t(LAB_LEVEL[kind.id][n]),
+                      ),
+                    ),
+                  )
+                : h('small', { class: 'muted' }, t(LAB_TEXT.buildFirst, { name: t(LAB_NAME[kind.id]) })),
           ),
         );
       }),

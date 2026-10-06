@@ -1,10 +1,13 @@
 // Canonical prices, rewards and costs. Review changes against the tuning snapshot.
 // DIFFICULTY_DUST stays in core/levels.ts so core never imports meta.
+import { version } from '../../package.json';
 import { t, tp } from '../i18n';
 import { unlocked } from './unlocks';
 
 export const GAME_NAME = 'Comet Garden';
-export const VERSION = '1.0.0';
+// One version source: package.json (the iOS release script writes it to MARKETING_VERSION too).
+// A named import so the bundle carries only the version, not the whole package.json.
+export const VERSION: string = version;
 
 export const PIGGY_PER_WIN = 4;
 export const PIGGY_MAX = 250;
@@ -188,6 +191,10 @@ export const RUSH_REWARD = { dustPerScore: 0.6, bestGems: 5 };
 export const CHALLENGE_REWARD = { winGems: 10, dust: 50 };
 export const CONTINUE_COST = 50;
 export const LAB_COST = [0, 0, 400, 1200, 3000, 7000];
+export const LAB_ESSENCE_COST = [0, 0, 10, 25, 50, 140];
+export const LAB_BUILD_COST = 300;
+export const LAB_FEATS = { fusion: 10, guard: 5 };
+export const FIRST_HOUR_REWARD = { dust: 100 };
 export const WELCOME_BACK_GEMS = 30;
 
 import type { Reward, RoadTier, QuestDef } from './progression';
@@ -303,6 +310,7 @@ export const EVENT_TIERS: EventTier[] = [
 ];
 
 export const BUILDINGS: Record<BuildingType, BuildingDef> = {
+  lab: { type: 'lab', name: 'Lab', desc: 'Your shots learn tricks', ring: 1, cost: LAB_BUILD_COST, max: 6 },
   mill: { type: 'mill', name: 'Stardust Mill', desc: 'Makes stardust while you are away', ring: 1, cost: 150, max: 3 },
   den: { type: 'den', name: 'Critter Den', desc: 'A home for creatures from your Lifebook', ring: 1, cost: 250, max: 2 },
   greenhouse: { type: 'greenhouse', name: 'Greenhouse', desc: 'Grows boosters for your levels', ring: 2, cost: 600, max: 2 },
@@ -823,7 +831,7 @@ export const EXPEDITION_REWARD = { dustPerHour: 120, eightHourGems: 6, fourHourG
 export const GALAXY_RATE = { base: 6, perStar: 3, perSpecies: 2 };
 export const INBOX_GIFTS: Record<string, Reward> = {
   welcome: { gems: 20 },
-  homeworld: { dust: 300 },
+  homeworld: {},
   chapter: { gems: 15, boosters: { spark: 1 } },
   best: { gems: 25 },
   season: { boosters: { shower: 1 } },

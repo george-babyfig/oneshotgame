@@ -2,11 +2,12 @@ import { clearLedger, ledgerSummary } from '../../meta/ledger';
 // Settings, language, how-to-play, credits and reset.
 import { h, btn, modal, confirmBox, toast } from '../dom';
 import { Capacitor } from '@capacitor/core';
+import { App as NativeApp } from '@capacitor/app';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { InAppReview } from '@capacitor-community/in-app-review';
 import { sfx } from '../audio';
 import { defaultProfile, saveProfile, type Settings } from '../../meta/profile';
-import { GAME_NAME, VERSION } from '../../meta/config';
+import { GAME_NAME } from '../../meta/config';
+import { VERSION } from '../../meta/tuning';
 import type { App } from '../app';
 import { scheduleReminders } from '../platform';
 import { LANGS, detectLang, t } from '../../i18n';
@@ -15,6 +16,10 @@ import { parentalGate } from './gate';
 import { ensureWishes } from '../../meta/wishes';
 import { today } from '../../meta/profile';
 import { enterGrownups } from '../screens/grownups';
+import { bindGateProfile } from './gate';
+
+// Set after App Store Connect assigns an Apple ID.
+export const APP_STORE_ID = '';
 
 type Toggle = 'sound' | 'music' | 'haptics' | 'reduceMotion' | 'notifications';
 type TextSize = Settings['textSize'];
@@ -140,8 +145,15 @@ export function settingsFlow(app: App) {
   const version = h(
     'p',
     { class: 'tiny muted' },
-    `${GAME_NAME} v${VERSION} · ${t('No accounts, no ads, no tracking. Progress is saved on this device.')}`,
+    `${GAME_NAME} ${t('v{version} (build {n})', { version: VERSION, n: import.meta.env.VITE_BUILD_NUMBER || '1' })} · ${t('No accounts, no ads, no tracking. Progress is saved on this device.')}`,
   );
+  if (Capacitor.isNativePlatform()) {
+    void NativeApp.getInfo()
+      .then((info) => {
+        version.textContent = `${GAME_NAME} ${t('v{version} (build {n})', { version: VERSION, n: info.build })} · ${t('No accounts, no ads, no tracking. Progress is saved on this device.')}`;
+      })
+      .catch(() => {});
+  }
   // Dev-only Balance Report; its English labels are never shown in production.
   if (import.meta.env.DEV) {
     let hold = 0;
@@ -185,6 +197,7 @@ export function settingsFlow(app: App) {
         settings: app.p.settings,
       };
       app.p = { ...defaultProfile(), ...keep };
+      bindGateProfile(app.p);
       if (keep.starter) app.p.skins.push('aurora');
       ensureWishes(app.p, today());
       await saveProfile(app.p);
@@ -222,10 +235,10 @@ export function grownupSettings(app: App): HTMLElement[] {
     await scheduleReminders(app.p);
   });
   const gameCenterButton = gcAvailable()
-    ? btn(app.p.settings.gameCenter ? t('Game Center') : t('Game Center: sign in'), 'ghost wide', async () => {
-        if (!gcIsSignedIn()) {
-          if (!(await parentalGate('gamecenter'))) return;
-          if (!(await gcSignIn(true))) {
+    ? btn(app.p.settings.gameCenter ? t('Game Center dashboard') : t('Game Center: sign in'), 'ghost wide', async () => {
+        if (!(await parentalGate('gamecenter'))) return;
+        if (!app.p.settings.gameCenter || !gcIsSignedIn()) {
+          if (!gcIsSignedIn() && !(await gcSignIn(true))) {
             toast(t("Game Center didn't sign in. You can sign in from the iPhone Settings app."));
             return;
           }
@@ -236,17 +249,23 @@ export function grownupSettings(app: App): HTMLElement[] {
         await gcDashboard(app.p);
       })
     : null;
-  const rate = Capacitor.isNativePlatform()
-    ? btn(t('Rate Comet Garden'), 'ghost wide', async () => {
-        if (!(await parentalGate('rate'))) return;
-        try {
-          await InAppReview.requestReview();
-        } catch {
-          /* the system may decline to show a rating sheet */
-        }
-      })
-    : null;
-  return [reminders, gameCenterButton, rate].filter((x): x is HTMLButtonElement => x !== null);
+  const gameCenterOff =
+    gcAvailable() && app.p.settings.gameCenter
+      ? btn(t('Turn off Game Center'), 'ghost wide', () => {
+          app.p.settings.gameCenter = false;
+          app.save();
+          toast(t('Game Center is off.'));
+        })
+      : null;
+  const rate =
+    Capacitor.isNativePlatform() && APP_STORE_ID
+      ? btn(t('Rate Comet Garden'), 'ghost wide', async () => {
+          if (!(await parentalGate('rate'))) return;
+          const url = `https://apps.apple.com/app/id${APP_STORE_ID}?action=write-review`;
+          window.open(url, '_blank');
+        })
+      : null;
+  return [reminders, gameCenterButton, gameCenterOff, rate].filter((x): x is HTMLButtonElement => x !== null);
 }
 
 function credits() {

@@ -11,7 +11,7 @@ import {
   type Planet,
   type Sector,
 } from './world';
-import { NO_MODIFIERS } from './modifiers';
+import { NO_MODIFIERS, type RoundModifiers } from './modifiers';
 import { OBSTACLES, skyFor, type ObstacleId, type SkyDef } from './sky';
 import { flyFull, sceneGeometry, STAR_SLING } from './flight';
 import { ROUND_RULES_V0, novaReady, roundState, rulesForLevel, stepRound, type RoundRules } from './round';
@@ -272,14 +272,32 @@ export function greedyPlan(start: Planet, queue: Kind[], throws: number, splash 
 }
 
 type SolverLevel = Pick<LevelDef, 'start' | 'queue' | 'throws' | 'nova'> &
-  Partial<Pick<LevelDef, 'n' | 'troubles' | 'difficulty' | 'seed'>>;
+  Partial<Pick<LevelDef, 'n' | 'troubles' | 'difficulty' | 'seed' | 'goals'>>;
 
 /** Today's perfect-aim, immediate-life choice, with automatic Supernovas. */
 export function solve2(level: SolverLevel, rules: RoundRules = rulesForLevel(level.n ?? 1)): Planet {
   return solvePlan(level, rules, NO_MODIFIERS);
 }
 
-function solvePlan(level: SolverLevel, rules: RoundRules, mods: typeof NO_MODIFIERS, choiceRules = rules): Planet {
+export function solveWith(level: SolverLevel, rules: RoundRules, mods: RoundModifiers): Planet {
+  return solvePlan(level, rules, mods);
+}
+
+/** Try goal-aware plans independently of the immediate-score greedy plan. */
+export function solveForGoals(level: SolverLevel, rules: RoundRules, mods: RoundModifiers): Planet {
+  if (!level.goals?.length) return solvePlan(level, rules, mods);
+  let best = solvePlan(level, rules, mods);
+  if (goalsMet(best, level.goals)) return best;
+  for (const goalWeight of [12, 30, 80, 200]) {
+    const candidate = solvePlan(level, rules, mods, rules, goalWeight);
+    if (goalsMet(candidate, level.goals)) return candidate;
+    const progress = (planet: Planet) => level.goals!.reduce((sum, goal) => sum + Math.min(goal.count, goalProgress(planet, goal)), 0);
+    if (progress(candidate) > progress(best)) best = candidate;
+  }
+  return best;
+}
+
+function solvePlan(level: SolverLevel, rules: RoundRules, mods: RoundModifiers, choiceRules = rules, goalWeight = 0): Planet {
   let state = roundState(level.start, level.nova, level.troubles, level.difficulty === 'hard' || level.difficulty === 'super');
   const queue =
     level.n === 2 && !level.seed?.startsWith('RX-') && choiceRules !== ROUND_RULES_V0
@@ -303,8 +321,12 @@ function solvePlan(level: SolverLevel, rules: RoundRules, mods: typeof NO_MODIFI
         nextBeat?.inThrows === 1 && nextBeat.sector !== null && !nextBeat.blockedBy
           ? (trial.state.planet.sectors[nextBeat.sector].species ? 12 : 0) + (nextBeat.id === 'vine' ? 8 : 3)
           : 0;
+      const goalValue =
+        goalWeight * (level.goals?.reduce((sum, goal) => sum + Math.min(goal.count, goalProgress(trial.state.planet, goal)), 0) ?? 0);
       const value =
-        trial.after + (choiceRules === ROUND_RULES_V0 ? 0 : trial.troubleEvents.filter((e) => e.kind === 'settled').length * 12 - risk);
+        trial.after +
+        goalValue +
+        (choiceRules === ROUND_RULES_V0 ? 0 : trial.troubleEvents.filter((e) => e.kind === 'settled').length * 12 - risk);
       if (value > best) {
         best = value;
         at = sector;

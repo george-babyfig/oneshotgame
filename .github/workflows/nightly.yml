@@ -24,3 +24,27 @@ jobs:
       - name: Calendar pre-flight (90 Daily Planets, 12 Voyage weeks)
         if: always()
         run: SIM=1 SIM_NIGHTLY=1 npx vitest run tests/sim/calendar-preflight.sim.ts --disableConsoleIntercept
+
+  economy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: SIM_NIGHTLY=1 npm run sim:economy
+
+  loadout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: SIM_NIGHTLY=1 npm run sim:loadout

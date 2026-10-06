@@ -1,12 +1,20 @@
 import { SECTORS, type Planet } from '../../core/world';
-import { firebreakBy, troubleTarget, type TroubleEvent, type TroubleForecast, type TroubleState } from '../../core/troubles';
+import {
+  firebreakBy,
+  troubleTarget,
+  type GuardContext,
+  type TroubleEvent,
+  type TroubleForecast,
+  type TroubleState,
+} from '../../core/troubles';
 
 export const troubleTargetShape = (id: TroubleState['id'], blocked: boolean): string =>
   blocked ? '▣' : id === 'vent' ? '◆' : id === 'vine' ? '▲' : '●';
 
-export function protectedWallSectors(planet: Planet, id: TroubleState['id'], forecasts: TroubleForecast[]): number[] {
+export function protectedWallSectors(planet: Planet, id: TroubleState['id'], forecasts: TroubleForecast[], guard?: GuardContext): number[] {
   return Array.from({ length: SECTORS }, (_, sector) => sector).filter(
-    (sector) => !!firebreakBy(planet, sector, id) || forecasts.some((beat) => beat.id === id && beat.sector === sector && !!beat.blockedBy),
+    (sector) =>
+      !!firebreakBy(planet, sector, id, guard) || forecasts.some((beat) => beat.id === id && beat.sector === sector && !!beat.blockedBy),
   );
 }
 
@@ -30,6 +38,8 @@ export function drawTroubles(
   targetPlanet: Planet = planet,
   previewEvents: TroubleEvent[] = [],
   forecasts: TroubleForecast[] = [],
+  guard?: GuardContext,
+  targetGuard: GuardContext = guard ?? { lab: {} },
 ): void {
   const step = (Math.PI * 2) / SECTORS;
   const point = (sector: number, reach: number) => {
@@ -84,7 +94,7 @@ export function drawTroubles(
     if (target !== null) {
       const [tx, ty] = point(target, 0.95);
       g.save();
-      g.strokeStyle = firebreakBy(targetPlanet, target, trouble.id) ? '#b8f5d3' : color;
+      g.strokeStyle = firebreakBy(targetPlanet, target, trouble.id, targetGuard) ? '#b8f5d3' : color;
       g.lineWidth = 2.5;
       g.setLineDash([3, 5]);
       g.lineDashOffset = reduceMotion ? 0 : -time * 10;
@@ -93,7 +103,9 @@ export function drawTroubles(
       g.lineTo(tx, ty);
       g.stroke();
       g.restore();
-      const blocked = !!forecasts.find((beat) => beat.id === trouble.id && beat.sector === target)?.blockedBy;
+      const blocked =
+        !!firebreakBy(targetPlanet, target, trouble.id, targetGuard) ||
+        !!forecasts.find((beat) => beat.id === trouble.id && beat.sector === target)?.blockedBy;
       g.fillStyle = '#17302f';
       g.beginPath();
       g.arc(tx, ty, Math.max(10, radius * 0.085), 0, Math.PI * 2);
@@ -104,7 +116,7 @@ export function drawTroubles(
       g.textBaseline = 'middle';
       g.fillText(troubleTargetShape(trouble.id, blocked), tx, ty + 1);
     }
-    for (const sector of protectedWallSectors(planet, trouble.id, forecasts)) {
+    for (const sector of protectedWallSectors(planet, trouble.id, forecasts, guard)) {
       const [x, y] = point(sector, 1.04);
       g.fillStyle = '#a4e8cf';
       g.strokeStyle = '#173f3b';

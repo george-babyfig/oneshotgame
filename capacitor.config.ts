@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  // Change to your own reverse-DNS bundle id before shipping (must match App Store Connect).
+  // Registered iOS bundle ID; keep it in sync with Xcode and App Store Connect.
   appId: 'com.pocketplanet.game',
   appName: 'Comet Garden',
   webDir: 'dist',

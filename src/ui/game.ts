@@ -73,6 +73,7 @@ export interface SceneOpts {
   buddy?: { species: string; acc: string } | null;
   /** Object Lab level per object (campaign/Zen only). */
   lab?: Partial<Record<Kind, number>>;
+  forms?: Partial<Record<Kind, boolean>>;
   /** The launcher is fully mastered (gold glow). */
   mastered?: boolean;
   splash: number; // 0..1
@@ -126,6 +127,7 @@ export interface SceneOpts {
   onLand?: (changed: BiomeId[], spawned: number) => number;
   /** The owner records first discoveries and pays their fixed reward. */
   onReaction?: (id: ReactionId) => { first: boolean };
+  onLabStep?: (step: Pick<import('../core/round').StepResult, 'reactions' | 'troubleEvents'> & { kind: Kind }) => void;
   onCombo?: (links: number, reaction?: ReactionId, superFusion?: boolean) => void;
   onPairTried?: (first: Kind, second: Kind) => void;
   eventEmoji?: string;
@@ -151,6 +153,7 @@ export interface LevelResult {
   reactionEvents?: ReactionId[];
   comboEvents?: { links: number; reaction?: ReactionId; superFusion: boolean }[];
   reactionRecorded?: boolean;
+  labEvents?: import('../core/labperks').LabEvent[];
   comboRecorded?: boolean;
 }
 
@@ -305,6 +308,8 @@ export class LevelScene {
   coachEvents = new Set<CoachEvent>();
   practiceGifts = 0;
   roundLog: RoundEventLog = emptyRoundLog();
+  labSteps: (Pick<import('../core/round').StepResult, 'reactions' | 'troubleEvents'> & { kind: Kind })[] = [];
+  labMarks: RoundState['labMarks'] = { rock: [], seed: [] };
   firstCreaturePointsShown = false;
   liveTimer = 0;
   coachTimer = 0;

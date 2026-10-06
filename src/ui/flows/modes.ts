@@ -32,7 +32,8 @@ import { recordWishRound } from '../../meta/wishes';
 import { shareText } from '../share';
 import { NO_BOOSTERS, type App } from '../app';
 import { t } from '../../i18n';
-import { gcScore } from '../gamecenter';
+import { helpedLine } from '../../meta/helped';
+import { LAB_TEXT } from '../../meta/labcopy';
 
 type Mode = 'daily' | 'rush' | 'zen' | 'challenge';
 
@@ -140,7 +141,6 @@ function modeEnded(app: App, mode: Mode, r: LevelResult, vs?: { code: string; se
   if (mode === 'daily') {
     const day = today();
     const gems = recordDaily(p, day, r.score, stars);
-    gcScore('daily', r.score);
     body = [
       h('div', { class: 'm-title' }, t('Daily Planet #{n}', { n: dailyNumber(day) })),
       h('div', { class: 'end-stars' }, ...[0, 1, 2].map((i) => h('span', { class: i < stars ? 'on' : '' }, '★'))),
@@ -204,6 +204,9 @@ function modeEnded(app: App, mode: Mode, r: LevelResult, vs?: { code: string; se
   const m = modal(
     [
       ...body,
+      mode === 'zen' && app.scene && helpedLine(p, app.scene.roundLog, 'zen')
+        ? h('p', { class: 'homeworld-helped' }, t(LAB_TEXT.helped), ': ', helpedLine(p, app.scene.roundLog, 'zen'))
+        : null,
       h(
         'div',
         { class: 'row' },

@@ -8,7 +8,7 @@
 
 ## Promotional text (170)
 
-Lance cometas e faça crescer um mundinho onde criaturas fofas vêm morar. Misture Fusões, encadeie Combos e monte seu Mundo-Lar. Sem anúncios; só adultos fazem compras.
+Lance cometas e crie um mundinho. Misture Fusões e Combos, monte seu Mundo-Lar. Sem anúncios. Compras exigem controle parental.
 
 ## Description (4,000)
 
@@ -39,9 +39,11 @@ JOGUE DO SEU JEITO
 • Mais de 100 planetas que ficam mais difíceis aos pouquinhos, com 1 a 3 estrelas em cada um
 • Uma escada de ajuda quando um planeta complica: o que aconteceu, uma dica e uma ajudinha extra
 • Planeta do Dia, Viagem Semanal, Chuva de Meteoros, Jardim Zen e desafios entre amigos
+• Remix bônus traz surpresas e estrelas douradas aos capítulos concluídos
+• Ganhe Essências nos planetas e construa Laboratórios no Mundo-Lar
 • Jogue em English, Español, Français, Deutsch, Português (Brasil) ou 日本語
 
-PARA GENTE GRANDE
+CALMO, JUSTO E PRIVADO
 • Sem anúncios. Sem vidas nem cronômetros de energia. Sem recompensas pagas aleatórias.
 • As compras opcionais ficam só na Área dos pais, protegida por um controle parental, e sempre mostram exatamente o que você recebe
 • Opção Planetas tranquilos, resumo do tempo de jogo e um lembrete de pausa opcional
@@ -57,10 +59,10 @@ _Native terms: fofo (cute), bichinho (little critter, very common in Brazil), f�
 
 ## Support / marketing / privacy
 
-- Support URL: https://<your-site>/support.html (site files in `site/`; same URL for every language)
-- Marketing URL: https://<your-site>/
-- Privacy policy URL: https://<your-site>/privacy.html (the page includes a Portuguese section)
-- Copyright: 2026 <owner legal name>
+- Support URL: https://YOUR-DOMAIN/support.html (site files in `site/`; same URL for every language)
+- Marketing URL: https://YOUR-DOMAIN/
+- Privacy policy URL: https://YOUR-DOMAIN/privacy.html (the page includes a Portuguese section)
+- Copyright: 2026 OWNER NAME
 
 ## What's New
 
@@ -68,4 +70,4 @@ Not shown for version 1.0 (Apple has no "What's New" on a first release). From 1
 
 ## Lengths
 
-Subtitle 29/30 chars · Promotional text 167/170 chars · Description 2,246/4,000 chars · Keywords 97/100 bytes (UTF-8). Measured with python3 on the exact text to paste (len() in characters; blank lines in the description counted).
+Subtitle 29/30 chars · Promotional text 127/170 chars · Description 2,389/4,000 chars · Keywords 97/100 bytes (UTF-8). Measured with python3 on the exact text to paste (len() in characters; blank lines in the description counted).

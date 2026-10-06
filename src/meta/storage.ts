@@ -16,11 +16,20 @@ export async function loadKey(key: string): Promise<string | null> {
   }
 }
 
+export async function saveKeyChecked(key: string, value: string): Promise<void> {
+  if (native) await Preferences.set({ key, value });
+  else localStorage.setItem(key, value);
+}
+
 export async function saveKey(key: string, value: string): Promise<void> {
   try {
-    if (native) await Preferences.set({ key, value });
-    else localStorage.setItem(key, value);
+    await saveKeyChecked(key, value);
   } catch {
     /* storage unavailable — keep playing */
   }
+}
+
+export async function removeKey(key: string): Promise<void> {
+  if (native) await Preferences.remove({ key });
+  else localStorage.removeItem(key);
 }

@@ -1,6 +1,17 @@
 import { goalProgress, goalsMet, makeLevel, rngFrom, starsEarned, starsFor, type Difficulty, type LevelDef } from '../../src/core/levels';
-import { SECTORS, clonePlanet, lifeScore, settle, type Planet, type TraitId } from '../../src/core/world';
-import { NO_MODIFIERS } from '../../src/core/modifiers';
+import {
+  SECTORS,
+  SPECIES,
+  traitOf,
+  clonePlanet,
+  lifeScore,
+  settle,
+  type BiomeId,
+  type Kind,
+  type Planet,
+  type TraitId,
+} from '../../src/core/world';
+import { NO_MODIFIERS, maxLabModifiers, type RoundModifiers } from '../../src/core/modifiers';
 import {
   ROUND_RULES_V0,
   lifeSparkSectors,
@@ -23,29 +34,27 @@ export interface BotContext {
   state?: RoundState;
   turn: number;
   nova: boolean;
-  labLevel: number;
   random: () => number;
   blindBest?: number;
   awareBest?: number;
   retry?: number;
-  modifiers?: typeof NO_MODIFIERS;
+  modifiers?: RoundModifiers;
 }
 
 export interface BotPolicy {
   name: string;
-  labLevel: number;
   chooseAim: (context: BotContext) => number;
 }
 
 export function oneStep(context: BotContext, rules: RoundRules = ROUND_RULES_V0, gainOut?: { best: number }): number {
-  const { level, turn, nova, labLevel } = context;
+  const { level, turn, nova } = context;
   const state = context.state ?? roundState(context.planet, level.nova, level.troubles, level.difficulty !== 'normal');
   let best = -Infinity;
   let aim = 0;
   for (let sector = 0; sector < SECTORS; sector++) {
     const result = stepRound(
       rules === ROUND_RULES_V0 ? { ...state, troubles: [] } : state,
-      { kind: level.queue[turn], sector, nova },
+      { kind: level.queue[turn % level.queue.length], sector, nova },
       context.modifiers ?? NO_MODIFIERS,
       rules,
     );
@@ -60,9 +69,6 @@ export function oneStep(context: BotContext, rules: RoundRules = ROUND_RULES_V0,
             )
           ? 12
           : 0) +
-      (labLevel >= 2 ? result.changed.length * 2 : 0) +
-      (labLevel >= 4 ? result.spawned.length * 6 : 0) +
-      (labLevel >= 5 ? 3 : 0) +
       level.goals.reduce((sum, goal) => sum + 25 * Math.min(goal.count, goalProgress(result.state.planet, goal)), 0);
     if (value > best) {
       best = value;
@@ -72,10 +78,9 @@ export function oneStep(context: BotContext, rules: RoundRules = ROUND_RULES_V0,
   return aim;
 }
 
-function aimingPolicy(name: string, aimError: number, randomShare: number, labLevel: number, aware = false): BotPolicy {
+function aimingPolicy(name: string, aimError: number, randomShare: number, aware = false): BotPolicy {
   return {
     name,
-    labLevel,
     chooseAim(context) {
       const { random } = context;
       const learning = Math.pow(0.9, context.retry ?? 0);
@@ -91,15 +96,59 @@ function aimingPolicy(name: string, aimError: number, randomShare: number, labLe
 
 // More policies can supply their own chooseAim without changing the runner.
 export const POLICIES = {
-  casual: aimingPolicy('casual', 0.4, 0.3, 1),
-  decent: aimingPolicy('decent', 0.25, 0.1, 1, true),
-  'decent-blind': aimingPolicy('decent-blind', 0.25, 0.1, 1),
-  'decent-aware': aimingPolicy('decent-aware', 0.25, 0.1, 1, true),
-  sharp: aimingPolicy('sharp', 0.1, 0, 1, true),
-  'decent+lab3': aimingPolicy('decent+lab3', 0.25, 0.1, 3),
+  casual: aimingPolicy('casual', 0.4, 0.3),
+  decent: aimingPolicy('decent', 0.25, 0.1, true),
+  'decent-blind': aimingPolicy('decent-blind', 0.25, 0.1),
+  'decent-aware': aimingPolicy('decent-aware', 0.25, 0.1, true),
+  sharp: aimingPolicy('sharp', 0.1, 0, true),
 } satisfies Record<string, BotPolicy>;
 
+export interface Loadout {
+  mods: RoundModifiers;
+  extraThrows: number;
+  lifeSpark: boolean;
+  continues?: number;
+}
+
+/** M11 will retire splash and Extra Throws; keep both configurations measurable. */
+export function maxLegalLoadout(level: LevelDef, opts: { retiringUpgrades?: boolean } = {}): Loadout {
+  const shield: TraitId | null =
+    level.n < 18
+      ? null
+      : level.troubles[0]?.id === 'vent'
+        ? 'fireproof'
+        : level.troubles[0]?.id === 'vine'
+          ? 'weedproof'
+          : level.troubles[0]?.id === 'frost'
+            ? 'frostproof'
+            : null;
+  const species = shield ? (SPECIES.find((candidate) => traitOf(candidate.id) === shield)?.id ?? null) : null;
+  return {
+    mods: {
+      ...NO_MODIFIERS,
+      ...maxLabModifiers(),
+      extraThrows: opts.retiringUpgrades ? 5 : 0,
+      scopeLevel: opts.retiringUpgrades ? 3 : 0,
+      splash: opts.retiringUpgrades ? 1 : 0,
+      momentum: 3,
+      buddy: species ? { species, acc: '' } : null,
+      buddyShield: species ? shield : null,
+      boosters: { shower: true, spark: true, scope: true },
+    },
+    extraThrows: opts.retiringUpgrades ? 10 : 5,
+    lifeSpark: true,
+  };
+}
+
 export interface PlayResult {
+  planet: Planet;
+  regions: BiomeId[];
+  arrivals: string[];
+  labSteps: {
+    kind: Kind;
+    reactions: ReturnType<typeof stepRound>['reactions'];
+    troubleEvents: ReturnType<typeof stepRound>['troubleEvents'];
+  }[];
   score: number;
   frostSectors: number;
   stars: number;
@@ -117,6 +166,7 @@ export interface PlayResult {
   gainByKind: Partial<Record<(typeof levelKinds)[number], { gain: number; throws: number }>>;
   deadByKind: Partial<Record<(typeof levelKinds)[number], number>>;
   choiceDifferences: number;
+  continuesUsed: number;
   firstClearLeft: number;
   finalStarLeft: number;
   flight?: { bonks: number; fizzles: number; misses: number; surpriseBonks: number; noiseBonks: number; roundTime: number; waits: number };
@@ -143,31 +193,33 @@ export function playLevel(
   rules = rulesForLevel(level.n),
   flight?: { phone: Phone; timed?: boolean; badgeAware?: boolean; retry?: number },
   retry = 0,
-  maxLoadout = false,
+  loadout?: Loadout,
 ): PlayResult {
   if (level.n === 2 && level.seed.startsWith('PP-')) {
     const chance = policy.name === 'sharp' ? 1 : policy.name === 'casual' ? 0.4 : policy.name === 'decent-blind' ? 0 : 0.7;
     if (random() < chance) level = { ...level, queue: [level.queue[1], level.queue[0], ...level.queue.slice(2)] };
   }
   const start = clonePlanet(level.start);
-  if (maxLoadout) {
+  if (loadout?.lifeSpark) {
     for (const sector of lifeSparkSectors(level, start)) start.sectors[sector].life = Math.min(3, start.sectors[sector].life + 1);
     settle(start);
   }
   let state = roundState(start, level.nova, level.troubles, level.difficulty !== 'normal');
-  const shield: TraitId | null =
-    level.troubles[0]?.id === 'vent'
-      ? 'fireproof'
-      : level.troubles[0]?.id === 'vine'
-        ? 'weedproof'
-        : level.troubles[0]?.id === 'frost'
-          ? 'frostproof'
-          : null;
-  const modifiers = maxLoadout
-    ? { ...NO_MODIFIERS, splash: 1, momentum: 3, buddyShield: shield, boosters: { shower: true, spark: true, scope: true } }
-    : NO_MODIFIERS;
+  const rawModifiers = loadout?.mods ?? NO_MODIFIERS;
+  const modifiers: RoundModifiers = {
+    ...rawModifiers,
+    buddyShield: rawModifiers.buddy && traitOf(rawModifiers.buddy.species) === rawModifiers.buddyShield ? rawModifiers.buddyShield : null,
+  };
   let halfStars = 0;
-  let throws = level.throws + (maxLoadout ? 5 : 0);
+  let throws = level.throws + (loadout?.extraThrows ?? 0);
+  let continuesLeft = loadout?.continues ?? 0;
+  let continuesUsed = 0;
+  const maybeContinue = (turn: number) => {
+    if (turn + 1 !== throws || !continuesLeft || starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level) > 0) return;
+    continuesLeft--;
+    continuesUsed++;
+    throws += 5;
+  };
   let gifts = 0;
   let novas = 0;
   let fusion = 0;
@@ -180,6 +232,9 @@ export function playLevel(
   const starHistory: number[] = [];
   const gainByKind: PlayResult['gainByKind'] = {};
   const deadByKind: PlayResult['deadByKind'] = {};
+  const regions: BiomeId[] = [];
+  const arrivals = new Set<string>();
+  const labSteps: PlayResult['labSteps'] = [];
   let skyState = emptySkyState();
   const flightStats = { bonks: 0, fizzles: 0, misses: 0, surpriseBonks: 0, noiseBonks: 0, roundTime: 0, waits: 0 };
   let practiceBonkUsed = false;
@@ -195,13 +250,9 @@ export function playLevel(
     : undefined;
   for (let turn = 0; turn < throws; turn++) {
     const nova = novaReady(state);
-    const blindBest = oneStep({ level, planet: state.planet, state, turn, nova, labLevel: policy.labLevel, random, modifiers });
+    const blindBest = oneStep({ level, planet: state.planet, state, turn, nova, random, modifiers });
     const bestGain = { best: -Infinity };
-    const awareBest = oneStep(
-      { level, planet: state.planet, state, turn, nova, labLevel: policy.labLevel, random, modifiers },
-      rules,
-      bestGain,
-    );
+    const awareBest = oneStep({ level, planet: state.planet, state, turn, nova, random, modifiers }, rules, bestGain);
     if (blindBest !== awareBest) choiceDifferences++;
     if (bestGain.best <= 3) bestDeadThrows++;
     const aim = policy.chooseAim({
@@ -210,7 +261,6 @@ export function playLevel(
       state,
       turn,
       nova,
-      labLevel: policy.labLevel,
       random,
       blindBest,
       awareBest,
@@ -310,17 +360,17 @@ export function playLevel(
         }
         if (turn + 1 === Math.floor(level.throws / 2)) halfStars = starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level);
         starHistory.push(starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level));
+        maybeContinue(turn);
         continue;
       }
       sector = actual.hit.sector;
     }
-    const step = stepRound(
-      state,
-      { kind: level.queue[turn], sector, nova },
-      { ...modifiers, lab: { [level.queue[turn]]: policy.labLevel } },
-      rules,
-    );
+    const thrownKind = level.queue[turn % level.queue.length];
+    const step = stepRound(state, { kind: thrownKind, sector, nova }, modifiers, rules);
     state = step.state;
+    labSteps.push({ kind: thrownKind, reactions: step.reactions, troubleEvents: step.troubleEvents });
+    for (const index of step.changed) regions.push(state.planet.sectors[index].biome);
+    for (const species of step.spawned) arrivals.add(species.id);
     for (const reaction of step.reactions) {
       reactionCounts[reaction.id] = (reactionCounts[reaction.id] ?? 0) + 1;
       if (reaction.id === 'scorch') clash++;
@@ -328,12 +378,12 @@ export function playLevel(
     }
     if (step.after - step.before <= 3) {
       deadThrows++;
-      deadByKind[level.queue[turn]] = (deadByKind[level.queue[turn]] ?? 0) + 1;
+      deadByKind[thrownKind] = (deadByKind[thrownKind] ?? 0) + 1;
     }
-    const kindGain = gainByKind[level.queue[turn]] ?? { gain: 0, throws: 0 };
+    const kindGain = gainByKind[thrownKind] ?? { gain: 0, throws: 0 };
     kindGain.gain += step.after - step.before;
     kindGain.throws++;
-    gainByKind[level.queue[turn]] = kindGain;
+    gainByKind[thrownKind] = kindGain;
     if (step.novaFired) novas++;
     if (firstClearLeft < 0 && starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level) > 0)
       firstClearLeft = Math.max(0, throws - turn - 1);
@@ -352,11 +402,16 @@ export function playLevel(
         state.bonus += Math.max(0, level.stars[0] - lifeScore(state.planet) - state.bonus);
       }
     }
+    maybeContinue(turn);
   }
   const score = lifeScore(state.planet) + state.bonus;
   const finalStars = starsEarned(state.planet, score, level);
   const finalStarTurn = finalStars > 0 ? starHistory.findIndex((count) => count >= finalStars) : -1;
   return {
+    planet: state.planet,
+    regions,
+    arrivals: [...arrivals],
+    labSteps,
     score,
     frostSectors: state.planet.sectors.filter((sector) => ['tundra', 'icesheet', 'taiga'].includes(sector.biome)).length,
     stars: finalStars,
@@ -374,6 +429,7 @@ export function playLevel(
     gainByKind,
     deadByKind,
     choiceDifferences,
+    continuesUsed,
     firstClearLeft,
     finalStarLeft: finalStarTurn < 0 ? -1 : Math.max(0, throws - finalStarTurn - 1),
     flight: flight ? flightStats : undefined,
@@ -413,6 +469,7 @@ export function runPlanet(
   salt?: number,
   flight?: { phone?: Phone; timed?: boolean; badgeAware?: boolean },
   masterSeed = 'default',
+  loadout?: Loadout,
 ): PlanetMetrics {
   const level = makeLevel(n, 'PP', salt === undefined ? {} : { salt });
   let failures = 0;
@@ -443,6 +500,7 @@ export function runPlanet(
           }
         : undefined,
       retryCount,
+      loadout,
     );
     if (result.stars === 0) retryCount = Math.min(7, retryCount + 1);
     else {

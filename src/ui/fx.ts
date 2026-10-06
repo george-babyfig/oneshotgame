@@ -28,17 +28,17 @@ import { forecastTroubles } from '../core/troubles';
 import { troubleFeel } from './feel';
 import { canvasDpr } from './devcapture';
 
+const MAX_PARTICLES = 600;
+
 function logFlightHit(scene: LevelScene, hit: { kind: 'bonk'; by: 'moon' | 'rock' | 'ring' | 'bubble' } | { kind: 'fizzle' | 'miss' }) {
   scene.roundLog.bonks.push(hit.kind === 'bonk' ? hit.by : hit.kind === 'fizzle' ? 'mist' : 'miss');
 }
 
-function logRoundStep(
-  scene: LevelScene,
-  res: { troubleEvents: TroubleEvent[]; reactions: { id: import('../core/round').ReactionId }[]; lost: { species: string }[] },
-) {
+function logRoundStep(scene: LevelScene, res: Pick<StepResult, 'troubleEvents' | 'reactions' | 'lost' | 'labEvents'>) {
   scene.roundLog.troubles.push(...res.troubleEvents);
   scene.roundLog.reactions.push(...res.reactions.map((event) => event.id));
   scene.roundLog.wandered.push(...res.lost.map((event) => event.species));
+  scene.roundLog.lab.push(...res.labEvents);
 }
 
 function drawHintPulse(scene: LevelScene) {
@@ -516,6 +516,8 @@ export function drawPlanet(scene: LevelScene) {
     aimedStep?.state.planet ?? scene.planet,
     aimedStep?.troubleEvents,
     forecastTroubles(scene.roundState(), scene.roundModifiers()),
+    { lab: scene.o.lab ?? {}, marks: scene.labMarks },
+    { lab: scene.o.lab ?? {}, marks: aimedStep?.state.labMarks ?? scene.labMarks },
   );
   drawRoundTraitBadges(scene);
   drawTraitPuffs(scene);
@@ -575,6 +577,7 @@ function tickTroublesAfterMiss(scene: LevelScene, sh: Shot) {
   );
   logRoundStep(scene, res);
   scene.planet = res.state.planet;
+  scene.labMarks = res.state.labMarks;
   applyTroubleState(scene, res);
   scene.nova = res.state.nova;
   scene.score = res.after + scene.bonus;
@@ -743,6 +746,8 @@ export function update(scene: LevelScene, dt: number) {
     p.vy *= 0.98;
   }
   scene.particles = scene.particles.filter((p) => p.life > 0);
+  // Old phones: keep the newest particles if a burst storm piles up (a Combo bloom plus a Supernova).
+  if (scene.particles.length > MAX_PARTICLES) scene.particles.splice(0, scene.particles.length - MAX_PARTICLES);
   scene.feedback = advanceFeedback(scene.feedback, scene.time * 1000);
   scene.popups = scene.feedback.active.map((item) => {
     const elapsed = scene.time - item.startedAt / 1000;
@@ -779,6 +784,8 @@ export function land(scene: LevelScene, sh: Shot, i: number) {
   );
   showTraitBlocks(scene, res.troubleEvents);
   logRoundStep(scene, res);
+  scene.labSteps.push({ kind: sh.kind, reactions: res.reactions, troubleEvents: res.troubleEvents });
+  scene.o.onLabStep?.({ kind: sh.kind, reactions: res.reactions, troubleEvents: res.troubleEvents });
   scene.planet = res.state.planet;
   scene.nova = res.state.nova;
   scene.combo = res.state.combo;
@@ -829,7 +836,7 @@ export function land(scene: LevelScene, sh: Shot, i: number) {
   scene.bonus = res.state.bonus;
   scene.regionBests = res.state.regionBests;
   scene.arrived = new Set(res.state.arrived);
-  const bonus = res.labBonus;
+  scene.labMarks = res.state.labMarks;
   const regions = res.after >= res.before ? res.newRegionBests.map((at) => scene.planet.sectors[at].biome) : [];
   // a throw that makes the planet worse earns nothing (M0 churn rule), arrivals included
   const arrivals = res.after >= res.before ? res.firstArrivals.length : 0;
@@ -853,7 +860,6 @@ export function land(scene: LevelScene, sh: Shot, i: number) {
     }
     scene.popup(target.x, target.y - 70, t('+{n} Supernova', { n: res.novaGain }), '#ffe78a', 16, 1, 0);
   }
-  if (bonus) setTimeout(() => scene.popup(sh.x - 34, sh.y + 16, t('🧪 +{n}', { n: bonus }), '#c9a8ff', 16, 1.2), 380);
   if (res.novaFired) {
     if (!scene.o.reduceMotion) scene.ring(sh.x, sh.y, '#ffd24a', scene.R * 1.6);
     scene.burst(sh.x, sh.y, '#fff2b8', scene.o.reduceMotion ? 8 : 50, 9);
@@ -871,7 +877,7 @@ export function land(scene: LevelScene, sh: Shot, i: number) {
   scene.shake = scene.o.reduceMotion ? 0 : 10;
   scene.burst(sh.x, sh.y, OBJECT_FEEL[sh.kind].burst, scene.o.reduceMotion ? 10 : 34, 7);
   scene.ring(sh.x, sh.y, OBJECT_FEEL[sh.kind].burst, scene.R * 0.9);
-  const delta = res.after - res.before + bonus;
+  const delta = res.after - res.before;
   const quality = delta + res.spawned.length * 6;
   const call = CALLOUTS.find(([min]) => quality >= min);
   if (call) {
@@ -976,6 +982,7 @@ export function roundState(scene: LevelScene): RoundState {
     troubles: scene.troubles,
     buddyShieldUsed: scene.buddyShieldUsed,
     calmUsed: scene.calmUsed,
+    labMarks: scene.labMarks,
   };
 }
 
@@ -985,6 +992,7 @@ export function roundModifiers(scene: LevelScene): RoundModifiers {
     splash: scene.o.splash,
     scopeLevel: scene.o.scopeLevel,
     lab: scene.o.lab ?? {},
+    forms: scene.o.forms ?? {},
     boosters: scene.o.boosters,
     momentum: scene.o.momentum ?? 0,
     buddy: scene.o.buddy ?? null,

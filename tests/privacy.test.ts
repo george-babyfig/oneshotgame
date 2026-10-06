@@ -26,7 +26,14 @@ export const ALLOWED_DEPENDENCIES = [
 ];
 
 /** Hard-coded URLs allowed in code (comments are ignored). XML namespaces are identifiers, never fetched. */
-export const ALLOWED_URLS = ['http://www.w3.org/2000/svg', 'http://www.w3.org/1999/xhtml', 'http://www.w3.org/1999/xlink'];
+export const ALLOWED_URLS = [
+  'http://www.w3.org/2000/svg',
+  'http://www.w3.org/1999/xhtml',
+  'http://www.w3.org/1999/xlink',
+  // The "Rate Comet Garden" link: opened by the system only after the parental gate, and only once the
+  // owner sets APP_STORE_ID (settings.ts). It is a link out, never fetched by the app.
+  'https://apps.apple.com/app/id${APP_STORE_ID}?action=write-review',
+];
 
 /** Network APIs banned in src/ (matched in code, not comments). */
 export const NETWORK_APIS: { label: string; re: RegExp }[] = [
@@ -40,8 +47,8 @@ export const NETWORK_APIS: { label: string; re: RegExp }[] = [
   { label: 'downloadFile', re: /\b(?:Filesystem\s*\.\s*)?downloadFile\s*\(/ },
 ];
 
-/** sha256 of ios/App/App/PrivacyInfo.xcprivacy (line endings normalised). Update only with a privacy review. */
-export const PRIVACY_MANIFEST_SHA256 = 'a331d51864743ebe4e00dd22360b4a538b6b3ac26a6b3eb54094e60a36959a12';
+/** Privacy review 2026-10-05: Filesystem uses only app-local postcard timestamps (C617.1); Preferences uses app settings (CA92.1). No collected data or tracking. */
+export const PRIVACY_MANIFEST_SHA256 = 'c7698b0790c3bcf9ba6786caf8a7819579d05d573ec60f466f0c03d9b5f2811a';
 const PRIVACY_MANIFEST = 'ios/App/App/PrivacyInfo.xcprivacy';
 
 // ---- Helpers ----

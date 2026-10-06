@@ -2,6 +2,7 @@ import { SECTORS, clonePlanet, settle, wrap, type Planet } from './world';
 import { traitOf, type TraitId } from './world';
 import type { RoundState } from './round';
 import type { RoundModifiers } from './modifiers';
+import type { GuardId } from './labperks';
 
 export type TroubleId = 'vent' | 'vine' | 'frost';
 export const TROUBLES: Record<
@@ -39,26 +40,43 @@ export interface TroubleEvent {
   id: TroubleId;
   kind: 'act' | 'blocked' | 'settled' | 'spread';
   sector: number;
-  by?: 'water' | 'mountain' | 'strongRoots' | 'hot' | TraitId;
+  by?: 'water' | 'mountain' | 'strongRoots' | 'hot' | 'firewall' | 'labRoots' | TraitId;
+  perk?: GuardId;
+  clearedByThrow?: boolean;
+  buddy?: boolean;
   species?: string;
 }
 export interface TroubleForecast {
   id: TroubleId;
   sector: number | null;
   inThrows: number;
-  blockedBy?: TraitId | 'water' | 'mountain' | 'strongRoots' | 'hot';
+  blockedBy?: TroubleEvent['by'];
 }
 
-export function firebreakBy(planet: Planet, sector: number, id: TroubleId): TroubleEvent['by'] | undefined {
+export interface GuardContext {
+  lab: Partial<Record<import('./world').Kind, number>>;
+  marks?: RoundState['labMarks'];
+}
+
+export function firebreakBy(planet: Planet, sector: number, id: TroubleId, guard?: GuardContext): TroubleEvent['by'] | undefined {
   const s = planet.sectors[wrap(sector)];
   const trait = s.species ? traitOf(s.species) : null;
   if (id === 'vent') {
     if (s.water >= 2) return 'water';
     if (s.land >= 3) return 'mountain';
+    if (
+      (guard?.lab.rock ?? 1) >= 4 &&
+      [-1, 1].some((d) => {
+        const near = wrap(sector + d);
+        return guard?.marks?.rock?.includes(near) && planet.sectors[near].land >= 3;
+      })
+    )
+      return 'firewall';
     if (trait === 'fireproof' || trait === 'swimmer') return trait;
   } else if (id === 'vine') {
     if (s.water >= 2) return 'water';
     if (s.life >= 3) return 'strongRoots';
+    if ((guard?.lab.seed ?? 1) >= 4 && guard?.marks?.seed?.includes(wrap(sector))) return 'labRoots';
     if (trait === 'weedproof' || trait === 'swimmer') return trait;
   } else {
     if (s.heat >= 2) return 'hot';
@@ -112,7 +130,7 @@ export function forecastTroubles(state: RoundState, mods: RoundModifiers): Troub
       }
       trouble.nextIn = trouble.every;
       const sector = troubleTarget(planet, trouble);
-      const blockedBy = sector === null ? undefined : firebreakBy(planet, sector, trouble.id);
+      const blockedBy = sector === null ? undefined : firebreakBy(planet, sector, trouble.id, { lab: mods.lab, marks: state.labMarks });
       if (sector === null) {
         out.push({ id: trouble.id, sector, inThrows: turn });
         trouble.settled = true;

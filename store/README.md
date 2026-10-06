@@ -20,8 +20,10 @@ Everything needed to put Comet Garden on the App Store. Start with **`APP_STORE_
 | `social/`, `tools/scrapbook-social.mjs`, `tools/scrapbook-social-post.py`                                           | Social pack in the same style: a 1080 × 1080 launch post (EN, ES, JA), a 1080 × 1920 story and a 1200 × 630 site link preview, plus suggested post copy (`social/README.md`) |
 | `tools/measure-listings.py`                                                                                         | Checks every listing against Apple's length and keyword limits and our banned words                                                                                          |
 | `../docs/product/store-research.md`                                                                                 | The research behind the choices (Apple rules, Kids Category, how family games present their pages), with sources                                                             |
-| `gamecenter.md`                                                                                                     | Game Center leaderboards and achievements (optional)                                                                                                                         |
+| `gamecenter.md`                                                                                                     | Game Center achievements only for 1.0 (optional)                                                                                                                             |
 
 The support/marketing site lives in `../site/` (see `site/README.md`).
 
 Rules we followed: no other games' names, no "#1"/"best", no prices, "free" or pressure words in screenshots or copy, and no "for kids" wording (the app launches in Games → Casual at 4+; the Kids Category stays an option for later).
+
+The App Store Connect checklist also uses `accessibility.md` and `in-app-event.md` as drafts. Product metadata in `compliance.md` is checked by `tests/storedocs.test.ts`.

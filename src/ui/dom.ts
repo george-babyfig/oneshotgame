@@ -1,6 +1,6 @@
 import { sfx } from './audio';
 import { haptic } from './haptics';
-import { t } from '../i18n';
+import { getLang, t } from '../i18n';
 import { MOTION, popIn, popOut, prefersReducedMotion } from './motion';
 
 type Child = Node | string | number | null | undefined | false | Child[];
@@ -39,14 +39,14 @@ export function btn(label: Child, cls: string, onClick: () => void): HTMLButtonE
   return b;
 }
 
-export const fmt = (n: number) => Math.floor(n).toLocaleString('en-US');
+export const fmt = (n: number) => Math.floor(n).toLocaleString(getLang());
 export const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 let overlay: HTMLElement;
 let toasts: HTMLElement;
 export function mountOverlays(root: HTMLElement) {
   overlay = h('div', { class: 'overlay' });
-  toasts = h('div', { class: 'toasts' });
+  toasts = h('div', { class: 'toasts', 'aria-live': 'polite', 'aria-atomic': 'false' });
   root.append(overlay, toasts);
 }
 
@@ -64,12 +64,22 @@ const aborts = new Set<() => void>();
  */
 export function modal(content: Child[], opts: { cls?: string; dismiss?: boolean; onClose?: () => void; onAbort?: () => void } = {}): Modal {
   const box = h('div', { class: `modal ${opts.cls ?? ''}` }, ...content);
+  const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
+  const title = box.querySelector<HTMLElement>('.m-title, .end-title, .confirm, h1, h2');
+  if (title) {
+    title.id ||= `modal-title-${Math.random().toString(36).slice(2)}`;
+    box.setAttribute('aria-labelledby', title.id);
+  } else box.setAttribute('aria-label', t('Dialog'));
+  box.tabIndex = -1;
   const scrim = h('div', { class: 'scrim' }, box);
   let done = false;
   const abort = () => {
     if (done) return;
     done = true;
     opts.onAbort?.();
+    opener?.focus();
   };
   if (opts.onAbort) aborts.add(abort);
   const close = () => {
@@ -81,10 +91,12 @@ export function modal(content: Child[], opts: { cls?: string; dismiss?: boolean;
     scrim.style.pointerEvents = 'none';
     setTimeout(() => scrim.remove(), prefersReducedMotion() ? MOTION.calm : MOTION.popOut);
     opts.onClose?.();
+    opener?.focus();
   };
   if (opts.dismiss !== false) scrim.addEventListener('click', (e) => e.target === scrim && close());
   overlay.append(scrim);
   popIn(box);
+  (box.querySelector<HTMLElement>('button:not([disabled]), input, select, [tabindex="0"]') ?? box).focus();
   return { el: box, close };
 }
 

@@ -14,7 +14,7 @@ A small static marketing and support site for Comet Garden. It has five HTML pag
 | `img/icon.png`                                       | The original 1024 px app icon, offered as a download in the press kit                                         |
 | `img/icon-512.png`, `icon-180.png`, `favicon-32.png` | Smaller copies of the icon for the hero, the Apple touch icon and the favicon                                 |
 | `img/og.png`                                         | 1200×630 link-preview image                                                                                   |
-| `img/shot-1.png` … `shot-6.png`                      | **Placeholder** screenshots (660×1434)                                                                        |
+| `img/shot-1.jpg` … `shot-6.jpg`                      | **Placeholder** screenshots (660×1434)                                                                        |
 | `press/`                                             | Empty for now. Press downloads go here.                                                                       |
 
 Japanese text uses the system font (Hiragino on Apple devices) because Fredoka has no Japanese glyphs.
@@ -42,11 +42,11 @@ grep -rn "TODO\|YOUR-DOMAIN\|OWNER NAME\|DEVELOPER NAME" site
 Placeholders on the page are also highlighted with a pink dashed box, so you can spot them.
 
 1. **Support email**: `support@YOUR-DOMAIN`, in `support.html` (the contact card and the last FAQ answer) and `press.html`. Change both the visible text and the `mailto:` link. **Apple requires the Support URL to show real contact information**, so this must be done before you submit.
-2. **Owner name**: `OWNER NAME` in the footer of all five pages (`© 2026 …`). Use the same legal name as the Copyright field in App Store Connect.
+2. **Owner name**: `OWNER NAME` in the footer of all five pages and in both privacy-policy copies (`© 2026 …`). Use the same legal name as the Copyright field in App Store Connect.
 3. **Developer name**: `DEVELOPER NAME` in the `press.html` fact sheet.
 4. **Domain**: `https://YOUR-DOMAIN` in the `press.html` fact sheet. Then follow the TODO in each page's `<head>`: add `<link rel="canonical">` and `og:url`, and make `og:image` absolute (`https://YOUR-DOMAIN/img/og.png`). Most link previews ignore relative image paths.
 5. **App Store badge and link** (after approval): see the TODO in `index.html`. Download the official "Download on the App Store" badge from Apple's Marketing Resources and save it into `img/`, because hotlinking would break the no-external-requests rule. Link it to `https://apps.apple.com/app/id…` and replace the "Coming soon" note. Follow Apple's badge guidelines on size and clear space.
-6. **Screenshots**: replace `img/shot-1.png` … `shot-6.png` with real portrait screenshots. Keep the file names and resize them to about 660 px wide. The App Store originals are 1320 px wide and much heavier. Then update each `alt` text in `index.html` to describe the real image.
+6. **Screenshots**: replace `img/shot-1.jpg` … `shot-6.jpg` with real portrait screenshots. Keep the file names and resize them to about 660 px wide. The App Store originals are 1320 px wide and much heavier. Then update each `alt` text in `index.html` to describe the real image.
 7. **Launch date**: set the `<time>` in `notes.html`.
 8. **Press assets**: put the screenshots zip and a logo in `press/`, then turn the note in `press.html` into links.
 

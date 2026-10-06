@@ -44,6 +44,10 @@ export default defineConfig({
       use: { ...devices['iPhone 14'], browserName: 'chromium', defaultBrowserType: 'chromium', ...phone(390, 844) },
     },
     {
+      name: 'webkit-320x568',
+      use: { ...devices['iPhone SE'], browserName: 'webkit', defaultBrowserType: 'webkit', ...phone(320, 568) },
+    },
+    {
       name: 'webkit-390x844',
       use: { ...devices['iPhone 14'], browserName: 'webkit', defaultBrowserType: 'webkit', ...phone(390, 844) },
     },

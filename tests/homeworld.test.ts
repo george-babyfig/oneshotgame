@@ -41,8 +41,8 @@ function rich() {
 describe('homeworld', () => {
   it('builds with a drone and finishes on time', () => {
     const p = rich();
-    expect(build(p, 0, 'mill', T0)).toBe('ok');
-    expect(p.dust).toBe(1e6 - 150);
+    expect(build(p, 0, 'den', T0)).toBe('ok');
+    expect(p.dust).toBe(1e6 - 250);
     expect(busyDrones(p.home, T0)).toBe(1);
     expect(tickBuilds(p.home, T0 + BUILD_TIME[1] - 1)).toEqual([]);
     expect(tickBuilds(p.home, T0 + BUILD_TIME[1])).toEqual([0]);
@@ -51,18 +51,19 @@ describe('homeworld', () => {
 
   it('limits drones (2 free, 3 with the pass) but never for decorations', () => {
     const p = rich();
-    build(p, 0, 'mill', T0);
-    build(p, 1, 'mill', T0);
-    expect(build(p, 2, 'mill', T0)).toBe('drones');
+    p.home.ring = 2;
+    build(p, 0, 'den', T0);
+    build(p, 1, 'tower', T0);
+    expect(build(p, 2, 'greenhouse', T0)).toBe('drones');
     expect(build(p, 2, 'lantern', T0)).toBe('ok');
     p.pass = true;
-    expect(build(p, 3, 'mill', T0)).toBe('ok');
+    expect(build(p, 3, 'greenhouse', T0)).toBe('ok');
   });
 
   it('gates buildings and upgrades by ring', () => {
     const p = rich();
-    expect(build(p, 0, 'grove', T0)).toBe('ring');
-    build(p, 0, 'mill', T0);
+    expect(build(p, 0, 'greenhouse', T0)).toBe('ring');
+    build(p, 0, 'den', T0);
     tickBuilds(p.home, T0 + H);
     expect(canUpgrade(p, 0, T0 + H)).toBe('ring'); // lv2 needs ring 2
     expect(expand(p)).toBe('ok');
@@ -81,7 +82,7 @@ describe('homeworld', () => {
 
   it('produces up to a cap and keeps partial progress', () => {
     const p = rich();
-    build(p, 0, 'mill', T0);
+    p.home.plots[0] = { type: 'mill', lv: 1, since: T0, done: T0 + BUILD_TIME[1] }; // existing producer save
     const start = T0 + BUILD_TIME[1];
     tickBuilds(p.home, start);
     expect(ready(p.home, 0, start + 0.5 * H)).toBe(20);
@@ -96,7 +97,7 @@ describe('homeworld', () => {
 
   it('a campaign win speeds builds up; no gem skips exist', () => {
     const p = rich();
-    build(p, 0, 'mill', T0);
+    build(p, 0, 'den', T0);
     tickBuilds(p.home, T0 + H);
     expand(p);
     upgrade(p, 0, T0 + H);
@@ -216,7 +217,7 @@ describe('homeworld exploit fixes', async () => {
   });
   it('win speed-ups only shorten builds still running, never into the past', () => {
     const p = rich();
-    Hw.build(p, 0, 'mill', T0); // done at T0 + 30s
+    Hw.build(p, 0, 'den', T0); // done at T0 + 30s
     expect(Hw.speedUpBuilds(p.home, Hw.WIN_SPEEDUP, T0 + H)).toBe(0);
     Hw.tickBuilds(p.home, T0 + H);
     expect(p.home.plots[0]!.since).toBe(T0 + BUILD_TIME[1]);

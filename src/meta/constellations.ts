@@ -11,6 +11,7 @@ import { applyReward, type Reward } from './progression';
 import { unlocked } from './unlocks';
 
 export type Mat = 'stone' | 'dew' | 'leaf' | 'ember' | 'frost';
+export type Essence = Mat;
 export const MATS: Mat[] = ['stone', 'dew', 'leaf', 'ember', 'frost'];
 export const MAT_EMOJI: Record<Mat, string> = { stone: '🪨', dew: '💧', leaf: '🌿', ember: '🔥', frost: '❄️' };
 export const MAT_NAMES: Record<Mat, string> = { stone: 'Stone', dew: 'Dew', leaf: 'Leaf', ember: 'Ember', frost: 'Frost' };
@@ -47,6 +48,21 @@ export function dropsFor(planet: Planet, stars: number): Partial<Record<Mat, num
     if (n) out[m] = n + (m !== 'frost' && stars >= 3 ? MATERIAL_DROP.threeStarBonus : 0);
   }
   return out;
+}
+
+export function essenceDropsFor(planet: Planet, stars: number, firstClear: boolean): Partial<Record<Mat, number>> {
+  const full = dropsFor(planet, stars);
+  if (firstClear) {
+    // First discoveries help the scarce Rock colour and the Seed/Sun shared colour.
+    const discoveryBonus = stars >= 3 ? 4 : stars >= 2 ? 2 : 0;
+    if (discoveryBonus) for (const mat of ['stone', 'leaf'] as const) if (full[mat]) full[mat] += discoveryBonus;
+    return full;
+  }
+  return Object.fromEntries(
+    Object.entries(full)
+      .map(([mat, amount]) => [mat, Math.floor(amount / 2)] as const)
+      .filter(([, amount]) => amount > 0),
+  );
 }
 
 export function addDrops(p: Profile, d: Partial<Record<Mat, number>>, source: EarnSource = 'material_drop') {

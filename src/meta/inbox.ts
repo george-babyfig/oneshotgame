@@ -9,6 +9,7 @@ import { seasonOf, skyEventOn } from './seasons';
 import { chaptersDone, friendLevel, FRIEND_LEVELS } from './homeworld';
 import { UNLOCKS, unlocked } from './unlocks';
 import { remixUnlocked } from './remix';
+import { LAB_TEXT } from './labcopy';
 
 export interface Mail {
   id: string;
@@ -54,11 +55,11 @@ const RULES: Rule[] = [
   {
     kind: 'homeworld',
     key: (p) => (unlocked(p, 'homeworld') ? 'homeworld' : null),
+    vars: () => ({ m10: 1 }),
     letter: () => ({
       from: MC,
       title: 'A planet of your own',
-      body: 'We found you a quiet little world. Build a Stardust Mill and a Critter Den — it will grow with every chapter you finish.',
-      gift: INBOX_GIFTS.homeworld,
+      body: LAB_TEXT.letterBody,
     }),
   },
   {
@@ -236,6 +237,10 @@ export function checkMail(p: Profile, now = new Date()): number {
 }
 
 export function letterOf(m: Mail): LetterDef | null {
+  // Pre-M10 letters had no vars and promised 300 stardust. Preserve an unclaimed gift.
+  if (m.kind === 'homeworld' && !m.vars?.m10) {
+    return { from: MC, title: 'A planet of your own', body: LAB_TEXT.letterBody, gift: { dust: 300 } };
+  }
   if (m.kind === 'coach_intro') {
     const row = UNLOCKS.find((x) => x.id === m.vars?.id && x.intro);
     return row?.intro ? { from: 'Keeper', title: row.intro.title, body: row.intro.body } : null;

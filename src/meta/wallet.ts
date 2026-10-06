@@ -7,6 +7,7 @@ export type Currency = 'gems' | 'dust' | Material;
 export type EarnSource =
   | 'level_win'
   | 'first_clear'
+  | 'first_hour'
   | 'quest'
   | 'wish'
   | 'calendar'

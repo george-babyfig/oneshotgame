@@ -9,7 +9,7 @@
 
 ## Promotional text (170)
 
-すいせいを投げて、かわいいいきものがひっこしてくる小さな世界をそだてよう。フュージョンをつくり、コンボをつなげて、ホームワールドをつくろう。広告なし。おかいものは大人だけ。
+すいせいを投げて、かわいいいきものがひっこしてくる小さな世界をそだてよう。フュージョンをつくり、コンボをつなげて、ホームワールドをつくろう。広告なし。購入には保護者チェックが必要です。
 
 ## Description (4,000)
 
@@ -40,9 +40,11 @@
 ・100をこえる惑星。むずかしさは少しずつ上がり、どの惑星でも星を1〜3つもらえます
 ・むずかしい惑星では、ヘルプが一歩ずつ：なにがおきたか、ちいさなヒント、そしてもう少しのおてつだい
 ・今日の惑星、ウィークリーボヤージュ、メテオラッシュ、禅の庭、友だちと対戦
+・ボーナスリミックスでは、クリアしたチャプターに楽しいしかけと金の星が加わります
+・惑星でエッセンスを集め、ホームワールドにラボを建てよう
 ・English、Español、Français、Deutsch、Português (Brasil)、日本語であそべます
 
-【おとなの方へ】
+【安心してあそべる工夫】
 ・広告なし。ライフやスタミナの待ち時間なし。有料のランダム報酬（ガチャ）もありません。
 ・追加購入は任意で、保護者チェックのある「おうちの方へ」エリアでのみ販売。中身は、購入前にいつもはっきり表示されます
 ・「やさしい惑星」設定、プレイ時間のまとめ、休憩をすすめるおしらせ（任意）
@@ -58,10 +60,10 @@ _Native terms: 箱庭 (miniature-world sandbox), 育成 (raising/growing), 癒�
 
 ## Support / marketing / privacy
 
-- Support URL: https://<your-site>/support.html (site files in `site/`; same URL for every language)
-- Marketing URL: https://<your-site>/
-- Privacy policy URL: https://<your-site>/privacy.html (the page includes a Japanese section)
-- Copyright: 2026 <owner legal name>
+- Support URL: https://YOUR-DOMAIN/support.html (site files in `site/`; same URL for every language)
+- Marketing URL: https://YOUR-DOMAIN/
+- Privacy policy URL: https://YOUR-DOMAIN/privacy.html (the page includes a Japanese section)
+- Copyright: 2026 OWNER NAME
 
 ## What's New
 
@@ -69,4 +71,4 @@ Not shown for version 1.0 (Apple has no "What's New" on a first release). From 1
 
 ## Lengths
 
-Subtitle 21/30 chars · Promotional text 86/170 chars · Description 1,086/4,000 chars · Keywords 98/100 bytes (UTF-8). Measured with python3 on the exact text to paste (len() in characters; blank lines in the description counted).
+Subtitle 21/30 chars · Promotional text 92/170 chars · Description 1,162/4,000 chars · Keywords 98/100 bytes (UTF-8). Measured with python3 on the exact text to paste (len() in characters; blank lines in the description counted).

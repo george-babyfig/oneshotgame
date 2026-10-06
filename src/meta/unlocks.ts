@@ -3,6 +3,7 @@ import { GOALS_FROM } from '../core/levels';
 import { OBSTACLES, type ObstacleId } from '../core/sky';
 import { KINDS, type Kind } from '../core/world';
 import type { Profile } from './profile';
+import { LAB_TEXT } from './labcopy';
 
 export const HOME_UNLOCK_LEVEL = 5;
 export const MOMENTUM_UNLOCK = 17;
@@ -151,7 +152,7 @@ export const UNLOCKS: readonly Unlock[] = [
     letter: 'homeworld',
     intro: {
       title: 'A planet of your own',
-      body: 'Build a home. Welcome a friend.',
+      body: LAB_TEXT.unlockBody,
     },
   },
   { id: 'weekly_event', planet: EVENT_UNLOCK_LEVEL, placement: 'home' },

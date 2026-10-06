@@ -20,7 +20,12 @@ export const haptic = {
     Haptics.impact({ style: kind === 'settled' ? ImpactStyle.Medium : ImpactStyle.Light }).catch(() => {});
   },
   sky: () => allowed() && Haptics.impact({ style: ImpactStyle.Light }).catch(() => {}),
-  tick: () => allowed() && Haptics.selectionChanged().catch(() => {}),
+  tick: () => {
+    if (!allowed()) return;
+    void Haptics.selectionStart()
+      .then(() => Haptics.selectionChanged())
+      .catch(() => {});
+  },
   light: () => allowed() && Haptics.impact({ style: ImpactStyle.Light }).catch(() => {}),
   medium: () => allowed() && Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {}),
   heavy: () => allowed() && Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {}),

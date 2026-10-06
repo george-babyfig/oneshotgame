@@ -16,8 +16,10 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { defaultProfile, migrate, PROFILE_VERSION, type Profile } from '../src/meta/profile';
+import { defaultProfile, migrate, PROFILE_VERSION, readInterruptedRound, type Profile } from '../src/meta/profile';
+import { labBuildCost, labCap, labLevel } from '../src/meta/labs';
 import { unlocked } from '../src/meta/unlocks';
+import { BUILDINGS, canBuild } from '../src/meta/homeworld';
 
 const DIR = 'tests/fixtures/saves';
 const FILES = readdirSync(DIR)
@@ -50,8 +52,15 @@ function wallet(p: Raw) {
 }
 
 describe('save goldens', () => {
-  it('has the five fixtures (add one for every save format change)', () => {
-    expect(FILES).toEqual(['a-new-profile.v3.json', 'b-mid-game.v3.json', 'c-pre-m0.v3.json', 'd-round4.v2.json', 'e-pre-m3.v3.json']);
+  it('has the six fixtures (add one for every save format change)', () => {
+    expect(FILES).toEqual([
+      'a-new-profile.v3.json',
+      'b-mid-game.v3.json',
+      'c-pre-m0.v3.json',
+      'd-round4.v2.json',
+      'e-pre-m3.v3.json',
+      'f-pre-m10.v3.json',
+    ]);
   });
 
   for (const f of FILES) {
@@ -96,6 +105,37 @@ describe('save goldens', () => {
 });
 
 describe('save goldens: specific migrations', () => {
+  it('f-pre-m10 keeps paid Lab levels, full plots, wallet and old checkpoint', () => {
+    const raw = load('f-pre-m10.v3.json');
+    const p = loadSave('f-pre-m10.v3.json');
+    expect(p.home.plots).toEqual((raw.home as Raw).plots);
+    expect(p.mats).toEqual(raw.mats);
+    expect(p.lab).toEqual(raw.lab);
+    expect(p.home.firstHour).toBe(2);
+    expect(p.home.plots.every(Boolean)).toBe(true);
+    for (const [type, def] of Object.entries(BUILDINGS))
+      expect(p.home.plots.filter((b) => b?.type === type).length, type).toBeLessThanOrEqual(def.max);
+    expect(p.home.debris.every((i) => !p.home.plots[i])).toBe(true);
+    expect(labCap(p)).toBe(4);
+    expect(labLevel(p, 'seed')).toBe(5);
+    for (const kind of ['rock', 'ice', 'seed', 'magma'] as const) expect(labBuildCost(p, kind)).toBe(0);
+    const checkpoint = readInterruptedRound(p);
+    expect(checkpoint?.n).toBe(33);
+    expect(checkpoint?.state.labMarks).toEqual({ rock: [], seed: [] });
+    expect(checkpoint?.modifiers.forms).toBeUndefined();
+  });
+  it('keeps the first-hour invitation for an untouched Homeworld', () => {
+    expect(loadSave('e-pre-m3.v3.json').home.firstHour).toBe(0);
+    expect(loadSave('a-new-profile.v3.json').home.firstHour).toBe(0);
+  });
+
+  it('refuses new retired producers and generic Lab builds', () => {
+    const p = defaultProfile(0);
+    p.level = 33;
+    p.home.ring = 3;
+    p.dust = 100_000;
+    for (const type of ['mill', 'grove', 'observatory', 'lab'] as const) expect(canBuild(p, 0, type, 1), type).toBe('max');
+  });
   it('migrates the old dollar reminder and adds a parent PIN default', () => {
     const raw = load('b-mid-game.v3.json');
     (raw.settings as Raw).spendingReminder = 5;

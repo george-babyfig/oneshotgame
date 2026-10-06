@@ -80,6 +80,13 @@ import type { App } from '../app';
 import { getLang, planetName, t, tp } from '../../i18n';
 import { whenText } from '../../meta/dates';
 import { canvasDpr } from '../devcapture';
+import { KINDS, type Kind } from '../../core/world';
+import { MATS, MAT_EMOJI } from '../../meta/constellations';
+import { labLevel, labPlot, labBuildCost, canBuildLab, buildLab, suggestedFirstLab, formState } from '../../meta/labs';
+import { firstHourStep, firstHourLab, firstHourFriend } from '../../meta/firsthour';
+import { LAB_NAME, LAB_TEXT, LAB_FIRST_COPY, ESSENCE_NAME } from '../../meta/labcopy';
+import { labCard } from './labcard';
+import { showFirstFriend } from '../flows/labmoments';
 
 const TAU = Math.PI * 2;
 
@@ -93,7 +100,17 @@ export function fmtTime(ms: number) {
   return mm ? t('{h}h {m}m', { h: hh, m: mm }) : t('{h}h', { h: hh });
 }
 
-function structIcon(type: BuildingType, lv: number, px: number) {
+const iconCache = new Map<string, string>();
+function structIcon(type: BuildingType, lv: number, px: number, kind?: Kind) {
+  const key = `${type}:${lv}:${px}:${kind ?? ''}:${canvasDpr()}`;
+  const cached = iconCache.get(key);
+  if (cached) {
+    const img = document.createElement('img');
+    img.src = cached;
+    img.width = img.height = px;
+    img.alt = '';
+    return img;
+  }
   const dpr = canvasDpr();
   const cv = document.createElement('canvas');
   cv.width = cv.height = Math.round(px * dpr);
@@ -101,11 +118,16 @@ function structIcon(type: BuildingType, lv: number, px: number) {
   const g = cv.getContext('2d')!;
   g.scale(dpr, dpr);
   g.translate(px / 2, px * 0.9);
-  drawStructure(g, type, lv, px * 0.95, 0.4);
-  return cv;
+  drawStructure(g, type, lv, px * 0.95, 0.4, false, { kind });
+  const img = document.createElement('img');
+  img.src = cv.toDataURL();
+  img.width = img.height = px;
+  img.alt = '';
+  iconCache.set(key, img.src);
+  return img;
 }
 
-export const REASON: Record<BuildCheck, string> = {
+export const REASON: Record<BuildCheck | 'locked', string> = {
   ok: '',
   ring: 'Expand your planet first',
   max: 'You have the most of these',
@@ -116,6 +138,7 @@ export const REASON: Record<BuildCheck, string> = {
   debris: 'Clear the meteor rock first',
   occupied: 'This plot is taken',
   maxlv: 'Fully upgraded',
+  locked: 'Unlock this object first',
 };
 
 function gotText(c: Collected) {
@@ -156,6 +179,9 @@ export function showHomeworld(app: App) {
   const canvas = h('canvas', { class: 'hw-canvas' }) as HTMLCanvasElement;
   const panel = h('div', { class: 'hw-panel' });
   const ringLbl = h('small', { class: 'muted' });
+  const pouchHeader = btn('', 'ghost hw-pouch-head', () => essenceSheet(app));
+  pouchHeader.setAttribute('aria-label', t(LAB_TEXT.pouch));
+  const plotButtons = home.plots.map((_, i) => btn('', 'hw-plot-access', () => tapPlot(i)));
   const g = canvas.getContext('2d')!;
   let rot = -Math.PI / 2 - (selected >= 0 ? (selected * TAU) / home.plots.length : 0);
   let vel = 0;
@@ -353,7 +379,16 @@ export function showHomeworld(app: App) {
       g.fill();
       const b = home.plots[i];
       if (home.debris.includes(i)) drawDebris(g, s, time + i);
-      else if (b) drawStructure(g, b.type, b.lv, s, time + i * 0.3, !!b.done && b.done > nowMs);
+      else if (b)
+        drawStructure(
+          g,
+          b.type,
+          b.type === 'lab' && b.kind ? labLevel(p, b.kind) : b.lv,
+          s,
+          time + i * 0.3,
+          !!b.done && b.done > nowMs,
+          b.type === 'lab' ? { kind: b.kind, formOn: !!b.kind && formState(p, b.kind).on } : undefined,
+        );
       else if (i === selected) {
         g.fillStyle = 'rgba(255,255,255,0.7)';
         g.font = `700 ${Math.round(s * 0.4)}px Fredoka, ui-rounded, system-ui, sans-serif`;
@@ -559,6 +594,9 @@ export function showHomeworld(app: App) {
       moving,
       p.dust,
       p.gems,
+      p.mats,
+      p.lab,
+      home.firstHour,
       home.ring,
       home.debris,
       home.residents.length,
@@ -590,6 +628,18 @@ export function showHomeworld(app: App) {
     const bar = canvas.parentElement?.querySelector('.topbar');
     if (bar) bar.replaceWith(app.topBar(app.canGoBack()));
     ringLbl.textContent = ` ${t('Ring {n}', { n: home.ring })}`;
+    pouchHeader.textContent = MATS.map((mat) => `${MAT_EMOJI[mat]}${fmt(p.mats[mat] ?? 0)}`).join(' ');
+    plotButtons.forEach((button, index) => {
+      const building = home.plots[index];
+      const description = home.debris.includes(index)
+        ? t('Meteor rock')
+        : building?.type === 'lab' && building.kind
+          ? t('{name}, level {level}', { name: t(LAB_NAME[building.kind]), level: labLevel(p, building.kind) })
+          : building
+            ? t('{name}, level {level}', { name: t(BUILDINGS[building.type].name), level: building.lv })
+            : t('Empty plot');
+      button.setAttribute('aria-label', t('Plot {n}: {description}', { n: index + 1, description }));
+    });
     const kids: (HTMLElement | null)[] = [];
     const i = selected;
     const b = i >= 0 ? home.plots[i] : null;
@@ -610,6 +660,12 @@ export function showHomeworld(app: App) {
         ),
       );
       kids.push(h('p', { class: 'muted hw-hint' }, t('Drag to spin your planet. Tap a plot to build.')));
+      if (firstHourStep(p) !== 'done')
+        kids.push(
+          btn(t(firstHourStep(p) === 'lab' ? LAB_TEXT.firstLab : LAB_TEXT.firstFriend), 'primary wide', () =>
+            firstHourSheet(app, renderPanel),
+          ),
+        );
       kids.push(
         h(
           'div',
@@ -656,7 +712,43 @@ export function showHomeworld(app: App) {
         h(
           'div',
           { class: 'hw-build' },
-          ...BUILDING_TYPES.filter((type) => p.chapters.length >= 1 || !BUILDINGS[type].gems).map((type) => {
+          ...(Object.keys(KINDS) as Kind[])
+            .filter((kind) => labPlot(p, kind) < 0)
+            .map((kind) => {
+              const check = canBuildLab(p, i, kind, now);
+              const locked = check === 'locked';
+              const cost = labBuildCost(p, kind);
+              return h(
+                'button',
+                {
+                  class: `hw-opt lab-opt${check === 'ok' ? '' : ' no'}${locked ? ' locked' : ''}`,
+                  onclick: () => {
+                    const result = buildLab(p, i, kind, Date.now());
+                    if (result !== 'ok') return toast(t(locked ? LAB_TEXT.unlockPlanet : REASON[result], { n: KINDS[kind].unlock }));
+                    firstHourStep(p);
+                    sfx.chest();
+                    haptic.success();
+                    app.save();
+                    renderPanel();
+                  },
+                },
+                structIcon('lab', 1, 54, kind),
+                h('b', null, t(LAB_NAME[kind])),
+                h(
+                  'small',
+                  null,
+                  locked ? t(LAB_TEXT.unlockPlanet, { n: KINDS[kind].unlock }) : cost ? `✨${fmt(cost)}` : t(LAB_TEXT.firstFree),
+                ),
+              );
+            }),
+          ...BUILDING_TYPES.filter(
+            (type) =>
+              type !== 'lab' &&
+              type !== 'mill' &&
+              type !== 'grove' &&
+              type !== 'observatory' &&
+              (p.chapters.length >= 1 || !BUILDINGS[type].gems),
+          ).map((type) => {
             const d = BUILDINGS[type];
             const check = canBuild(p, i, type, now);
             const locked = check === 'ring' || check === 'max';
@@ -695,6 +787,9 @@ export function showHomeworld(app: App) {
           }),
         ),
       );
+    } else if (b.type === 'lab' && b.kind) {
+      kids.push(labCard(app, b.kind, renderPanel));
+      kids.push(btn(t('Move'), 'ghost', () => ((moving = i), renderPanel())));
     } else {
       const d = BUILDINGS[b.type];
       const building = !!b.done && b.done > now;
@@ -814,7 +909,15 @@ export function showHomeworld(app: App) {
   schedule();
 
   app.mount(
-    h('div', { class: 'screen page homeworld' }, app.topBar(), h('div', { class: 'page-title' }, t('Homeworld'), ringLbl), canvas, panel),
+    h(
+      'div',
+      { class: 'screen page homeworld' },
+      app.topBar(),
+      h('div', { class: 'page-title' }, t('Homeworld'), ringLbl, pouchHeader),
+      canvas,
+      h('nav', { class: 'hw-plot-list', 'aria-label': t('Homeworld plots') }, ...plotButtons),
+      panel,
+    ),
     'homeworld',
     () => {
       stopped = true;
@@ -828,19 +931,120 @@ export function showHomeworld(app: App) {
   if (!home.intro) {
     home.intro = true;
     app.save();
-    const m = modal([
-      h('div', { class: 'm-title' }, t('Welcome to your Homeworld!')),
-      h(
-        'div',
-        { class: 'howto' },
-        h('p', null, t('🏗️ Build a Stardust Mill and a Critter Den on your empty plots.')),
-        h('p', null, t('🛸 Drones build while you play. Every planet you finish speeds them up.')),
-        h('p', null, t('🦦 Invite creatures from your Lifebook to live here — they will ask you for small favours.')),
-        h('p', null, t('🌍 Finish chapters to grow your planet and unlock new buildings.')),
-      ),
-      btn(t('Got it!'), 'primary wide', () => m.close()),
-    ]);
+    firstHourSheet(app, () => {
+      renderPanel();
+      schedule();
+    });
   }
+}
+
+function essenceSheet(app: App) {
+  const p = app.p;
+  const m = modal(
+    [
+      h('div', { class: 'm-title' }, t(LAB_TEXT.pouch)),
+      ...MATS.map((mat) =>
+        h(
+          'div',
+          { class: 'essence-row' },
+          h('b', null, `${MAT_EMOJI[mat]} ${t(ESSENCE_NAME[mat])} · ${fmt(p.mats[mat] ?? 0)}`),
+          h(
+            'small',
+            null,
+            t('What uses it: {list}', {
+              list: new Intl.ListFormat(getLang(), { style: 'long', type: 'conjunction' }).format([
+                ...(Object.keys(LAB_NAME) as Kind[])
+                  .filter((kind) =>
+                    kind === 'seed' || kind === 'sun'
+                      ? mat === 'leaf'
+                      : ({ rock: 'stone', ice: 'frost', magma: 'ember', storm: 'dew' } as Partial<Record<Kind, string>>)[kind] === mat,
+                  )
+                  .map((kind) => t(LAB_NAME[kind])),
+                t('Star Atlas'),
+                t('Dyes'),
+              ]),
+            }),
+          ),
+        ),
+      ),
+      btn(t('Close'), 'ghost wide', () => m.close()),
+    ],
+    { cls: 'essence-sheet' },
+  );
+}
+
+function firstHourSheet(app: App, refresh: () => void) {
+  const step = firstHourStep(app.p);
+  if (step === 'done') return;
+  const choice = suggestedFirstLab(app.p);
+  let chosen = choice;
+  const introText = h('p', null, t(LAB_FIRST_COPY[choice]));
+  let buildButton: HTMLButtonElement;
+  const buildLabel = (kind: Kind) =>
+    labBuildCost(app.p, kind) === 0
+      ? t(LAB_TEXT.buildSelected, { name: t(LAB_NAME[kind]) })
+      : t('Build {name} · ✨{cost}', { name: t(LAB_NAME[kind]), cost: fmt(labBuildCost(app.p, kind)) });
+  const choiceButtons: HTMLButtonElement[] = [];
+  for (const kind of Object.keys(KINDS) as Kind[]) {
+    if (KINDS[kind].unlock > app.p.level) continue;
+    const button = btn(t(LAB_NAME[kind]), kind === choice ? 'primary' : 'ghost', () => {
+      chosen = kind;
+      introText.textContent = t(LAB_FIRST_COPY[kind]);
+      buildButton.textContent = buildLabel(kind);
+      choiceButtons.forEach((item) => {
+        item.classList.toggle('primary', item === button);
+        item.classList.toggle('ghost', item !== button);
+      });
+    });
+    choiceButtons.push(button);
+  }
+  buildButton = btn(buildLabel(choice), 'primary wide', () => {
+    const result = firstHourLab(app.p, chosen, undefined, Date.now());
+    if (result !== 'ok') return toast(t(REASON[result]));
+    app.save();
+    m.close();
+    refresh();
+    firstHourSheet(app, refresh);
+  });
+  const buildingLab = step === 'friend' ? app.p.home.plots.find((b) => b?.type === 'lab' && b.done && b.done > Date.now()) : null;
+  const m = modal(
+    [
+      h('div', { class: 'm-title' }, t(LAB_TEXT.firstTitle)),
+      h('p', null, t(step === 'lab' ? LAB_TEXT.firstLab : LAB_TEXT.firstFriend)),
+      step === 'lab'
+        ? introText
+        : h(
+            'p',
+            null,
+            buildingLab?.done
+              ? t('{name} is being built · ready at {time}', {
+                  name: t(LAB_NAME[buildingLab.kind!]),
+                  time: whenText(buildingLab.done, Date.now(), getLang()),
+                })
+              : t(LAB_TEXT.firstFriendCopy),
+          ),
+      step === 'lab'
+        ? h('div', { class: 'first-lab-choices' }, ...choiceButtons)
+        : btn(t(LAB_TEXT.firstFriend), buildingLab ? 'ghost wide dim' : 'primary wide', () => {
+            if (buildingLab?.done && buildingLab.done > Date.now())
+              return toast(
+                t('{name} is being built · ready at {time}', {
+                  name: t(LAB_NAME[buildingLab.kind!]),
+                  time: whenText(buildingLab.done, Date.now(), getLang()),
+                }),
+              );
+            const result = firstHourFriend(app.p, Date.now());
+            if (!result) return toast(t('Make room for a friend first'));
+            app.save();
+            m.close();
+            refresh();
+            showFirstFriend(app, result.species);
+          }),
+      step === 'lab' ? buildButton : null,
+      btn(t('Close'), 'ghost wide', () => m.close()),
+    ],
+    { cls: 'first-hour' },
+  );
 }
 
 // ---------------------------------------------------------------- sheets

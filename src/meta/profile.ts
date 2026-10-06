@@ -1,4 +1,4 @@
-import { loadKey, saveKey } from './storage';
+import { loadKey, saveKey, saveKeyChecked, removeKey } from './storage';
 import type { BoosterId, UpgradeId } from './config';
 import type { Kind, Planet } from '../core/world';
 import type { ObstacleId, SkyState } from '../core/sky';
@@ -6,6 +6,7 @@ import { defaultHome, type HomeState } from './homeworld';
 import type { Mail } from './inbox';
 import { UNLOCKS } from './unlocks';
 import { restoreRound, serializeRound, type RoundState } from '../core/round';
+import type { FeatId } from '../core/labperks';
 import { LEVEL_SALT, makeLevel } from '../core/levels';
 import type { RoundModifiers } from '../core/modifiers';
 import { DEFAULT_AVATAR, type AvatarParts } from './cosmetics';
@@ -62,6 +63,7 @@ export interface RoundCheckpoint {
   salt?: number;
   state: RoundState;
   modifiers: RoundModifiers;
+  labSteps?: (Pick<import('../core/round').StepResult, 'reactions' | 'troubleEvents'> & { kind: Kind })[];
   throwsLeft: number;
   throwsUsed: number;
   throwsTotal: number;
@@ -289,6 +291,9 @@ export interface Profile {
   home: HomeState;
   /** Object Lab levels per flingable (missing = 1). */
   lab: Partial<Record<Kind, number>>;
+  feats: Partial<Record<FeatId, number>>;
+  forms: Partial<Record<Kind, boolean>>;
+  formsSeen: Kind[];
   /** Flings per object (object records). */
   flings: Partial<Record<Kind, number>>;
   /** Times each creature was seen appearing (Lifebook field notes). */
@@ -424,6 +429,9 @@ export function defaultProfile(now = Date.now()): Profile {
     passport: { first: -1, second: -1, set: false, title: '', banner: 0, frame: 0, badges: [], badgesSet: false },
     home: defaultHome(now),
     lab: {},
+    feats: {},
+    forms: {},
+    formsSeen: [],
     flings: {},
     sightings: {},
     mail: [],
@@ -457,9 +465,12 @@ export function defaultProfile(now = Date.now()): Profile {
 
 /** Deep-merge saved data over defaults so fields added in updates get sane values. */
 function merge<T>(base: T, saved: unknown): T {
-  if (saved === undefined || saved === null) return base;
-  if (typeof saved !== 'object' || Array.isArray(saved) || typeof base !== 'object' || base === null || Array.isArray(base))
-    return saved as T;
+  if (saved === undefined) return base;
+  if (base === undefined || base === null) return saved as T;
+  if (saved === null) return base;
+  if (Array.isArray(base)) return Array.isArray(saved) ? (saved as T) : base;
+  if (typeof base !== 'object') return typeof saved === typeof base ? (saved as T) : base;
+  if (typeof saved !== 'object' || Array.isArray(saved)) return base;
   const out: Record<string, unknown> = { ...(base as Record<string, unknown>) };
   for (const [k, v] of Object.entries(saved as Record<string, unknown>)) {
     out[k] = merge((base as Record<string, unknown>)[k], v);
@@ -469,7 +480,10 @@ function merge<T>(base: T, saved: unknown): T {
 
 /** Upgrade older save formats in place. */
 export function migrate(raw: Record<string, unknown>): Profile {
+  if (typeof raw.v === 'number' && raw.v > PROFILE_VERSION) throw new NewerProfileError();
   const p = merge(defaultProfile(), raw);
+  const oldHome = raw.home as Partial<HomeState> | undefined;
+  if (oldHome && !Object.hasOwn(oldHome, 'firstHour') && (p.home.intro || p.home.plots.some(Boolean))) p.home.firstHour = 2;
   if (!p.remix || typeof p.remix !== 'object' || Array.isArray(p.remix)) p.remix = {};
   if (!Object.hasOwn(raw, 'm4RankPaidThrough')) p.m4RankPaidThrough = Math.min(7, Math.max(0, p.rank - 1));
   if (!Object.hasOwn(raw, 'roadPoints'))
@@ -541,10 +555,56 @@ export function migrate(raw: Record<string, unknown>): Profile {
 /** Set when storage could not be read: we then never overwrite what's on disk this session. */
 let readOnly = false;
 export const storageReadOnly = () => readOnly;
+export type ProfileLoadNotice = 'none' | 'recovered' | 'read-only' | 'newer';
+let loadNotice: ProfileLoadNotice = 'none';
+export const profileLoadNotice = () => loadNotice;
+export class NewerProfileError extends Error {}
+
+/** Clear only profile copies after an explicit adult recovery choice. */
+export async function startFreshProfile(): Promise<void> {
+  await removeKey(KEY);
+  await removeKey(BACKUP_KEY);
+  try {
+    sessionStorage.removeItem('pp.profile.tryBackup');
+  } catch {
+    /* storage can be unavailable */
+  }
+  readOnly = false;
+  loadNotice = 'none';
+}
+
+async function quarantine(raw: string): Promise<void> {
+  await saveKey('pp.profile.broken', raw);
+}
+
+/** Preserve the failed launch's raw bytes and stage a backup-only retry. */
+export async function prepareInitRecovery(): Promise<void> {
+  try {
+    const raw = await loadKey(KEY);
+    if (raw) await quarantine(raw);
+    const backup = await loadKey(BACKUP_KEY);
+    if (backup) {
+      const parsed = JSON.parse(backup) as Record<string, unknown>;
+      migrate(parsed);
+      sessionStorage.setItem('pp.profile.tryBackup', '1');
+    }
+  } catch {
+    // The recovery screen still offers a fresh start when storage cannot be read.
+  }
+}
 
 export async function loadProfile(): Promise<Profile> {
+  readOnly = false;
+  loadNotice = 'none';
   let failedReads = 0;
-  for (const key of [KEY, BACKUP_KEY]) {
+  let damaged = false;
+  let preferBackup = false;
+  try {
+    preferBackup = sessionStorage.getItem('pp.profile.tryBackup') === '1';
+  } catch {
+    /* unavailable */
+  }
+  for (const key of preferBackup ? [BACKUP_KEY, KEY] : [KEY, BACKUP_KEY]) {
     let raw: string | null;
     try {
       raw = await loadKey(key);
@@ -554,13 +614,49 @@ export async function loadProfile(): Promise<Profile> {
     }
     if (!raw) continue;
     try {
-      return migrate(JSON.parse(raw));
+      const parsed = JSON.parse(raw) as unknown;
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Invalid profile');
+      const version = (parsed as Record<string, unknown>).v;
+      if (typeof version === 'number' && version > PROFILE_VERSION) {
+        readOnly = true;
+        loadNotice = 'newer';
+        return defaultProfile();
+      }
+      if (version !== PROFILE_VERSION) {
+        // Keep the first pre-migration bytes; later launches must not replace this rescue copy.
+        try {
+          if (!(await loadKey('pp.profile.pre-migration'))) await saveKeyChecked('pp.profile.pre-migration', raw);
+        } catch {
+          readOnly = true;
+          loadNotice = 'read-only';
+          return defaultProfile();
+        }
+      }
+      const profile = migrate(parsed as Record<string, unknown>);
+      if (failedReads) {
+        readOnly = true;
+        loadNotice = 'read-only';
+      }
+      if (preferBackup) {
+        try {
+          sessionStorage.removeItem('pp.profile.tryBackup');
+        } catch {
+          /* unavailable */
+        }
+        if (!failedReads) loadNotice = 'recovered';
+      }
+      if (damaged && !failedReads) loadNotice = 'recovered';
+      return profile;
     } catch {
-      /* corrupted: try the backup */
+      damaged = true;
+      if (key === KEY) await quarantine(raw);
     }
   }
-  // Storage errored (not merely empty): play on, but don't clobber a save we couldn't read.
-  if (failedReads) readOnly = true;
+  // A failed or corrupt read must never let defaults replace the only copy.
+  if (failedReads || damaged) {
+    readOnly = true;
+    loadNotice = 'read-only';
+  }
   return defaultProfile();
 }
 

@@ -17,8 +17,6 @@ import {
   boostRadius,
   clonePlanet,
   impact,
-  labBonus,
-  landingLabBonus,
   newPlanet,
   novaCharge,
   settle,
@@ -130,13 +128,12 @@ const resultRow = (r: ImpactResult) => ({
   lost: r.lost,
 });
 
-/** What the game scene derives from a landing (events progress and Lab bonus at every level). */
+/** What the game scene derives from a landing. */
 function landingRow(res: ImpactResult, planet: Planet, regionBests: number[], arrived: Set<string>) {
   const earned = earnedLandingProgress(res, planet, regionBests, arrived);
-  const lab: number[] = [];
-  for (let lv = 1; lv <= 4; lv++) lab.push(landingLabBonus(lv, res, planet, [...regionBests], new Set(arrived)));
-  lab.push(landingLabBonus(5, res, planet, regionBests, arrived)); // the last call keeps the running state
-  return { earned: [earned.regions, earned.arrivals, [...earned.firstArrivals]], lab };
+  for (const i of res.changed) regionBests[i] = Math.max(regionBests[i] ?? 0, BIOMES[planet.sectors[i].biome].value);
+  for (const species of res.spawned) arrived.add(species.id);
+  return { earned: [earned.regions, earned.arrivals, [...earned.firstArrivals]] };
 }
 
 const startBests = (p: Planet) => p.sectors.map((s) => BIOMES[s.biome].value);
@@ -208,7 +205,11 @@ function sequenceRows(): Row[] {
       const res = impact(p, kind, at, cfg.splash, { nova });
       const landing = landingRow(res, p, regionBests, arrived);
       if (nova) charge = 0;
-      else charge = Math.min(NOVA_CHARGE, charge + novaCharge(res.changed.length, res.spawned.length, cfg.lv) * (cfg.shower ? 2 : 1));
+      else {
+        // Preserve this historical sequence's Supernova timing while removing its flat Lab column.
+        const base = novaCharge(res.changed.length, res.spawned.length);
+        charge = Math.min(NOVA_CHARGE, charge + (cfg.lv >= 3 ? Math.ceil(base * 1.5) : base) * (cfg.shower ? 2 : 1));
+      }
       rows.push({
         id: `${cfg.seed}/${t}`,
         kind,
@@ -235,78 +236,18 @@ function tableRows(): Row[] {
     for (let water = 0; water <= 5; water++)
       for (let heat = -3; heat <= 3; heat++) for (let life = 0; life <= 3; life++) biome.push(biomeOf({ land, water, heat, life }));
   rows.push({ id: 'biomeOf[land][water][heat+3][life]', data: biome });
-  // novaCharge[lv][changed][spawned], lv 0 = the default argument
-  const nova: number[][][] = [];
-  for (let lv = 0; lv <= 6; lv++) {
-    const byChanged: number[][] = [];
-    for (let changed = 0; changed <= SECTORS; changed++) {
-      const bySpawned: number[] = [];
-      for (let spawned = 0; spawned <= 6; spawned++)
-        bySpawned.push(lv === 0 ? novaCharge(changed, spawned) : novaCharge(changed, spawned, lv));
-      byChanged.push(bySpawned);
-    }
-    nova.push(byChanged);
+  const nova: number[][] = [];
+  for (let changed = 0; changed <= SECTORS; changed++) {
+    const bySpawned: number[] = [];
+    for (let spawned = 0; spawned <= 6; spawned++) bySpawned.push(novaCharge(changed, spawned));
+    nova.push(bySpawned);
   }
-  rows.push({ id: 'novaCharge[lv|0=default][changed][spawned]', data: nova });
-  // labBonus[lv][changed][spawned]
-  const lab: number[][][] = [];
-  for (let lv = 0; lv <= 6; lv++) {
-    const byChanged: number[][] = [];
-    for (let changed = 0; changed <= SECTORS; changed++) {
-      const bySpawned: number[] = [];
-      for (let spawned = 0; spawned <= 6; spawned++) bySpawned.push(labBonus(lv, changed, spawned));
-      byChanged.push(bySpawned);
-    }
-    lab.push(byChanged);
-  }
-  rows.push({ id: 'labBonus[lv][changed][spawned]', data: lab });
+  rows.push({ id: 'novaCharge[changed][spawned]', data: nova });
   rows.push({
     id: 'boostRadius',
-    data: [boostRadius(), boostRadius({}), boostRadius({ nova: false }), boostRadius({ nova: true, lv: 5 })],
+    data: [boostRadius(), boostRadius({}), boostRadius({ nova: false }), boostRadius({ nova: true })],
   });
   rows.push({ id: 'NOVA_CHARGE', data: NOVA_CHARGE });
-  // hand-made landingLabBonus cases, including a worse throw and repeat arrivals
-  const planet = newPlanet((i) => (i < 6 ? LAND.forest : i < 12 ? LAND.ocean : {}));
-  settle(planet);
-  const cases: { name: string; res: ImpactResult; bests: number[]; arrived: string[] }[] = [
-    { name: 'no change', res: { before: 10, after: 10, changed: [], spawned: [], lost: [] }, bests: startBests(planet), arrived: [] },
-    {
-      name: 'new bests and arrivals',
-      res: {
-        before: 10,
-        after: 30,
-        changed: [0, 1, 6, 12],
-        spawned: [
-          { id: 'deer', at: 0 },
-          { id: 'fish', at: 6 },
-        ],
-        lost: [],
-      },
-      bests: Array(SECTORS).fill(0),
-      arrived: ['fish'],
-    },
-    {
-      name: 'worse throw pays nothing but still tracks',
-      res: { before: 30, after: 20, changed: [0, 1], spawned: [{ id: 'otter', at: 5 }], lost: ['deer'] },
-      bests: Array(SECTORS).fill(0),
-      arrived: [],
-    },
-    {
-      name: 'regions already at their best',
-      res: { before: 10, after: 12, changed: [0, 1, 2], spawned: [{ id: 'deer', at: 0 }], lost: [] },
-      bests: Array(SECTORS).fill(9),
-      arrived: ['deer'],
-    },
-  ];
-  for (const c of cases) {
-    const out: unknown[] = [];
-    for (let lv = 0; lv <= 6; lv++) {
-      const bests = [...c.bests];
-      const arrived = new Set(c.arrived);
-      out.push([landingLabBonus(lv, c.res, planet, bests, arrived), bests, [...arrived]]);
-    }
-    rows.push({ id: `landingLabBonus/${c.name}`, data: out });
-  }
   return rows;
 }
 

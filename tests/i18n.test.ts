@@ -36,6 +36,7 @@ import { NEW_FEATURE } from '../src/meta/nextup';
 import { FACTS } from '../src/ui/screens/fieldguide';
 import { REACTIONS } from '../src/core/round';
 import { GUSTY_WIND_TIP, UNLOCKS } from '../src/meta/unlocks';
+import { LAB_NAME, LAB_LEVEL, LAB_GUARD_NAME, LAB_FORM, LAB_FIRST_COPY, ESSENCE_NAME, LAB_TEXT } from '../src/meta/labcopy';
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
@@ -128,6 +129,13 @@ export function allKeys(): string[] {
   WISH_TEMPLATES.forEach((wish) => add(wish.text));
   Object.values(NEW_FEATURE).forEach(add);
   Object.values(FACTS).forEach((fact) => (add(fact.element), add(fact.job)));
+  Object.values(LAB_NAME).forEach(add);
+  Object.values(LAB_LEVEL).forEach((ladder) => Object.values(ladder).forEach(add));
+  Object.values(LAB_GUARD_NAME).forEach(add);
+  Object.values(LAB_FORM).forEach((form) => Object.values(form).forEach(add));
+  Object.values(LAB_FIRST_COPY).forEach(add);
+  Object.values(ESSENCE_NAME).forEach(add);
+  Object.values(LAB_TEXT).forEach(add);
   // mode names/descriptions live in a UI module (src/ui/flows/modes.ts)
   [
     'Daily Planet',

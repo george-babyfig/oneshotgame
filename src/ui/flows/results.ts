@@ -16,7 +16,8 @@ import { sharePostcard } from '../postcard';
 import { addTokens, ensureEvent, eventActive, eventReady } from '../../meta/events';
 import { planetName, t, tp } from '../../i18n';
 import { homeUnlocked, speedUpBuilds } from '../../meta/homeworld';
-import { MAT_EMOJI, addDrops, dropsFor, type Mat } from '../../meta/constellations';
+import { addDrops, essenceDropsFor } from '../../meta/constellations';
+import { essenceLine, helpedLine } from '../../meta/helped';
 import { renderPlanet } from '../art/planet';
 import { unlocked } from '../../meta/unlocks';
 import { SPECIES_BY_ID } from '../../core/world';
@@ -151,8 +152,8 @@ export function levelResults(app: App, r: LevelResult) {
   if (eventActive(p) && eventReady(p).length)
     extras.push(h('div', { class: 'nudge' }, t('{emoji} Event reward ready!', { emoji: ensureEvent(p).emoji })));
   if (unlocked(p, 'quests') && wishClaimable(p)) extras.push(h('div', { class: 'nudge' }, t('A Wish is ready to claim!')));
-  // materials for the constellations (from the lands on this planet)
-  const drops = dropsFor(r.planet, r.stars);
+  // The campaign is the only Essence source; a replay pays half per colour.
+  const drops = essenceDropsFor(r.planet, r.stars, out.firstClear);
   if (Object.keys(drops).length) {
     addDrops(p, drops, out.firstClear ? 'material_drop_first_clear' : 'material_drop_replay');
     app.save();
@@ -179,18 +180,8 @@ export function levelResults(app: App, r: LevelResult) {
   const rewards = [
     h('div', null, dustValue, h('small', null, t('stardust'))),
     ...(out.gems ? [h('div', null, gemValue, h('small', null, t('3-star bonus')))] : []),
-    ...(n < 5 || !Object.keys(drops).length
+    ...(n < 6 || !Object.keys(drops).length
       ? [h('div', null, h('b', null, `${r.planet.speciesFound.length}`), h('small', null, t('creatures')))]
-      : []),
-    ...(n >= 5 && Object.keys(drops).length
-      ? [
-          h(
-            'div',
-            { class: 'drops' },
-            h('small', null, t('Materials')),
-            ...Object.entries(drops).map(([m, count]) => h('span', null, `${MAT_EMOJI[m as Mat]} ${count}`)),
-          ),
-        ]
       : []),
   ].slice(0, 3);
   const planetCanvas = h('canvas', { class: 'purpose-planet', 'aria-hidden': 'true' });
@@ -254,6 +245,10 @@ export function levelResults(app: App, r: LevelResult) {
           )
         : null,
       h('div', { class: 'rewards' }, ...rewards),
+      app.scene && helpedLine(p, app.scene.roundLog, 'campaign')
+        ? h('p', { class: 'homeworld-helped' }, t('Homeworld helped: {line}', { line: helpedLine(p, app.scene.roundLog, 'campaign')! }))
+        : null,
+      n >= 6 && Object.keys(drops).length ? h('p', { class: 'drops essence-progress' }, essenceLine(p, drops)) : null,
       showBestCombo(r.comboBest ?? 0, rulesForLevel(r.level.n))
         ? h('p', { class: 'end-combo' }, t('Best Combo: {n}', { n: r.comboBest ?? 0 }))
         : null,

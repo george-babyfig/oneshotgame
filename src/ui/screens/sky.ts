@@ -1,5 +1,6 @@
-// Star Atlas: restore constellations with materials from your planets.
+// Star Atlas: restore constellations with Essences from your planets.
 import { h, btn, modal, toast } from '../dom';
+import { LAB_TEXT } from '../../meta/labcopy';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
 import {
@@ -143,7 +144,7 @@ export function showSky(app: App) {
                 done
                   ? h('b', { class: 'tick' }, '✓')
                   : btn(t('Fill'), can ? 'primary small' : 'ghost small dim', () => {
-                      if (!fillBundle(p, c.id, b.id)) return toast(t('Finish more planets to collect materials'));
+                      if (!fillBundle(p, c.id, b.id)) return toast(t(LAB_TEXT.atlasNeed));
                       sfx.chest();
                       haptic.success();
                       app.save();
@@ -184,17 +185,7 @@ export function showSky(app: App) {
       { class: 'screen page' },
       app.topBar(true),
       h('div', { class: 'page-title' }, t('Star Atlas')),
-      h(
-        'div',
-        { class: 'scroll' },
-        h(
-          'p',
-          { class: 'muted' },
-          t('Every planet you finish drops materials from its lands. Fill bundles to relight the constellations above your Homeworld.'),
-        ),
-        bag,
-        ...cards,
-      ),
+      h('div', { class: 'scroll' }, h('p', { class: 'muted' }, t(LAB_TEXT.atlasIntro)), bag, ...cards),
     ),
     'sky',
   );

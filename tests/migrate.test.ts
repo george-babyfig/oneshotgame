@@ -3,6 +3,13 @@ import { defaultProfile, migrate } from '../src/meta/profile';
 import { openChest, chapterReward } from '../src/meta/progression';
 
 describe('profile migration', () => {
+  it('uses defaults for fields saved with the wrong type', () => {
+    const p = migrate({ v: 3, settings: 'broken', stats: 17, chapters: 'broken' });
+    expect(p.settings.sound).toBe(true);
+    expect(p.stats.wins).toBe(0);
+    expect(p.chapters).toEqual([]);
+  });
+
   it('turns off old reminder settings and fills new counters', () => {
     const old = defaultProfile(0);
     const { gameCenter: _gameCenter, ...oldSettings } = old.settings;

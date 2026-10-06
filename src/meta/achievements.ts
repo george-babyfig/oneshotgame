@@ -1,4 +1,4 @@
-// Game Center achievements and leaderboards, evaluated from the profile.
+// Game Center achievements, evaluated from the profile.
 // IDs must match what you create in App Store Connect (see store/gamecenter.md).
 import type { Profile } from './profile';
 import { ownedStickers } from './stickers';
@@ -9,13 +9,6 @@ const remixChapters = (p: Profile) => Object.keys(p.remix ?? {}).map(Number);
 const goldFrames = (p: Profile) => remixChapters(p).filter((chapter) => remixFrame(p, chapter) === 'gold').length;
 
 const PREFIX = 'com.pocketplanet.game.';
-
-export const LEADERBOARDS = {
-  stars: `${PREFIX}lb.stars`,
-  life: `${PREFIX}lb.life`,
-  rush: `${PREFIX}lb.rush`,
-  daily: `${PREFIX}lb.daily`,
-} as const;
 
 export interface AchievementDef {
   id: string;

@@ -23,6 +23,26 @@ jobs:
       - name: Reject dev tools in production bundle
         run: '! grep -rqE "Balance Report|__app|__i18n|__scene|__gate" dist/'
 
+  # The production bundle serves and loads (Playwright journeys run against the dev server).
+  preview-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Serve and check production preview
+        run: |
+          npx vite preview --host 127.0.0.1 --port 4173 --strictPort &
+          for attempt in {1..20}; do
+            if curl -fsS http://127.0.0.1:4173/ | grep -q 'assets/'; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+
   # M8 quick difficulty and two-sided lint gates on planets 1-60.
   # The full shadow-seed curve and 61-120 watches run nightly.
   sim-quick:
@@ -49,6 +69,30 @@ jobs:
       - run: npm ci
       - run: SIM=1 SIM_BALANCE=1 TROUBLE_RUNS=32 npx vitest run tests/sim/balance.sim.ts tests/sim/trouble-cost.sim.ts tests/sim/remix.sim.ts
 
+  economy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run sim:economy
+
+  loadout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run sim:loadout
+
   # Playwright journeys (J1-J7, prices, gate, overlap, showtime) — one job per browser
   # project so the three run in parallel and each stays well inside its time limit.
   e2e:
@@ -57,7 +101,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [chromium-320x568, chromium-390x844, webkit-390x844]
+        project: [chromium-320x568, chromium-390x844, webkit-320x568, webkit-390x844]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -88,6 +132,8 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npx cap sync ios
+      - name: Reject hooks in native web bundle
+        run: '! grep -rqE "Balance Report|__app|__i18n|__scene|__gate|VITE_TESTER" ios/App/App/public/'
       - name: Build for iOS Simulator
         run: |
           xcodebuild -version
@@ -100,6 +146,19 @@ jobs:
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             build | tail -n 80
+          exit ${PIPESTATUS[0]}
+      # The same Release archive App Store Connect gets, without signing (no Apple account needed).
+      - name: Archive Release without signing
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/CometGarden.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            archive | tail -n 80
           exit ${PIPESTATUS[0]}
       # Zipped Simulator build: download it from the run's Artifacts section and
       # install with `xcrun simctl install booted App.app` (see README).

@@ -14,6 +14,9 @@ export interface PurchaseOutcome {
 export type IapEvent = { productId: string; txId: string; revokedAt?: number; purchasedAt?: number };
 export type StorePrice = { display: string; currency: string; amount: number };
 
+/** A missing entitlement is not proof of revocation, particularly offline. */
+export const shouldRevoke = (event: IapEvent) => event.revokedAt !== undefined;
+
 export interface Iap {
   kind: 'native' | 'mock' | 'none';
   init(onTx: (event: IapEvent) => void): Promise<void>;

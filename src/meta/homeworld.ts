@@ -23,7 +23,7 @@ import { earn, spend } from './wallet';
 //   are free and deterministic from the clock.
 import type { Profile } from './profile';
 import type { BoosterId } from './config';
-import { SPECIES, SPECIES_BY_ID } from '../core/world';
+import { SPECIES, SPECIES_BY_ID, type Kind } from '../core/world';
 import { rngFrom } from '../core/levels';
 import { LEVELS_PER_CHAPTER } from './progression';
 import { unlocked } from './unlocks';
@@ -31,7 +31,7 @@ import { unlocked } from './unlocks';
 const H = 3600e3;
 
 export type BuildingType =
-  'mill' | 'greenhouse' | 'grove' | 'den' | 'tower' | 'observatory' | 'fountain' | 'lantern' | 'flowers' | 'statue';
+  'lab' | 'mill' | 'greenhouse' | 'grove' | 'den' | 'tower' | 'observatory' | 'fountain' | 'lantern' | 'flowers' | 'statue';
 
 export interface BuildingDef {
   type: BuildingType;
@@ -70,6 +70,7 @@ export { HOME_UNLOCK_LEVEL } from './unlocks';
 
 export interface Building {
   type: BuildingType;
+  kind?: Kind;
   lv: number;
   /** When production last restarted (collect, or finishing a build). */
   since: number;
@@ -178,6 +179,8 @@ export interface Expedition {
 
 export interface HomeState {
   ring: number;
+  firstHour: 0 | 1 | 2;
+  labFreeUsed: boolean;
   plots: (Building | null)[];
   residents: Resident[];
   expedition: Expedition | null;
@@ -245,6 +248,8 @@ export function currentPaint(p: Profile) {
 export function defaultHome(now = Date.now()): HomeState {
   return {
     ring: 1,
+    firstHour: 0,
+    labFreeUsed: false,
     plots: Array(RING_PLOTS[1]).fill(null),
     residents: [],
     expedition: null,
@@ -288,6 +293,7 @@ export function canBuild(p: Profile, plot: number, type: BuildingType, now = Dat
   const h = p.home;
   const d = BUILDINGS[type];
   if (now < (h.lastTick ?? 0)) return 'busy';
+  if (type === 'lab' || type === 'mill' || type === 'grove' || type === 'observatory') return 'max';
   if (plot < 0 || plot >= h.plots.length) return 'occupied';
   if (h.plots[plot]) return 'occupied';
   if (h.debris.includes(plot)) return 'debris';
@@ -314,6 +320,7 @@ export function canUpgrade(p: Profile, plot: number, now = Date.now()): BuildChe
   if (now < (p.home.lastTick ?? 0)) return 'busy';
   const b = p.home.plots[plot];
   if (!b) return 'occupied';
+  if (b.type === 'lab') return 'maxlv';
   if (BUILDINGS[b.type].decor || b.lv >= MAX_LEVEL) return 'maxlv';
   if (b.done && b.done > now) return 'busy';
   if (b.lv + 1 > p.home.ring) return 'ring';

@@ -17,13 +17,6 @@ async function purchase(app: App, key: string) {
 }
 
 export function shopSection(app: App) {
-  if (!app.p.chapters.length)
-    return h(
-      'section',
-      { class: 'grownups-section' },
-      h('h2', null, t('Shop')),
-      h('p', null, t('The shop opens after the first chapter chest.')),
-    );
   return h(
     'section',
     { class: 'grownups-section' },

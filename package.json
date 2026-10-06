@@ -13,14 +13,16 @@
     "icon": "node resources/render-art.cjs",
     "music": "node resources/render-music.cjs",
     "ios:sync": "npm run build && npx cap sync ios",
+    "ios:release": "node scripts/ios-release.mjs",
     "ios:open": "npx cap open ios",
-    "sim": "SIM=1 vitest run",
+    "sim": "SIM=1 vitest run --exclude tests/economy.sim.ts --exclude 'tests/sim/economy/*.sim.ts' --exclude tests/sim/loadout.sim.ts",
     "sim:quick": "SIM=1 vitest run tests/sim/quick.sim.ts",
     "sim:baseline": "SIM=1 BASELINE=write vitest run tests/sim/quick.sim.ts",
     "e2e": "playwright test",
     "e2e:quick": "LOCALE=en playwright test --project=chromium-390x844",
     "e2e:install": "playwright install chromium webkit",
-    "sim:economy": "SIM=1 vitest run tests/economy.sim.ts"
+    "sim:economy": "SIM=1 vitest run tests/economy.sim.ts tests/sim/economy/*.sim.ts --disableConsoleIntercept",
+    "sim:loadout": "SIM=1 vitest run tests/sim/loadout.sim.ts --disableConsoleIntercept"
   },
   "dependencies": {
     "@capacitor-community/in-app-review": "^8.0.0",

@@ -2,6 +2,7 @@
 // coordinates: the base sits at (0, 0) and "up" is -y. Higher levels grow a
 // little and gain details, so upgrades are visible at a glance.
 import type { BuildingType } from '../../meta/homeworld';
+import { KINDS, type Kind } from '../../core/world';
 import { shade } from './color';
 
 type G = CanvasRenderingContext2D;
@@ -48,12 +49,64 @@ function pennant(g: G, x: number, y: number, s: number, lv: number, t: number) {
   if (lv >= 5) star(g, x, y - s * 0.34, s * 0.06, '#fff6b0');
 }
 
-export function drawStructure(g: G, type: BuildingType, lv: number, s: number, t: number, building = false) {
+export function drawStructure(
+  g: G,
+  type: BuildingType,
+  lv: number,
+  s: number,
+  t: number,
+  building = false,
+  opts: { kind?: Kind; formOn?: boolean } = {},
+) {
   const k = 0.82 + lv * 0.06;
   g.save();
   g.scale(k, k);
   if (building) g.globalAlpha = 0.55;
   switch (type) {
+    case 'lab': {
+      const kind = opts.kind ?? 'rock';
+      const color = KINDS[kind].color;
+      // The silhouette grows one readable feature per level.
+      rr(g, -s * 0.28, -s * 0.42, s * 0.56, s * 0.42, s * 0.06, '#b8a88d');
+      rr(g, -s * 0.32, -s * 0.5, s * 0.64, s * 0.12, s * 0.05, '#705d67');
+      rr(g, -s * 0.07, -s * 0.19, s * 0.14, s * 0.19, s * 0.03, '#554456');
+      circ(g, 0, -s * 0.32, s * 0.095, color);
+      if (lv >= 2) {
+        rr(g, s * 0.13, -s * 0.68, s * 0.1, s * 0.22, s * 0.02, '#7e7181');
+        for (let i = 0; i < 2; i++)
+          circ(g, s * (0.18 + i * 0.08), -s * (0.73 + i * 0.08) + Math.sin(t * 2 + i) * s * 0.02, s * 0.055, color);
+      }
+      if (lv >= 3) {
+        rr(g, -s * 0.19, -s * 0.73, s * 0.31, s * 0.23, s * 0.03, '#cfc2a9');
+        rr(g, -s * 0.22, -s * 0.77, s * 0.38, s * 0.07, s * 0.02, '#705d67');
+      }
+      if (lv >= 4) {
+        g.fillStyle = '#f5dc88';
+        g.beginPath();
+        g.moveTo(-s * 0.23, -s * 0.42);
+        g.lineTo(-s * 0.11, -s * 0.42);
+        g.lineTo(-s * 0.11, -s * 0.23);
+        g.lineTo(-s * 0.17, -s * 0.18);
+        g.lineTo(-s * 0.23, -s * 0.23);
+        g.closePath();
+        g.fill();
+        star(g, -s * 0.17, -s * 0.32, s * 0.035, '#fff8dd');
+      }
+      if (lv >= 5) {
+        g.save();
+        g.globalAlpha *= 0.55 + Math.sin(t * 3) * 0.12;
+        g.fillStyle = color;
+        g.beginPath();
+        g.arc(0, -s * 0.72, s * 0.26, Math.PI, 0);
+        g.fill();
+        g.restore();
+      }
+      if (lv >= 5 && opts.formOn) {
+        const a = t * 1.5;
+        circ(g, Math.cos(a) * s * 0.33, -s * 0.78 + Math.sin(a) * s * 0.1, s * 0.065, color);
+      }
+      break;
+    }
     case 'mill': {
       rr(g, -s * 0.16, -s * 0.55, s * 0.32, s * 0.55, s * 0.06, '#e8d6b0');
       rr(g, -s * 0.2, -s * 0.62, s * 0.4, s * 0.12, s * 0.06, '#b86b4a');
@@ -233,6 +286,10 @@ export function drawStructure(g: G, type: BuildingType, lv: number, s: number, t
       g.globalAlpha *= tw;
       star(g, s * 0.2, -s * 0.62, s * 0.05, '#ffffff');
       break;
+    }
+    default: {
+      const unreachable: never = type;
+      throw new Error(`Unknown building: ${unreachable}`);
     }
   }
   g.restore();

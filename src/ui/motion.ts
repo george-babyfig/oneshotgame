@@ -1,6 +1,7 @@
 import { sfx } from './audio';
 import { haptic } from './haptics';
 import type { Profile } from '../meta/profile';
+import { getLang } from '../i18n';
 
 export const MOTION = {
   popIn: 360,
@@ -91,7 +92,7 @@ export function countUp(el: HTMLElement, from: number, to: number, prefix = '', 
   activeCounts.get(el)?.();
   const calm = prefersReducedMotion();
   if (calm || from === to) {
-    el.textContent = `${prefix}${Math.floor(to).toLocaleString('en-US')}`;
+    el.textContent = `${prefix}${Math.floor(to).toLocaleString(getLang())}`;
     return () => {};
   }
   const start = performance.now();
@@ -112,7 +113,7 @@ export function countUp(el: HTMLElement, from: number, to: number, prefix = '', 
     // a pill inserted during a screen transition may not be in the page yet: wait briefly, never leave a stale number
     if (!el.isConnected) {
       if (++waited > 30) {
-        el.textContent = `${prefix}${to.toLocaleString('en-US')}`;
+        el.textContent = `${prefix}${to.toLocaleString(getLang())}`;
         stop();
         return;
       }
@@ -121,7 +122,7 @@ export function countUp(el: HTMLElement, from: number, to: number, prefix = '', 
     }
     const elapsed = now - start;
     const value = countValue(from, to, elapsed, ms);
-    el.textContent = `${prefix}${value.toLocaleString('en-US')}`;
+    el.textContent = `${prefix}${value.toLocaleString(getLang())}`;
     const step = Math.floor((elapsed / ms) * 5);
     if (step !== lastTick && step < 5) {
       lastTick = step;

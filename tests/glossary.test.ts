@@ -40,7 +40,7 @@ const MILESTONES = [
 type Milestone = (typeof MILESTONES)[number];
 
 /** Milestones that are built. Later milestones append themselves here when they ship. */
-export const BUILT: Milestone[] = ['M0', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M6.5', 'M7', 'M7.5', 'M8', 'M9'];
+export const BUILT: Milestone[] = ['M0', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M6.5', 'M7', 'M7.5', 'M8', 'M9', 'M10'];
 
 const built = (m: Milestone) => BUILT.includes(m);
 
@@ -604,7 +604,13 @@ export const RETIRED: Retired[] = [
     note: 'Renamed Essences.',
   },
   { word: 'Object Lab', retiredIn: 'M10', tr: trs({ fr: 'Labo des objets', de: 'Objekt-Labor', ja: 'オブジェクト研究所' }) },
-  { word: 'Bloom', retiredIn: 'M10', match: cs('Bloom'), allow: [/Combo Bloom/u, /Bloom Week/u], note: 'The Lab perk.' },
+  {
+    word: 'Bloom',
+    retiredIn: 'M10',
+    match: cs('Bloom'),
+    allow: [/Combo Bloom/u, /Bloom Week/u, /Bloom Sling/u],
+    note: 'The Lab perk; the launcher look stays until M10.5.',
+  },
   { word: 'Charge', retiredIn: 'M10', match: cs('Charge'), note: 'The Lab perk; "Supernovas charge" (a verb) is fine.' },
   { word: 'Magnet', retiredIn: 'M10', match: cs('Magnet'), allow: [/Magnet Mist/u], note: 'The Lab perk.' },
   {

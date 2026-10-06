@@ -20,7 +20,7 @@ export interface AimTagFacts {
 
 export function aimTagFacts(result: StepResult, land: BiomeId): AimTagFacts {
   return {
-    delta: result.after - result.before + result.labBonus,
+    delta: result.after - result.before,
     land,
     arrivals: result.spawned.map((arrival) => arrival.id),
     firstArrivals: result.firstArrivals,

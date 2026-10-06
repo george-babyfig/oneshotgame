@@ -33,7 +33,7 @@ function nameSize(name: string): string {
 }
 
 /** Shrinks a one-line label until it fits its box (long translated planet names at 320 px). */
-function fitOneLine(el: HTMLElement, min = 11): HTMLElement {
+function fitOneLine(el: HTMLElement, scene: LevelScene, min = 11): HTMLElement {
   const start = el.style.fontSize; // a size chosen up front (nameSize) is the ceiling
   const fit = () => {
     if (!el.isConnected) return;
@@ -47,7 +47,25 @@ function fitOneLine(el: HTMLElement, min = 11): HTMLElement {
   // Measure again once the web font arrives (it is wider than the fallback) and when the box resizes.
   requestAnimationFrame(fit);
   void document.fonts?.ready.then(fit);
-  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => requestAnimationFrame(fit)).observe(el);
+  if (typeof ResizeObserver !== 'undefined') {
+    const observer = new ResizeObserver(() => {
+      if (scene.destroyed) observer.disconnect();
+      else requestAnimationFrame(fit);
+    });
+    observer.observe(el);
+    const removal = new MutationObserver(() => {
+      if (!scene.destroyed && el.isConnected) return;
+      observer.disconnect();
+      removal.disconnect();
+    });
+    removal.observe(document.body, { childList: true, subtree: true });
+    const destroy = scene.destroy.bind(scene);
+    scene.destroy = () => {
+      observer.disconnect();
+      removal.disconnect();
+      destroy();
+    };
+  }
   return el;
 }
 
@@ -129,6 +147,7 @@ export function buildHud(scene: LevelScene) {
             { class: 'hud-name', style: nameSize(planetName(scene.L.name)) },
             planetName(scene.L.name),
           ),
+          scene,
         ),
         scene.L.difficulty !== 'normal'
           ? h('div', { class: `hud-diff ${scene.L.difficulty}` }, scene.L.difficulty === 'super' ? t('💀 SUPER HARD') : t('🔥 HARD'))

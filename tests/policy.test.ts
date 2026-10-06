@@ -51,6 +51,7 @@ export const OUTBOUND_CALLS = [
   'iap.purchase(',
   'showShop(',
   'app.buy(',
+  'gcDashboard(',
 ];
 // These chokepoints are invoked only after their callers pass the gate; the low-level
 // IAP adapter cannot show UI, and shareTextUngated is used after the postcard gate.
@@ -59,6 +60,7 @@ const GATED_CHOKEPOINTS = [
   { file: 'src/ui/share.ts', call: 'navigator.share(', functionName: 'shareTextUngated' },
   { file: 'src/ui/app.ts', call: 'this.iap.restore(', functionName: 'restore' },
   { file: 'src/meta/iap.ts', call: 'restorePurchases(', functionName: 'restore' },
+  { file: 'src/ui/gamecenter.ts', call: 'gcDashboard(', functionName: 'gcDashboard' },
 ];
 export const GC_AUTH_FILES = ['src/ui/gamecenter.ts'];
 export const GC_SIGNIN_FILES = ['src/ui/gamecenter.ts', 'src/ui/flows/settings.ts', 'src/ui/app.ts'];
@@ -130,6 +132,7 @@ function outboundViolations(file: string, src: string): string[] {
       if (call === 'showShop(' && (file === 'src/ui/app.ts' || file === 'src/ui/screens/shop.ts')) continue;
       if (call === 'app.buy(' && file === 'src/ui/screens/shop.ts') continue;
       if (call === 'restorePurchases(' && /(?:function|async)\s+$/.test(src.slice(Math.max(0, index - 20), index))) continue;
+      if (call === 'gcDashboard(' && /(?:function|async)\s+$/.test(src.slice(Math.max(0, index - 20), index))) continue;
       const fn = enclosingFunction(src, index);
       if (!fn) {
         bad.push(`${file}:${lineOf(src, index)}: ${call} outside a function`);
@@ -180,6 +183,24 @@ function sourceStrings(): { file: string; s: string }[] {
 // ---- Rules ----
 
 describe('policy: outbound actions are gated (0.1, 0.2)', () => {
+  it('shows the offline policy and contact only in Grown-ups', () => {
+    const grownups = code('src/ui/screens/grownups.ts');
+    expect(grownups).toContain("t('Privacy')");
+    expect(grownups).toContain('PRIVACY_CONTACT.email');
+    expect(grownups).toContain('PRIVACY_CONTACT.policy');
+    expect(grownups).not.toContain('window.open(');
+  });
+
+  it('has the Grown-ups shop on the first launch behind the gate', () => {
+    expect(code('src/ui/screens/shop.ts')).not.toContain('!app.p.chapters.length');
+    expect(code('src/ui/screens/grownups.ts')).toContain("parentalGate('grownups')");
+  });
+
+  it('submits achievements but no Game Center leaderboard scores', () => {
+    const gc = code('src/ui/gamecenter.ts');
+    expect(gc).toContain('GC.reportAchievements(');
+    expect(gc).not.toContain('GC.submitScore(');
+  });
   it('routes the shop through the Grown-ups gate', () => {
     expect(code('src/ui/screens/shop.ts')).toContain('refreshGrownups(app)');
     expect(code('src/ui/screens/grownups.ts')).toContain("parentalGate('grownups')");

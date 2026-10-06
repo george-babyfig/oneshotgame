@@ -451,6 +451,25 @@ export function pageText(page: Page) {
   return page.evaluate(() => document.body.innerText);
 }
 
+/** Kid-safe checks shared by later journeys. */
+export async function expectKidSafe(page: Page, loc: LocaleId = 'en') {
+  const text = await pageText(page);
+  expect.soft(text).not.toMatch(/[$€£¥]|US\$|R\$/);
+  expect.soft(text).not.toContain('Heat');
+  for (const key of ['OFFER', 'Want a nudge?', 'Rate Comet Garden', 'To rate the game, please answer:', 'Ask a grown-up'])
+    expect.soft(text).not.toContain(tr(loc, key));
+  const gemButtons = await page.$$eval('button', (buttons) =>
+    buttons
+      .filter((b) => (b as HTMLElement).offsetParent !== null && (b as HTMLElement).innerText.includes('💎'))
+      .map((b) => (b as HTMLElement).innerText),
+  );
+  expect.soft(gemButtons).toHaveLength(0);
+  await expect.soft(page.locator('.gate-q, .offer, .buy-real, .pack')).toHaveCount(0);
+  await expect.soft(page.locator('.pill.gems .plus')).toHaveCount(0);
+  const tabs = await page.locator('.main-tabs .main-tab').allInnerTexts();
+  expect.soft(tabs.filter((s) => s.includes(tr(loc, 'Shop')))).toEqual([]);
+}
+
 // ------------------------------------------------------------------ M4 navigation
 
 /** The five bottom tabs (M4 4.1); `data-tab` ids. */
@@ -509,6 +528,24 @@ export async function midGame(page: Page, opts: MidGameOpts = {}) {
   );
   await waitScreen(page, 'home');
   await settle(page);
+}
+
+/** Reach the planet-5 Homeworld with the first-hour state still untouched. */
+export async function planetFiveHomeworld(page: Page, opts: { reduceMotion?: boolean } = {}) {
+  await midGame(page, { level: 6 });
+  await page.evaluate((reduceMotion) => {
+    const a = (window as any).__app;
+    a.p.settings.reduceMotion = reduceMotion;
+    a.p.home.firstHour = 0;
+    a.p.home.intro = false;
+    a.p.home.labFreeUsed = false;
+    a.p.home.plots = a.p.home.plots.map(() => null);
+    a.p.home.debris = [];
+    a.p.home.residents = [];
+    a.save();
+    a.selectTab('homeworld');
+  }, !!opts.reduceMotion);
+  await waitScreen(page, 'homeworld');
 }
 
 export const screenName = (page: Page) => page.evaluate(() => (window as any).__app.screen as string);

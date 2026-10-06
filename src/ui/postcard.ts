@@ -78,30 +78,41 @@ export async function sharePostcard(planet: Planet, info: PostcardInfo, text: st
 }
 
 /** Hand any rendered image to the share sheet (or download it on the web). */
-export async function shareCanvas(canvas: HTMLCanvasElement, text: string, name = 'pocket-planet') {
+export async function shareCanvas(canvas: HTMLCanvasElement, text: string, _name = 'comet-garden') {
   if (!(await parentalGate('share'))) return;
   const dataUrl = canvas.toDataURL('image/png');
+  const path = `comet-garden-${Date.now()}.png`;
   try {
     if (Capacitor.isNativePlatform()) {
+      // Remove share files left by earlier versions or an interrupted sheet.
+      const old = await Filesystem.readdir({ path: '', directory: Directory.Cache }).catch(() => ({ files: [] }));
+      for (const entry of old.files) {
+        if (/^(pocket-planet|homeworld-photo|comet-garden).*\.png$/.test(entry.name))
+          await Filesystem.deleteFile({ path: entry.name, directory: Directory.Cache }).catch(() => {});
+      }
       const file = await Filesystem.writeFile({
-        path: `${name}-${Date.now()}.png`,
+        path,
         data: dataUrl.split(',')[1],
         directory: Directory.Cache,
       });
-      await Share.share({ title: 'Comet Garden', text, files: [file.uri] });
+      try {
+        await Share.share({ title: 'Comet Garden', text, files: [file.uri] });
+      } finally {
+        await Filesystem.deleteFile({ path, directory: Directory.Cache }).catch(() => {});
+      }
       return;
     }
     // build the file synchronously so the share keeps the tap's user activation
     const bytes = Uint8Array.from(atob(dataUrl.split(',')[1]), (c) => c.charCodeAt(0));
     const blob = new Blob([bytes], { type: 'image/png' });
-    const f = new File([blob], `${name}.png`, { type: 'image/png' });
+    const f = new File([blob], path, { type: 'image/png' });
     if (navigator.canShare?.({ files: [f] })) {
       await navigator.share({ files: [f], text });
       return;
     }
     const a = document.createElement('a');
     a.href = dataUrl;
-    a.download = `${name}.png`;
+    a.download = path;
     a.click();
     toast(t('Image saved'), 'good');
   } catch (e) {

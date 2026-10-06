@@ -7,6 +7,7 @@ describe('round modifiers', () => {
     splash: 1,
     scopeLevel: 3,
     lab: { rock: 5 },
+    forms: { rock: true },
     boosters: { shower: true, spark: true, scope: true },
     momentum: 3,
     buddy: { species: 'bunny', acc: 'bow' },
@@ -38,8 +39,10 @@ describe('round modifiers', () => {
   it('returns independent nested objects', () => {
     const first = modifiersFor('campaign', bonuses);
     first.lab.rock = 1;
+    first.forms.rock = false;
     first.boosters.shower = false;
     expect(bonuses.lab.rock).toBe(5);
+    expect(bonuses.forms.rock).toBe(true);
     expect(bonuses.boosters.shower).toBe(true);
   });
 });

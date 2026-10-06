@@ -39,8 +39,20 @@ function ensure(): AudioContext | null {
 
 export function unlockAudio() {
   const c = ensure();
-  if (c?.state === 'suspended') c.resume().catch(() => {});
+  if (c && c.state !== 'running') c.resume().catch(() => {});
   if (musicOn && musicTimer === null) startMusic();
+}
+
+let resumeInstalled = false;
+/** iOS can interrupt audio after the first gesture (calls, Siri, route changes). */
+export function installAudioResume() {
+  if (resumeInstalled || typeof window === 'undefined') return;
+  resumeInstalled = true;
+  const resume = () => {
+    if (ctx && ctx.state !== 'running') void ctx.resume().catch(() => {});
+  };
+  window.addEventListener('pointerup', resume, { passive: true });
+  window.addEventListener('touchend', resume, { passive: true });
 }
 
 export function setAudio(sound: boolean, music: boolean) {

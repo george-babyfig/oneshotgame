@@ -10,6 +10,8 @@ import { grownupSettings } from '../flows/settings';
 import { shopSection } from './shop';
 
 const active = new WeakSet<App>();
+// Fill these together once the owner has a hosted policy and monitored mailbox.
+export const PRIVACY_CONTACT = { email: 'support@YOUR-DOMAIN', policy: 'YOUR-SITE' } as const;
 
 export async function guardGrownups(gate: () => Promise<boolean>, show: () => void): Promise<boolean> {
   if (!(await gate())) return false;
@@ -197,7 +199,13 @@ function renderGrownups(app: App) {
       h('p', null, t('Screen Time: use iPhone Settings to manage purchases and play time.')),
       h('p', null, t('Family Sharing: eligible looks can be shared with your Apple family. Gems cannot be shared.')),
       h('p', null, t('Refunds: request a refund through Apple purchase history.')),
-      h('p', null, t('Progress lives on this device.')),
+      h('h3', null, t('Privacy')),
+      h('p', null, t('Comet Garden has no accounts, ads, or tracking. The game does not send play data to us.')),
+      h('p', null, t('Progress is stored on your iPhone and may be included in iPhone backups. Reset progress removes it from the game.')),
+      h('p', null, t('Sharing opens only after a grown-up passes the gate. Game Center is optional and uses your Apple account.')),
+      h('p', null, t('If you email support, we use your message to reply.')),
+      h('p', null, t('Support email: {email}', { email: PRIVACY_CONTACT.email })),
+      h('p', null, t('Privacy policy: {url}', { url: PRIVACY_CONTACT.policy })),
       btn(t('Clear play history'), 'danger wide', async () => {
         if (!(await confirmBox(t('Clear play history on this device?'), t('Clear')))) return;
         await clearLedger();

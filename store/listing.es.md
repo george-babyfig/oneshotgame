@@ -8,7 +8,7 @@
 
 ## Promotional text (170)
 
-Lanza cometas y haz crecer un mundito donde se mudan criaturas tiernas. Mezcla Fusiones, encadena Combos y crea tu Planeta Hogar. Sin anuncios; solo compran los adultos.
+Lanza cometas y haz crecer mundos con criaturas tiernas. Mezcla Fusiones y Combos; crea tu Planeta Hogar. Sin anuncios. Compras bajo control parental.
 
 ## Description (4,000)
 
@@ -38,10 +38,12 @@ TU PROPIO PLANETA HOGAR
 JUEGA A TU MANERA
 • Más de 100 planetas que suben de dificultad poco a poco, con 1 a 3 estrellas en cada uno
 • Una escalera de ayuda cuando un planeta se complica: qué pasó, un consejo y una ayudita extra
-• Planeta del Día, Viaje Semanal, Lluvia de Meteoros, Jardín Zen y desafíos entre amigos
+• Planeta del día, Viaje semanal, Lluvia de meteoros, Jardín zen y desafíos entre amigos
+• Remix extra añade giros divertidos y estrellas doradas a los capítulos terminados
+• Gana Esencias en los planetas y construye Laboratorios en tu Planeta Hogar
 • Juega en English, Español, Français, Deutsch, Português (Brasil) o 日本語
 
-PARA LOS ADULTOS
+TRANQUILO, JUSTO Y PRIVADO
 • Sin anuncios. Sin vidas ni temporizadores de energía. Sin recompensas pagadas al azar.
 • Las compras opcionales se venden solo en la Zona de padres, protegida con un control parental, y siempre muestran exactamente lo que recibes
 • Ajuste de Planetas tranquilos, resumen del tiempo de juego y un recordatorio de descanso opcional
@@ -57,10 +59,10 @@ _Native terms: tierno (cute), relajante (relaxing), física (physics games), zen
 
 ## Support / marketing / privacy
 
-- Support URL: https://<your-site>/support.html (site files in `site/`; same URL for every language)
-- Marketing URL: https://<your-site>/
-- Privacy policy URL: https://<your-site>/privacy.html (the page includes a Spanish section)
-- Copyright: 2026 <owner legal name>
+- Support URL: https://YOUR-DOMAIN/support.html (site files in `site/`; same URL for every language)
+- Marketing URL: https://YOUR-DOMAIN/
+- Privacy policy URL: https://YOUR-DOMAIN/privacy.html (the page includes a Spanish section)
+- Copyright: 2026 OWNER NAME
 
 ## What's New
 
@@ -68,4 +70,4 @@ Not shown for version 1.0 (Apple has no "What's New" on a first release). From 1
 
 ## Lengths
 
-Subtitle 29/30 chars · Promotional text 169/170 chars · Description 2,386/4,000 chars · Keywords 98/100 bytes (UTF-8). Measured with python3 on the exact text to paste (len() in characters; blank lines in the description counted).
+Subtitle 29/30 chars · Promotional text 150/170 chars · Description 2,551/4,000 chars · Keywords 98/100 bytes (UTF-8). Measured with python3 on the exact text to paste (len() in characters; blank lines in the description counted).

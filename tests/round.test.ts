@@ -10,7 +10,7 @@ import {
   serializeRound,
   stepRound,
 } from '../src/core/round';
-import { BIOMES, clonePlanet, impact, landingLabBonus, newPlanet, settle } from '../src/core/world';
+import { BIOMES, newPlanet, settle } from '../src/core/world';
 
 describe('round engine', () => {
   it('is pure and previews exactly the same transition', () => {
@@ -29,20 +29,15 @@ describe('round engine', () => {
     expect(step.newRegionBests).toContain(3);
   });
 
-  it('matches the existing first-arrival and region-best bonus', () => {
+  it('keeps region bests and arrivals without flat Lab score', () => {
     let state = roundState(newPlanet());
     const mods = { ...NO_MODIFIERS, lab: { rock: 4 } };
     for (const sector of [2, 2, 3]) {
       const prior = state;
       const result = stepRound(state, { kind: 'rock', sector }, mods, ROUND_RULES_V0);
-      const planet = clonePlanet(prior.planet);
-      const impactResult = impact(planet, 'rock', sector);
-      const regionBests = [...prior.regionBests];
-      const arrived = new Set(prior.arrived);
-      const expected = landingLabBonus(4, impactResult, planet, regionBests, arrived);
-      expect(result.labBonus).toBe(expected);
-      expect(result.state.regionBests).toEqual(regionBests);
-      expect(result.state.arrived).toEqual([...arrived]);
+      expect(result.state.bonus).toBe(prior.bonus);
+      expect(result.state.regionBests.every((best, i) => best >= prior.regionBests[i])).toBe(true);
+      expect(result.state.arrived).toEqual(expect.arrayContaining(prior.arrived));
       state = result.state;
     }
   });

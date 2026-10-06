@@ -6,6 +6,7 @@ import { TROUBLES, type TroubleEvent } from '../core/troubles';
 import { OBSTACLES } from '../core/sky';
 import { t, tp } from '../i18n';
 import type { Profile } from './profile';
+import type { LabEvent } from '../core/labperks';
 
 export type HelpRung = 'whatHappened' | 'tip' | 'buddyThrows' | 'hintTry';
 export type RoundEventLog = {
@@ -14,9 +15,10 @@ export type RoundEventLog = {
   bonks: ('moon' | 'rock' | 'ring' | 'bubble' | 'mist' | 'miss')[];
   wandered: string[];
   missedGoals: Goal[];
+  lab: LabEvent[];
 };
 
-export const emptyRoundLog = (): RoundEventLog => ({ troubles: [], reactions: [], bonks: [], wandered: [], missedGoals: [] });
+export const emptyRoundLog = (): RoundEventLog => ({ troubles: [], reactions: [], bonks: [], wandered: [], missedGoals: [], lab: [] });
 
 /** Rungs accumulate. The fourth counted fail repeats the Buddy gift; the fifth adds a hint try. */
 export function helpAtFailCount(fails: number): HelpRung[] {

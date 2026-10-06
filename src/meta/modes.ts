@@ -82,7 +82,8 @@ export function zenLevel(saved: Planet | null, taught = 20): LevelDef {
 }
 
 // ------------------------------------------------------------------ challenge codes
-const ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'; // no 0/O/1/I/L
+const LEGACY_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+const ALPHABET = '23456789BCDFGHJKMNPQRSTVWXYZ'; // new seeds avoid vowels
 
 export function newChallengeSeed(rnd = Math.random) {
   let s = '';
@@ -98,8 +99,8 @@ export function encodeChallenge(seed: string, score: number) {
 
 function checkChar(body: string) {
   let h = 7;
-  for (const c of body) h = (h * 31 + c.charCodeAt(0)) % ALPHABET.length;
-  return ALPHABET[h];
+  for (const c of body) h = (h * 31 + c.charCodeAt(0)) % LEGACY_ALPHABET.length;
+  return LEGACY_ALPHABET[h];
 }
 
 export function decodeChallenge(code: string): { seed: string; score: number } | null {

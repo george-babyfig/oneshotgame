@@ -4,11 +4,11 @@
 **Subtitle (30):** Fling comets, grow tiny worlds
 **Primary category:** Games → Casual · **Secondary:** Games → Simulation
 **Age rating:** 4+ (see age-rating answers)
-**Price:** Free, with optional in-app purchases (parents only, in the Grown-ups area)
+**Price:** Free, with optional in-app purchases (in the gated Grown-ups area)
 
 ## Promotional text (170)
 
-Fling comets and grow a tiny world where cute creatures move in. Mix Fusions, chain Combos and build your Homeworld. No ads, and purchases stay with grown-ups.
+Fling comets and grow a tiny world where cute creatures move in. Mix Fusions, chain Combos and build your Homeworld. No ads. Optional purchases require a parent check.
 
 ## Description (4,000)
 
@@ -39,9 +39,11 @@ PLAY YOUR WAY
 • More than 100 planets that ramp up gently, with 1 to 3 stars on each
 • A help ladder when a planet is tricky: what happened, a tip, and a little extra help
 • Daily Planet, Weekly Voyage, Meteor Rush, Zen Garden and friend challenges
+• Bonus Remix adds playful twists and gold stars to finished chapters
+• Earn Essences from planets and build Labs on your Homeworld
 • Play in English, Español, Français, Deutsch, Português (Brasil) or 日本語
 
-FOR GROWN-UPS
+CALM, FAIR AND PRIVATE
 • No ads. No lives or energy timers. No random paid rewards.
 • Optional purchases are sold only in the Grown-ups area, behind a parent check, and always show exactly what you get
 • Gentle planets setting, play-time summary and an optional break reminder
@@ -55,10 +57,10 @@ space,planet,asteroid,meteor,terraform,cozy,cute,creature,animal,physics,galaxy,
 
 ## Support / marketing / privacy
 
-- Support URL: https://<your-site>/support.html (site files in `site/`; see site/README.md)
-- Marketing URL: https://<your-site>/
-- Privacy policy URL: https://<your-site>/privacy.html
-- Copyright: 2026 <owner legal name>
+- Support URL: https://YOUR-DOMAIN/support.html (site files in `site/`; see site/README.md)
+- Marketing URL: https://YOUR-DOMAIN/
+- Privacy policy URL: https://YOUR-DOMAIN/privacy.html
+- Copyright: 2026 OWNER NAME
 
 ## What's New
 

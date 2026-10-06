@@ -8,7 +8,7 @@
 
 ## Promotional text (170)
 
-Lance des comètes, fais pousser un petit monde, accueille de mignonnes créatures. Fusions, Combos et Planète Mère t'attendent. Sans pub ; seuls les adultes achètent.
+Lance des comètes et fais pousser un petit monde. Fusions, Combos et Planète Mère t’attendent. Sans pub. Achats sous contrôle parental.
 
 ## Description (4,000)
 
@@ -39,9 +39,11 @@ JOUE À TA FAÇON
 • Plus de 100 planètes qui se corsent tout en douceur, avec 1 à 3 étoiles sur chacune
 • Une échelle d'aide quand une planète résiste : ce qui s'est passé, une astuce, puis un petit coup de pouce
 • Planète du jour, Voyage de la semaine, Pluie de météores, Jardin zen et défis entre amis
+• Le Remix bonus ajoute des surprises et des étoiles dorées aux chapitres terminés
+• Gagne des Essences sur les planètes et construis des Laboratoires sur ta Planète Mère
 • Joue en English, Español, Français, Deutsch, Português (Brasil) ou 日本語
 
-POUR LES GRANDS
+CALME, ÉQUITABLE ET PRIVÉ
 • Pas de pub. Pas de vies ni de minuteurs d'énergie. Pas de récompenses payantes au hasard.
 • Les achats facultatifs se font uniquement dans l'Espace parents, protégé par un contrôle parental, et montrent toujours exactement ce que l'on obtient
 • Réglage Planètes douces, résumé du temps de jeu et rappel de pause facultatif
@@ -57,10 +59,10 @@ _Native terms: mignon (cute), animaux, physique (physics games), zen (calm; also
 
 ## Support / marketing / privacy
 
-- Support URL: https://<your-site>/support.html (site files in `site/`; same URL for every language)
-- Marketing URL: https://<your-site>/
-- Privacy policy URL: https://<your-site>/privacy.html (the page includes a French section)
-- Copyright: 2026 <owner legal name>
+- Support URL: https://YOUR-DOMAIN/support.html (site files in `site/`; same URL for every language)
+- Marketing URL: https://YOUR-DOMAIN/
+- Privacy policy URL: https://YOUR-DOMAIN/privacy.html (the page includes a French section)
+- Copyright: 2026 OWNER NAME
 
 ## What's New
 
@@ -68,4 +70,4 @@ Not shown for version 1.0 (Apple has no "What's New" on a first release). From 1
 
 ## Lengths
 
-Subtitle 30/30 chars · Promotional text 165/170 chars · Description 2,414/4,000 chars · Keywords 98/100 bytes (UTF-8). Measured with python3 on the exact text to paste (len() in characters; blank lines in the description counted).
+Subtitle 30/30 chars · Promotional text 135/170 chars · Description 2,595/4,000 chars · Keywords 98/100 bytes (UTF-8). Measured with python3 on the exact text to paste (len() in characters; blank lines in the description counted).

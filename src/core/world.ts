@@ -204,14 +204,19 @@ const habitable = (s: Sector) => s.land >= 1 || s.water >= 1;
 
 /** Object Lab level (1-5) and whether the throw is a charged Supernova. */
 export interface ImpactBoost {
-  lv?: number;
   nova?: boolean;
+  power?: number;
+  novaReach?: number;
+  form?: boolean;
 }
 
 /** Repeat the object's main effect across its expanded Supernova reach. */
-function applyBoost(p: Planet, kind: Kind, at: number, splash: number) {
-  const r = Math.min(4, KINDS[kind].stats.reach + splash + 1);
-  for (let d = -r; d <= r; d++)
+function applyBoost(p: Planet, kind: Kind, at: number, splash: number, boost: ImpactBoost) {
+  const baseRadius = Math.min(4, KINDS[kind].stats.reach + splash + 1);
+  const r = Math.min(4, baseRadius + (boost.novaReach ?? 0));
+  for (let d = -r; d <= r; d++) {
+    const index = wrap(at + d);
+    const before = { ...p.sectors[index] };
     touch(p, at + d, (s) => {
       switch (kind) {
         case 'rock':
@@ -226,7 +231,7 @@ function applyBoost(p: Planet, kind: Kind, at: number, splash: number) {
         case 'magma':
           s.heat += KINDS.magma.stats.power;
           s.land += 1;
-          s.water -= 1;
+          if (!boost.form) s.water -= 1;
           break;
         case 'storm':
           s.water += KINDS.storm.stats.power;
@@ -236,38 +241,16 @@ function applyBoost(p: Planet, kind: Kind, at: number, splash: number) {
           break;
       }
     });
-}
-
-/**
- * Object Lab perks never change the terrain (so an upgrade can't spoil a goal);
- * they add bonus life on top of the planet's own:
- * Lv2 Bloom +2 per region it transforms · Lv3 Charge (Supernova meter 50% faster)
- * Lv4 Magnet +6 per creature it brings · Lv5 Starfall +3 on every landing.
- */
-export function labBonus(lv: number, changed: number, spawned: number) {
-  let b = 0;
-  if (lv >= 2) b += changed * 2;
-  if (lv >= 4) b += spawned * 6;
-  if (lv >= 5) b += 3;
-  return b;
-}
-
-/** Track first arrivals and each region's best land, even on a worse throw. */
-export function landingLabBonus(lv: number, result: ImpactResult, planet: Planet, regionBests: number[], arrived: Set<string>): number {
-  let newBests = 0;
-  for (const i of result.changed) {
-    const value = BIOMES[planet.sectors[i].biome].value;
-    if (value > regionBests[i]) newBests++;
+    if (Math.abs(d) > baseRadius && biomeOf(p.sectors[index]) !== biomeOf(before)) {
+      p.sectors[index] = before;
+    } else if (boost.novaReach && (kind === 'storm' || kind === 'sun')) {
+      const base = p.sectors[index];
+      const candidate = { ...base };
+      if (kind === 'storm') candidate.water = Math.min(5, candidate.water + 1);
+      else if (habitable(candidate)) candidate.life = Math.min(3, candidate.life + 1);
+      if (biomeOf(candidate) === biomeOf(base)) p.sectors[index] = candidate;
+    }
   }
-  planet.sectors.forEach((sector, i) => {
-    regionBests[i] = Math.max(regionBests[i] ?? 0, BIOMES[sector.biome].value);
-  });
-  let firstArrivals = 0;
-  for (const species of result.spawned) {
-    if (!arrived.has(species.id)) firstArrivals++;
-    arrived.add(species.id);
-  }
-  return result.after < result.before ? 0 : labBonus(lv, newBests, firstArrivals);
 }
 
 export function boostRadius(b: ImpactBoost = {}) {
@@ -275,49 +258,51 @@ export function boostRadius(b: ImpactBoost = {}) {
 }
 
 /** Supernova charge a landing earns (Lab Lv3+ objects charge 50% faster). */
-export function novaCharge(changed: number, spawned: number, lv = 1) {
-  const base = changed + spawned * 2;
-  return lv >= 3 ? Math.ceil(base * 1.5) : base;
+export function novaCharge(changed: number, spawned: number) {
+  return changed + spawned * 2;
 }
 
 /** Mutate sectors for an impact. `splash` = extra neighbour radius (upgrade). */
-function applyKind(p: Planet, kind: Kind, at: number, splash: number) {
+function applyKind(p: Planet, kind: Kind, at: number, splash: number, boost: ImpactBoost): void {
   const r = KINDS[kind].stats.reach + splash;
+  const form = !!boost.form;
   switch (kind) {
     case 'rock':
       touch(p, at, (s) => (s.land += KINDS.rock.stats.power));
       for (let d = 1; d <= r; d++) for (const j of [at - d, at + d]) touch(p, j, (s) => (s.land += 2));
+      if (form) for (const d of [-3, 3]) touch(p, at + d, (s) => (s.land += 1));
       break;
     case 'ice':
       touch(p, at, (s) => {
         s.water += KINDS.ice.stats.power;
-        s.heat -= 1;
+        s.heat = form ? Math.min(s.heat - 1, -2) : s.heat - 1;
       });
-      for (let d = 1; d <= r; d++) for (const j of [at - d, at + d]) touch(p, j, (s) => (s.water += 2));
+      for (let d = 1; d <= r; d++) for (const j of [at - d, at + d]) touch(p, j, (s) => (s.water += form ? 1 : 2));
       break;
     case 'magma':
       touch(p, at, (s) => {
         s.heat += KINDS.magma.stats.power;
         s.land += 1;
-        s.water -= 1;
+        if (!form) s.water -= 1;
       });
       for (let d = 1; d <= r; d++)
         for (const j of [at - d, at + d])
           touch(p, j, (s) => {
             s.heat += 1;
-            if (s.water === 0) s.land += 1;
+            if (form || s.water === 0) s.land += 1;
           });
       break;
     case 'seed':
       for (let d = -r; d <= r; d++)
         touch(p, at + d, (s) => {
-          if (habitable(s)) s.life += d === 0 ? KINDS.seed.stats.power : 1;
+          if (habitable(s)) s.life += d === 0 ? KINDS.seed.stats.power + (form ? 1 : 0) : form ? 2 : 1;
         });
       break;
     case 'storm':
       for (let d = -r; d <= r; d++)
         touch(p, at + d, (s) => {
           s.water += KINDS.storm.stats.power + Number(Math.abs(d) <= 1);
+          if (form && s.water >= 2 && habitable(s)) s.life += 1;
           if (s.heat > 0) s.heat -= 1;
           else if (s.heat < 0) s.heat += 1;
         });
@@ -325,7 +310,8 @@ function applyKind(p: Planet, kind: Kind, at: number, splash: number) {
     case 'sun':
       for (let d = -r; d <= r; d++)
         touch(p, at + d, (s) => {
-          s.heat += KINDS.sun.stats.power;
+          const hadPlants = s.life >= 2;
+          if (!form || hadPlants) s.heat += KINDS.sun.stats.power;
           if (Math.abs(d) < r && habitable(s)) s.life += KINDS.sun.stats.power;
         });
       break;
@@ -551,6 +537,7 @@ export interface ImpactResult {
   changed: number[]; // sector indices whose biome changed
   spawned: { id: string; at: number }[];
   lost: string[];
+  powerApplied?: boolean;
 }
 
 export function impact(
@@ -564,12 +551,34 @@ export function impact(
   const before = lifeScore(p);
   const prev = p.sectors.map((s) => s.biome);
   const extra = boostRadius(boost);
-  applyKind(p, kind, wrap(at), splash + extra);
-  if (boost.nova) applyBoost(p, kind, wrap(at), splash);
+  const baseReach = KINDS[kind].stats.reach + splash + extra;
+  const labReach = boost.nova ? Math.min(4, baseReach + (boost.novaReach ?? 0)) : baseReach;
+  const beforeLabReach = labReach > baseReach ? clonePlanet(p) : null;
+  if (beforeLabReach) applyKind(beforeLabReach, kind, wrap(at), baseReach - KINDS[kind].stats.reach, { ...boost, novaReach: 0 });
+  applyKind(p, kind, wrap(at), Math.max(baseReach, labReach) - KINDS[kind].stats.reach, boost);
+  if (beforeLabReach)
+    for (const distance of [-labReach, labReach]) {
+      const index = wrap(at + distance);
+      if (biomeOf(p.sectors[index]) !== biomeOf(beforeLabReach.sectors[index])) p.sectors[index] = beforeLabReach.sectors[index];
+    }
+  if (boost.nova) applyBoost(p, kind, wrap(at), splash, boost);
   beforeSettle?.(p);
+  // Add Power after Fusions and Supernova, so it cannot change their recipes.
+  let powerApplied = false;
+  if (boost.power) {
+    const index = wrap(at);
+    const sector = p.sectors[index];
+    if (habitable(sector)) {
+      const candidate = { ...sector, life: Math.min(3, sector.life + boost.power) };
+      if (candidate.life > sector.life && biomeOf(candidate) === biomeOf(sector)) {
+        touch(p, at, (s) => (s.life += boost.power!));
+        powerApplied = true;
+      }
+    }
+  }
   const { spawned, lost } = settle(p);
   const changed = p.sectors.map((s, i) => (s.biome !== prev[i] ? i : -1)).filter((i) => i >= 0);
-  return { before, after: lifeScore(p), changed, spawned, lost };
+  return { before, after: lifeScore(p), changed, spawned, lost, ...(powerApplied ? { powerApplied: true } : {}) };
 }
 
 export function clonePlanet(p: Planet): Planet {

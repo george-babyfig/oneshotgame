@@ -147,6 +147,28 @@ test.describe('J3 purchases in Grown-ups (mock store)', () => {
     expectNoErrors(guard);
   });
 
+  test('decision 45: on a fresh install a grown-up reaches the shop through the gate (App Review path)', async ({ page }, info) => {
+    const guard = watchErrors(page);
+    await freshInstall(page);
+    await page.evaluate(() => {
+      const a = (window as any).__app;
+      a.p.tutorial = true; // past the first planet's tutorial, nothing else played
+      a.save();
+      a.showHome(true);
+    });
+    await waitScreen(page, 'home');
+    const intros = page.locator(OPEN_MODAL);
+    while (await intros.count()) {
+      await intros.first().locator('button').last().click();
+      await settle(page);
+    }
+    expect(await page.evaluate(() => (window as any).__app.p.chapters.length), 'no chapter chest opened').toBe(0);
+    await openGrownups(page);
+    for (const title of GEM_PRODUCTS) await expect(productRow(page, title), title).toBeVisible();
+    await snap(page, info, guard, 'grownups-first-launch');
+    expectNoErrors(guard);
+  });
+
   test('gem pack: gate → contents sheet → store → receipt; gems added exactly once; a replay is ignored', async ({ page }, info) => {
     const guard = watchErrors(page);
     await inGrownups(page, guard, info);

@@ -56,7 +56,7 @@ export function flyingSurvey(first = 1, last = 60, runs = 8) {
       if (decentBonks > 0.8) failures.push(`planet ${n} decent bonks ${decentBonks.toFixed(2)} > 0.8`);
       if (c.fail > 0.33 || dec.fail > 0.26)
         failures.push(`planet ${n} obstacle fail casual/decent ${Math.round(c.fail * 100)}%/${Math.round(dec.fail * 100)}% > 33%/26%`);
-      const floor: typeof POLICIES.casual = { name: 'casual', labLevel: 1, chooseAim: (context) => oneStep(context, ROUND_RULES_V0) };
+      const floor: typeof POLICIES.casual = { name: 'casual', chooseAim: (context) => oneStep(context, ROUND_RULES_V0) };
       const floorRow = runPlanet(n, floor, runs, undefined, { timed: false, badgeAware: true });
       if (floorRow.fail > 0.1) failures.push(`planet ${n} Solver 0 with casual flight fails ${Math.round(floorRow.fail * 100)}% > 10%`);
     }

@@ -1,5 +1,6 @@
 // Styles: dress your Keeper and preview looks without changing the saved outfit.
 import { h, btn, fmt, toast } from '../dom';
+import { LAB_TEXT } from '../../meta/labcopy';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
 import {
@@ -312,7 +313,7 @@ function buddyPanel(app: App) {
   );
 }
 
-/** Dye tab: recolour the suit body and trim; locked dyes unlock with materials. */
+/** Dye tab: recolour the suit body and trim; locked dyes unlock with Essences. */
 function dyePanel(app: App) {
   const p = app.p;
   const row = (channel: 'main' | 'trim') =>
@@ -337,7 +338,7 @@ function dyePanel(app: App) {
             class: `dye${on ? ' on' : ''}${owned ? '' : ' locked'}`,
             onclick: () => {
               if (!owned) {
-                if (!unlockDye(p, d.id)) return toast(t('Needs {cost} — finish more planets for materials', { cost: costText(d.cost) }));
+                if (!unlockDye(p, d.id)) return toast(t(LAB_TEXT.dyeNeed, { cost: costText(d.cost) }));
                 sfx.chest();
                 haptic.success();
                 toast(t('{name} dye unlocked!', { name: t(d.name) }), 'good');
@@ -359,7 +360,7 @@ function dyePanel(app: App) {
     row('main'),
     h('div', { class: 'sec-title' }, t('Trim')),
     row('trim'),
-    h('p', { class: 'muted tiny' }, t('Dyes work with every suit. Unlock them once with materials from your planets.')),
+    h('p', { class: 'muted tiny' }, t(LAB_TEXT.dyeIntro)),
   );
 }
 

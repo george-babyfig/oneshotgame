@@ -2,6 +2,7 @@
 // Usage: npm run dev (in another terminal), then: node resources/render-art.cjs
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 let chromium;
 try {
   ({ chromium } = require('playwright'));
@@ -115,10 +116,56 @@ async function render(page, size, kind) {
         drawCreature(g, 'fish', cx + R * 0.95, cy + R * 0.2, Math.PI / 2 - 0.25, R * 0.3, 1.2);
         drawCreature(g, 'bear', cx - R * 0.98, cy + R * 0.05, -Math.PI / 2 + 0.1, R * 0.3, 2.1);
       }
+      if (kind === 'icon') {
+        // Canvas PNGs are RGBA even when every pixel is opaque; encode RGB for App Store validation.
+        const bytes = g.getImageData(0, 0, size, size).data;
+        let raw = '';
+        for (let i = 0; i < bytes.length; i += 32768) raw += String.fromCharCode(...bytes.subarray(i, i + 32768));
+        return btoa(raw);
+      }
       return c.toDataURL('image/png');
     },
     { size, kind },
   );
+}
+
+function rgbPng(rgba, size) {
+  const scanlines = Buffer.alloc(size * (1 + size * 3));
+  for (let y = 0; y < size; y++) {
+    const row = y * (1 + size * 3);
+    for (let x = 0; x < size; x++) {
+      const src = (y * size + x) * 4;
+      const dst = row + 1 + x * 3;
+      scanlines[dst] = rgba[src];
+      scanlines[dst + 1] = rgba[src + 1];
+      scanlines[dst + 2] = rgba[src + 2];
+    }
+  }
+  const crcTable = Array.from({ length: 256 }, (_, n) => {
+    for (let k = 0; k < 8; k++) n = n & 1 ? 0xedb88320 ^ (n >>> 1) : n >>> 1;
+    return n >>> 0;
+  });
+  const chunk = (name, data) => {
+    const type = Buffer.from(name);
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    let crc = 0xffffffff;
+    for (const byte of Buffer.concat([type, data])) crc = crcTable[(crc ^ byte) & 255] ^ (crc >>> 8);
+    const checksum = Buffer.alloc(4);
+    checksum.writeUInt32BE((crc ^ 0xffffffff) >>> 0);
+    return Buffer.concat([length, type, data, checksum]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(size, 0);
+  header.writeUInt32BE(size, 4);
+  header[8] = 8;
+  header[9] = 2; // PNG truecolor, no alpha
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    chunk('IHDR', header),
+    chunk('IDAT', zlib.deflateSync(scanlines)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
 }
 
 (async () => {
@@ -128,10 +175,10 @@ async function render(page, size, kind) {
   await page.waitForTimeout(600);
   const save = (url, file) => fs.writeFileSync(file, Buffer.from(url.split(',')[1], 'base64'));
   const root = path.join(__dirname, '..');
-  const icon = await render(page, 1024, 'icon');
-  save(icon, path.join(__dirname, 'icon.png'));
-  save(icon, path.join(root, 'public/icon.png'));
-  save(icon, path.join(root, 'ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png'));
+  const icon = rgbPng(Buffer.from(await render(page, 1024, 'icon'), 'base64'), 1024);
+  fs.writeFileSync(path.join(__dirname, 'icon.png'), icon);
+  fs.writeFileSync(path.join(root, 'public/icon.png'), icon);
+  fs.writeFileSync(path.join(root, 'ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png'), icon);
   const splash = await render(page, 2732, 'splash');
   for (const f of ['splash-2732x2732.png', 'splash-2732x2732-1.png', 'splash-2732x2732-2.png'])
     save(splash, path.join(root, 'ios/App/App/Assets.xcassets/Splash.imageset', f));

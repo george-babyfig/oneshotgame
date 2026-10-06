@@ -674,14 +674,34 @@ const portraits = new Map<HTMLCanvasElement, LivePortrait>();
 const visiblePortraits = new Set<HTMLCanvasElement>();
 let portraitObserver: IntersectionObserver | null = null;
 let portraitRaf = 0;
+let portraitSweepTimer: number | null = null;
 let lastPortraitFrame = 0;
 
 export function refreshCreatureGalleryMotion() {
-  if (document.hidden || document.documentElement.classList.contains('reduce-motion')) {
+  if (document.hidden) {
     cancelAnimationFrame(portraitRaf);
     portraitRaf = 0;
+    if (portraitSweepTimer !== null) clearInterval(portraitSweepTimer);
+    portraitSweepTimer = null;
     return;
   }
+  if (document.documentElement.classList.contains('reduce-motion')) {
+    cancelAnimationFrame(portraitRaf);
+    portraitRaf = 0;
+    if (!portraits.size && portraitSweepTimer !== null) {
+      clearInterval(portraitSweepTimer);
+      portraitSweepTimer = null;
+    }
+    // A quiet sweep still releases cards detached while animation is disabled.
+    if (portraitSweepTimer === null && portraits.size)
+      portraitSweepTimer = window.setInterval(() => {
+        sweepDetachedPortraits(portraits, removePortrait);
+        if (!portraits.size) refreshCreatureGalleryMotion();
+      }, 100);
+    return;
+  }
+  if (portraitSweepTimer !== null) clearInterval(portraitSweepTimer);
+  portraitSweepTimer = null;
   if (!portraitRaf && portraits.size) portraitRaf = requestAnimationFrame(portraitFrame);
 }
 
@@ -689,6 +709,17 @@ function removePortrait(canvas: HTMLCanvasElement) {
   portraits.delete(canvas);
   visiblePortraits.delete(canvas);
   portraitObserver?.unobserve(canvas);
+}
+
+export function sweepDetachedPortraits(
+  entries: Iterable<[HTMLCanvasElement, { detachedFrames: number }]>,
+  remove: (canvas: HTMLCanvasElement) => void,
+) {
+  for (const [canvas, entry] of entries) {
+    if (!canvas.isConnected) {
+      if (++entry.detachedFrames > 60) remove(canvas);
+    } else entry.detachedFrames = 0;
+  }
 }
 
 function portraitFrame(now: number) {
@@ -699,13 +730,9 @@ function portraitFrame(now: number) {
     return;
   }
   lastPortraitFrame = now;
+  sweepDetachedPortraits(portraits, removePortrait);
   let count = 0;
-  for (const [canvas, entry] of portraits) {
-    if (!canvas.isConnected) {
-      if (++entry.detachedFrames > 60) removePortrait(canvas);
-      continue;
-    }
-    entry.detachedFrames = 0;
+  for (const [canvas] of portraits) {
     if (visiblePortraits.has(canvas)) count++;
   }
   if (count <= 24 && !document.documentElement.classList.contains('reduce-motion')) {

@@ -248,6 +248,9 @@ for (const loc of localesToRun()) {
 
       // (d) the Homeworld at planet 5: no prices, gem prompts or offers
       await waitScreen(page, 'homeworld');
+      const firstHour = page.locator(OPEN_MODAL).last();
+      await expect(firstHour).toContainText(tr(loc, '2 steps · 🎁 ✨100 when done'));
+      await expect(firstHour).toContainText(tr(loc, 'Build your first Lab'));
       intros.push(...(await closeSheets(page, info, guard, 'homeworld')));
       await snap(page, info, guard, 'homeworld');
       await expectKidSafe(page, loc, 'homeworld');

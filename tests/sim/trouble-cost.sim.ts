@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import { makeLevel, rngFrom } from '../../src/core/levels';
 import { clonePlanet, lifeScore, settle } from '../../src/core/world';
 import { lifeSparkSectors } from '../../src/core/round';
-import { POLICIES, playLevel, type BotPolicy } from './harness';
+import { POLICIES, maxLegalLoadout, playLevel } from './harness';
 
 if (process.env.SIM === '1') {
   it('measures blind, aware and max-loadout Trouble cost on identical deals', () => {
@@ -10,7 +10,6 @@ if (process.env.SIM === '1') {
     const teaching = [14, 25, 28, 36, 49, 59];
     const planets = nightly ? Array.from({ length: 47 }, (_, i) => i + 14).filter((n) => makeLevel(n).troubles.length > 0) : teaching;
     const runs = Number(process.env.TROUBLE_RUNS ?? (nightly ? 32 : 16));
-    const maxPolicy: BotPolicy = { ...POLICIES['decent-blind'], name: 'decent-blind-max', labLevel: 5 };
     const gated: Record<string, number[]> = { blind: [], aware: [], max: [] };
     const survey: Record<string, number[]> = { blind: [], aware: [], max: [] };
     const other: Record<string, number[]> = { blind: [], aware: [], max: [] };
@@ -32,11 +31,12 @@ if (process.env.SIM === '1') {
         for (const [name, policy, max] of [
           ['blind', POLICIES['decent-blind'], false],
           ['aware', POLICIES['decent-aware'], false],
-          ['max', maxPolicy, true],
+          ['max', POLICIES['decent-blind'], true],
         ] as const) {
           const seed = `${level.seed}-cost-${name}-${run}`;
-          const withTrouble = playLevel(level, policy, rngFrom(seed), undefined, undefined, 0, max);
-          const without = playLevel(quiet, policy, rngFrom(seed), undefined, undefined, 0, max);
+          const loadout = max ? maxLegalLoadout(level) : undefined;
+          const withTrouble = playLevel(level, policy, rngFrom(seed), undefined, undefined, 0, loadout);
+          const without = playLevel(quiet, policy, rngFrom(seed), undefined, undefined, 0, loadout);
           const cost = (without.score - withTrouble.score) / Math.max(1, without.score - (max ? maxBase : base));
           perPlanet[name].push(cost);
           survey[name].push(cost);
@@ -62,6 +62,9 @@ if (process.env.SIM === '1') {
       );
     expect(result.blind, 'blind Trouble cost ≥5%').toBeGreaterThanOrEqual(0.05);
     expect(result.aware, 'aware Trouble cost ≤8%').toBeLessThanOrEqual(0.08);
-    expect(result.max, 'blind max-loadout Trouble cost ≥3%').toBeGreaterThanOrEqual(0.03);
+    // Decision 41: with Labs a maxed score is far larger, so the same Troubles are a smaller share of it.
+    // The pre-Lab 3% target stays visible as a Watch; the gate keeps Troubles from vanishing entirely.
+    if (result.max < 0.03) console.log(`Watch (decision 41): max-loadout Trouble cost ${(result.max * 100).toFixed(1)}% < 3% target`);
+    expect(result.max, 'blind max-loadout Trouble cost ≥1% (decision 41)').toBeGreaterThanOrEqual(0.01);
   }, 600_000); // slower CI runners
 }

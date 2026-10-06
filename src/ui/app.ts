@@ -26,7 +26,7 @@ import {
 import { setPlanetPalette } from './art/planet';
 import type { SkyState } from '../core/sky';
 import { restoredSkyState } from './feel';
-import { createIap, type IapEvent, type StorePrice } from '../meta/iap';
+import { createIap, shouldRevoke, type IapEvent, type StorePrice } from '../meta/iap';
 import { PRODUCT_BY_ID, PRODUCT_BY_KEY, SKINS, type BoosterId } from '../meta/config';
 import { clearFails, continueAllowed, countsAsFail, recordFail } from '../meta/continues';
 import { firstTargets, helpAtFailCount, helpFor, helpThrowsForAttempt } from '../meta/help';
@@ -81,7 +81,8 @@ import { showAlbum } from './screens/album';
 import { festivalFlow } from './flows/festival';
 import { ensureFestival, festivalActive, festivalLive, spotFestival } from '../meta/festivals';
 import { tickHome } from '../meta/homeworld';
-import { labLevels } from '../meta/lab';
+import { activeForms, labLevels, recordLabEvents } from '../meta/labs';
+import { showFormReveal } from './flows/labmoments';
 import { addFling } from '../meta/records';
 import { sight } from '../meta/lore';
 import { seasonOf, skyEventOn } from '../meta/seasons';
@@ -319,6 +320,7 @@ export class App {
       comboIconsBest: scene.comboIconsBest,
       reactionEvents: scene.reactionEvents,
       roundLog: scene.roundLog,
+      labSteps: scene.labSteps,
       reactionsSeen: [...scene.reactionsSeen],
       comboEvents: scene.comboEvents,
       warmup: !!scene.o.practice,
@@ -797,6 +799,7 @@ export class App {
     boosters: Boosters = NO_BOOSTERS,
     tutorial = false,
   ): SceneOpts {
+    const earnedForms: Kind[] = [];
     const skin = SKINS.find((s) => s.id === this.p.skin && (!this.p.settings.hidePaidLooks || (!s.starter && !s.pass))) ?? SKINS[0];
     const look = currentLook(this.p);
     const mods = modifiersFor(mode === 'tutorial' ? 'campaign' : mode, {
@@ -805,6 +808,7 @@ export class App {
       extraThrows: this.p.upgrades.throws,
       boosters,
       lab: labLevels(this.p),
+      forms: activeForms(this.p),
       momentum: extra.momentum ?? 0,
       shower: !!skyEventOn(new Date()),
       gentle: !!this.p.settings.gentle,
@@ -862,6 +866,11 @@ export class App {
         this.saveNow();
         return result;
       },
+      onLabStep: (step) => {
+        if (mode !== 'campaign' && mode !== 'tutorial' && mode !== 'voyage' && mode !== 'zen') return;
+        earnedForms.push(...recordLabEvents(this.p, step, mode === 'tutorial' ? 'campaign' : mode));
+        this.saveNow();
+      },
       onCombo: (links, reaction, superFusion) => {
         recordCombo(this.p, links, reaction, superFusion, mode === 'tutorial' ? 'campaign' : mode);
         this.saveNow();
@@ -886,24 +895,28 @@ export class App {
         clearInterruptedRound(this.p);
         this.save();
         this.showHome();
+        for (const lab of earnedForms) showFormReveal(this, lab);
       },
       season: seasonOf(new Date(), this.p.settings.hemi),
       festAcc: festivalActive(this.p) ? ensureFestival(this.p).acc : undefined,
       buddy: currentBuddy(this.p, festivalActive(this.p) ? ensureFestival(this.p).acc : undefined),
       ...extra,
       onEnd: (result) => {
+        result.labEvents = this.scene?.roundLog.lab ?? [];
         if (result.throwsUsed !== -1 && !extra.endless) {
           this.roundsThisSession++;
           const breakAfter = this.p.settings.breakAfterRounds;
           if (breakAfter && this.roundsThisSession % breakAfter === 0) this.breakDue = true;
         }
         extra.onEnd(result);
+        for (const lab of earnedForms) showFormReveal(this, lab);
       },
       scopeLevel: mods.scopeLevel,
       splash: mods.splash,
       extraThrows: mods.extraThrows,
       boosters: mods.boosters,
       lab: mods.lab,
+      forms: mods.forms,
       momentum: mods.momentum,
       shower: mods.shower,
       ...{ buddyShield: mods.buddyShield },
@@ -991,6 +1004,7 @@ export class App {
     opts.extraThrows = m.extraThrows;
     opts.boosters = m.boosters;
     opts.lab = m.lab;
+    opts.forms = m.forms ?? {};
     opts.momentum = m.momentum;
     opts.shower = m.shower;
     opts.gentle = m.gentle;
@@ -1015,6 +1029,8 @@ export class App {
     scene.mistTipShown = !!s.mistTipShown;
     scene.gustTipShown = !!s.gustTipShown;
     scene.planet = s.state.planet;
+    scene.labSteps = s.labSteps ?? [];
+    scene.labMarks = s.state.labMarks ?? { rock: [], seed: [] };
     restoreSceneTroubles(scene, s.state);
     scene.nova = s.state.nova;
     scene.combo = s.state.combo;
@@ -1029,7 +1045,7 @@ export class App {
       Array.isArray(s.roundLog.bonks) &&
       Array.isArray(s.roundLog.wandered)
     )
-      scene.roundLog = s.roundLog;
+      scene.roundLog = { ...s.roundLog, lab: s.roundLog.lab ?? [] };
     scene.reactionsSeen = new Set(s.reactionsSeen ?? scene.reactionEvents);
     scene.comboEvents = s.comboEvents ?? [];
     scene.bonus = s.state.bonus;
@@ -1289,7 +1305,16 @@ export class App {
         const transactions = await this.iap.transactions();
         for (const event of transactions) {
           const product = PRODUCT_BY_ID[event.productId];
-          if (!product || event.revokedAt || this.p.processedTx.includes(event.txId)) continue;
+          if (!product) continue;
+          // Only Apple's explicit revocation (a refund, Family Sharing ending) removes a paid look.
+          if (shouldRevoke(event)) {
+            if (!product.consumable && ((product.key === 'starter' && this.p.starter) || (product.key === 'pass' && this.p.pass))) {
+              revokeProduct(this.p, event.productId);
+              await this.saveNow();
+            }
+            continue;
+          }
+          if (this.p.processedTx.includes(event.txId)) continue;
           if (!event.purchasedAt || event.purchasedAt < this.p.meta.installed - 60_000) continue;
           await this.handleTransaction(event);
         }
@@ -1298,20 +1323,9 @@ export class App {
       }
     }
     try {
+      // Absence from the current entitlements is not a revocation (StoreKit can answer partially
+      // offline), so this only ever adds what the store says is owned.
       const owned = await this.iap.owned();
-      if (this.iap.kind === 'native') {
-        for (const id of Object.keys(PRODUCT_BY_ID)) {
-          const key = PRODUCT_BY_ID[id].key;
-          if (
-            !PRODUCT_BY_ID[id].consumable &&
-            !owned.includes(id) &&
-            ((key === 'starter' && this.p.starter) || (key === 'pass' && this.p.pass))
-          ) {
-            revokeProduct(this.p, id);
-            await this.saveNow();
-          }
-        }
-      }
       if (this.applyOwned(owned)) this.refresh();
     } catch {
       // Keep local ownership if the store cannot answer.

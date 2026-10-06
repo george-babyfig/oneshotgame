@@ -5,6 +5,8 @@ import { chestsReady, roadReady } from './progression';
 import { wishClaimable, wishText, type WishCard } from './wishes';
 import { CONSTELLATIONS } from './tuning';
 import { habitatProgress, HABITATS } from './habitats';
+import { firstHourStep } from './firsthour';
+import { LAB_TEXT } from './labcopy';
 
 export interface NextUp {
   kind: 'unlock' | 'claim' | 'wish' | 'goal' | 'play';
@@ -75,6 +77,7 @@ export function nextUp(p: Profile, _now: number): NextUp {
       x.planet === p.level - 1 &&
       (x.intro || x.button || x.placement === 'modes') &&
       unlocked(p, x.id) &&
+      (x.id !== 'homeworld' || firstHourStep(p) !== 'done') &&
       (!['quests', 'star_road', 'star_calendar', 'inbox'].includes(x.id) || unlocked(p, 'quests')) &&
       (x.id !== 'workshop' || p.chapters.length >= 1),
   );
@@ -95,11 +98,11 @@ export function nextUp(p: Profile, _now: number): NextUp {
   const nearWish = (p.quests.list as WishCard[]).find((q) => q.template && q.species && !q.claimed && q.progress >= q.goal * 0.8);
   if (unlocked(p, 'quests') && nearWish)
     return { kind: 'wish', title: t('A Wish is growing'), subtitle: wishText(nearWish), action: 'missions' };
-  if (unlocked(p, 'homeworld') && !p.home.plots.some((b) => b?.type === 'den' || b?.type === 'mill'))
+  if (unlocked(p, 'homeworld') && firstHourStep(p) !== 'done')
     return {
       kind: 'goal',
-      title: t('Build your first Homeworld home'),
-      subtitle: t('Your Homeworld has room to grow'),
+      title: t(firstHourStep(p) === 'lab' ? LAB_TEXT.firstLab : LAB_TEXT.firstFriend),
+      subtitle: t(LAB_TEXT.firstReward),
       action: 'homeworld',
     };
   const constellation = CONSTELLATIONS.find((c) => !p.constellations.includes(c.id) && c.bundles.some((b) => p.bundles.includes(b.id)));

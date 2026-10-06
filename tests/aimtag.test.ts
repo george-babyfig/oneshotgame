@@ -39,7 +39,6 @@ describe('on-planet aim tag', () => {
     const result = {
       before: 10,
       after: 26,
-      labBonus: 0,
       spawned: [{ id: ids[0], at: 4 }],
       firstArrivals: [ids[0]],
       lost: [
@@ -49,7 +48,7 @@ describe('on-planet aim tag', () => {
       reactions: [{ id: 'steam', at: 4, partner: 5, sectors: [4, 5] }],
       combo: { links: 5, step: 5, superFusion: true },
       troubleEvents: [{ id: 'vent', kind: 'settled', sector: 4 }],
-    } as StepResult;
+    } as unknown as StepResult;
     const facts = aimTagFacts(result, 'forest');
     expect(facts.delta).toBe(16);
     expect(aimTagRing(facts)).toBe('double-gold');

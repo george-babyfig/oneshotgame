@@ -52,12 +52,10 @@ if (process.env.SIM === '1') {
     const gains = Object.values(objectGain);
     const greedy: BotPolicy = {
       name: 'greedy-aware',
-      labLevel: 1,
       chooseAim: (context) => oneStep(context, rulesForLevel(context.level.n)),
     };
     const planner: BotPolicy = {
       name: 'planner-aware',
-      labLevel: 1,
       chooseAim(context) {
         const state =
           context.state ?? roundState(context.planet, context.level.nova, context.level.troubles, context.level.difficulty !== 'normal');

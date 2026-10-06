@@ -67,7 +67,9 @@ function pseudo(key: string): string {
 }
 
 export function detectLang(): Lang {
-  const nav = (typeof navigator !== 'undefined' ? navigator.language : 'en').toLowerCase();
+  // WKWebView can report a different navigator.language; the iOS shell sets this before page load.
+  const native = typeof window !== 'undefined' ? window.__nativeLanguage : undefined;
+  const nav = (native || (typeof navigator !== 'undefined' ? navigator.language : 'en')).toLowerCase();
   const code = nav.slice(0, 2) as PlayerLang;
   return code in DICTS ? code : 'en';
 }
@@ -97,9 +99,9 @@ export function planetName(name: string): string {
   return localPlanetName(name, lang) ?? t(name);
 }
 
-/** Plural helper: picks `one` when n === 1. */
+/** Plural helper: French treats zero as singular. */
 export function tp(n: number, one: string, other: string, vars: Record<string, string | number> = {}) {
-  return t(n === 1 ? one : other, { n, ...vars });
+  return t(new Intl.PluralRules(getLang()).select(n) === 'one' ? one : other, { n, ...vars });
 }
 
 if (import.meta.env.DEV && typeof window !== 'undefined') {
@@ -108,6 +110,7 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
 
 declare global {
   interface Window {
+    __nativeLanguage?: string;
     __i18n?: { setLang: typeof setLang; t: typeof t };
   }
 }

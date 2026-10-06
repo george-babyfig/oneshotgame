@@ -8,7 +8,7 @@
 
 ## Promotional text (170)
 
-Wirf Kometen, lass eine Mini-Welt wachsen, in die süße Wesen einziehen. Mische Fusionen, verkette Combos, bau deine Heimatwelt. Ohne Werbung; Kaufen ist Erwachsenensache.
+Wirf Kometen und lass eine Mini-Welt wachsen. Mische Fusionen, verkette Combos, bau deine Heimatwelt. Ohne Werbung. Käufe erfordern die Elternabfrage.
 
 ## Description (4,000)
 
@@ -39,9 +39,11 @@ SPIEL, WIE DU MAGST
 • Über 100 Planeten, die sanft schwieriger werden, mit je 1 bis 3 Sternen
 • Eine Hilfeleiter, wenn ein Planet knifflig ist: was passiert ist, ein Tipp und ein bisschen Extrahilfe
 • Planet des Tages, Wochenreise, Meteorsturm, Zen-Garten und Duelle mit Freunden
+• Bonus-Remix bringt verspielte Überraschungen und Goldsterne in fertige Kapitel
+• Sammle Essenzen auf Planeten und baue Labore auf deiner Heimatwelt
 • Spiele auf English, Español, Français, Deutsch, Português (Brasil) oder 日本語
 
-FÜR DIE GROSSEN
+RUHIG, FAIR UND PRIVAT
 • Keine Werbung. Keine Leben und keine Energie-Timer. Keine zufälligen Belohnungen gegen Geld.
 • Optionale Käufe gibt es nur im „Elternbereich“, geschützt durch eine Elternabfrage, und sie zeigen immer genau, was man bekommt
 • Einstellung „Sanfte Planeten“, Spielzeit-Übersicht und eine optionale Pausen-Erinnerung
@@ -57,10 +59,10 @@ _Native terms: Weltraum (the usual German search word for space), niedlich (cute
 
 ## Support / marketing / privacy
 
-- Support URL: https://<your-site>/support.html (site files in `site/`; same URL for every language)
-- Marketing URL: https://<your-site>/
-- Privacy policy URL: https://<your-site>/privacy.html (the page includes a German section)
-- Copyright: 2026 <owner legal name>
+- Support URL: https://YOUR-DOMAIN/support.html (site files in `site/`; same URL for every language)
+- Marketing URL: https://YOUR-DOMAIN/
+- Privacy policy URL: https://YOUR-DOMAIN/privacy.html (the page includes a German section)
+- Copyright: 2026 OWNER NAME
 
 ## What's New
 
@@ -68,4 +70,4 @@ Not shown for version 1.0 (Apple has no "What's New" on a first release). From 1
 
 ## Lengths
 
-Subtitle 29/30 chars · Promotional text 170/170 chars · Description 2,332/4,000 chars · Keywords 97/100 bytes (UTF-8). Measured with python3 on the exact text to paste (len() in characters; blank lines in the description counted).
+Subtitle 29/30 chars · Promotional text 150/170 chars · Description 2,484/4,000 chars · Keywords 97/100 bytes (UTF-8). Measured with python3 on the exact text to paste (len() in characters; blank lines in the description counted).

@@ -3034,10 +3034,11 @@ button.lb {
 }
 .hw-build {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 .hw-opt {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3054,6 +3055,7 @@ button.lb {
 .hw-opt small {
   font-size: max(12px, calc(12px * var(--text-scale)));
   color: var(--dust);
+  overflow-wrap: anywhere;
 }
 .hw-opt.no small {
   color: var(--bad);
@@ -5169,4 +5171,243 @@ button.lb {
 .end .btn,
 .trouble-beat {
   min-height: 44px;
+}
+
+/* M10 Labs: compact enough for the Homeworld panel at 320 px. */
+.hw-lab-card {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.hw-lab-card .hw-head {
+  align-items: center;
+}
+.lab-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.lab-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
+}
+.lab-stat-pips,
+.guide-stat-pips {
+  display: inline-flex;
+  gap: 3px;
+}
+.lab-stat-pips i,
+.guide-stat-pips i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid #bdb4d0;
+}
+.lab-stat-pips i.filled,
+.guide-stat-pips i.filled {
+  background: #b9dfff;
+}
+.lab-stat-pips i.gold,
+.guide-stat-pips i.gold {
+  background: #ffd76a;
+  border-color: #ffd76a;
+}
+.lab-ladder {
+  display: grid;
+  gap: 3px;
+}
+.lab-rung {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 7px;
+  padding: 5px 7px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  font-size: max(12px, calc(12px * var(--text-scale)));
+}
+.lab-rung.got {
+  border-left: 3px solid #89e5ad;
+}
+.lab-rung.next {
+  border-left: 3px solid #ffd76a;
+}
+.lab-rung.locked {
+  opacity: 0.78;
+}
+.lab-have {
+  height: 7px;
+  margin: 5px 0 8px;
+  border-radius: 9px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.18);
+}
+.lab-have i {
+  display: block;
+  height: 100%;
+  background: var(--lab-color, #ffd76a);
+}
+.lab-form {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+}
+.lab-form-found,
+.lab-form-shadow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lab-form-shadow {
+  opacity: 0.55;
+}
+.essence-row {
+  display: grid;
+  gap: 2px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+.essence-row small {
+  opacity: 0.8;
+}
+.first-lab-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  max-height: 180px;
+  overflow: auto;
+}
+.first-lab-choices .btn {
+  min-width: 0;
+  min-height: 44px;
+  font-size: max(12px, calc(14px * var(--text-scale)));
+  hyphens: auto;
+  overflow-wrap: normal;
+}
+@media (max-width: 360px) {
+  .first-lab-choices {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.hw-plot-list {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+.hw-plot-access {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+}
+.hw-plot-access:focus-visible {
+  position: fixed;
+  z-index: 100;
+  left: 12px;
+  top: 65px;
+  width: auto;
+  height: 44px;
+  padding: 8px;
+  opacity: 1;
+}
+.lab-moment {
+  text-align: center;
+}
+.lab-moment-icon {
+  display: flex;
+  justify-content: center;
+  animation: lab-moment-arrive 650ms ease-out both;
+}
+@keyframes lab-moment-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(32px) scale(0.75) rotate(-20deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.lab-moment .m-title {
+  animation: lab-moment-arrive 750ms ease-out both;
+}
+.lab-moment p {
+  animation: lab-moment-arrive 950ms ease-out both;
+}
+.lab-moment.celebrate-still .lab-moment-icon,
+.lab-moment.celebrate-still .m-title,
+.lab-moment.celebrate-still p {
+  animation: none;
+}
+.lab-form-switch {
+  min-height: 44px;
+}
+.essence-progress {
+  margin: 8px 0;
+  overflow-wrap: normal;
+}
+.homeworld-helped {
+  border-radius: 9px;
+  padding: 7px 9px;
+  background: rgba(126, 228, 176, 0.16);
+}
+.guide-lab {
+  display: grid;
+  gap: 3px;
+  margin-top: 6px;
+}
+.guide-lab small.got {
+  color: #89e5ad;
+}
+.homeworld .page-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.hw-pouch-head {
+  flex: 0 1 auto;
+  font-size: max(12px, calc(12px * var(--text-scale)));
+  white-space: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+  padding: 8px;
+  min-height: 44px;
+}
+.lab-friend-ship {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 38px;
+}
+.lab-friend-ship {
+  animation: lab-ship-arrive 1.2s ease-out both;
+}
+@keyframes lab-ship-arrive {
+  from {
+    transform: translateY(-26px) scale(0.75);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lab-friend-ship {
+    animation: none;
+  }
+}
+.celebrate-still .lab-friend-ship {
+  animation: none;
 }

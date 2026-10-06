@@ -27,4 +27,4 @@ Thanks for playing, and happy flinging!
 ## Promotional text ideas (170 characters, change any time without review)
 
 - Launch: "Fling comets and grow a tiny world where cute creatures move in. Mix Fusions, chain Combos and build your Homeworld. No ads, and purchases stay with grown-ups."
-- Seasonal: "This month's Festival is here: dress your friends in costumes and grow a festival planet. No ads, and purchases stay with grown-ups."
+- Feature update: "A new garden path is ready to explore. Find fresh ways to play at your own pace."

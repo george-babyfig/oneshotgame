@@ -27,6 +27,7 @@ import { NO_BOOSTERS, type App } from '../app';
 import { getLang, planetName, t, tp } from '../../i18n';
 import { rulesForLevel } from '../../core/round';
 import { untilText } from '../../meta/dates';
+import { helpedLine } from '../../meta/helped';
 
 // Levels are pure functions of week + base + stop, so cache them for the session.
 const cache = new Map<string, LevelDef>();
@@ -242,6 +243,9 @@ function ended(app: App, i: number, week: string, r: LevelResult) {
     h('div', { class: 'm-title' }, res.done ? t('Voyage complete! 🚀') : t('Stop cleared!')),
     h('div', { class: 'end-stars' }, ...[0, 1, 2].map((k) => h('span', { class: k < r.stars ? 'on' : '' }, '★'))),
     h('div', { class: 'end-score' }, t('{n} life', { n: fmt(r.score) })),
+    app.scene && helpedLine(p, app.scene.roundLog, 'voyage')
+      ? h('p', { class: 'homeworld-helped' }, t('Homeworld helped: {line}', { line: helpedLine(p, app.scene.roundLog, 'voyage')! }))
+      : null,
     res.reward ? h('div', { class: 'reward-list' }, ...rewardText(res.reward).map((x) => h('span', null, x))) : null,
     r.boss ? h('div', { class: 'nudge boss' }, t('☄️ Guardian defeated!')) : null,
     res.done

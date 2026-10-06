@@ -125,7 +125,7 @@ describe('Troubles', () => {
       ['frost', 'sun', 12],
     ] as const) {
       const result = stepRound(ready(id), { kind, sector: at });
-      expect(result.troubleEvents).toContainEqual({ id, kind: 'settled', sector: 10 });
+      expect(result.troubleEvents).toContainEqual(expect.objectContaining({ id, kind: 'settled', sector: 10, clearedByThrow: true }));
       expect(result.state.troubles[0].settled).toBe(true);
       expect(result.novaGain).toBeGreaterThanOrEqual(3);
       expect(stepRound(result.state, far).troubleEvents).toEqual([]);
