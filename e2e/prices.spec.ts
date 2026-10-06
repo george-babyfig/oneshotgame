@@ -165,14 +165,16 @@ for (const loc of LOCALES) {
       await visit('missions-wishes');
       await page
         .locator('.host .mission-entry')
-        .filter({ hasText: tr(loc, 'Star Road') })
+        .filter({ hasText: tr(loc, 'Cosmic Road') })
         .first()
         .click();
       await waitScreen(page, 'road');
       await dismissSheets(page);
       await visit('star-road');
       await expect(page.locator('.host .pass-cta'), 'no Cosmic Pass pitch on the kid side').toHaveCount(0);
-      expect(await page.evaluate(() => typeof (window as any).__app.showPass), 'no kid-side Pass page').toBe('undefined');
+      await expect(page.locator('.host .rhead button'), 'non-owners cannot open a Pass contents sheet').toHaveCount(0);
+      await expect(page.locator('.host .rrow .rc.prem'), 'non-owners cannot see paid look previews').toHaveCount(0);
+      await expect(page.getByText(tr(loc, 'Your Cosmic Road looks')), 'no owner looks sheet for non-owners').toHaveCount(0);
       await page.evaluate(() => {
         const a = (window as any).__app;
         a.p.settings.hidePaidLooks = true;

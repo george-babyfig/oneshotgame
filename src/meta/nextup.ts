@@ -41,7 +41,6 @@ export interface NextUp {
     | 'sky'
     | 'road'
     | 'voyage'
-    | 'event'
     | 'festival'
     | 'modes';
 }
@@ -72,7 +71,6 @@ const TARGETS: Record<string, NextUp['action']> = {
   inbox: 'inbox',
   homeworld: 'homeworld',
   voyage: 'voyage',
-  weekly_event: 'event',
   festival: 'festival',
   daily: 'modes',
   zen: 'modes',

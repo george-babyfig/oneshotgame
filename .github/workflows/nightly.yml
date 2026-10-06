@@ -1,6 +1,6 @@
 name: Nightly sims
 
-# Reviewed curve, dedicated shadow generator gate, 90-day Daily and 12-week Voyage pre-flight.
+# Reviewed curve, dedicated shadow generator gate, 120-day Daily and 104-week Voyage pre-flight.
 on:
   schedule:
     - cron: '0 6 * * *'
@@ -21,7 +21,7 @@ jobs:
         run: SIM_NIGHTLY=1 npm run sim
       - if: always()
         run: SIM=1 SIM_NIGHTLY=1 npx vitest run tests/sim/flying-nightly.sim.ts --disableConsoleIntercept
-      - name: Calendar pre-flight (90 Daily Planets, 12 Voyage weeks)
+      - name: Calendar pre-flight (120 Daily Planets, 104 Voyage weeks)
         if: always()
         run: SIM=1 SIM_NIGHTLY=1 npx vitest run tests/sim/calendar-preflight.sim.ts --disableConsoleIntercept
 

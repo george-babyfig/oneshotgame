@@ -8,7 +8,7 @@
 
 ## Promotional text (170)
 
-Lanza cometas y haz crecer mundos con criaturas tiernas. Mezcla Fusiones y Combos; crea tu Planeta Hogar. Sin anuncios. Compras bajo control parental.
+Lanza cometas, haz crecer mundos diminutos y construye Grandes Obras en un Planeta Hogar donde tus amigos hacen su vida. Sin anuncios. Compras con control parental.
 
 ## Description (4,000)
 
@@ -18,6 +18,7 @@ LANZA Y HAZ CRECER
 • Jala, apunta y suelta: la gravedad curva cada lanzamiento alrededor del planeta
 • Las Rocas levantan montañas, los Cometas de Hielo llenan océanos, las Vainas de Semillas hacen crecer praderas y bosques, el Magma forma volcanes, y las Nubes de Lluvia y los Estallidos Solares ayudan a que todo prospere
 • Antes de que sueltes, el planeta te muestra qué hará tu lanzamiento: tierra nueva, quién se muda y quién podría irse a pasear
+• Elige un lanzador para cada planeta: la Honda Estelar, Remolino, Zum o Tambor, cada uno con un punto fuerte y una desventaja
 
 CONOCE A LAS CRIATURAS
 • 36 criaturas por descubrir, cada una con su hogar favorito: nutrias donde el bosque se junta con el mar, tritones en volcanes tibios, búhos en pinos nevados
@@ -31,7 +32,9 @@ MEZCLA, ENCADENA Y PLANEA
 • Lee el cielo: Rocas Errantes, una Luna Burbuja y un Anillo de Guijarros que gira; calcula bien el momento de cada lanzamiento
 
 TU PROPIO PLANETA HOGAR
-• Invita a los amigos que conozcas a vivir en tu Planeta Hogar
+• Invita a los amigos que conozcas a vivir en tu Planeta Hogar, donde tienen su propio día: duermen en la Madriguera por la noche, se reúnen al caer la tarde y disfrutan del clima y de las estaciones del año
+• Haz crecer las tierras que descubras entre tus construcciones
+• Construye cinco Grandes Obras mientras juegas, desde el Jardín de Brotes hasta el Faro del Guardián
 • Elige un Compañero que te ayude cuando aparezca un Problema en un planeta
 • Crea a tu Guardián: cara, tono de piel, pelo y conjuntos
 
@@ -41,6 +44,7 @@ JUEGA A TU MANERA
 • Planeta del día, Viaje semanal, Lluvia de meteoros, Jardín zen y desafíos entre amigos
 • Remix extra añade giros divertidos y estrellas doradas a los capítulos terminados
 • Gana Esencias en los planetas y construye Laboratorios en tu Planeta Hogar
+• Sigue el Camino Cósmico: las estrellas nuevas y los Deseos te dan recompensas a cada paso
 • Juega en English, Español, Français, Deutsch, Português (Brasil) o 日本語
 
 TRANQUILO, JUSTO Y PRIVADO
@@ -70,4 +74,4 @@ Not shown for version 1.0 (Apple has no "What's New" on a first release). From 1
 
 ## Lengths
 
-Subtitle 29/30 chars · Promotional text 150/170 chars · Description 2,551/4,000 chars · Keywords 98/100 bytes (UTF-8). Measured with python3 on the exact text to paste (len() in characters; blank lines in the description counted).
+Subtitle 29/30 chars · Promotional text 164/170 chars · Description 3,081/4,000 chars · Keywords 98/100 bytes (UTF-8). Measured with python3 on the exact text to paste (len() in characters; blank lines in the description counted).

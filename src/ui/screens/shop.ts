@@ -4,6 +4,7 @@ import { PRODUCTS } from '../../meta/tuning';
 import type { App } from '../app';
 import { t } from '../../i18n';
 import { refreshGrownups } from './grownups';
+import { ownsProduct } from '../../meta/economy';
 
 export function skinSwatch(glow: string) {
   if (glow === 'aurora') return 'conic-gradient(#ff8fc8,#6ec8ff,#b8ff6e,#ffd24a,#ff8fc8)';
@@ -23,13 +24,13 @@ export function shopSection(app: App) {
     h('h2', null, t('Shop')),
     ...PRODUCTS.map((product) => {
       const piggy = product.key === 'piggy';
-      const owned = (product.key === 'starter' && app.p.starter) || (product.key === 'pass' && app.p.pass);
+      const owned = ownsProduct(app.p, product.id);
       const buy = btn(
         owned ? t('Owned') : app.priceOf(product.key) || t('Price unavailable'),
         'buy-real',
         () => void purchase(app, product.key),
       );
-      buy.disabled = !app.canBuy(product.key);
+      buy.disabled = owned || !app.canBuy(product.key);
       return h(
         'div',
         { class: 'grownups-product' },

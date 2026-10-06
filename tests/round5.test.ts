@@ -12,7 +12,16 @@ import {
   spotFestival,
 } from '../src/meta/festivals';
 import { RESIDENT_ACCS, accAvailable, wearAcc } from '../src/meta/homeworld';
-import { VOYAGE_LEN, VOYAGE_REWARDS, clearStop, ensureVoyage, voyageBase, voyageLevel, voyageUnlocked } from '../src/meta/voyage';
+import {
+  VOYAGE_LEN,
+  VOYAGE_REWARDS,
+  clearStop,
+  ensureVoyage,
+  stopReward,
+  voyageBase,
+  voyageLevel,
+  voyageUnlocked,
+} from '../src/meta/voyage';
 import { OBSTACLES } from '../src/core/sky';
 import { goalProgress, makeLevel } from '../src/core/levels';
 import {
@@ -134,8 +143,8 @@ describe('weekly voyage', () => {
     expect(clearStop(p, 1, 3).reward).toBeNull(); // skipping ahead
     expect(clearStop(p, 0, 0).reward).toBeNull(); // a loss
     const dust = p.dust;
-    expect(clearStop(p, 0, 2).reward).toEqual(VOYAGE_REWARDS[0]);
-    expect(p.dust).toBe(dust + (VOYAGE_REWARDS[0].dust ?? 0));
+    expect(clearStop(p, 0, 2).reward).toEqual(stopReward(p, 0));
+    expect(p.dust).toBe(dust + (VOYAGE_REWARDS[0].dust ?? 0) + 175); // retired Event play value stays in each stop
     expect(clearStop(p, 0, 3).reward).toBeNull(); // replay: better stars, no reward
     expect(p.voyage.stars[0]).toBe(3);
     for (let i = 1; i < VOYAGE_LEN; i++) expect(clearStop(p, i, 1).reward).not.toBeNull();

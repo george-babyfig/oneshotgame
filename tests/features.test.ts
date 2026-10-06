@@ -135,24 +135,23 @@ describe('modes', () => {
   });
 });
 
-describe('weekly events', async () => {
+describe('weekly Voyage themes and legacy Event value', async () => {
   const E = await import('../src/meta/events');
-  it('rotates by ISO week and pays tiers once', () => {
+  it('selects seasonal themes and maps an open legacy Event once', () => {
     expect(E.isoWeek(new Date(2026, 0, 1))).toBe('2026-W01');
     expect(E.isoWeek(new Date(2026, 8, 27))).toBe('2026-W39');
     const ids = new Set(Array.from({ length: 6 }, (_, i) => E.eventFor(`2026-W${10 + i}`).id));
-    expect(ids.size).toBe(6);
+    expect(ids.size).toBe(3);
     const p = defaultProfile(0);
-    p.level = E.EVENT_UNLOCK_LEVEL;
-    E.ensureEvent(p, '2026-W10');
-    E.addTokens(p, 150);
-    expect(E.eventReady(p)).toHaveLength(6);
-    for (let i = 0; i < 6; i++) expect(E.claimEventTier(p, i)).not.toBeNull();
-    expect(E.claimEventTier(p, 0)).toBeNull();
+    p.level = 20;
+    p.event = { week: '2026-W10', tokens: 150, claimed: [] };
+    const before = p.gems;
+    expect(E.retireEventProgress(p, '2026-W10')).toBe(85);
+    expect(p.gems - before).toBe(85);
+    expect(E.retireEventProgress(p, '2026-W10')).toBe(85);
+    expect(p.gems - before).toBe(85);
     expect(p.skins).toContain(E.eventFor('2026-W10').skin);
-    E.ensureEvent(p, '2026-W11');
     expect(p.event.tokens).toBe(0);
-    expect(E.tokensForLand(E.EVENTS[0], ['volcano', 'ocean', 'springs'], 0)).toBe(2);
   });
 });
 

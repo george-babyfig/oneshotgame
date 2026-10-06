@@ -26,21 +26,29 @@ export function calendarPreflight(days: number, weeks: number, start = new Date(
   for (let week = 0; week < weeks; week++) {
     const date = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() + week * 7));
     const key = isoWeek(date);
-    for (const taught of [16, 28, 36])
-      for (let stop = 0; stop < VOYAGE_LEN; stop++)
-        errors.push(...issue(voyageLevel(key, voyageBase(taught), stop, taught), `Voyage ${key} stop ${stop + 1} taught ${taught}`));
+    // Live Voyage scales from early play through level 120, in either hemisphere.
+    for (const taught of [16, 28, 36, 60, 120])
+      for (const hemisphere of ['north', 'south'] as const)
+        for (let stop = 0; stop < VOYAGE_LEN; stop++)
+          errors.push(
+            ...issue(
+              voyageLevel(key, voyageBase(taught), stop, taught, hemisphere),
+              `Voyage ${key} stop ${stop + 1} taught ${taught} ${hemisphere}`,
+            ),
+          );
   }
   return errors;
 }
 
 if (process.env.SIM === '1') {
-  const count = process.env.SIM_NIGHTLY === '1' ? { days: 90, weeks: 104 } : { days: 7, weeks: 1 };
+  const count = process.env.SIM_NIGHTLY === '1' ? { days: 120, weeks: 104 } : { days: 7, weeks: 1 };
+  if (process.env.CALENDAR_WEEKS) count.weeks = Number(process.env.CALENDAR_WEEKS);
   it(
     `pre-flights ${count.days} Daily Planets and ${count.weeks} Voyage weeks`,
     () => {
       const errors = calendarPreflight(count.days, count.weeks);
       console.log(
-        `Calendar pre-flight: ${count.days * 3} Daily layouts, ${count.weeks * VOYAGE_LEN * 3} Voyage stops; ${errors.length} issues`,
+        `Calendar pre-flight: ${count.days * 3} Daily layouts, ${count.weeks * VOYAGE_LEN * 5 * 2} Voyage stops; ${errors.length} issues`,
       );
       expect(errors).toEqual([]);
     },

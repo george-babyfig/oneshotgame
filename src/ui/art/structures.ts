@@ -4,6 +4,7 @@
 import type { BuildingType } from '../../meta/homeworld';
 import { KINDS, type Kind } from '../../core/world';
 import { shade } from './color';
+import { COSMETIC_BY_ID } from '../../meta/cosmetics';
 
 type G = CanvasRenderingContext2D;
 
@@ -56,7 +57,7 @@ export function drawStructure(
   s: number,
   t: number,
   building = false,
-  opts: { kind?: Kind; formOn?: boolean; homeLevel?: number; growth?: number } = {},
+  opts: { kind?: Kind; formOn?: boolean; homeLevel?: number; growth?: number; style?: string } = {},
 ) {
   const k = 0.82 + lv * 0.06;
   g.save();
@@ -317,6 +318,73 @@ export function drawStructure(
       const unreachable: never = type;
       throw new Error(`Unknown building: ${unreachable}`);
     }
+  }
+  const style = COSMETIC_BY_ID[opts.style ?? ''];
+  if (
+    style?.motif &&
+    (type === 'lab' ||
+      type === 'den' ||
+      type === 'greenhouse' ||
+      type === 'launch_bay' ||
+      type === 'flowers' ||
+      type === 'fountain' ||
+      type === 'lantern')
+  ) {
+    // Each structure gets its own cloth/panel shape; the Lab lamp and pennant stay clear.
+    g.save();
+    g.globalAlpha *= 0.45;
+    g.strokeStyle = style.colors[0];
+    g.fillStyle = style.colors[1] ?? style.colors[0];
+    g.lineWidth = s * 0.035;
+    g.beginPath();
+    if (type === 'lab') {
+      g.moveTo(-s * 0.3, -s * 0.42);
+      g.lineTo(-s * 0.3, -s * 0.13);
+      g.moveTo(s * 0.3, -s * 0.42);
+      g.lineTo(s * 0.3, -s * 0.13);
+    } else if (type === 'den') {
+      g.moveTo(-s * 0.35, -s * 0.29);
+      g.quadraticCurveTo(0, -s * 0.48, s * 0.35, -s * 0.29);
+    } else if (type === 'greenhouse') {
+      g.moveTo(-s * 0.22, -s * 0.37);
+      g.lineTo(s * 0.22, -s * 0.12);
+      g.moveTo(s * 0.22, -s * 0.37);
+      g.lineTo(-s * 0.22, -s * 0.12);
+    } else if (type === 'launch_bay') {
+      g.moveTo(-s * 0.27, -s * 0.11);
+      g.lineTo(-s * 0.1, -s * 0.24);
+      g.moveTo(s * 0.27, -s * 0.11);
+      g.lineTo(s * 0.1, -s * 0.24);
+    } else {
+      g.arc(0, -s * 0.23, s * (type === 'flowers' ? 0.14 : type === 'fountain' ? 0.19 : 0.11), 0, Math.PI * 2);
+    }
+    g.stroke();
+    if (type === 'lab') {
+      // Side shutters leave the fixed element lamp in the centre untouched.
+      rr(g, -s * 0.29, -s * 0.31, s * 0.08, s * 0.16, s * 0.02, style.colors[1] ?? style.colors[0]);
+      rr(g, s * 0.21, -s * 0.31, s * 0.08, s * 0.16, s * 0.02, style.colors[1] ?? style.colors[0]);
+    } else if (type === 'den') {
+      rr(g, -s * 0.2, -s * 0.23, s * 0.4, s * 0.07, s * 0.03, style.colors[1] ?? style.colors[0]);
+    } else if (type === 'greenhouse') {
+      rr(g, -s * 0.07, -s * 0.28, s * 0.14, s * 0.1, s * 0.02, style.colors[1] ?? style.colors[0]);
+    } else if (type === 'launch_bay') {
+      rr(g, -s * 0.18, -s * 0.16, s * 0.36, s * 0.07, s * 0.02, style.colors[1] ?? style.colors[0]);
+    } else if (type === 'flowers') {
+      for (const dx of [-0.1, 0, 0.1]) circ(g, dx * s, -s * 0.23, s * 0.045, style.colors[1] ?? style.colors[0]);
+    } else if (type === 'fountain') {
+      rr(g, -s * 0.2, -s * 0.18, s * 0.4, s * 0.05, s * 0.02, style.colors[1] ?? style.colors[0]);
+    } else if (type === 'lantern') {
+      rr(g, -s * 0.09, -s * 0.31, s * 0.18, s * 0.11, s * 0.03, style.colors[1] ?? style.colors[0]);
+    }
+    if (style.motif === 'wave') {
+      g.beginPath();
+      g.arc(0, -s * 0.1, s * 0.12, 0.1, Math.PI - 0.1);
+      g.stroke();
+    } else if (style.motif === 'candy') {
+      circ(g, -s * 0.19, -s * 0.1, s * 0.024, style.colors[1] ?? style.colors[0]);
+      circ(g, s * 0.19, -s * 0.1, s * 0.024, style.colors[1] ?? style.colors[0]);
+    }
+    g.restore();
   }
   g.restore();
   if (opts.homeLevel === 5 && !building) {

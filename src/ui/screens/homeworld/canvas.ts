@@ -3,7 +3,8 @@ import { sfx, setMusicTheme } from '../../audio';
 import { haptic } from '../../haptics';
 import { effectiveReduceMotion } from '../../motion';
 import { busyDrones, collect, drones, isFull, moveBuilding, ready, tickHome, currentPaint, resolvedGaps } from '../../../meta/homeworld';
-import { currentLook } from '../../../meta/cosmetics';
+import { previewLook } from '../../../meta/cosmetics';
+import { drawFriendOutfit, homeworldStyleColors, structureStyleId } from '../../art/styleRender';
 import { critterCanvas, drawCreature } from '../../art/critters';
 import { drawKeeper } from '../../art/keeper';
 import { drawDrone, drawStructure } from '../../art/structures';
@@ -359,8 +360,12 @@ export function showHomeworld(app: App) {
       if (!calm) drawMeteors(g, w, hh, time, night * (sceneWeather === 'starry' ? 2.5 : 1));
     }
     // planet body, in the player's paint job
+    const look = previewLook(p);
     const paint = currentPaint(p);
-    const cacheKey = `${Math.round(R * dpr)}:${season}:${paint.ground.colors.join(':')}`;
+    const styleColors = homeworldStyleColors(look);
+    const groundColors = styleColors.ground ?? paint.ground.colors;
+    const seaColors = styleColors.sea ?? paint.sea.colors;
+    const cacheKey = `${Math.round(R * dpr)}:${season}:${groundColors.join(':')}`;
     if (!planetCache || planetCacheKey !== cacheKey) {
       planetCacheKey = cacheKey;
       planetCache = document.createElement('canvas');
@@ -368,9 +373,9 @@ export function showHomeworld(app: App) {
       const pg = planetCache.getContext('2d')!;
       pg.scale(dpr, dpr);
       const body = pg.createRadialGradient(R * 0.7, R * 0.65, R * 0.1, R, R, R);
-      body.addColorStop(0, paint.ground.colors[0]);
-      body.addColorStop(0.55, paint.ground.colors[1]);
-      body.addColorStop(1, paint.ground.colors[2]);
+      body.addColorStop(0, groundColors[0]);
+      body.addColorStop(0.55, groundColors[1]);
+      body.addColorStop(1, groundColors[2]);
       pg.fillStyle = body;
       pg.beginPath();
       pg.arc(R, R, R, 0, TAU);
@@ -406,7 +411,7 @@ export function showHomeworld(app: App) {
     for (let i = 0; i < 4; i++) {
       const a = rot * 0.999 + i * 1.7;
       const d = R * (0.35 + (i % 2) * 0.25);
-      g.fillStyle = paint.sea.colors[1];
+      g.fillStyle = seaColors[1];
       g.globalAlpha = 0.7;
       g.beginPath();
       g.ellipse(geo.cx + Math.cos(a) * d, geo.cy + Math.sin(a) * d, R * 0.16, R * 0.1, a, 0, TAU);
@@ -464,6 +469,7 @@ export function showHomeworld(app: App) {
         drawStructure(g, b.type, b.type === 'lab' && b.kind ? labLevel(p, b.kind) : b.lv, s, time + i * 0.3, !!b.done && b.done > nowMs, {
           homeLevel: home.level,
           growth: b.type === 'greenhouse' ? (b.greenhouse?.winsTowardNext ?? 0) : undefined,
+          style: structureStyleId(look, b.type, b.kind),
           ...(b.type === 'lab' ? { kind: b.kind, formOn: !!b.kind && formState(p, b.kind).on } : {}),
         });
       if (b) drawSeasonTrim(g, 0, 0, s, season);
@@ -543,6 +549,7 @@ export function showHomeworld(app: App) {
         g.drawImage(sprite, -side / 2, -side / 2, side, side);
         g.restore();
       }
+      drawFriendOutfit(g, look, q.x, q.y, s * 0.42);
       drawFriendActivity(g, routine.activity, q.x, q.y, s * 0.42);
       if (pair && pair.a === r.species) {
         g.textAlign = 'center';
@@ -556,7 +563,7 @@ export function showHomeworld(app: App) {
     g.save();
     g.translate(kq.x, kq.y);
     g.rotate(ka + Math.PI / 2);
-    drawKeeper(g, currentLook(p), 0, 0, s * 0.8, time);
+    drawKeeper(g, look, 0, 0, s * 0.8, time);
     g.restore();
     // drones idle in orbit
     const idle = drones(p) - busyDrones(home, nowMs);

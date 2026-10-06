@@ -52,6 +52,8 @@ import { SEASON_EMOJI, SEASON_NAMES, seasonOf } from '../../../meta/seasons';
 import { drawSeason } from '../../art/seasons';
 import { passportName } from '../../../meta/passport';
 import { getLang, planetName, t, tp } from '../../../i18n';
+import { clearStyleSlot, COSMETICS, equip, owns, previewLook } from '../../../meta/cosmetics';
+import { homeworldStyleColors } from '../../art/styleRender';
 import { whenText } from '../../../meta/dates';
 import { canvasDpr } from '../../devcapture';
 import { KINDS, type Kind } from '../../../core/world';
@@ -931,15 +933,14 @@ export function levelSheet(app: App, after: () => void) {
 export function paintSheet(app: App) {
   const p = app.p;
   const cur = currentPaint(p);
+  const styled = homeworldStyleColors(previewLook(p));
   const row = (channel: 'ground' | 'sea') =>
     h(
       'div',
       { class: 'paint-row' },
-      ...PAINTS.filter(
-        (x) => x.channel === channel && (!p.settings.hidePaidLooks || !x.pass) && (p.chapters.length >= 1 || (!x.gems && !x.pass)),
-      ).map((x) => {
+      ...PAINTS.filter((x) => x.channel === channel && (p.chapters.length >= 1 || !x.gems)).map((x) => {
         const owned = ownsPaint(p, x.id);
-        const on = cur[channel].id === x.id;
+        const on = !styled[channel] && cur[channel].id === x.id;
         return h(
           'button',
           {
@@ -947,7 +948,8 @@ export function paintSheet(app: App) {
             onclick: () => {
               const r = applyPaint(p, x.id);
               if (r === 'gems') return app.needGems();
-              if (r === 'pass') return toast(t('Available with the Cosmic Pass'));
+              if (r === 'unavailable') return;
+              clearStyleSlot(p, channel);
               sfx.click();
               haptic.light();
               app.save();
@@ -957,9 +959,28 @@ export function paintSheet(app: App) {
           },
           h('i', { style: `background:radial-gradient(circle at 35% 30%,${x.colors[0]},${x.colors[1]} 55%,${x.colors[2]})` }),
           h('small', null, t(x.name)),
-          h('b', null, owned ? (on ? '✓' : '') : x.pass ? '🌌' : `💎${x.gems}`),
+          h('b', null, owned ? (on ? '✓' : '') : `💎${x.gems}`),
         );
       }),
+      ...COSMETICS.filter((x) => x.slot === channel && owns(p, x.id) && !p.settings.hidePaidLooks).map((x) =>
+        h(
+          'button',
+          {
+            class: `paint${previewLook(p)[channel] === x.id ? ' on' : ''}`,
+            onclick: () => {
+              equip(p, x.id);
+              sfx.click();
+              haptic.light();
+              app.save();
+              m.close();
+              paintSheet(app);
+            },
+          },
+          h('i', { style: `background:${x.colors[0]}` }),
+          h('small', null, t(x.name)),
+          h('b', null, previewLook(p)[channel] === x.id ? '✓' : ''),
+        ),
+      ),
     );
   const m = modal([
     h('div', { class: 'm-title' }, t('Paint your Homeworld')),
@@ -974,13 +995,14 @@ export function paintSheet(app: App) {
 }
 
 // ---------------------------------------------------------------- photo mode
-type Frame = 'clean' | 'polaroid' | 'stars' | 'season' | 'gold';
-export const FRAMES: { id: Frame; name: string; pass?: boolean }[] = [
+type Frame = 'clean' | 'polaroid' | 'stars' | 'season' | 'starfield' | 'gold';
+export const FRAMES: { id: Frame; name: string }[] = [
   { id: 'polaroid', name: 'Instant' },
   { id: 'clean', name: 'Clean' },
   { id: 'stars', name: 'Starry' },
   { id: 'season', name: 'Seasonal' },
-  { id: 'gold', name: 'Golden', pass: true },
+  { id: 'starfield', name: 'Starfield photo frame' },
+  { id: 'gold', name: 'Golden photo frame' },
 ];
 
 function renderPhoto(app: App, src: HTMLCanvasElement, frame: Frame): HTMLCanvasElement {
@@ -1012,9 +1034,21 @@ function renderPhoto(app: App, src: HTMLCanvasElement, frame: Frame): HTMLCanvas
     g.fillRect(W - pad, 0, pad, H);
     g.fillRect(0, pad + 40 + size, W, H);
   } else {
-    g.strokeStyle = frame === 'gold' ? '#ffd24a' : 'rgba(255,255,255,0.8)';
-    g.lineWidth = frame === 'gold' ? 18 : 8;
+    g.strokeStyle = frame === 'gold' ? '#ffd24a' : frame === 'starfield' ? '#6679a4' : 'rgba(255,255,255,0.8)';
+    g.lineWidth = frame === 'gold' ? 18 : frame === 'starfield' ? 10 : 8;
     g.strokeRect(pad, pad + 40, size, size);
+  }
+  if (frame === 'starfield') {
+    // Muted code-drawn stars keep the earned Golden frame brightest.
+    g.fillStyle = '#99a9cf';
+    for (let i = 0; i < 24; i++) {
+      const x = 18 + ((i * 317) % (W - 36));
+      const y = 18 + ((i * 193) % (H - 36));
+      if (x > pad && x < W - pad && y > pad + 40 && y < pad + 40 + size) continue;
+      g.beginPath();
+      g.arc(x, y, i % 4 === 0 ? 3 : 2, 0, TAU);
+      g.fill();
+    }
   }
   if (frame === 'stars' || frame === 'gold') {
     const col = frame === 'gold' ? '#ffd24a' : '#fff6b0';
@@ -1066,19 +1100,18 @@ export function photoMode(app: App, src: HTMLCanvasElement) {
   const frames = h(
     'div',
     { class: 'photo-frames' },
-    ...FRAMES.filter(
-      (f) =>
-        (f.id === 'gold' && p.home.landmarks.keepers_beacon.stage === 4) ||
-        ((!p.settings.hidePaidLooks || !f.pass) && (p.chapters.length >= 1 || !f.pass)),
+    ...FRAMES.filter((f) =>
+      f.id === 'gold'
+        ? (p.home.landmarks.keepers_beacon.stage === 4 || !p.settings.hidePaidLooks) && owns(p, 'frame_gold')
+        : f.id === 'starfield'
+          ? !p.settings.hidePaidLooks && owns(p, 'frame_starfield')
+          : true,
     ).map((f) => {
       const el = h(
         'button',
         {
           class: `tab${f.id === frame ? ' on' : ''}`,
           onclick: () => {
-            if (f.id === 'gold' && !p.pass && p.home.landmarks.keepers_beacon.stage !== 4)
-              return toast(t("Finish the Keeper's Beacon to earn the Golden frame"));
-            if (f.pass && f.id !== 'gold' && !p.pass) return toast(t('Available with the Cosmic Pass'));
             frame = f.id;
             frames.querySelectorAll('.tab').forEach((x) => x.classList.remove('on'));
             el.classList.add('on');
@@ -1086,7 +1119,7 @@ export function photoMode(app: App, src: HTMLCanvasElement) {
             paint();
           },
         },
-        `${f.pass && !p.pass && !(f.id === 'gold' && p.home.landmarks.keepers_beacon.stage === 4) ? '🔒 ' : ''}${t(f.name)}`,
+        t(f.name),
       );
       return el;
     }),

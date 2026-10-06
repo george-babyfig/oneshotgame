@@ -8,9 +8,18 @@ import {
   COSMETIC_BY_ID,
   MASTERY_STEPS,
   SLOTS,
+  STYLE_SLOTS,
+  OBJECT_KINDS,
+  beginStyleDraft,
+  activeStyleDraft,
+  finishStyleDraft,
+  setStyleDraft,
+  tryStyle,
   SLOT_NAMES,
   buyCosmetic,
   currentLook,
+  clearStyleSlot,
+  previewLook,
   equip,
   masteryLevel,
   owns,
@@ -26,6 +35,8 @@ import {
   savePreset,
   type Look,
   type Slot,
+  type StyleSlot,
+  type StyleDraft,
   FACE_NAMES,
   HAIR_NAMES,
   EYE_NAMES,
@@ -35,8 +46,10 @@ import {
   HAIR_COLORS,
   type AvatarParts,
 } from '../../meta/cosmetics';
-import { drawKeeper, drawTrail, itemCanvas, keeperHead } from '../art/keeper';
+import { drawKeeper, itemCanvas, keeperHead } from '../art/keeper';
 import { drawProjectile } from '../art/projectiles';
+import { drawFriendOutfit, drawStylePreview } from '../art/styleRender';
+import { drawStructure } from '../art/structures';
 import type { App } from '../app';
 import { t } from '../../i18n';
 import { DYES, applyDye, ownsDye, unlockDye } from '../../meta/dyes';
@@ -52,9 +65,102 @@ import { skinSwatch } from './shop';
 import { effectiveReduceMotion } from '../motion';
 import { drawGameplayLauncher } from '../art/launchers';
 import type { LauncherId } from '../../core/launchers';
+import { KINDS, type Kind } from '../../core/world';
+import type { BuildingType } from '../../meta/homeworld';
 
-type Tab = Slot | 'dye' | 'buddy' | 'atmosphere' | 'you';
+type GroupTab = 'objects' | 'effects' | 'homeworld' | 'friends';
+type Tab = StyleSlot | GroupTab | 'dye' | 'buddy' | 'atmosphere' | 'you';
 let lastSlot: Tab = 'suit';
+let activeDraft: { app: App; selection: StyleDraft; skin?: string } | null = null;
+let inspectedId = '';
+
+function slotName(slot: StyleSlot): string {
+  if (slot in SLOT_NAMES) return SLOT_NAMES[slot as Slot];
+  const kindName: Record<string, string> = {
+    rock: 'Rock',
+    ice: 'Ice Comet',
+    magma: 'Magma',
+    seed: 'Seed Pod',
+    storm: 'Rain Cloud',
+    sun: 'Sunburst',
+  };
+  if (slot.startsWith('shotTrail:')) return `Shot trail: ${kindName[slot.split(':')[1]]}`;
+  if (slot.startsWith('burst:')) return `Burst: ${kindName[slot.split(':')[1]]}`;
+  if (slot.startsWith('labSkin:')) return `Lab: ${kindName[slot.split(':')[1]]}`;
+  return (
+    (
+      {
+        supernova: 'Supernova style',
+        fusion: 'Fusion style',
+        ground: 'Ground paint',
+        sea: 'Sea paint',
+        denSkin: 'Den skin',
+        greenhouseSkin: 'Greenhouse skin',
+        launchBaySkin: 'Launch Bay skin',
+        friendOutfit: 'Friend outfit',
+      } as Record<string, string>
+    )[slot] ?? `Decoration: ${slot.split(':')[1]}`
+  );
+}
+
+function inGroup(itemSlot: StyleSlot, tab: Tab): boolean {
+  if (tab === 'objects') return itemSlot.startsWith('shotTrail:') || itemSlot.startsWith('burst:');
+  if (tab === 'effects') return itemSlot === 'supernova' || itemSlot === 'fusion';
+  if (tab === 'homeworld')
+    return (
+      ['ground', 'sea', 'denSkin', 'greenhouseSkin', 'launchBaySkin'].includes(itemSlot) ||
+      itemSlot.startsWith('labSkin:') ||
+      itemSlot.startsWith('decoration:')
+    );
+  if (tab === 'friends') return itemSlot === 'friendOutfit';
+  return itemSlot === tab;
+}
+
+function styleTile(id: string): HTMLElement {
+  const item = COSMETIC_BY_ID[id];
+  if (item.slot === 'ground' || item.slot === 'sea')
+    return h('i', { class: 'atmosphere-swatch', style: `background:linear-gradient(135deg,${item.colors.join(',')})` });
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 64;
+  cv.style.width = cv.style.height = '64px';
+  const g = cv.getContext('2d')!;
+  const slot = item.slot;
+  const type: BuildingType | null = slot.startsWith('labSkin:')
+    ? 'lab'
+    : slot === 'denSkin'
+      ? 'den'
+      : slot === 'greenhouseSkin'
+        ? 'greenhouse'
+        : slot === 'launchBaySkin'
+          ? 'launch_bay'
+          : slot.startsWith('decoration:')
+            ? (slot.split(':')[1] as BuildingType)
+            : null;
+  if (type) {
+    g.translate(32, 54);
+    drawStructure(g, type, 1, 55, 0.3, false, { kind: slot.startsWith('labSkin:') ? (slot.split(':')[1] as Kind) : undefined, style: id });
+  } else if (slot === 'friendOutfit') {
+    g.fillStyle = '#bac5ce';
+    g.beginPath();
+    g.arc(32, 29, 18, 0, Math.PI * 2);
+    g.fill();
+    drawFriendOutfit(g, { ...DEFAULT_LOOK, friendOutfit: id }, 32, 32, 56);
+  } else if (slot.startsWith('shotTrail:') || slot.startsWith('burst:') || slot === 'supernova' || slot === 'fusion') {
+    const kind = slot.includes(':') ? (slot.split(':')[1] as Kind) : 'rock';
+    drawStylePreview(
+      g,
+      { ...DEFAULT_LOOK, [slot]: id },
+      kind,
+      [
+        { x: 16, y: 40 },
+        { x: 25, y: 35 },
+      ],
+      0.3,
+      true,
+    );
+  }
+  return cv;
+}
 
 function avatarPanel(app: App, preview: Look, repaint: () => void): HTMLElement {
   const draft: AvatarParts = { ...app.p.avatar };
@@ -153,6 +259,7 @@ function stage(
   emoting = false,
   buddy: { species: string; acc: string } | null = null,
   glow = '#6ec8ff',
+  previewKind: Kind = 'rock',
 ) {
   const g = canvas.getContext('2d')!;
   let raf = 0;
@@ -180,7 +287,7 @@ function stage(
     // throw cycle: aim 0-1.2s, fly 1.2-2.2s, rest to 2.8s
     const cyc = time % 2.8;
     const pull = cyc < 1.2 ? Math.min(1, cyc / 0.9) : 0;
-    const flying = cyc >= 1.2 && cyc < 2.2 ? (cyc - 1.2) / 1 : -1;
+    const flying = reduceMotion ? 0.55 : cyc >= 1.2 && cyc < 2.2 ? (cyc - 1.2) / 1 : -1;
     // tiny planet target
     const px = w * 0.9;
     const py = hh * 0.2;
@@ -213,11 +320,11 @@ function stage(
       ly,
       time,
       { x: -pull * 14, y: pull * 22 },
-      '#c9c2ff',
+      KINDS[previewKind].color,
       mastered(look.launcher),
     );
     if (flying < 0) {
-      drawProjectile(g, 'rock', lx - pull * 14, ly + pull * 22, 30, time);
+      drawProjectile(g, previewKind, lx - pull * 14, ly + pull * 22, 30, time);
     } else {
       const pts: { x: number; y: number }[] = [];
       const pos = (k: number) => ({
@@ -225,9 +332,9 @@ function stage(
         y: ly + (py - ly) * k - Math.sin(k * Math.PI) * hh * 0.25,
       });
       for (let i = 0; i < 18; i++) pts.push(pos(Math.max(0, flying - (18 - i) * 0.025)));
-      drawTrail(g, look.trail, pts, time, '#c9c2ff');
+      drawStylePreview(g, look, previewKind, pts, time, reduceMotion);
       const p = pos(flying);
-      drawProjectile(g, 'rock', p.x, p.y, 26, time, flying * 8);
+      drawProjectile(g, previewKind, p.x, p.y, 26, time, flying * 8);
     }
     if (!reduceMotion) schedule();
   };
@@ -429,6 +536,8 @@ function presetRow(app: App, slot: Tab) {
             'aria-label': t('Wear outfit {n}', { n: i + 1 }),
             onclick: () => {
               if (!loadPreset(p, i)) return toast(t('Tap 💾 to save your current look here'));
+              activeDraft = { app, selection: beginStyleDraft(p) };
+              setStyleDraft(p, activeDraft.selection);
               sfx.click();
               haptic.light();
               app.save();
@@ -460,35 +569,73 @@ function presetRow(app: App, slot: Tab) {
 export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
   lastSlot = slot;
   const p = app.p;
+  if (activeDraft && activeDraft.app === app && activeStyleDraft(p) !== activeDraft.selection) activeDraft = null;
+  if (!activeDraft || activeDraft.app !== app) activeDraft = { app, selection: beginStyleDraft(p) };
+  if (p.settings.hidePaidLooks) {
+    activeDraft.selection = beginStyleDraft(p);
+    activeDraft.skin = undefined;
+  }
+  if (tryOn) inspectedId = tryOn;
+  if (tryOn && COSMETIC_BY_ID[tryOn]) activeDraft.selection = tryStyle(activeDraft.selection, tryOn);
+  setStyleDraft(p, activeDraft.selection);
+  if (slot === 'atmosphere' && tryOn && SKINS.some((skin) => skin.id === tryOn)) activeDraft.skin = tryOn;
   if (p.stylesNewSeen !== STYLES_RELEASE) {
     p.stylesNewSeen = STYLES_RELEASE;
     app.save();
   }
   document.documentElement.classList.remove('styles-new');
   const worn = currentLook(p);
-  const preview: Look = { ...worn };
-  if (tryOn && COSMETIC_BY_ID[tryOn]) preview[COSMETIC_BY_ID[tryOn].slot] = tryOn;
-  const sel = tryOn ?? (slot === 'buddy' || slot === 'atmosphere' || slot === 'you' ? '' : worn[slot === 'dye' ? 'suit' : slot]);
+  const preview: Look = previewLook(p);
+  const previewing =
+    (activeDraft.skin !== undefined && activeDraft.skin !== p.skin) ||
+    Object.entries(activeDraft.selection.slots).some(([key, id]) => id !== worn[key as StyleSlot]);
+  const sel =
+    (tryOn ?? inspectedId) ||
+    (slot === 'buddy' ||
+    slot === 'atmosphere' ||
+    slot === 'you' ||
+    slot === 'objects' ||
+    slot === 'effects' ||
+    slot === 'homeworld' ||
+    slot === 'friends'
+      ? ''
+      : (preview[slot === 'dye' ? 'suit' : slot] ?? ''));
   const item = COSMETIC_BY_ID[sel];
   const canvas = h('canvas', { class: 'ws-stage' }) as HTMLCanvasElement;
   let repaintPreview = () => {};
+  const completeDraft = () => {
+    if (!activeDraft) return;
+    finishStyleDraft(p, activeDraft.selection);
+    if (
+      activeDraft.skin &&
+      (p.skins.includes(activeDraft.skin) || (activeDraft.skin === 'aurora' && p.starter) || (activeDraft.skin === 'cosmic' && p.pass))
+    )
+      p.skin = activeDraft.skin;
+    setStyleDraft(p, null);
+    activeDraft = null;
+    app.save();
+    showStyles(app, slot);
+  };
 
   let action: HTMLElement;
   if (!item) action = h('div');
-  else if (worn[item.slot] === item.id) action = h('div', { class: 'ws-state' }, t('✓ Equipped'));
+  else if (worn[item.slot as StyleSlot] === item.id) action = h('div', { class: 'ws-state' }, t('✓ Equipped'));
   else if (owns(p, item.id))
     action = btn(t('Equip'), 'primary', () => {
       equip(p, item.id);
+      delete activeDraft?.selection.slots[item.slot];
       sfx.click();
       haptic.light();
       app.save();
       showStyles(app, slot);
     });
+  else if (previewing && (item.source === 'gems' || item.source === 'dust')) action = btn(t('Done'), 'ghost', completeDraft);
   else if (item.source === 'gems')
     action = btn(`${t('Buy')} 💎${item.gems}`, 'gem', () => {
       if (p.gems < (item.gems ?? 0)) return app.needGems();
       buyCosmetic(p, item.id);
       equip(p, item.id);
+      delete activeDraft?.selection.slots[item.slot];
       sfx.coin();
       haptic.success();
       toast(t('{name} is yours!', { name: t(item.name) }), 'good');
@@ -499,13 +646,15 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
     action = btn(`${t('Buy')} ✨${fmt(item.dust ?? 0)}`, 'dust-btn', () => {
       if (!buyCosmetic(p, item.id)) return toast(t('Not enough stardust'));
       equip(p, item.id);
+      delete activeDraft?.selection.slots[item.slot];
       sfx.coin();
       haptic.success();
       toast(t('{name} is yours!', { name: t(item.name) }), 'good');
       app.save();
       showStyles(app, slot);
     });
-  else if (isPaidLook(item)) action = btn(t(tryOn ? 'Done' : 'Try on'), 'ghost', () => showStyles(app, slot, tryOn ? undefined : item.id));
+  else if (isPaidLook(item))
+    action = previewing ? btn(t('Done'), 'ghost', completeDraft) : btn(t('Try on'), 'ghost', () => showStyles(app, slot, item.id));
   else if (item.source === 'road') action = h('div', { class: 'ws-state locked' }, sourceText(item));
   else action = h('div', { class: 'ws-state locked' }, `🔒 ${sourceText(item)}`);
 
@@ -514,10 +663,10 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
   const tabs = h(
     'div',
     { class: 'tabs' },
-    ...['you' as const, ...SLOTS, 'dye' as const, 'buddy' as const, 'atmosphere' as const].map((s) =>
+    ...(['you', ...SLOTS, 'objects', 'effects', 'homeworld', 'friends', 'dye', 'buddy', 'atmosphere'] as Tab[]).map((s) =>
       h(
         'button',
-        { class: `tab${s === slot ? ' on' : ''}`, onclick: () => (sfx.click(), showStyles(app, s)) },
+        { class: `tab${s === slot ? ' on' : ''}`, onclick: () => (sfx.click(), (inspectedId = ''), showStyles(app, s)) },
         s === 'you'
           ? t('You')
           : s === 'dye'
@@ -526,7 +675,15 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
               ? t('Buddy')
               : s === 'atmosphere'
                 ? t('Atmosphere')
-                : t(SLOT_NAMES[s]),
+                : s === 'objects'
+                  ? t('Objects')
+                  : s === 'effects'
+                    ? t('Effects')
+                    : s === 'homeworld'
+                      ? t('Homeworld looks')
+                      : s === 'friends'
+                        ? t('Friend outfits')
+                        : t(slotName(s as StyleSlot)),
       ),
     ),
   );
@@ -542,22 +699,44 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
             : h(
                 'div',
                 { class: 'ws-grid' },
-                ...visibleCosmetics(p, slot).map((x) => {
-                  const have = owns(p, x.id);
-                  const on = worn[x.slot] === x.id;
-                  return h(
+                ...STYLE_SLOTS.filter(
+                  (s) =>
+                    !SLOTS.includes(s as Slot) &&
+                    (slot === s || (['objects', 'effects', 'homeworld', 'friends'].includes(slot) && inGroup(s, slot))),
+                ).map((s) =>
+                  h(
                     'button',
                     {
-                      class: `ws-item t-${x.tier}${have ? '' : ' locked'}${on ? ' on' : ''}${x.id === sel ? ' sel' : ''}`,
-                      onclick: () => (sfx.click(), haptic.light(), showStyles(app, slot, x.id)),
+                      class: `ws-item${preview[s] ? '' : ' on'}`,
+                      onclick: () => {
+                        clearStyleSlot(p, s);
+                        delete activeDraft?.selection.slots[s];
+                        app.save();
+                        showStyles(app, slot);
+                      },
                     },
-                    itemCanvas(x.id, worn, 64),
-                    h('b', null, t(x.name)),
-                    h('small', null, on ? t('Equipped') : have ? t('Owned') : isPaidLook(x) ? t('Try on') : sourceText(x)),
-                  );
-                }),
+                    h('b', null, t('Off')),
+                    h('small', null, t(slotName(s))),
+                  ),
+                ),
+                ...visibleCosmetics(p)
+                  .filter((x) => inGroup(x.slot, slot))
+                  .map((x) => {
+                    const have = owns(p, x.id);
+                    const on = worn[x.slot] === x.id;
+                    return h(
+                      'button',
+                      {
+                        class: `ws-item t-${x.tier}${have ? '' : ' locked'}${on ? ' on' : ''}${x.id === sel ? ' sel' : ''}`,
+                        onclick: () => (sfx.click(), haptic.light(), showStyles(app, slot, x.id)),
+                      },
+                      SLOTS.includes(x.slot as Slot) ? itemCanvas(x.id, worn, 64) : styleTile(x.id),
+                      h('b', null, t(x.name)),
+                      h('small', null, on ? t('Equipped') : have ? t('Owned') : isPaidLook(x) ? t('Try on') : sourceText(x)),
+                    );
+                  }),
               );
-  const previewSkin = SKINS.find((x) => x.id === (slot === 'atmosphere' ? (tryOn ?? p.skin) : p.skin));
+  const previewSkin = SKINS.find((x) => x.id === (activeDraft?.skin ?? p.skin));
   const glow = previewSkin && (!p.settings.hidePaidLooks || (!previewSkin.starter && !previewSkin.pass)) ? previewSkin.glow : SKINS[0].glow;
   const stageView = stage(
     canvas,
@@ -568,6 +747,7 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
     slot === 'emote',
     currentBuddy(p, festivalActive(p) ? ensureFestival(p).acc : undefined),
     glow,
+    item?.slot.includes(':') && OBJECT_KINDS.includes(item.slot.split(':')[1] as Kind) ? (item.slot.split(':')[1] as Kind) : 'rock',
   );
   repaintPreview = stageView.repaint;
   app.mount(
@@ -609,6 +789,9 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
         tabs,
         mastery,
         grid,
+        previewing && (!item || owns(p, item.id) || (!isPaidLook(item) && item.source !== 'gems' && item.source !== 'dust'))
+          ? btn(t('Done'), 'ghost wide', completeDraft)
+          : null,
         item
           ? btn(p.favourites.includes(item.id) ? t('♥ Favourited') : t('♡ Favourite'), 'ghost wide', () => {
               toggleFavourite(p, item.id);

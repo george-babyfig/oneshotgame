@@ -1,2 +1,12 @@
-// Compatibility import for existing callers; Road logic lives in starroad.ts.
-export { ROAD_DAILY_CAP, addRoadPoints } from './starroad';
+// Stable point API for campaign, Daily, Voyage, and Wishes.
+export {
+  ROAD_DAILY_CAP,
+  ROAD_CATCH_UP_CAP,
+  ROAD_PACING,
+  addRoadPoints,
+  grantRoadPoints,
+  grantProfileRoadPoints,
+  roadCap,
+  type RoadPointEvent,
+  type RoadPointSource,
+} from './starroad';

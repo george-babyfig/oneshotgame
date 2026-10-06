@@ -136,14 +136,11 @@ export interface SceneOpts {
   onThrow?: (kind: Kind) => void;
   onLauncherFling?: () => void;
   onTransform?: (regions: number) => void;
-  /** Weekly event hook: returns event tokens earned by this landing. */
-  onLand?: (changed: BiomeId[], spawned: number) => number;
   /** The owner records first discoveries and pays their fixed reward. */
   onReaction?: (id: ReactionId) => { first: boolean };
   onLabStep?: (step: Pick<import('../core/round').StepResult, 'reactions' | 'troubleEvents'> & { kind: Kind }) => void;
   onCombo?: (links: number, reaction?: ReactionId, superFusion?: boolean) => void;
   onPairTried?: (first: Kind, second: Kind) => void;
-  eventEmoji?: string;
   onEnd: (r: LevelResult) => void;
   onQuit: () => void;
 }

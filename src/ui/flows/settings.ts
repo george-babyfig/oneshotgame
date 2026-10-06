@@ -5,7 +5,7 @@ import { Capacitor } from '@capacitor/core';
 import { App as NativeApp } from '@capacitor/app';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { sfx } from '../audio';
-import { defaultProfile, saveProfile, type Settings } from '../../meta/profile';
+import { defaultProfile, saveProfile, type Profile, type Settings } from '../../meta/profile';
 import { GAME_NAME } from '../../meta/config';
 import { VERSION } from '../../meta/tuning';
 import type { App } from '../app';
@@ -210,17 +210,8 @@ export function settingsFlow(app: App) {
     btn(t('Reset progress'), 'danger wide', async () => {
       m.close();
       if (!(await confirmBox(t('Erase all progress? This cannot be undone.'), t('Erase')))) return;
-      const keep = {
-        processedTx: app.p.processedTx,
-        pendingPiggy: app.p.pendingPiggy,
-        pendingPurchaseRecords: app.p.pendingPurchaseRecords,
-        starter: app.p.starter,
-        pass: app.p.pass,
-        settings: app.p.settings,
-      };
-      app.p = { ...defaultProfile(), ...keep };
+      app.p = resetProfileKeepingPurchases(app.p);
       bindGateProfile(app.p);
-      if (keep.starter) app.p.skins.push('aurora');
       ensureWishes(app.p, today());
       await saveProfile(app.p);
       await clearLedger();
@@ -230,6 +221,35 @@ export function settingsFlow(app: App) {
     btn(t('Back'), 'ghost wide', () => m.close()),
     version,
   ]);
+}
+
+/** Reset play progress while retaining durable store state and the looks-only Pass marker. */
+export function resetProfileKeepingPurchases(p: Profile): Profile {
+  const sourceMeta = p.meta as Profile['meta'] & {
+    passLooksOnly?: boolean;
+    productEntitlements?: string[];
+    revokedProducts?: Record<string, number>;
+    refundQuietUntil?: number;
+  };
+  const fresh = defaultProfile();
+  fresh.processedTx = [...p.processedTx];
+  fresh.pendingPiggy = p.pendingPiggy;
+  fresh.pendingPurchaseRecords = [...p.pendingPurchaseRecords];
+  fresh.starter = p.starter;
+  fresh.pass = p.pass;
+  // Legacy Pass paint/frame grants survive a play reset; ordinary earned looks reset with progress.
+  fresh.wardrobe = p.wardrobe.filter((id) => ['paint_gilded_ground', 'paint_liquid_gold_sea', 'frame_gold'].includes(id));
+  fresh.settings = p.settings;
+  fresh.roadPassEntitlements = [...p.roadPassEntitlements];
+  fresh.meta = {
+    ...fresh.meta,
+    passLooksOnly: sourceMeta.passLooksOnly ?? p.pass,
+    productEntitlements: [...(sourceMeta.productEntitlements ?? [])],
+    revokedProducts: { ...sourceMeta.revokedProducts },
+    refundQuietUntil: sourceMeta.refundQuietUntil,
+  } as Profile['meta'];
+  if (fresh.starter) fresh.skins.push('aurora');
+  return fresh;
 }
 
 export function grownupSettings(app: App): HTMLElement[] {

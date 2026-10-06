@@ -239,7 +239,7 @@ describe('progression', () => {
     const p = defaultProfile(0);
     p.roadPoints = 4;
     expect(roadReady(p)).toEqual([]);
-    p.roadPoints = 12;
+    p.roadPoints = 20;
     expect(roadReady(p)).toEqual([0, 1]);
     const got = claimRoad(p, 0);
     expect(got).toEqual([STAR_ROAD[0].reward]);

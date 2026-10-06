@@ -46,6 +46,8 @@ export interface Reward {
   dust?: number;
   boosters?: Partial<Record<BoosterId, number>>;
   skin?: string;
+  /** Earned album sticker ID; art is registered by the Sticker Album. */
+  sticker?: string;
   /** Keeper cosmetic (ownership is derived from the claimed tier, see cosmetics.ts). */
   item?: string;
   /** Display only: gameplay ownership comes from the opened chapter record. */
@@ -112,6 +114,7 @@ export function applyReward(p: Profile, r: Reward, source: EarnSource = 'generic
   if (r.dust) earn(p, 'dust', r.dust, source);
   for (const [k, v] of Object.entries(r.boosters ?? {})) p.boosters[k as BoosterId] += v ?? 0;
   if (r.skin && !p.skins.includes(r.skin)) p.skins.push(r.skin);
+  if (r.sticker && !p.roadStickers.includes(r.sticker)) p.roadStickers.push(r.sticker);
 }
 
 export function rewardText(r: Reward): string[] {
@@ -121,6 +124,7 @@ export function rewardText(r: Reward): string[] {
   const bEmoji: Record<string, string> = { shower: '🌠', spark: '✨', scope: '🔭' };
   for (const [k, v] of Object.entries(r.boosters ?? {})) if (v) out.push(`${bEmoji[k]} ×${v}`);
   if (r.skin) out.push(t('🌈 New atmosphere'));
+  if (r.sticker === 'cosmic_road') out.push(t('Cosmic Road sticker'));
   if (r.item) out.push(t('🧑‍🚀 {name}', { name: t(COSMETIC_BY_ID[r.item]?.name ?? '') }));
   if (r.launcher)
     out.push(

@@ -4,7 +4,9 @@ Draft for owner and counsel, 5 October 2026. Product facts are checked against `
 
 ## Product and age-rating controls
 
-The game has no account, ads, analytics, tracking or app-run server. Local progress and play history may be included in a device backup. Purchases, sharing, rating, reminders and Game Center access use the parental gate. Game Center 1.0 uses achievements only, has an off switch, and its dashboard is behind the gate. The age-rating draft in `store/compliance.md` says Contests: None and expects 4+; confirm the final App Store Connect questionnaire and test the native build before submission.
+The game has no account, ads, analytics, tracking or app-run server. Local progress and play history may be included in a device backup. The native StoreKit purchase journal holds verified transaction and product IDs on the device until a saved grant is acknowledged; it is not sent to an app-run server. Purchases, sharing, rating, reminders and Game Center access use the parental gate. Game Center 1.0 uses achievements only, has an off switch, and its dashboard is behind the gate. The age-rating draft in `store/compliance.md` says Contests: None and expects 4+; confirm the final App Store Connect questionnaire and test the native build before submission.
+
+The twelve-product 1.0 catalogue is frozen for owner approval in `store/catalogue-sheet.md`. Seven permanent looks products use Family Sharing; four fixed gem packs and the Gem Piggy Bank are consumable and do not. All twelve have fixed contents and a Grown-ups-only checkout; the Cosmic Pass pays looks along the Road rather than currency or power. The three Theme/Pack samplers are earned from Wishes independently of purchase. The six App Store metadata languages need native review before entry. No product has been created in App Store Connect from this sheet.
 
 ## COPPA: retention and security
 

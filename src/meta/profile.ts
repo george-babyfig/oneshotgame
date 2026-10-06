@@ -30,6 +30,9 @@ import { defaultCometPier, type CometPierProgress } from './landmarks';
 import type { VaultState } from './homeworldTypes';
 import type { LandmarkId, LandmarkStage, LandmarkState } from './homeworldLife';
 import { earn } from './wallet';
+import { COSMIC_ROAD_ID, newRoadState, roadCloseOn, STAR_ROAD, type RoadState } from './starroad';
+import type { Hemisphere } from './seasons';
+import { retireEventProgress } from './events';
 
 export interface GalaxyPlanet {
   n: number;
@@ -274,6 +277,15 @@ export interface Profile {
   /** Star Road progress, separate from campaign stars. */
   roadPoints: number;
   roadDay: { day: string; earned: number };
+  /** Stable per-Road progress. Legacy road fields remain for older callers. */
+  roadRecords: Record<string, RoadState>;
+  roadCreditedEarningKeys: string[];
+  roadPassEntitlements: string[];
+  roadLegacySerial: number;
+  roadStickers: string[];
+  m12RoadMigrated: boolean;
+  /** Old Pass paints and claimed photo frame were preserved once. */
+  m12LegacyLooksMigrated: boolean;
   /** Lifebook: every creature ever discovered. */
   seen: string[];
   skySeen: ObstacleId[];
@@ -343,7 +355,7 @@ export interface Profile {
   /** The persistent Zen Garden world. */
   zen: Planet | null;
   /** This week's event progress. */
-  event: { week: string; tokens: number; claimed: number[] };
+  event: { week: string; tokens: number; claimed: number[]; retired?: boolean; legacyGems?: number };
   /** Game Center achievement ids already reported. */
   gcReported: string[];
   /** Keeper outfit (see meta/cosmetics.ts) and items bought with gems. */
@@ -398,7 +410,7 @@ export interface Profile {
   /** This month's festival: costumed critters spotted and tiers claimed. */
   festival: { key: string; spotted: number; claimed: number[] };
   /** This week's Voyage: difficulty base, stops cleared, best stars per stop; and voyages ever finished. */
-  voyage: { week: string; base: number; cleared: number; stars: number[] };
+  voyage: { week: string; base: number; cleared: number; stars: number[]; hemisphere?: Hemisphere; legacyCatchUpPaid?: boolean };
   voyageDone: number;
   /** Campaign fails in a row per planet (cleared on a win); drives the continue rule. */
   fails: Record<number, number>;
@@ -419,7 +431,7 @@ export interface Profile {
 
 const KEY = 'pp.profile';
 const BACKUP_KEY = 'pp.profile.bak';
-export const PROFILE_VERSION = 5;
+export const PROFILE_VERSION = 6;
 
 export function defaultProfile(now = Date.now()): Profile {
   return {
@@ -431,6 +443,13 @@ export function defaultProfile(now = Date.now()): Profile {
     remix: {},
     roadPoints: 0,
     roadDay: { day: '', earned: 0 },
+    roadRecords: { [COSMIC_ROAD_ID]: newRoadState() },
+    roadCreditedEarningKeys: [],
+    roadPassEntitlements: [],
+    roadLegacySerial: 0,
+    roadStickers: [],
+    m12RoadMigrated: true,
+    m12LegacyLooksMigrated: true,
     seen: [],
     skySeen: [],
     gustSeen: false,
@@ -507,7 +526,7 @@ export function defaultProfile(now = Date.now()): Profile {
     habitats: [],
     challengeLog: [],
     zen: null,
-    event: { week: '', tokens: 0, claimed: [] },
+    event: { week: '', tokens: 0, claimed: [], retired: false, legacyGems: 0 },
     gcReported: [],
     look: { suit: 'suit_sky', hat: 'hat_antenna', launcher: 'l_pad', trail: 'tr_dots', emote: 'em_cheer' },
     avatar: { ...DEFAULT_AVATAR },
@@ -536,7 +555,7 @@ export function defaultProfile(now = Date.now()): Profile {
     dyes: [],
     dye: { main: null, trim: null },
     festival: { key: '', spotted: 0, claimed: [] },
-    voyage: { week: '', base: 8, cleared: 0, stars: [] },
+    voyage: { week: '', base: 8, cleared: 0, stars: [], hemisphere: 'north' },
     voyageDone: 0,
     fails: {},
     continuesUsed: {},
@@ -812,6 +831,109 @@ export function migrate(raw: Record<string, unknown>): Profile {
   if (!Object.hasOwn(raw, 'roadPoints'))
     p.roadPoints = Object.entries(p.stars).reduce((sum, [n, stars]) => sum + (+n > 0 ? stars : 0), 0) + (p.stars[0] ?? 0);
   delete p.stars[0];
+  const nonnegativeInt = (value: unknown, limit = Number.MAX_SAFE_INTEGER) =>
+    typeof value === 'number' && Number.isFinite(value) ? Math.min(limit, Math.max(0, Math.floor(value))) : 0;
+  const savedEvent = raw.event && typeof raw.event === 'object' && !Array.isArray(raw.event) ? (raw.event as Record<string, unknown>) : {};
+  p.event = {
+    week: typeof savedEvent.week === 'string' && /^\d{4}-W\d{2}$/.test(savedEvent.week) ? savedEvent.week : '',
+    tokens: nonnegativeInt(savedEvent.tokens),
+    claimed: Array.isArray(savedEvent.claimed)
+      ? [...new Set(savedEvent.claimed.filter((index): index is number => Number.isInteger(index) && index >= 0 && index < 10))]
+      : [],
+    retired: savedEvent.retired === true,
+    legacyGems: nonnegativeInt(savedEvent.legacyGems),
+  };
+  const savedVoyage =
+    raw.voyage && typeof raw.voyage === 'object' && !Array.isArray(raw.voyage) ? (raw.voyage as Record<string, unknown>) : {};
+  p.voyage.hemisphere = savedVoyage.hemisphere === 'north' || savedVoyage.hemisphere === 'south' ? savedVoyage.hemisphere : p.settings.hemi;
+  if (p.voyage.cleared > 0)
+    p.voyage.legacyCatchUpPaid =
+      savedVoyage.legacyCatchUpPaid === true ||
+      (savedVoyage.legacyCatchUpPaid === undefined && savedEvent.retired === true && savedEvent.week === p.voyage.week);
+  else delete p.voyage.legacyCatchUpPaid;
+  const roadIds = (value: unknown, id: string) =>
+    Array.isArray(value)
+      ? [...new Set(value.filter((key): key is string => typeof key === 'string' && new RegExp(`^${id}:tier\\d{2}$`).test(key)))].slice(
+          0,
+          100,
+        )
+      : [];
+  const savedRoads =
+    raw.roadRecords && typeof raw.roadRecords === 'object' && !Array.isArray(raw.roadRecords)
+      ? (raw.roadRecords as Record<string, unknown>)
+      : {};
+  p.roadRecords = {};
+  for (const [id, value] of Object.entries(savedRoads)) {
+    if (!/^road\d{2}$/.test(id) || !value || typeof value !== 'object' || Array.isArray(value)) continue;
+    const row = value as Record<string, unknown>;
+    p.roadRecords[id] = {
+      points: nonnegativeInt(row.points),
+      claimedFreeTierIds: roadIds(row.claimedFreeTierIds, id),
+      claimedPaidTierIds: roadIds(row.claimedPaidTierIds, id),
+      lastCreditedDay:
+        typeof row.lastCreditedDay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(row.lastCreditedDay) ? row.lastCreditedDay : '',
+      earnedOnLastCreditedDay: nonnegativeInt(row.earnedOnLastCreditedDay, 8),
+      creditedEarningKeys: Array.isArray(row.creditedEarningKeys)
+        ? [...new Set(row.creditedEarningKeys.filter((key): key is string => typeof key === 'string' && key.length <= 160))]
+        : [],
+      ...(typeof row.openedOn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(row.openedOn) ? { openedOn: row.openedOn } : {}),
+      ...(typeof row.plannedEndOn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(row.plannedEndOn) ? { plannedEndOn: row.plannedEndOn } : {}),
+      legacyGrantIds: Array.isArray(row.legacyGrantIds)
+        ? [...new Set(row.legacyGrantIds.filter((key): key is string => typeof key === 'string' && /^legacy:(free|paid):\d{2}$/.test(key)))]
+        : [],
+    };
+  }
+  p.roadCreditedEarningKeys = Array.isArray(raw.roadCreditedEarningKeys)
+    ? [...new Set(raw.roadCreditedEarningKeys.filter((key): key is string => typeof key === 'string' && key.length <= 160))]
+    : [];
+  p.roadPassEntitlements = Array.isArray(raw.roadPassEntitlements)
+    ? [...new Set(raw.roadPassEntitlements.filter((id): id is string => typeof id === 'string' && /^road\d{2}$/.test(id)))]
+    : [];
+  p.roadLegacySerial = nonnegativeInt(raw.roadLegacySerial);
+  p.roadStickers = Array.isArray(raw.roadStickers)
+    ? [...new Set(raw.roadStickers.filter((id): id is string => typeof id === 'string' && /^[a-z0-9_]{1,40}$/.test(id)))]
+    : [];
+  if (raw.m12RoadMigrated !== true) {
+    const state = newRoadState();
+    state.points = nonnegativeInt(p.roadPoints);
+    state.lastCreditedDay = typeof p.roadDay.day === 'string' ? p.roadDay.day : '';
+    state.earnedOnLastCreditedDay = nonnegativeInt(p.roadDay.earned, 8);
+    const oldClaims = (value: unknown) =>
+      Array.isArray(value)
+        ? [...new Set(value.filter((index): index is number => Number.isInteger(index) && index >= 0 && index < 15))]
+        : [];
+    const free = oldClaims(raw.road);
+    const paid = oldClaims(raw.roadPass);
+    state.claimedFreeTierIds = free.map((index) => STAR_ROAD[index].id);
+    state.claimedPaidTierIds = paid.map((index) => STAR_ROAD[index].id);
+    state.legacyGrantIds = [
+      ...free.map((index) => `legacy:free:${String(index).padStart(2, '0')}`),
+      ...paid.map((index) => `legacy:paid:${String(index).padStart(2, '0')}`),
+    ];
+    p.roadRecords[COSMIC_ROAD_ID] = state;
+  }
+  p.roadRecords[COSMIC_ROAD_ID] ??= newRoadState();
+  // Replace old personal end dates with the installed Road's shared close date.
+  const roadZeroClose = roadCloseOn(COSMIC_ROAD_ID);
+  if (roadZeroClose) p.roadRecords[COSMIC_ROAD_ID].plannedEndOn = roadZeroClose;
+  else delete p.roadRecords[COSMIC_ROAD_ID].plannedEndOn;
+  if (!Object.hasOwn(raw, 'roadPoints') && p.roadRecords[COSMIC_ROAD_ID].points === 0) p.roadRecords[COSMIC_ROAD_ID].points = p.roadPoints;
+  p.m12RoadMigrated = true;
+  p.roadPoints = p.roadRecords[COSMIC_ROAD_ID].points;
+  p.road = STAR_ROAD.flatMap((tier, index) => (p.roadRecords[COSMIC_ROAD_ID].claimedFreeTierIds.includes(tier.id) ? [index] : []));
+  p.roadPass = STAR_ROAD.flatMap((tier, index) => (p.roadRecords[COSMIC_ROAD_ID].claimedPaidTierIds.includes(tier.id) ? [index] : []));
+  if (raw.m12LegacyLooksMigrated !== true) {
+    if (p.pass) {
+      // The retired paint IDs were owned immediately with the old Pass.
+      for (const id of ['paint_gilded_ground', 'paint_liquid_gold_sea']) if (!p.wardrobe.includes(id)) p.wardrobe.push(id);
+    }
+    if (p.roadPass.includes(4) && !p.wardrobe.includes('frame_gold')) p.wardrobe.push('frame_gold');
+    if (p.pass && p.home.paint.ground === 'gilded') (p.look as Record<string, string>).ground = 'paint_gilded_ground';
+    if (p.pass && p.home.paint.sea === 'goldsea') (p.look as Record<string, string>).sea = 'paint_liquid_gold_sea';
+    if (p.home.paint.ground === 'gilded') p.home.paint.ground = 'meadow';
+    if (p.home.paint.sea === 'goldsea') p.home.paint.sea = 'blue';
+  }
+  p.m12LegacyLooksMigrated = true;
   if (raw.m3Migrated !== true) {
     const oldLevels: Record<string, number> = {
       swap: 1,
@@ -881,6 +1003,7 @@ export function migrate(raw: Record<string, unknown>): Profile {
       ? id
       : null;
   });
+  retireEventProgress(p);
   p.v = PROFILE_VERSION;
   return p;
 }

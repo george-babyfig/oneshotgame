@@ -1,7 +1,7 @@
 import { h, btn, modal, confirmBox, toast } from '../dom';
 import { getLang, t, tp } from '../../i18n';
 import { deviceCurrency, formatCurrency } from '../../meta/currency';
-import { COSMETIC_BY_ID } from '../../meta/cosmetics';
+import { COSMETIC_BY_ID, setStyleDraft } from '../../meta/cosmetics';
 import { PRODUCTS, PRODUCT_BY_KEY } from '../../meta/tuning';
 import { clearLedger, ledgerSummary, playTimeThisWeek, purchaseHistory, spentThisMonth } from '../../meta/ledger';
 import type { App } from '../app';
@@ -9,6 +9,7 @@ import { parentalGate, setParentPin, clearParentPin } from '../flows/gate';
 import { grownupSettings } from '../flows/settings';
 import { shopSection } from './shop';
 import { diagnosticCode } from '../../meta/diagnostics';
+import { ownsProduct } from '../../meta/economy';
 
 const active = new WeakSet<App>();
 // Fill these together once the owner has a hosted policy and monitored mailbox.
@@ -83,6 +84,7 @@ function renderGrownups(app: App) {
       'aria-checked': String(p.settings.hidePaidLooks),
       onclick: () => {
         p.settings.hidePaidLooks = !p.settings.hidePaidLooks;
+        setStyleDraft(p, null);
         app.save();
         renderGrownups(app);
       },
@@ -158,6 +160,9 @@ function renderGrownups(app: App) {
         )
       : null,
     shopSection(app),
+    PRODUCTS.some((product) => !product.consumable && ownsProduct(p, product.id))
+      ? btn(t('Styles'), 'ghost wide', () => app.showStyles())
+      : null,
     h(
       'section',
       { class: 'grownups-section' },

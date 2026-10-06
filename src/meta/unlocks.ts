@@ -8,7 +8,6 @@ import { LAUNCHERS, LAUNCH_ROSTER, type LauncherId } from '../core/launchers';
 
 export const HOME_UNLOCK_LEVEL = 5;
 export const MOMENTUM_UNLOCK = 17;
-export const EVENT_UNLOCK_LEVEL = 20;
 export const FESTIVAL_UNLOCK_LEVEL = 34;
 export const VOYAGE_UNLOCK_LEVEL = 20;
 const LEGACY_QUEST_IDS = new Set(['throw25', 'win3', 'star6', 'creature8', 'three1', 'booster1', 'collect2', 'land20', 'spot6', 'voyage1']);
@@ -22,7 +21,6 @@ export type UnlockId =
   | 'super_hard'
   | 'guardian'
   | 'homeworld'
-  | 'weekly_event'
   | 'festival'
   | 'voyage'
   | 'star_road'
@@ -177,7 +175,6 @@ export const UNLOCKS: readonly Unlock[] = [
       body: LAB_TEXT.unlockBody,
     },
   },
-  { id: 'weekly_event', planet: EVENT_UNLOCK_LEVEL, placement: 'home' },
   {
     id: 'festival',
     planet: FESTIVAL_UNLOCK_LEVEL,
@@ -257,7 +254,6 @@ export function unlocked(p: Profile, id: UnlockId): boolean {
   if (id === 'quest_voyage' && (p.voyage.cleared > 0 || p.voyageDone > 0)) return true;
   if (id === 'voyage' && (p.voyage.cleared > 0 || p.voyageDone > 0)) return true;
   if (id === 'festival' && (p.festival.spotted > 0 || p.festival.claimed.length > 0)) return true;
-  if (id === 'weekly_event' && (p.event.tokens > 0 || p.event.claimed.length > 0)) return true;
   if (id === 'star_calendar' && !!p.daily.last) return true;
   if (id === 'momentum' && p.momentum.streak > 0) return true;
   if (id === 'homeworld' && (p.home.intro || p.home.plots.some(Boolean) || p.home.residents.length > 0)) return true;

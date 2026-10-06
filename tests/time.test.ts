@@ -8,7 +8,7 @@
 //   TZ=Australia/Sydney npx vitest run tests/time.test.ts
 import { describe, expect, it } from 'vitest';
 import { dayGap, defaultProfile, today } from '../src/meta/profile';
-import { EVENTS, ensureEvent, eventEndsIn, eventFor, isoWeek } from '../src/meta/events';
+import { EVENTS, eventEndsIn, eventFor, isoWeek } from '../src/meta/events';
 import { ensureFestival, festivalDaysLeft, festivalKey, festivalOn, FESTIVALS } from '../src/meta/festivals';
 import { clearStop, ensureVoyage, VOYAGE_NAMES, voyageName } from '../src/meta/voyage';
 import { seasonOf, skyEventOn } from '../src/meta/seasons';
@@ -80,7 +80,7 @@ describe('time: local calendar days', () => {
   });
 });
 
-describe('time: ISO weeks (weekly event and Weekly Voyage)', () => {
+describe('time: ISO weeks and Weekly Voyage', () => {
   it('knows the week-53 years and the year-end edges', () => {
     const wk = (y: number, m: number, d: number) => isoWeek(new Date(y, m - 1, d, 12));
     // 2026 starts on a Thursday, so it has 53 ISO weeks
@@ -173,22 +173,18 @@ describe('time: ISO weeks (weekly event and Weekly Voyage)', () => {
     }
   });
 
-  it('week 53 is its own event and voyage week; 2027-W01 starts fresh', () => {
+  it('week 53 is its own Voyage week; 2027-W01 starts fresh', () => {
     const p = defaultProfile(0);
     p.level = 30;
-    ensureEvent(p, '2026-W52');
     ensureVoyage(p, '2026-W52');
-    p.event.tokens = 50;
     p.voyage.cleared = 4;
-    ensureEvent(p, isoWeek(new Date(2026, 11, 31, 12)));
     ensureVoyage(p, isoWeek(new Date(2026, 11, 31, 12)));
-    expect(p.event).toEqual({ week: '2026-W53', tokens: 0, claimed: [] });
     expect(p.voyage).toMatchObject({ week: '2026-W53', cleared: 0 });
-    p.event.tokens = 12;
-    ensureEvent(p, isoWeek(new Date(2027, 0, 3, 23)));
-    expect(p.event.tokens).toBe(12);
-    ensureEvent(p, isoWeek(new Date(2027, 0, 4, 0, 30)));
-    expect(p.event).toEqual({ week: '2027-W01', tokens: 0, claimed: [] });
+    p.voyage.cleared = 2;
+    ensureVoyage(p, isoWeek(new Date(2027, 0, 3, 23)));
+    expect(p.voyage.cleared).toBe(2);
+    ensureVoyage(p, isoWeek(new Date(2027, 0, 4, 0, 30)));
+    expect(p.voyage).toMatchObject({ week: '2027-W01', cleared: 0 });
   });
 });
 
@@ -426,46 +422,37 @@ describe('time: the clock moved back or forward', () => {
     expect(stamp(p, today(new Date(NOW + 400 * DAY)))).toBeNull();
   });
 
-  it('one period back and forward keeps event, voyage, and festival progress', () => {
+  it('one period back and forward keeps voyage and festival progress', () => {
     const p = midGame();
     const d = new Date(NOW);
-    ensureEvent(p, isoWeek(d));
     ensureVoyage(p, isoWeek(d));
     ensureFestival(p, d);
-    p.event.tokens = 64;
-    p.event.claimed = [0, 1];
     p.voyage.cleared = 3;
     p.voyage.stars = [3, 2, 3];
     p.festival.spotted = 31;
     p.festival.claimed = [0, 1];
-    const before = structuredClone({ event: p.event, voyage: p.voyage, festival: p.festival });
+    const before = structuredClone({ voyage: p.voyage, festival: p.festival });
 
     const weekBack = new Date(NOW - 7 * DAY);
     const monthBack = new Date(2026, 7, 27, 17, 30);
-    ensureEvent(p, isoWeek(weekBack));
     ensureVoyage(p, isoWeek(weekBack));
     ensureFestival(p, monthBack);
-    ensureEvent(p, isoWeek(d)); // and put right again
     ensureVoyage(p, isoWeek(d));
     ensureFestival(p, d);
 
-    expect({ event: p.event, voyage: p.voyage, festival: p.festival }).toEqual(before);
+    expect({ voyage: p.voyage, festival: p.festival }).toEqual(before);
   });
 
   it('a far-forward clock corrected back resets to the current week and month', () => {
     const p = midGame();
     const future = new Date(2027, 5, 20, 12);
-    ensureEvent(p, isoWeek(future));
     ensureVoyage(p, isoWeek(future));
     ensureFestival(p, future);
-    p.event.tokens = 30;
     p.voyage.cleared = 2;
     p.festival.spotted = 20;
     const current = new Date(NOW);
-    ensureEvent(p, isoWeek(current));
     ensureVoyage(p, isoWeek(current));
     ensureFestival(p, current);
-    expect(p.event).toEqual({ week: isoWeek(current), tokens: 0, claimed: [] });
     expect(p.voyage).toMatchObject({ week: isoWeek(current), cleared: 0 });
     expect(p.festival).toEqual({ key: festivalKey(current), spotted: 0, claimed: [] });
   });

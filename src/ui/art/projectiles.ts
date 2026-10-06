@@ -5,6 +5,16 @@ import { canvasDpr } from '../devcapture';
 
 type G = CanvasRenderingContext2D;
 
+/** Stable shape cues. Styles draw only outside these sprites in styleRender.ts. */
+export const PROJECTILE_SILHOUETTES: Record<Kind, string> = {
+  rock: 'faceted',
+  ice: 'hexagon',
+  magma: 'round-craters',
+  seed: 'seed-leaves',
+  storm: 'cloud',
+  sun: 'rays',
+};
+
 export function drawObjectFeelTrail(g: G, kind: Kind, points: { x: number; y: number }[], nova: boolean, still: boolean) {
   if (still) return;
   const style = OBJECT_FEEL[kind];

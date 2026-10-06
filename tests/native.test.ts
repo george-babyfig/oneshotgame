@@ -99,4 +99,19 @@ describe('native iOS release configuration', () => {
     expect(tuning).toMatch(/import \{ version \} from '\.\.\/\.\.\/package\.json'/);
     expect(tuning).toContain('export const VERSION: string = version;');
   });
+
+  it('registers an early persistent StoreKit journal and consumable-history fallback', () => {
+    const plugin = read(`${app}/PurchaseJournalPlugin.swift`);
+    expect(plugin).toContain('Transaction.unfinished');
+    expect(plugin).toContain('Transaction.updates');
+    expect(plugin).toContain('UserDefaults.standard.set(data');
+    expect(plugin).toContain('name: "drain"');
+    expect(plugin).toContain('name: "ack"');
+    expect(read('ios/App/CapApp-SPM/Package.swift')).not.toContain('CapgoNativePurchases');
+    expect(read('capacitor.config.ts')).toContain('includePlugins: [');
+    expect(read(`${app}/MainViewController.swift`)).toContain('registerPluginInstance(PurchaseJournalPlugin())');
+    expect(read(`${app}/AppDelegate.swift`)).toContain('PurchaseJournal.shared.start()');
+    expect(project).toContain('PurchaseJournalPlugin.swift in Sources');
+    expect(info).toMatch(/<key>SKIncludeConsumableInAppPurchaseHistory<\/key>\s*<true\/>/);
+  });
 });

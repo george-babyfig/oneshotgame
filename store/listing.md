@@ -8,7 +8,7 @@
 
 ## Promotional text (170)
 
-Fling comets and grow a tiny world where cute creatures move in. Mix Fusions, chain Combos and build your Homeworld. No ads. Optional purchases require a parent check.
+Fling comets, grow tiny worlds and build Landmarks on a Homeworld where your friends live their day. No ads. Optional purchases need a parent check.
 
 ## Description (4,000)
 
@@ -18,6 +18,7 @@ FLING AND GROW
 • Pull back, aim and let go: gravity bends every throw around the planet
 • Rocks raise mountains, ice comets fill oceans, seed pods grow meadows and forests, magma builds volcanoes, rain clouds and sunbursts help it all thrive
 • The planet shows what your throw will do before you let go: new land, who moves in, and anyone who might wander off
+• Pick a launcher for each planet: the Star Sling, Swoop, Zip or Thumper, each with one strength and one trade-off
 
 MEET THE CREATURES
 • 36 creatures to find, each with a favourite home: otters where forest meets the sea, newts on warm volcanoes, owls in snowy pines
@@ -31,7 +32,9 @@ MIX, CHAIN AND PLAN
 • Read the sky: drifting rocks, a bubble moon and a turning ring of pebbles to time your throws around
 
 A HOMEWORLD OF YOUR OWN
-• Invite the friends you meet to live on your Homeworld
+• Invite the friends you meet to live on your Homeworld, where they have their own day: they sleep in the Den at night, gather in the evening and enjoy the weather and the seasons
+• Grow the lands you discover between your buildings
+• Build five Landmarks by playing, from the Sprout Garden to the Keeper's Beacon
 • Choose a Buddy who helps when a Trouble appears on a planet
 • Make your Keeper: faces, skin tones, hair and outfits
 
@@ -41,6 +44,7 @@ PLAY YOUR WAY
 • Daily Planet, Weekly Voyage, Meteor Rush, Zen Garden and friend challenges
 • Bonus Remix adds playful twists and gold stars to finished chapters
 • Earn Essences from planets and build Labs on your Homeworld
+• Follow the Cosmic Road: new stars and Wishes earn rewards along the way
 • Play in English, Español, Français, Deutsch, Português (Brasil) or 日本語
 
 CALM, FAIR AND PRIVATE

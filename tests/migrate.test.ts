@@ -16,7 +16,7 @@ describe('profile migration', () => {
     // Mill L3 150+380+900 and L1 150; Grove L1 2000; Observatory L2 2500+6250.
     const refund = 2550 + 1600 + 5000 + 1430 + 150 + 2000 + 8750;
     expect(p.dust).toBe(raw.dust + refund + 1500);
-    expect(p.gems).toBe(raw.gems + 1);
+    expect(p.gems).toBe(raw.gems + 1 + 3); // three Event tokens beyond the last reached tier become gems.
     expect(p.home.level).toBe(3);
     expect(p.home.plots.filter((b) => b?.type === 'mill' || b?.type === 'grove' || b?.type === 'observatory')).toEqual([]);
     expect(p.home.plots.find((b) => b?.type === 'launch_bay')?.lv).toBe(1);

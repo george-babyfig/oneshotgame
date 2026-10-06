@@ -8,7 +8,7 @@
 
 ## Promotional text (170)
 
-Wirf Kometen und lass eine Mini-Welt wachsen. Mische Fusionen, verkette Combos, bau deine Heimatwelt. Ohne Werbung. Käufe erfordern die Elternabfrage.
+Wirf Kometen, lass Mini-Welten wachsen, bau Wahrzeichen auf deiner Heimatwelt, wo deine Freunde ihren Tag erleben. Ohne Werbung. Optionale Käufe nur mit Elternabfrage.
 
 ## Description (4,000)
 
@@ -18,6 +18,7 @@ WERFEN UND WACHSEN LASSEN
 • Zurückziehen, zielen, loslassen: Die Schwerkraft lenkt jeden Wurf um den Planeten
 • Felsen türmen Berge auf, Eiskometen füllen Ozeane, Samenkapseln lassen Wiesen und Wälder wachsen, Magma baut Vulkane, und Regenwolken und Sonnenstrahlen lassen alles gedeihen
 • Noch bevor du loslässt, zeigt dir der Planet, was dein Wurf bewirkt: neues Land, wer einzieht und wer vielleicht spazieren geht
+• Wähle für jeden Planeten deinen Werfer: Sternschleuder, Schlenker, Flitzer oder Stampfer – jeder mit einer besonderen Stärke und einem kleinen Haken
 
 LERNE DIE WESEN KENNEN
 • 36 Wesen zum Entdecken, jedes mit seinem Lieblingszuhause: Otter, wo Wald und Meer sich treffen, Molche auf warmen Vulkanen, Käuze in verschneiten Kiefern
@@ -31,7 +32,9 @@ MISCHEN, VERKETTEN, PLANEN
 • Behalte den Himmel im Blick: Treibfelsen, ein Blasenmond und ein kreisender Kieselring – pass den richtigen Moment für deinen Wurf ab
 
 EINE HEIMATWELT GANZ FÜR DICH
-• Lade die Freunde, die du triffst, auf deine Heimatwelt ein
+• Lade die Freunde, die du triffst, auf deine Heimatwelt ein. Dort leben sie ihren ganz eigenen Tag: Nachts schlafen sie im Tierchenbau, abends kommen sie zusammen, und sie freuen sich über Wetter und Jahreszeiten
+• Lass zwischen deinen Gebäuden die Landschaften wachsen, die du entdeckst
+• Bau beim Spielen fünf Wahrzeichen, vom Sprossgarten bis zum Leuchtfeuer des Hüters
 • Wähle einen Kumpel, der hilft, wenn auf einem Planeten eine Sorge auftaucht
 • Gestalte deinen Hüter: Gesicht, Hautton, Haare und Outfits
 
@@ -41,6 +44,7 @@ SPIEL, WIE DU MAGST
 • Planet des Tages, Wochenreise, Meteorsturm, Zen-Garten und Duelle mit Freunden
 • Bonus-Remix bringt verspielte Überraschungen und Goldsterne in fertige Kapitel
 • Sammle Essenzen auf Planeten und baue Labore auf deiner Heimatwelt
+• Folge der Kosmischen Straße: Mit neuen Sternen und erfüllten Wünschen sammelst du unterwegs Belohnungen
 • Spiele auf English, Español, Français, Deutsch, Português (Brasil) oder 日本語
 
 RUHIG, FAIR UND PRIVAT
@@ -70,4 +74,4 @@ Not shown for version 1.0 (Apple has no "What's New" on a first release). From 1
 
 ## Lengths
 
-Subtitle 29/30 chars · Promotional text 150/170 chars · Description 2,484/4,000 chars · Keywords 97/100 bytes (UTF-8). Measured with python3 on the exact text to paste (len() in characters; blank lines in the description counted).
+Subtitle 29/30 chars · Promotional text 167/170 chars · Description 3,054/4,000 chars · Keywords 97/100 bytes (UTF-8). Measured with python3 on the exact text to paste (len() in characters; blank lines in the description counted).

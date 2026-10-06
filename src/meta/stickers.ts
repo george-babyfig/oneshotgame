@@ -107,6 +107,15 @@ const COMBO_STICKERS: Sticker[] = COMBO_STAMP_NAMES.map((name, i) => ({
 }));
 
 export const STICKERS: Sticker[] = [
+  {
+    id: 'cosmic_road',
+    kind: 'feat',
+    name: 'Cosmic Road sticker',
+    art: 'atlas',
+    hint: ['Reach the end of Cosmic Road'],
+    earned: (p) => p.roadStickers.includes('cosmic_road'),
+    bonus: true,
+  },
   ...SPECIES.map((s): Sticker => ({
     id: `c_${s.id}`,
     kind: 'critter',

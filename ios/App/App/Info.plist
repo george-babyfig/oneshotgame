@@ -33,6 +33,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>SKIncludeConsumableInAppPurchaseHistory</key>
+	<true/>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Saves your Comet Garden picture to Photos.</string>
 	<key>UIApplicationSceneManifest</key>

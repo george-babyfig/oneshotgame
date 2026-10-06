@@ -220,7 +220,6 @@ export interface Paint {
   /** light, mid, dark */
   colors: [string, string, string];
   gems?: number;
-  pass?: boolean;
 }
 
 export { PAINTS } from './tuning';
@@ -230,16 +229,14 @@ export const PAINT_BY_ID: Record<string, Paint> = Object.fromEntries(PAINTS.map(
 export function ownsPaint(p: Profile, id: string) {
   const x = PAINT_BY_ID[id];
   if (!x) return false;
-  if (x.pass) return p.pass;
   return !x.gems || p.home.paints.includes(id);
 }
 
 /** Buy (if needed) and apply a paint. */
-export function applyPaint(p: Profile, id: string): 'ok' | 'gems' | 'pass' {
+export function applyPaint(p: Profile, id: string): 'ok' | 'gems' | 'unavailable' {
   const x = PAINT_BY_ID[id];
-  if (!x) return 'pass';
+  if (!x) return 'unavailable';
   if (!ownsPaint(p, id)) {
-    if (x.pass) return 'pass';
     if (p.gems < (x.gems ?? 0)) return 'gems';
     spend(p, 'gems', x.gems ?? 0, 'cosmetic');
     p.home.paints.push(id);

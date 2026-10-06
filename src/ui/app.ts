@@ -29,10 +29,20 @@ import { setPlanetPalette } from './art/planet';
 import type { SkyState } from '../core/sky';
 import { restoredSkyState } from './feel';
 import { createIap, shouldRevoke, type IapEvent, type StorePrice } from '../meta/iap';
-import { PRODUCT_BY_ID, PRODUCT_BY_KEY, SKINS, type BoosterId } from '../meta/config';
+import { PRODUCT_BY_ID, PRODUCT_BY_KEY, PRODUCTS, SKINS, type BoosterId } from '../meta/config';
 import { clearFails, continueAllowed, countsAsFail, recordFail } from '../meta/continues';
 import { firstTargets, helpAtFailCount, helpFor, helpThrowsForAttempt } from '../meta/help';
-import { discoverSpecies, grantProduct, refundQuietUntil, revokeProduct, spendGems } from '../meta/economy';
+import {
+  discoverSpecies,
+  grantProduct,
+  noteRefund,
+  ownsProduct,
+  refundQuietUntil,
+  restoreProduct,
+  revokeProduct,
+  spendGems,
+} from '../meta/economy';
+import { grantRoadPass } from '../meta/starroad';
 import { chapterOf } from '../meta/progression';
 import { ensureWishes } from '../meta/wishes';
 import { MOMENTUM_PERKS, momentumActive, momentumLoss, momentumRoundPerk, momentumWin } from '../meta/momentum';
@@ -45,8 +55,6 @@ import { titleBeat } from './flows/title';
 import { choosePopup, type PopupKind } from '../meta/governor';
 import { awayCollectables } from '../meta/economy';
 import { scheduleReminders } from './platform';
-import { addTokens, ensureEvent, eventActive, tokensForLand } from '../meta/events';
-import { eventFlow } from './flows/event';
 import { showHome } from './screens/home';
 import { showLifebook } from './screens/lifebook';
 import { showShop } from './screens/shop';
@@ -179,6 +187,7 @@ export class App {
   private lastReceipt: Promise<void> | null = null;
   private processingTx = new Map<string, Promise<void>>();
   private txQueue: Promise<void> = Promise.resolve();
+  private reconcileQueue: Promise<void> = Promise.resolve();
   private roundsThisSession = 0;
   private breakDue = false;
 
@@ -187,6 +196,18 @@ export class App {
   }
 
   async init() {
+    // Attach before native profile/ledger reads; the native journal also retains earlier updates.
+    const iapReady = this.iap.init((event) => {
+      if (!this.p) return;
+      if (this.iap.kind === 'native') {
+        if (!this.busy) void this.reconcilePurchases();
+      } else if (shouldRevoke(event)) {
+        if (revokeProduct(this.p, event.productId, event.revokedAt)) {
+          this.saveNow();
+          this.refresh();
+        }
+      } else void this.handleTransaction(event, true).catch(() => {});
+    });
     this.host = h('div', { class: 'host' });
     this.root.append(this.host);
     mountOverlays(this.root);
@@ -242,6 +263,7 @@ export class App {
         if (this.lastAbsenceMs >= 30 * 60_000) this.popupShownThisOpen = false;
         this.p.meta.lastSeen = Date.now();
         if (this.screen === 'home') this.showHome();
+        void this.reconcilePurchases();
       });
     }
     document.addEventListener('visibilitychange', () => {
@@ -250,15 +272,7 @@ export class App {
       this.p.meta.lastSeen = Date.now();
       saveProfile(this.p);
     });
-    this.iap
-      .init((event) => {
-        if (event.revokedAt) {
-          if (revokeProduct(this.p, event.productId, event.revokedAt)) {
-            this.saveNow();
-            this.refresh();
-          }
-        } else void this.handleTransaction(event);
-      })
+    iapReady
       .then(() => this.iap.prices())
       .then(async (pr) => {
         this.prices = pr;
@@ -558,7 +572,7 @@ export class App {
     showCollection(this);
   }
   showStyles() {
-    if (!this.p.chapters.length) {
+    if (!this.p.chapters.length && !PRODUCTS.some((product) => !product.consumable && ownsProduct(this.p, product.id))) {
       this.mount(
         h(
           'div',
@@ -712,9 +726,6 @@ export class App {
   visitors() {
     visitorsFlow(this);
   }
-  events() {
-    eventFlow(this);
-  }
   modes() {
     modesFlow(this);
   }
@@ -774,13 +785,11 @@ export class App {
         onReaction: () => ({ first: false }),
         onCombo: () => {},
         onPairTried: () => {},
-        onLand: () => 0,
         onGustSeen: () => {},
         onSkySeen: () => {},
         spendGems: () => false,
         buddy: null,
         festAcc: undefined,
-        eventEmoji: undefined,
         onEnd: (r) => {
           clearInterruptedRound(this.p);
           if (r.throwsUsed === -1) return this.preRemix(n);
@@ -937,16 +946,6 @@ export class App {
         this.p.reactionPairsTried.push(pair);
         this.saveNow();
       },
-      eventEmoji: !extra.endless && !extra.competitive && eventActive(this.p) ? ensureEvent(this.p).emoji : undefined,
-      onLand:
-        extra.endless || extra.competitive
-          ? undefined
-          : (changed, spawned) => {
-              if (!eventActive(this.p)) return 0;
-              const n = tokensForLand(ensureEvent(this.p), changed, spawned);
-              addTokens(this.p, n);
-              return n;
-            },
       onQuit: () => {
         clearInterruptedRound(this.p);
         this.save();
@@ -1273,8 +1272,7 @@ export class App {
     return (
       !!pr &&
       (this.iap.kind !== 'native' || !!this.prices[pr.id]?.display) &&
-      !(key === 'starter' && this.p.starter) &&
-      !(key === 'pass' && this.p.pass) &&
+      (pr.consumable || !ownsProduct(this.p, pr.id)) &&
       !(key === 'piggy' && (!this.p.piggy || this.p.pendingPiggy))
     );
   }
@@ -1312,7 +1310,7 @@ export class App {
       const r = await this.iap.purchase(pr);
       if (r.ok && r.txId) {
         this.root.classList.remove('buying');
-        await this.handleTransaction({ productId: r.productId ?? pr.id, txId: r.txId });
+        await this.handleTransaction({ productId: r.productId ?? pr.id, txId: r.txId }, true);
         if (this.lastReceipt) await this.lastReceipt;
       } else if (r.pending) {
         ledger.count('purchase_pending');
@@ -1332,35 +1330,40 @@ export class App {
       this.busy = false;
       this.root.classList.remove('buying');
       if (this.screen === 'shop') this.refresh();
+      if (this.iap.kind === 'native') void this.reconcilePurchases();
     }
   }
 
-  private handleTransaction(event: IapEvent): Promise<void> {
+  private handleTransaction(event: IapEvent, localPurchase = false): Promise<void> {
     const running = this.processingTx.get(event.txId);
     if (running) return running;
     const task = this.txQueue
-      .then(() => this.grant(event.productId, event.txId, event.purchasedAt))
-      .catch(() => toast(t('Purchase could not be completed'), 'bad'))
+      .then(() => this.grant(event.productId, event.txId, event.purchasedAt, localPurchase))
+      .catch((error) => {
+        if (localPurchase) toast(t('Purchase could not be completed'), 'bad');
+        throw error;
+      })
       .finally(() => this.processingTx.delete(event.txId));
-    this.txQueue = task;
+    this.txQueue = task.catch(() => {});
     this.processingTx.set(event.txId, task);
     return task;
   }
 
-  async grant(productId: string, txId: string, purchasedAt = Date.now()) {
+  async grant(productId: string, txId: string, purchasedAt = Date.now(), localPurchase = true) {
     const alreadyProcessed = this.p.processedTx.includes(txId);
     const product = PRODUCT_BY_ID[productId];
-    const alreadyOwned = (product?.key === 'starter' && this.p.starter) || (product?.key === 'pass' && this.p.pass);
+    const alreadyOwned = product ? ownsProduct(this.p, product.id) : false;
     const g = grantProduct(this.p, productId, txId);
+    if (product?.key === 'pass' && g) grantRoadPass(this.p);
     if (!g && alreadyProcessed) {
       await saveProfileChecked(this.p);
-      if (this.iap.kind === 'native') await this.iap.finish(txId).catch(() => {});
+      if (this.iap.kind === 'native') await this.iap.ack([txId]);
       return;
     }
-    if (g && !alreadyOwned) {
+    if (g && !alreadyOwned && localPurchase) {
       ledger.count('purchase_ok');
     }
-    if (product && g && !alreadyOwned) {
+    if (product && g && !alreadyOwned && localPurchase) {
       const storePrice = this.prices[product.id];
       if (storePrice || this.iap.kind !== 'native')
         recordPurchase({
@@ -1372,10 +1375,12 @@ export class App {
         });
       else this.p.pendingPurchaseRecords.push({ tx: txId, key: product.key, at: purchasedAt });
     }
-    await flushLedger(product && g && !alreadyOwned && (this.prices[product.id] || this.iap.kind !== 'native') ? txId : undefined);
+    await flushLedger(
+      product && g && !alreadyOwned && localPurchase && (this.prices[product.id] || this.iap.kind !== 'native') ? txId : undefined,
+    );
     await saveProfileChecked(this.p);
-    if (this.iap.kind === 'native') await this.iap.finish(txId).catch(() => {});
-    if (!g || alreadyOwned) return;
+    if (this.iap.kind === 'native') await this.iap.ack([txId]);
+    if (!g || alreadyOwned || !localPurchase) return;
     sfx.gem();
     haptic.success();
     this.refresh();
@@ -1404,57 +1409,64 @@ export class App {
     if (recorded.length) await saveProfileChecked(this.p).catch(() => {});
   }
 
-  /** Mark one-time purchases as owned (flags only — gems are never re-granted). */
+  /** Restore durable look entitlements without paying consumable rewards again. */
   private applyOwned(owned: string[]) {
     let restored = 0;
+    let backfilled = false;
     for (const id of owned) {
-      const key = PRODUCT_BY_ID[id]?.key;
-      if (key === 'starter' && !this.p.starter) {
-        this.p.starter = true;
-        if (!this.p.skins.includes('aurora')) this.p.skins.push('aurora');
-        restored++;
-      }
-      if (key === 'pass' && !this.p.pass) {
-        this.p.pass = true;
-        (this.p.meta as Profile['meta'] & { passLooksOnly?: boolean }).passLooksOnly = true;
-        restored++;
-      }
+      if (restoreProduct(this.p, id)) restored++;
+      if (PRODUCT_BY_ID[id]?.key === 'pass' && grantRoadPass(this.p).length) backfilled = true;
     }
-    if (restored) this.saveNow();
+    if (restored || backfilled) this.saveNow();
     return restored;
   }
 
-  private async reconcilePurchases() {
-    if (this.iap.kind === 'native') {
-      try {
-        const transactions = await this.iap.transactions();
-        for (const event of transactions) {
-          const product = PRODUCT_BY_ID[event.productId];
-          if (!product) continue;
-          // Only Apple's explicit revocation (a refund, Family Sharing ending) removes a paid look.
-          if (shouldRevoke(event)) {
-            if (!product.consumable && ((product.key === 'starter' && this.p.starter) || (product.key === 'pass' && this.p.pass))) {
-              revokeProduct(this.p, event.productId);
-              await this.saveNow();
-            }
-            continue;
-          }
-          if (this.p.processedTx.includes(event.txId)) continue;
-          if (!event.purchasedAt || event.purchasedAt < this.p.meta.installed - 60_000) continue;
-          await this.handleTransaction(event);
-        }
-      } catch {
-        // StoreKit can be unavailable offline; retry next launch.
-      }
-    }
+  private reconcilePurchases(): Promise<void> {
+    const task = this.reconcileQueue.then(() => this.reconcilePurchasesOnce());
+    this.reconcileQueue = task.catch(() => {});
+    return task;
+  }
+
+  private async reconcilePurchasesOnce() {
+    let owned: string[] | null = null;
     try {
-      // Absence from the current entitlements is not a revocation (StoreKit can answer partially
-      // offline), so this only ever adds what the store says is owned.
-      const owned = await this.iap.owned();
+      owned = await this.iap.owned();
       if (this.applyOwned(owned)) this.refresh();
     } catch {
-      // Keep local ownership if the store cannot answer.
+      // An offline StoreKit answer is not proof that any entitlement ended.
     }
+    if (this.iap.kind !== 'native') return;
+    let queued: IapEvent[] = [];
+    let historical: IapEvent[] = [];
+    try {
+      queued = await this.iap.drain();
+      historical = await this.iap.transactions();
+    } catch {
+      // The persistent journal is retried on resume and next launch.
+      return;
+    }
+    const valid = new Set(owned ?? []);
+    const queuedIds = new Set(queued.map((event) => event.txId));
+    for (const event of [...queued, ...historical.filter((item) => !queuedIds.has(item.txId))]) {
+      if (!PRODUCT_BY_ID[event.productId]) continue;
+      if (shouldRevoke(event)) {
+        noteRefund(this.p, event.revokedAt!);
+        // A revoked old transaction must not strip a newer or independently shared entitlement.
+        const newerValid = historical.some(
+          (candidate) =>
+            candidate.productId === event.productId && !shouldRevoke(candidate) && (candidate.purchasedAt ?? 0) > (event.purchasedAt ?? 0),
+        );
+        if (owned && !valid.has(event.productId) && !newerValid) {
+          revokeProduct(this.p, event.productId, event.revokedAt);
+        }
+        await saveProfileChecked(this.p);
+        if (queuedIds.has(event.txId)) await this.iap.ack([event.txId]);
+        continue;
+      }
+      if (!queuedIds.has(event.txId) && (!event.purchasedAt || event.purchasedAt < this.p.meta.installed - 60_000)) continue;
+      await this.handleTransaction(event);
+    }
+    this.refresh();
   }
 
   async restore() {

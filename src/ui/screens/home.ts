@@ -23,10 +23,11 @@ import { unlocked } from '../../meta/unlocks';
 import { nextUp } from '../../meta/nextup';
 import { STYLES_RELEASE } from '../../meta/cosmetics';
 import { currentLook } from '../../meta/cosmetics';
+import { refundQuietUntil } from '../../meta/economy';
 
 export function showHome(app: App) {
   const p = app.p;
-  document.documentElement.classList.toggle('styles-new', p.stylesNewSeen !== STYLES_RELEASE);
+  document.documentElement.classList.toggle('styles-new', p.stylesNewSeen !== STYLES_RELEASE && refundQuietUntil(p) <= Date.now());
   const now = Date.now();
   const next = levelMeta(p.level);
   const ch = chapterOf(p.level);
@@ -116,7 +117,6 @@ export function showHome(app: App) {
     else if (picked.action === 'sky') app.showSky();
     else if (picked.action === 'road') app.showRoad();
     else if (picked.action === 'voyage') app.showVoyage();
-    else if (picked.action === 'event') app.events();
     else if (picked.action === 'festival') app.festival();
     else if (picked.action === 'modes') app.modes();
     else if (p.level <= 3) app.startLevel(p.level);

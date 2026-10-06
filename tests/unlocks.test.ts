@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { GOALS_FROM } from '../src/core/levels';
 import { KINDS, type Kind } from '../src/core/world';
 import { buddyEligible } from '../src/meta/buddy';
-import { eventActive, EVENT_UNLOCK_LEVEL } from '../src/meta/events';
 import { festivalActive, FESTIVAL_UNLOCK_LEVEL } from '../src/meta/festivals';
 import { homeUnlocked, HOME_UNLOCK_LEVEL } from '../src/meta/homeworld';
 import { letterStrings } from '../src/meta/inbox';
@@ -116,8 +115,6 @@ describe('unlock ladder', () => {
         p.stats.wins = level - 1;
         expect(unlocked(p, 'homeworld')).toBe(level >= HOME_UNLOCK_LEVEL);
         expect(homeUnlocked(p)).toBe(level >= HOME_UNLOCK_LEVEL);
-        expect(unlocked(p, 'weekly_event')).toBe(level >= EVENT_UNLOCK_LEVEL);
-        expect(eventActive(p)).toBe(level >= EVENT_UNLOCK_LEVEL);
         expect(unlocked(p, 'festival')).toBe(level >= FESTIVAL_UNLOCK_LEVEL);
         expect(festivalActive(p)).toBe(level >= FESTIVAL_UNLOCK_LEVEL);
         expect(unlocked(p, 'voyage')).toBe(level >= VOYAGE_UNLOCK_LEVEL);

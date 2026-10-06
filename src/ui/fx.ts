@@ -8,7 +8,8 @@ import { renderPlanet } from './art/planet';
 import { drawCreature, drawStillCreature, drawWanderGhost } from './art/critters';
 import { aimTagSize } from './aimtag';
 import { drawObjectFeelTrail, drawProjectile } from './art/projectiles';
-import { drawTrail } from './art/keeper';
+import { drawStyledShotTrail, drawStyledBurst, drawStyledEvent } from './art/styleRender';
+import type { StyledLook } from '../meta/cosmetics';
 import { drawGameplayTrail } from './art/launchers';
 import { drawMeteors, drawSeason } from './art/seasons';
 import { sfx } from './audio';
@@ -33,6 +34,7 @@ import { troubleFeel } from './feel';
 import { canvasDpr } from './devcapture';
 
 const MAX_PARTICLES = 600;
+const styleMarks = new WeakMap<LevelScene, { kind: Shot['kind']; x: number; y: number; at: number; nova: boolean; fusion: boolean }>();
 
 function logFlightHit(scene: LevelScene, hit: { kind: 'bonk'; by: 'moon' | 'rock' | 'ring' | 'bubble' } | { kind: 'fizzle' | 'miss' }) {
   scene.roundLog.bonks.push(hit.kind === 'bonk' ? hit.by : hit.kind === 'fizzle' ? 'mist' : 'miss');
@@ -319,7 +321,7 @@ export function draw(scene: LevelScene) {
   // shot
   const sh = scene.shot;
   if (sh) {
-    drawTrail(g, scene.look.trail, sh.trail, scene.time, KINDS[sh.kind].color);
+    drawStyledShotTrail(g, scene.look as StyledLook, sh.kind, sh.trail, scene.time, !!scene.o.reduceMotion);
     drawGameplayTrail(g, scene.o.launcher.id, sh.trail, scene.combo.links);
     drawObjectFeelTrail(g, sh.kind, sh.trail, !!sh.nova, !!scene.o.reduceMotion);
     if (sh.nova && sh.trail.length > 1 && !scene.o.reduceMotion) {
@@ -503,6 +505,14 @@ export function drawPlanet(scene: LevelScene) {
       );
     },
   });
+  // Style ink belongs above terrain but below threats, forecasts and sky objects.
+  const mark = styleMarks.get(scene);
+  if (mark && scene.time - mark.at < 0.55) {
+    const look = scene.look as StyledLook;
+    drawStyledBurst(scene.g, look, mark.kind, mark.x, mark.y, scene.R * 0.55, !!scene.o.reduceMotion);
+    if (mark.nova) drawStyledEvent(scene.g, look, 'supernova', mark.x, mark.y, scene.R * 0.75, !!scene.o.reduceMotion);
+    if (mark.fusion) drawStyledEvent(scene.g, look, 'fusion', mark.x, mark.y, scene.R * 0.65, !!scene.o.reduceMotion);
+  }
   const pull = scene.pull();
   const aimedSector = !scene.shot && scene.aimFrom && pull.len >= 18 ? preview.predictFlight(scene, pull.vx, pull.vy).sector : null;
   const aimedStep =
@@ -892,8 +902,6 @@ export function land(scene: LevelScene, sh: Shot, i: number) {
   scene.arrived = new Set(res.state.arrived);
   scene.labMarks = res.state.labMarks;
   const regions = res.after >= res.before ? res.newRegionBests.map((at) => scene.planet.sectors[at].biome) : [];
-  // a throw that makes the planet worse earns nothing (M0 churn rule), arrivals included
-  const arrivals = res.after >= res.before ? res.firstArrivals.length : 0;
   if (res.novaGain > 0) {
     const target = scene.launch;
     for (let spark = 0; !scene.o.reduceMotion && spark < Math.min(12, res.novaGain); spark++) {
@@ -939,6 +947,7 @@ export function land(scene: LevelScene, sh: Shot, i: number) {
     scene.o.reduceMotion ? 10 : scene.o.launcher.id === 'zip' || (scene.o.launcher.id === 'skipper' && sh.specialBounced) ? 16 : 34,
     7,
   );
+  styleMarks.set(scene, { kind: sh.kind, x: sh.x, y: sh.y, at: scene.time, nova: !!res.novaFired, fusion: !!reaction });
   scene.ring(sh.x, sh.y, OBJECT_FEEL[sh.kind].burst, scene.R * 0.9);
   if (scene.o.launcher.id === 'swoop') scene.ring(sh.x, sh.y, '#85c8dd', scene.R * 1.1);
   if (scene.o.launcher.id === 'sparkler' && reaction) scene.ring(sh.x, sh.y, '#97d991', scene.R * 1.25);
@@ -988,8 +997,6 @@ export function land(scene: LevelScene, sh: Shot, i: number) {
     scene.cheerUntil = Math.max(scene.cheerUntil, scene.time + 0.9);
   }
   scene.o.onPlanet?.(scene.planet);
-  const tokens = scene.o.onLand?.(regions, arrivals);
-  if (tokens) setTimeout(() => scene.popup(sh.x + 30, sh.y + 10, `+${tokens} ${scene.o.eventEmoji ?? '⭐'}`, '#ffd84a', 18, 1.3), 500);
   if (delta !== 0) scene.popup(sh.x, sh.y - 20, `${delta > 0 ? '+' : ''}${delta}`, delta > 0 ? '#9dffb0' : '#ff9db0', 26);
   // name up to two newly formed biomes
   const shown = new Set<string>();

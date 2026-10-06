@@ -1,5 +1,4 @@
-import { Capacitor } from '@capacitor/core';
-import { NativePurchases, PURCHASE_TYPE, type Transaction } from '@capgo/native-purchases';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { PRODUCTS, PRODUCT_BY_ID, type ProductDef } from './config';
 
 export interface PurchaseOutcome {
@@ -11,8 +10,43 @@ export interface PurchaseOutcome {
   productId?: string;
 }
 
-export type IapEvent = { productId: string; txId: string; revokedAt?: number; purchasedAt?: number };
+export type IapEvent = {
+  productId: string;
+  txId: string;
+  originalTxId?: string;
+  revokedAt?: number;
+  purchasedAt?: number;
+  ownershipType?: string;
+};
 export type StorePrice = { display: string; currency: string; amount: number };
+
+type JournalRecord = {
+  transactionId: string;
+  originalTransactionId: string;
+  productId: string;
+  purchaseDate: number;
+  revocationDate: number | null;
+  ownershipType: string;
+};
+interface PurchaseJournalBridge {
+  drain(): Promise<{ records: JournalRecord[] }>;
+  ack(options: { ids: string[] }): Promise<void>;
+  addListener(event: 'queued', callback: () => void): Promise<unknown>;
+  prices(options: { ids: string[] }): Promise<{ prices: (StorePrice & { id: string })[] }>;
+  purchase(options: { id: string }): Promise<PurchaseOutcome>;
+  restore(): Promise<{ ids: string[] }>;
+  owned(): Promise<{ ids: string[] }>;
+  transactions(): Promise<{ records: JournalRecord[] }>;
+}
+const journal = registerPlugin<PurchaseJournalBridge>('PurchaseJournal');
+const fromJournal = (record: JournalRecord): IapEvent => ({
+  productId: record.productId,
+  txId: record.transactionId,
+  originalTxId: record.originalTransactionId,
+  purchasedAt: record.purchaseDate,
+  revokedAt: record.revocationDate ?? undefined,
+  ownershipType: record.ownershipType,
+});
 
 /** A missing entitlement is not proof of revocation, particularly offline. */
 export const shouldRevoke = (event: IapEvent) => event.revokedAt !== undefined;
@@ -27,45 +61,33 @@ export interface Iap {
   owned(): Promise<string[]>;
   transactions(): Promise<IapEvent[]>;
   finish(txId: string): Promise<void>;
+  drain(): Promise<IapEvent[]>;
+  ack(ids: string[]): Promise<void>;
 }
 
-// StoreKit 2 via @capgo/native-purchases (no server or third-party account needed).
+// StoreKit 2 via the app-local native journal (no auto-finishing third-party listener).
 const nativeIap: Iap = {
   kind: 'native',
   async init(onTx) {
-    // Purchases completed outside purchase() (Ask to Buy, interrupted) arrive here; caller dedupes by txId.
-    await NativePurchases.addListener('transactionUpdated', (tx: Transaction) => {
-      if (tx.productIdentifier && tx.transactionId)
-        onTx({
-          productId: tx.productIdentifier,
-          txId: tx.transactionId,
-          revokedAt: tx.revocationDate ? Date.parse(tx.revocationDate) || Date.now() : undefined,
-          purchasedAt: tx.purchaseDate ? Date.parse(tx.purchaseDate) : undefined,
-        });
+    // A native UserDefaults journal retains updates even when no web listener exists.
+    await journal.addListener('queued', () => {
+      void journal
+        .drain()
+        .then(({ records }) => records.forEach((record) => onTx(fromJournal(record))))
+        .catch(() => {});
     });
   },
   async prices() {
     try {
-      const { products } = await NativePurchases.getProducts({
-        productIdentifiers: PRODUCTS.map((p) => p.id),
-        productType: PURCHASE_TYPE.INAPP,
-      });
-      return Object.fromEntries(products.map((p) => [p.identifier, { display: p.priceString, currency: p.currencyCode, amount: p.price }]));
+      const { prices } = await journal.prices({ ids: PRODUCTS.map((p) => p.id) });
+      return Object.fromEntries(prices.map(({ id, ...price }) => [id, price]));
     } catch {
       return {};
     }
   },
   async purchase(p) {
     try {
-      const tx = await NativePurchases.purchaseProduct({
-        productIdentifier: p.id,
-        productType: PURCHASE_TYPE.INAPP,
-        quantity: 1,
-        isConsumable: p.consumable,
-        autoAcknowledgePurchases: false,
-      });
-      if (!tx.transactionId) return { ok: false, pending: true };
-      return { ok: true, txId: tx.transactionId, productId: tx.productIdentifier || p.id };
+      return await journal.purchase({ id: p.id });
     } catch (e) {
       const msg = String((e as Error)?.message ?? e);
       if (/pending|ask to buy|deferred/i.test(msg)) return { ok: false, pending: true };
@@ -75,31 +97,26 @@ const nativeIap: Iap = {
   },
   async restore() {
     try {
-      await NativePurchases.restorePurchases();
+      return (await journal.restore()).ids;
     } catch {
-      /* fall through to what StoreKit already knows */
+      return this.owned();
     }
-    return this.owned();
   },
   async owned() {
-    const { purchases } = await NativePurchases.getPurchases({ productType: PURCHASE_TYPE.INAPP, onlyCurrentEntitlements: true });
-    return purchases
-      .filter((t) => !t.revocationDate && PRODUCT_BY_ID[t.productIdentifier] && !PRODUCT_BY_ID[t.productIdentifier].consumable)
-      .map((t) => t.productIdentifier);
+    const { ids } = await journal.owned();
+    return ids.filter((id) => PRODUCT_BY_ID[id] && !PRODUCT_BY_ID[id].consumable);
   },
   async transactions() {
-    const { purchases } = await NativePurchases.getPurchases({ productType: PURCHASE_TYPE.INAPP });
-    return purchases
-      .filter((tx) => tx.productIdentifier && tx.transactionId)
-      .map((tx) => ({
-        productId: tx.productIdentifier,
-        txId: tx.transactionId,
-        revokedAt: tx.revocationDate ? Date.parse(tx.revocationDate) || Date.now() : undefined,
-        purchasedAt: tx.purchaseDate ? Date.parse(tx.purchaseDate) : undefined,
-      }));
+    return (await journal.transactions()).records.map(fromJournal);
   },
   async finish(txId) {
-    await NativePurchases.acknowledgePurchase({ purchaseToken: txId });
+    await journal.ack({ ids: [txId] });
+  },
+  async drain() {
+    return (await journal.drain()).records.map(fromJournal);
+  },
+  async ack(ids) {
+    await journal.ack({ ids });
   },
 };
 
@@ -172,6 +189,10 @@ const mockIap: Iap = {
     return [];
   },
   async finish() {},
+  async drain() {
+    return [];
+  },
+  async ack() {},
 };
 
 const noIap: Iap = {
@@ -191,6 +212,10 @@ const noIap: Iap = {
     return [];
   },
   async finish() {},
+  async drain() {
+    return [];
+  },
+  async ack() {},
 };
 
 export function createIap(): Iap {

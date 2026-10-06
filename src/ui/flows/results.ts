@@ -4,7 +4,7 @@ import { h, btn, fmt, modal } from '../dom';
 import { sfx } from '../audio';
 import { applyLevelWin } from '../../meta/economy';
 import { applyReward, chestsReady } from '../../meta/progression';
-import { roadReady } from '../../meta/starroad';
+import { COSMIC_ROAD_ID, currentRoad, roadReady } from '../../meta/starroad';
 import { recordWishRound, wishClaimable } from '../../meta/wishes';
 import { today } from '../../meta/profile';
 
@@ -14,7 +14,6 @@ export { BOSS_REWARD } from '../../meta/tuning';
 import { FINISH_DUST_PER_THROW, type LevelResult } from '../game';
 import type { App } from '../app';
 import { sharePostcard } from '../postcard';
-import { addTokens, ensureEvent, eventActive, eventReady } from '../../meta/events';
 import { planetName, t, tp } from '../../i18n';
 import { addDrops, essenceDropsFor } from '../../meta/constellations';
 import { essenceLine, helpedLine } from '../../meta/helped';
@@ -144,15 +143,21 @@ export function levelResults(app: App, r: LevelResult) {
   if (!r.reactionRecorded) for (const id of r.reactionEvents ?? r.reactions ?? []) if (recordReaction(p, id).first) newReactions.push(id);
   if (!r.comboRecorded) for (const event of r.comboEvents ?? []) recordCombo(p, event.links, event.reaction, event.superFusion);
   recordWishRound(p, 'campaign', r.planet, today(), r.level.start);
-  if (out.newStars && eventActive(p) && ensureEvent(p).stars) addTokens(p, out.newStars * 4);
   p.tutorial = true;
   app.saveNow();
   app.syncGameCenter();
   const extras: HTMLElement[] = [];
   if (chestsReady(p).length) extras.push(h('div', { class: 'nudge' }, t('🎁 Chapter chest ready on the Star Map!')));
-  if (unlocked(p, 'star_road') && roadReady(p).length) extras.push(h('div', { class: 'nudge' }, t('🛣️ New Star Road reward!')));
-  if (eventActive(p) && eventReady(p).length)
-    extras.push(h('div', { class: 'nudge' }, t('{emoji} Event reward ready!', { emoji: ensureEvent(p).emoji })));
+  if (unlocked(p, 'star_road') && roadReady(p, currentRoad(p).id).length)
+    extras.push(
+      h(
+        'div',
+        { class: 'nudge' },
+        currentRoad(p).id === COSMIC_ROAD_ID
+          ? t('🛣️ New Cosmic Road reward!')
+          : t('🛣️ New {road} reward!', { road: t(currentRoad(p).name) }),
+      ),
+    );
   if (unlocked(p, 'quests') && wishClaimable(p)) extras.push(h('div', { class: 'nudge' }, t('A Wish is ready to claim!')));
   // The campaign is the only Essence source; a replay pays half per colour, and so does a win
   // after a continue, so gems never speed up Lab progress (M11 economy gate).

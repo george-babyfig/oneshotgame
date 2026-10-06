@@ -2,12 +2,13 @@
 import { SPECIES_BY_ID, type BiomeId, type Planet } from '../core/world';
 import { rngFrom } from '../core/levels';
 import { t } from '../i18n';
-import type { Profile, QuestState } from './profile';
+import { today, type Profile, type QuestState } from './profile';
 import { QUESTS, QUEST_BONUS, WISH_REWARD } from './tuning';
 import { earn } from './wallet';
 import { unlocked } from './unlocks';
 import { addFriendship } from './homeworld';
-import { addRoadPoints } from './starroad';
+import { grantProfileRoadPoints } from './starroad';
+import { grantWishSampler } from './cosmetics';
 import { checkMail } from './inbox';
 import { REACTIONS, type ReactionId } from '../core/round';
 
@@ -298,7 +299,11 @@ export function claimWish(p: Profile, id: string, day?: string): boolean {
   card.claimed = true;
   earn(p, 'gems', WISH_REWARD.gems, 'wish');
   earn(p, 'dust', WISH_REWARD.dust, 'wish');
-  addRoadPoints(p, WISH_REWARD.roadPoints, day);
+  grantProfileRoadPoints(p, { source: 'wish', date: day ?? today(), earningKey: card.id, delta: WISH_REWARD.roadPoints });
+  // Each named sampler is earned from a Wish, with no paid entitlement.
+  for (const id of ['sampler_tidepool', 'sampler_cometcandy', 'sampler_crystalfrost'] as const) {
+    if (grantWishSampler(p, id)) break;
+  }
   const resident = p.home.residents.find((r) => r.species === card.species);
   if (resident) {
     addFriendship(p, resident, 2);

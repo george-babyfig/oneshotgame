@@ -30,7 +30,7 @@ const FILES = readdirSync(DIR)
 const DUST_DELTAS: Record<string, number> = {
   'a-new-profile.v3.json': 0,
   'b-mid-game.v3.json': 10440,
-  'c-pre-m0.v3.json': 10440,
+  'c-pre-m0.v3.json': 10740,
   'd-round4.v2.json': 1600,
   'e-pre-m3.v3.json': 0,
   'f-pre-m10.v3.json': 14260,
@@ -43,6 +43,14 @@ type Raw = Record<string, unknown>;
 const load = (f: string): Raw => JSON.parse(readFileSync(join(DIR, f), 'utf8')) as Raw;
 /** Load a fixture the way loadProfile() does: JSON text → migrate(). */
 const loadSave = (f: string): Profile => migrate(JSON.parse(readFileSync(join(DIR, f), 'utf8')) as Raw);
+const EVENT_GEM_DELTAS: Record<string, number> = {
+  'b-mid-game.v3.json': 3,
+  'c-pre-m0.v3.json': 1,
+  'd-round4.v2.json': 14,
+  'f-pre-m10.v3.json': 3,
+  'g-pre-m105.v3.json': 3,
+  'h-pre-m11.v3.json': 3,
+};
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
@@ -99,10 +107,18 @@ describe('save goldens', () => {
             (raw.gems as number) +
             ({ 'b-mid-game.v3.json': 1, 'c-pre-m0.v3.json': 1, 'f-pre-m10.v3.json': 2, 'g-pre-m105.v3.json': 2, 'h-pre-m11.v3.json': 1 }[
               f
-            ] ?? 0),
+            ] ?? 0) +
+            (EVENT_GEM_DELTAS[f] ?? 0),
           piggy: raw.piggy,
           mats: raw.mats ?? {},
-          boosters: raw.boosters,
+          boosters:
+            EVENT_GEM_DELTAS[f] === 3
+              ? {
+                  ...(raw.boosters as Raw),
+                  shower: ((raw.boosters as Raw).shower as number) + 1,
+                  spark: ((raw.boosters as Raw).spark as number) + 1,
+                }
+              : raw.boosters,
         });
         expect(p.dust).toBe((raw.dust as number) + DUST_DELTAS[f]);
       });
@@ -306,7 +322,7 @@ describe('save goldens: specific migrations', () => {
   it('grandfathers pre-M3 gates and marks past intro cards as seen', () => {
     const p = loadSave('e-pre-m3.v3.json');
     expect(p.m3Migrated).toBe(true);
-    for (const id of ['voyage', 'weekly_event', 'festival', 'star_calendar', 'momentum', 'quests', 'star_road'] as const)
+    for (const id of ['voyage', 'festival', 'star_calendar', 'momentum', 'quests', 'star_road'] as const)
       expect(unlocked(p, id), id).toBe(true);
     for (const id of ['homeworld', 'festival', 'voyage'] as const) expect(p.mailSeen).toContain(`coach-${id}`);
     expect(migrate(JSON.parse(JSON.stringify(p))).legacyUnlocks).toEqual(p.legacyUnlocks);
@@ -328,8 +344,8 @@ describe('save goldens: specific migrations', () => {
     expect(p.settings).toMatchObject({ notifications: true, gameCenter: true, lang: 'es', hemi: 'south', music: false });
     expect(p.settings.textSize).toBe('standard');
     expect(p.festival).toEqual({ key: '2026-09', spotted: 31, claimed: [0, 1] });
-    expect(p.voyage).toEqual({ week: '2026-W39', base: 19, cleared: 3, stars: [3, 2, 3] });
-    expect(p.event).toEqual({ week: '2026-W39', tokens: 64, claimed: [0, 1] });
+    expect(p.voyage).toEqual({ week: '2026-W39', base: 19, cleared: 3, stars: [3, 2, 3], hemisphere: 'south', legacyCatchUpPaid: false });
+    expect(p.event).toEqual({ week: '2026-W39', tokens: 0, claimed: [0, 1, 2], retired: true, legacyGems: 13 });
     expect(p.daily).toEqual({ last: '2026-09-27', streak: 17 });
     expect(p.fails).toEqual({ 24: 2 });
     expect(p.continuesUsed).toEqual({ 17: 1 });
@@ -371,7 +387,7 @@ describe('save goldens: specific migrations', () => {
     expect(p.mailSeen).toContain('coach-homeworld');
     expect(p.mailSeen).toContain('coach-festival');
     expect(p.festival).toEqual({ key: '', spotted: 0, claimed: [] });
-    expect(p.voyage).toEqual({ week: '', base: 8, cleared: 0, stars: [] });
+    expect(p.voyage).toEqual({ week: '', base: 8, cleared: 0, stars: [], hemisphere: 'north' });
     expect(p.buddy).toEqual({ species: null, acc: null });
     expect(p.album.pages).toHaveLength(3);
     expect(p.home.friends).toEqual({});

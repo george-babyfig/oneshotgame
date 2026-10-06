@@ -5,14 +5,14 @@ import { sfx, setMusicTheme } from '../audio';
 import { haptic } from '../haptics';
 import { LevelScene, type LevelResult } from '../game';
 import type { LevelDef } from '../../core/levels';
-import { eventEndsIn } from '../../meta/events';
+import { eventEndsIn, eventFor } from '../../meta/events';
 import {
   VOYAGE_LEN,
-  VOYAGE_REWARDS,
   clearStop,
   ensureVoyage,
+  stopReward,
+  voyageHemisphere,
   voyageLevel,
-  voyageName,
   voyageStars,
   voyageUnlocked,
 } from '../../meta/voyage';
@@ -31,11 +31,11 @@ import { helpedLine } from '../../meta/helped';
 
 // Levels are pure functions of week + base + stop, so cache them for the session.
 const cache = new Map<string, LevelDef>();
-function stopLevel(week: string, base: number, i: number, taught: number) {
-  const key = `${week}|${base}|${i}|${taught}`;
+function stopLevel(week: string, base: number, i: number, taught: number, hemisphere: 'north' | 'south') {
+  const key = `${week}|${base}|${i}|${taught}|${hemisphere}`;
   let L = cache.get(key);
   if (!L) {
-    L = voyageLevel(week, base, i, taught);
+    L = voyageLevel(week, base, i, taught, hemisphere);
     cache.set(key, L);
   }
   return L;
@@ -71,6 +71,8 @@ const X = [22, 60, 78, 44, 18, 52, 80];
 export function showVoyage(app: App) {
   const p = app.p;
   const v = ensureVoyage(p);
+  const hemisphere = voyageHemisphere(p);
+  const theme = eventFor(v.week, hemisphere);
   const now = Date.now();
   const until = untilText(now + eventEndsIn(new Date(now)), now, getLang());
   const untilLabel =
@@ -80,7 +82,7 @@ export function showVoyage(app: App) {
         ? t('until {day}', until.vars)
         : t('until {date}', until.vars);
   const stops = Array.from({ length: VOYAGE_LEN }, (_, i) => {
-    const L = stopLevel(v.week, v.base, i, p.level);
+    const L = stopLevel(v.week, v.base, i, p.level, hemisphere);
     const open = voyageUnlocked(p, i);
     const s = v.stars[i] ?? 0;
     const last = i === VOYAGE_LEN - 1;
@@ -112,14 +114,15 @@ export function showVoyage(app: App) {
       h(
         'div',
         { class: 'voy-head' },
-        h('b', null, t(voyageName(v.week))),
+        h('b', null, `${theme.emoji} ${t(theme.name)}`),
         h('small', null, `${untilLabel} · ★ ${voyageStars(p)}/${VOYAGE_LEN * 3}`),
+        v.week > '2026-W44' ? h('small', { class: 'muted' }, t('Seven themed stops.')) : null,
         h('div', { class: 'qbar' }, h('i', { style: `width:${(v.cleared / VOYAGE_LEN) * 100}%` })),
         h(
           'small',
           { class: 'muted' },
           done
-            ? t('Voyage complete! A new route opens on Monday.')
+            ? t('Voyage complete!')
             : t('{n} of {total} stops cleared. The last stop has a Comet Guardian!', { n: v.cleared, total: VOYAGE_LEN }),
         ),
       ),
@@ -165,10 +168,11 @@ function drawRoute(app: App) {
 function stopSheet(app: App, i: number) {
   const p = app.p;
   const v = p.voyage;
-  const L = stopLevel(v.week, v.base, i, p.level);
+  const hemisphere = voyageHemisphere(p);
+  const L = stopLevel(v.week, v.base, i, p.level, hemisphere);
   const first = i === v.cleared;
   const m = modal([
-    h('div', { class: 'm-sub' }, t('{voyage} · Stop {n}', { voyage: t(voyageName(v.week)), n: i + 1 })),
+    h('div', { class: 'm-sub' }, t('{voyage} · Stop {n}', { voyage: t(eventFor(v.week, hemisphere).name), n: i + 1 })),
     h('div', { class: 'm-title' }, planetName(L.name)),
     h('div', { class: 'vthumb' }, thumb(L, 120, false)),
     i === VOYAGE_LEN - 1 ? h('div', { class: 'twist-chip' }, t('☄️ Comet Guardian — hit it 3 times!')) : null,
@@ -189,7 +193,7 @@ function stopSheet(app: App, i: number) {
     h(
       'p',
       { class: 'muted' },
-      first ? t('Reward: {r}', { r: rewardText(VOYAGE_REWARDS[i]).join('  ') }) : t('Already cleared — replay for more stars.'),
+      first ? t('Reward: {r}', { r: rewardText(stopReward(p, i)).join('  ') }) : t('Already cleared — replay for more stars.'),
     ),
     btn(tp(L.throws, 'Set off! · {n} throw', 'Set off! · {n} throws'), 'primary big wide', () => {
       m.close();
@@ -204,7 +208,7 @@ function play(app: App, i: number) {
   const p = app.p;
   const v = p.voyage;
   const week = v.week;
-  const L = stopLevel(week, v.base, i, p.level);
+  const L = stopLevel(week, v.base, i, p.level, voyageHemisphere(p));
   p.stats.plays++;
   const opts = app.sceneOpts(
     'voyage',

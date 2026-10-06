@@ -1,5 +1,19 @@
 # Launch gap report: Comet Garden (com.pocketplanet.game), 5 Oct 2026
 
+> **Status, 6 October 2026 (after M12): the studio side of the launch candidate is built.** M0-M12 are done, and every BLOCKER, HIGH and MEDIUM studio item below is fixed, except the ones that need hardware:
+>
+> - **Needs a device or Xcode StoreKit testing (studio + owner):**
+>   - the new StoreKit 2 purchase journal (`ios/App/App/PurchaseJournalPlugin.swift`, which replaces the third-party plugin on iOS);
+>   - the StoreKit matrix in `docs/qa/release.md`: Ask to Buy approved while closed, kill between payment and grant, refund, Family Sharing, restore;
+>   - 60 fps on the oldest iPhone with 12 friends;
+>   - sound and haptics feel;
+>   - the iPad compatibility pass.
+> - **Store art still to capture after the final build:** the screenshots and App Preview still show pre-M10 Homeworld UI (H7). Re-capture them with `store/tools/scrapbook-capture.mjs` and `shots.mjs --only=video` once the build is frozen.
+> - **Owner checklist (§6, unchanged):** Apple Developer account, Paid Apps Agreement, App Store Connect record and the 12 products from `store/catalogue-sheet.md`, DSA trader status, trademark search, site hosting and a support mailbox, TestFlight with real devices, T0 kid playtests, legal reads, and native-speaker review of all six languages.
+> - **Owner decisions:** 33-55 are open with defaults applied (ROADMAP-v2 §10).
+>
+> The rest of this file is the original audit of 5 October, kept for its evidence.
+
 I re-checked every surprising claim from the five audits against the repo, read-only. I confirmed these with my own commands: `Info.plist`, `PrivacyInfo.xcprivacy`, the SceneDelegate/MainViewController/storyboard chain and its git history, the icon's alpha channel (`sips`), the missing `store/iap-review/`, `docs/compliance.md`, `docs/qa/release.md` and `e2e/j4*`, the iOS-15.4-only APIs, the save-load fallback, the shop lock, the IAP price mismatch, the Game Center toggle, haptics, purchase reconcile, the CI iOS job, the npm scripts and the site placeholders.
 
 Where auditors disagreed, I settled it from the files:

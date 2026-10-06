@@ -46,7 +46,7 @@ App Store Connect → Apps → **+** → New App.
 
 ## 5. In-app purchases
 
-Create the current 7 products exactly as in `compliance.md` (product IDs must match the code). For each, set the display name and description per language, the price tier, Family Sharing flag and a review screenshot of the Grown-ups shop. Submit them with the first version. Recheck this count against the frozen M12 catalogue before creating permanent IDs.
+After owner approval, create exactly the 12 products in `catalogue-sheet.md`. For each, use the six localized names and descriptions, the USD tier, Family Sharing flag and its matching review screenshot from `iap-review/`. Do not create any App Store Connect object before the sheet is approved. Submit all twelve with the first version.
 
 ## 6. Game Center (optional)
 

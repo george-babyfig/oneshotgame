@@ -5,9 +5,20 @@ import {
   COSMETICS,
   COSMETIC_BY_ID,
   DEFAULT_LOOK,
+  SLOTS,
+  STYLE_SLOTS,
   buyCosmetic,
   currentLook,
+  clearStyleSlot,
   equip,
+  beginStyleDraft,
+  activeStyleDraft,
+  finishStyleDraft,
+  loadPreset,
+  previewLook,
+  savePreset,
+  setStyleDraft,
+  tryStyle,
   fullSet,
   masteryLevel,
   owns,
@@ -68,6 +79,49 @@ describe('cosmetics', () => {
     expect(currentLook(p).hat).toBe(DEFAULT_LOOK.hat);
   });
 
+  it('keeps explicit try-ons from masking buys and saved M12 slots', () => {
+    const p = defaultProfile();
+    p.gems = 500;
+    expect(beginStyleDraft(p).slots).toEqual({});
+    const draft = tryStyle(beginStyleDraft(p), 'hat_sprout');
+    setStyleDraft(p, draft);
+    expect(previewLook(p).hat).toBe('hat_sprout');
+    expect(buyCosmetic(p, 'hat_sprout')).toBe(true);
+    expect(equip(p, 'hat_sprout')).toBe(true);
+    expect(previewLook(p).hat).toBe('hat_sprout');
+    finishStyleDraft(p, draft);
+    expect(currentLook(p).hat).toBe('hat_sprout');
+    setStyleDraft(p, null);
+
+    p.wardrobe.push('gardensky_seed_trail');
+    expect(equip(p, 'gardensky_seed_trail')).toBe(true);
+    savePreset(p, 0);
+    clearStyleSlot(p, 'shotTrail:seed');
+    expect(currentLook(p)['shotTrail:seed']).toBeUndefined();
+    expect(loadPreset(p, 0)).toBe(true);
+    expect(currentLook(p)['shotTrail:seed']).toBe('gardensky_seed_trail');
+  });
+
+  it('can clear every M12 wear slot', () => {
+    const p = defaultProfile();
+    for (const slot of STYLE_SLOTS.filter((value) => !SLOTS.includes(value as (typeof SLOTS)[number]))) {
+      p.look = { ...p.look, [slot]: 'temporary' };
+      clearStyleSlot(p, slot);
+      expect((p.look as Record<string, string>)[slot], slot).toBeUndefined();
+    }
+  });
+
+  it('ends paid try-on when Hide paid looks turns on', () => {
+    const p = defaultProfile();
+    setStyleDraft(p, tryStyle(beginStyleDraft(p), 'supernova_nebula'));
+    expect(previewLook(p).supernova).toBe('supernova_nebula');
+    p.settings.hidePaidLooks = true;
+    expect(previewLook(p).supernova).toBeUndefined();
+    expect(activeStyleDraft(p)).toBeUndefined();
+    p.settings.hidePaidLooks = false;
+    expect(previewLook(p).supernova).toBeUndefined();
+  });
+
   it('detects a full set and launcher mastery', () => {
     expect(fullSet({ suit: 'suit_star', hat: 'hat_halo', launcher: 'l_orbit', trail: 'tr_cosmic', emote: 'em_cheer' })).toBe('captain');
     expect(fullSet({ suit: 'suit_star', hat: 'hat_halo', launcher: 'l_pad', trail: 'tr_cosmic', emote: 'em_cheer' })).toBeNull();
@@ -90,11 +144,17 @@ describe('planet passport', () => {
     const p = defaultProfile();
     expect(titlesOwned(p).map((x) => x.text)).toEqual(['Stargazer']);
     p.pass = true;
+    expect(titlesOwned(p).some((x) => x.id === 'pass')).toBe(false);
+    p.roadPass = [roadTierOf('title_star_captain')!.i];
     expect(titlesOwned(p).some((x) => x.id === 'pass')).toBe(true);
     p.passport.banner = 5; // Nebula needs rank 4
     expect(currentBanner(p).id).toBe(0);
     p.rank = 4;
     expect(currentBanner(p).id).toBe(5);
+    p.passport.banner = 7;
+    expect(currentBanner(p).id).toBe(0);
+    p.roadPass.push(roadTierOf('banner_gilded')!.i);
+    expect(currentBanner(p).id).toBe(7);
   });
 
   it('pins up to three earned badges', () => {

@@ -6,13 +6,13 @@ import { BIOMES, SPECIES_BY_ID, type Planet } from '../core/world';
 import { DIFFICULTY_DUST, type Difficulty } from '../core/levels';
 import { PIGGY_MAX, PIGGY_PER_WIN, PRODUCT_BY_ID, GEMS_PER_NEW_SPECIES } from './config';
 import { BOOSTERS, type BoosterId } from './config';
-import { type GalaxyPlanet, type Profile } from './profile';
+import { today, type GalaxyPlanet, type Profile } from './profile';
 import type { HomeworldLevel, WonRoundEvent } from './homeworldTypes';
 import { collectAll, pendingHomeProduction } from './homeworld';
 import { openVisitor } from './visitors';
 import { WELCOME_BACK_GEMS } from './tuning';
 import { t } from '../i18n';
-import { addRoadPoints } from './starroad';
+import { grantProfileRoadPoints } from './starroad';
 import { takeWonContinues } from './continues';
 
 /** Stardust per hour produced by one galaxy planet. */
@@ -245,7 +245,8 @@ export function applyLevelWin(p: Profile, w: WinInput): LevelOutcome {
   const gems =
     (stars === 3 && prev < 3 ? WIN_REWARD.threeStarGems : 0) + (firstClear && difficulty === 'super' ? WIN_REWARD.superFirstClearGems : 0);
   p.stars[n] = Math.max(prev, stars);
-  addRoadPoints(p, newStars, w.day);
+  if (newStars)
+    grantProfileRoadPoints(p, { source: 'campaign', date: w.day ?? today(), earningKey: `planet:${n}:best:${stars}`, delta: newStars });
   earn(p, 'dust', dust, firstClear ? 'first_clear' : 'level_win');
   earn(p, 'gems', gems, firstClear ? 'first_clear' : 'level_win');
   p.piggy = Math.min(PIGGY_MAX, p.piggy + PIGGY_PER_WIN);
@@ -284,19 +285,65 @@ export function discoverSpecies(p: Profile, id: string): boolean {
   return true;
 }
 
-type CheckoutMeta = Profile['meta'] & { passLooksOnly?: boolean; refundQuietUntil?: number; revokedProducts?: Record<string, number> };
+type CheckoutMeta = Profile['meta'] & {
+  passLooksOnly?: boolean;
+  refundQuietUntil?: number;
+  revokedProducts?: Record<string, number>;
+  productEntitlements?: string[];
+};
+
+/** Product IDs, rather than transaction IDs, are the durable look entitlements. */
+export function ownsProduct(p: Profile, productId: string): boolean {
+  const def = PRODUCT_BY_ID[productId];
+  if (!def || def.consumable) return false;
+  if (def.key === 'starter') return p.starter;
+  if (def.key === 'pass') return p.pass;
+  return ((p.meta as CheckoutMeta).productEntitlements ?? []).includes(productId);
+}
+
+/** Restore has no receipt and never adds currency. */
+export function restoreProduct(p: Profile, productId: string): boolean {
+  const def = PRODUCT_BY_ID[productId];
+  if (!def || def.consumable) return false;
+  const meta = p.meta as CheckoutMeta;
+  // Repair older saves that kept the Pass bit but lost its looks-only marker.
+  if (def.key === 'pass' && p.pass) meta.passLooksOnly = true;
+  if (ownsProduct(p, productId)) return false;
+  if (meta.revokedProducts?.[productId]) {
+    const { [productId]: _revoked, ...remaining } = meta.revokedProducts;
+    meta.revokedProducts = remaining;
+  }
+  if (def.key === 'starter') {
+    p.starter = true;
+    if (!p.skins.includes('aurora')) p.skins.push('aurora');
+  } else if (def.key === 'pass') {
+    p.pass = true;
+    meta.passLooksOnly = true;
+    if (p.roadRecords?.road00?.claimedPaidTierIds.includes('road00:tier00') && !p.skins.includes('cosmic')) p.skins.push('cosmic');
+  } else {
+    meta.productEntitlements = [...(meta.productEntitlements ?? []), productId];
+  }
+  return true;
+}
 
 export function refundQuietUntil(p: Profile): number {
   return (p.meta as CheckoutMeta).refundQuietUntil ?? 0;
 }
 
+export function noteRefund(p: Profile, at: number): void {
+  const meta = p.meta as CheckoutMeta;
+  meta.refundQuietUntil = Math.max(meta.refundQuietUntil ?? 0, at + 7 * 86400000);
+}
+
 /** A revoked entitlement loses its looks; previously spent rewards stay put. */
 export function revokeProduct(p: Profile, productId: string, at = Date.now()): boolean {
   const def = PRODUCT_BY_ID[productId];
-  if (!def || def.consumable) return false;
+  if (!def) return false;
   const meta = p.meta as CheckoutMeta;
+  noteRefund(p, at);
+  if (def.consumable) return true; // Refunded currency stays spent; announcements still rest.
   meta.revokedProducts = { ...meta.revokedProducts, [productId]: at };
-  meta.refundQuietUntil = Math.max(meta.refundQuietUntil ?? 0, at + 7 * 86400000);
+  meta.productEntitlements = (meta.productEntitlements ?? []).filter((id) => id !== productId);
   if (def.key === 'starter') {
     p.starter = false;
     p.skins = p.skins.filter((id) => id !== 'aurora');
@@ -315,7 +362,7 @@ export function revokeProduct(p: Profile, productId: string, at = Date.now()): b
 export function grantProduct(p: Profile, productId: string, txId: string, piggyQuote?: number): { gems: number; title: string } | null {
   const def = PRODUCT_BY_ID[productId];
   if (!def || p.processedTx.includes(txId)) return null;
-  if (!def.consumable && (def.key === 'starter' ? p.starter : def.key === 'pass' ? p.pass : false)) {
+  if (!def.consumable && ownsProduct(p, productId)) {
     p.processedTx.push(txId);
     return { gems: 0, title: def.title };
   }
@@ -328,13 +375,13 @@ export function grantProduct(p: Profile, productId: string, txId: string, piggyQ
       p.pendingPiggy = null;
       break;
     case 'starter':
-      p.starter = true;
-      if (!p.skins.includes('aurora')) p.skins.push('aurora');
+      restoreProduct(p, productId);
       break;
     case 'pass':
-      p.pass = true;
-      (p.meta as CheckoutMeta).passLooksOnly = true;
+      restoreProduct(p, productId);
       break;
+    default:
+      if (!def.consumable) restoreProduct(p, productId);
   }
   earn(p, 'gems', gems, 'iap');
   return { gems, title: def.title };

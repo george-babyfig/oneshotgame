@@ -5,6 +5,10 @@ import { MAT_EMOJI } from '../../meta/constellations';
 import { bayLevel } from '../../meta/homeworld';
 import { landmarkDefinition, landmarkOpen, landmarkState } from '../../meta/landmarks';
 import { t } from '../../i18n';
+import { previewLook } from '../../meta/cosmetics';
+import { drawStructure } from '../art/structures';
+import { structureStyleId } from '../art/styleRender';
+import { canvasDpr } from '../devcapture';
 import { btn, fmt, h, toast } from '../dom';
 import { haptic } from '../haptics';
 import { sfx } from '../audio';
@@ -61,6 +65,7 @@ const BAY_CSS = `
 .launch-bay .bay-card.selected{box-shadow:0 0 0 2px #fff6bd inset}
 .launch-bay .bay-head{display:flex;align-items:center;gap:10px;min-width:0}
 .launch-bay .bay-emblem{display:grid;place-items:center;flex:none;width:44px;height:44px;border-radius:14px;border:2px solid var(--bay-color);font-size:24px;background:#141328}
+.launch-bay .bay-building-look{width:56px;height:56px;vertical-align:middle;margin-right:8px}
 .launch-bay .locked .bay-emblem{filter:grayscale(1);opacity:.55}
 .launch-bay .bay-head-text{min-width:0;flex:1}
 .launch-bay .bay-name{font-size:max(12px,calc(19px * var(--text-scale)));line-height:1.1}
@@ -260,13 +265,28 @@ function card(app: App, id: LauncherId): HTMLElement {
 
 export function showLaunchBay(app: App, focusId?: LauncherId, focusKind: 'selected' | 'button' = 'button') {
   rememberScroll(app);
+  const building = h('canvas', { class: 'bay-building-look', 'aria-hidden': 'true' }) as HTMLCanvasElement;
+  const dpr = canvasDpr();
+  building.width = building.height = Math.round(56 * dpr);
+  const ink = building.getContext('2d')!;
+  ink.scale(dpr, dpr);
+  ink.translate(28, 51);
+  drawStructure(ink, 'launch_bay', bayLevel(app.p.home), 52, 0.4, false, {
+    style: structureStyleId(previewLook(app.p), 'launch_bay'),
+  });
   app.mount(
     h(
       'div',
       { class: 'screen page launch-bay' },
       h('style', null, BAY_CSS),
       app.topBar(),
-      h('div', { class: 'page-title' }, t('Launch Bay'), h('small', { class: 'muted' }, ` ${t('Level {n}', { n: bayLevel(app.p.home) })}`)),
+      h(
+        'div',
+        { class: 'page-title' },
+        building,
+        t('Launch Bay'),
+        h('small', { class: 'muted' }, ` ${t('Level {n}', { n: bayLevel(app.p.home) })}`),
+      ),
       h(
         'div',
         { class: 'scroll' },

@@ -276,7 +276,7 @@ const KEPT_META: Noun[] = [
     area: 'meta',
     since: 'today',
     strict: true,
-    tr: { es: ['Decoración'], fr: ['Décoration'], de: ['Deko'], pt: ['Decoração'], ja: ja('かざり') },
+    tr: { es: ['Decoración'], fr: ['Décoration'], de: ['Deko'], pt: ['Decoração', 'decorações'], ja: ja('かざり') },
   },
   // Homeworld paint and suit dyes are one colour concept in Styles.
   { en: 'photo mode', area: 'meta', since: 'today' },
@@ -396,8 +396,28 @@ const KEPT_META: Noun[] = [
     since: 'today',
     tr: { es: ['festival'], fr: ['festival', 'fête'], de: ['Fest'], pt: ['festival', 'festivais'], ja: ja('おまつり', '祭') },
   },
-  { en: 'Star Road', area: 'meta', since: 'today', strict: true },
-  { en: 'Cosmic Pass', area: 'meta', since: 'today', strict: true },
+  // M12 renamed the Star Road to the Cosmic Road (Road 0); "Star Road" is retired below.
+  {
+    en: 'Cosmic Road',
+    area: 'meta',
+    since: 'today',
+    strict: true,
+    // German declines the adjective (der Kosmischen Straße).
+    tr: {
+      es: ['Camino Cósmico'],
+      fr: ['Route Cosmique'],
+      de: ['Kosmische Straße', 'Kosmischen Straße'],
+      pt: ['Estrada Cósmica'],
+      ja: ja('コズミックロード'),
+    },
+  },
+  {
+    en: 'Cosmic Pass',
+    area: 'meta',
+    since: 'today',
+    strict: true,
+    tr: { es: ['Pase Cósmico'], fr: ['Pass Cosmique'], de: ['Kosmos-Pass'], pt: ['Passe Cósmico'], ja: ja('コズミックパス') },
+  },
 ];
 
 /** New or renamed nouns (4h table, FLIGHT.md §5.1, HOMEWORLD.md §13.3) with the milestone that brings them. */
@@ -668,6 +688,7 @@ export const RETIRED: Retired[] = [
     tr: trs({ es: 'Mejoras', fr: 'Améliorations', pt: 'Melhorias' }),
   },
   { word: 'Aim Guide', retiredIn: 'M11', tr: trs({ de: 'Zielhilfe' }), note: 'Becomes the Aim line.' },
+  { word: 'Star Road', retiredIn: 'M12', note: 'Becomes the Cosmic Road (Road 0).' },
   { word: 'Extra Throws', retiredIn: 'M11', tr: trs({ de: 'Extra-Würfe' }) },
   { word: 'Wide Impact', retiredIn: 'M11', tr: trs({ de: 'Breiter Einschlag' }) },
   { word: 'Stardust Mill', retiredIn: 'M11', tr: trs({ de: 'Staubmühle' }) },

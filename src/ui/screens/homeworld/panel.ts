@@ -25,6 +25,8 @@ import {
   type BuildingType,
 } from '../../../meta/homeworld';
 import { drawStructure } from '../../art/structures';
+import { previewLook } from '../../../meta/cosmetics';
+import { structureStyleId } from '../../art/styleRender';
 import { constellationsReady } from '../../../meta/constellations';
 import { getLang, t } from '../../../i18n';
 import { whenText } from '../../../meta/dates';
@@ -71,8 +73,8 @@ export function fmtTime(ms: number) {
 }
 
 const iconCache = new Map<string, string>();
-function structIcon(type: BuildingType, lv: number, px: number, kind?: Kind) {
-  const key = `${type}:${lv}:${px}:${kind ?? ''}:${canvasDpr()}`;
+function structIcon(type: BuildingType, lv: number, px: number, kind?: Kind, style?: string) {
+  const key = `${type}:${lv}:${px}:${kind ?? ''}:${style ?? ''}:${canvasDpr()}`;
   const cached = iconCache.get(key);
   if (cached) {
     const img = document.createElement('img');
@@ -88,7 +90,7 @@ function structIcon(type: BuildingType, lv: number, px: number, kind?: Kind) {
   const g = cv.getContext('2d')!;
   g.scale(dpr, dpr);
   g.translate(px / 2, px * 0.9);
-  drawStructure(g, type, lv, px * 0.95, 0.4, false, { kind });
+  drawStructure(g, type, lv, px * 0.95, 0.4, false, { kind, style });
   const img = document.createElement('img');
   img.src = cv.toDataURL();
   img.width = img.height = px;
@@ -399,7 +401,7 @@ export function createPanel(ctx: HomeworldPanelContext) {
                     renderPanel();
                   },
                 },
-                structIcon('lab', 1, 54, kind),
+                structIcon('lab', 1, 54, kind, structureStyleId(previewLook(p), 'lab', kind)),
                 h('b', null, t(LAB_NAME[kind])),
                 h(
                   'small',
@@ -437,7 +439,7 @@ export function createPanel(ctx: HomeworldPanelContext) {
                   renderPanel();
                 },
               },
-              structIcon(type, 1, 54),
+              structIcon(type, 1, 54, undefined, structureStyleId(previewLook(p), type)),
               h('b', null, t(d.name)),
               h(
                 'small',
@@ -464,7 +466,7 @@ export function createPanel(ctx: HomeworldPanelContext) {
         h(
           'div',
           { class: 'hw-head' },
-          structIcon(b.type, b.lv, 56),
+          structIcon(b.type, b.lv, 56, b.kind, structureStyleId(previewLook(p), b.type, b.kind)),
           h(
             'div',
             null,

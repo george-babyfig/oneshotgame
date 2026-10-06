@@ -81,6 +81,12 @@ export function drawKeeper(g: G, look: Look, x: number, y: number, size: number,
       cheer = em === 'em_fireworks' ? 1 : 0.2;
       wave = em === 'em_flag';
       break;
+    case 'em_star_captain':
+      // A held salute remains a recognisable pose with Reduce Motion.
+      wave = true;
+      cheer = 0.45;
+      spin = look.reduceMotion ? 0 : Math.sin(et * 2) * 0.06;
+      break;
   }
   const bob = (look.reduceMotion ? 0 : Math.sin(t * 3) * size * 0.015) - cheer * size * 0.08;
   const body = look.suit;
@@ -567,6 +573,18 @@ function drawHat(g: G, id: string, x: number, hy: number, r: number, t: number) 
       g.stroke();
       break;
     }
+    default: {
+      // Catalogue hats share a quiet silhouette; their palette makes each preview real.
+      if (!COSMETIC_BY_ID[id]?.colors.length) break;
+      g.strokeStyle = c0;
+      g.lineWidth = r * 0.17;
+      g.beginPath();
+      g.arc(x, top + r * 0.1, r * 0.68, Math.PI * 1.12, Math.PI * 1.88);
+      g.stroke();
+      g.fillStyle = c1;
+      star(g, x, top - r * 0.45, r * 0.15, c1);
+      break;
+    }
   }
   g.restore();
 }
@@ -783,13 +801,16 @@ export function drawLauncher(g: G, id: string, x: number, y: number, t: number, 
       break;
     }
     default: {
-      g.fillStyle = 'rgba(255,255,255,0.08)';
+      const palette = COSMETIC_BY_ID[id]?.colors;
+      g.globalAlpha = 0.45;
+      g.fillStyle = palette?.[0] ?? 'rgba(255,255,255,0.08)';
       g.beginPath();
       g.arc(x, y, 34, 0, Math.PI * 2);
       g.fill();
-      g.strokeStyle = 'rgba(255,255,255,0.25)';
+      g.strokeStyle = palette?.[1] ?? 'rgba(255,255,255,0.25)';
       g.lineWidth = 2;
       g.stroke();
+      g.globalAlpha = 1;
       forkBand(-26, 26, 0);
     }
   }
@@ -874,8 +895,8 @@ export function drawTrail(g: G, id: string, pts: { x: number; y: number }[], t: 
         break;
       }
       default:
-        g.globalAlpha = a * 0.5;
-        g.fillStyle = kindColor;
+        g.globalAlpha = a * 0.45;
+        g.fillStyle = COSMETIC_BY_ID[id]?.colors[k % (COSMETIC_BY_ID[id]?.colors.length || 1)] ?? kindColor;
         g.beginPath();
         g.arc(p.x, p.y, 3 + k * 0.4, 0, Math.PI * 2);
         g.fill();

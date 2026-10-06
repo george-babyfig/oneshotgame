@@ -244,9 +244,13 @@ test.describe('J3 purchases in Grown-ups (mock store)', () => {
     await snap(page, info, guard, 'contents-starter');
     await sheet.getByRole('button', { name: 'Buy', exact: true }).click();
     await expect(receipt(page)).toBeVisible();
-    await expect(receipt(page)).toContainText(
-      'Aurora atmosphere, Explorer suit and trail are in Styles. The Aurora banner is in Passport.',
-    );
+    // The receipt says where each look went (charter): Styles, the Homeworld paint sheet and Passport.
+    for (const where of [
+      'Aurora atmosphere, Aurora Explorer suit, Aurora hat, Aurora trail and Aurora launcher look are in Styles.',
+      'Homeworld paint sheet',
+      'Passport',
+    ])
+      await expect(receipt(page)).toContainText(where);
     await snap(page, info, guard, 'receipt-starter');
     await receipt(page).getByRole('button', { name: 'Done', exact: true }).click();
     const after = await wallet(page);
@@ -487,4 +491,114 @@ test.describe('J3 purchases in Grown-ups (mock store)', () => {
     await expect(page.locator('.host .grownups-section h2').filter({ hasText: "What's new" })).toHaveCount(0);
     expectNoErrors(guard);
   });
+});
+
+// Catalogue sweep: the same gate, pending, replay and revocation behavior applies to every SKU.
+const LAUNCH_PRODUCTS = [
+  ['gems_s', 'Handful of Gems', 'gems80', 80, true],
+  ['gems_m', 'Pouch of Gems', 'gems500', 500, true],
+  ['gems_l', 'Chest of Gems', 'gems1200', 1200, true],
+  ['gems_xl', 'Galaxy of Gems', 'gems2800', 2800, true],
+  ['piggy', 'Gem Piggy Bank', 'piggy', 40, true],
+  ['starter', 'Starter Crew', 'startercrew', 0, false],
+  ['pass', 'Cosmic Pass: Cosmic Road', 'road00', 0, false],
+  ['theme_tidepool', 'Homeworld Theme: Tidepool', 'theme.tidepool', 0, false],
+  ['theme_cometcandy', 'Homeworld Theme: Comet Candy', 'theme.cometcandy', 0, false],
+  ['pack_crystalfrost', 'Planet Pack: Crystal Frost', 'pack.crystalfrost', 0, false],
+  ['style_nebula', 'Style Single: Nebula Swirl', 'style.nebula', 0, false],
+  ['style_firefly', 'Style Single: Firefly Sparks', 'style.firefly', 0, false],
+] as const;
+
+for (const [key, title, suffix, gems, consumable] of LAUNCH_PRODUCTS) {
+  test(`J3 launch catalogue: ${title}`, async ({ page }, info) => {
+    const guard = watchErrors(page);
+    await inGrownups(page, guard, info);
+    if (key === 'piggy') {
+      await page.evaluate(() => {
+        const app = (window as any).__app;
+        app.p.piggy = 40;
+        app.save();
+        app.refresh();
+      });
+    }
+    const id = `com.pocketplanet.game.${suffix}`;
+    const before = await wallet(page);
+
+    // Closing the gate before answering never opens a contents sheet or charges.
+    await productRow(page, title).locator('.buy-real').click();
+    await expect(page.locator(GATE)).toBeVisible();
+    await page.locator(GATE).getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(contentsSheet(page)).toHaveCount(0);
+    expect(await wallet(page)).toEqual(before);
+
+    await page.evaluate(() => (window as any).__iap.pending());
+    await startBuying(page, title);
+    await expect(contentsSheet(page)).toContainText(consumable ? 'Family Sharing: no' : 'Family Sharing: yes');
+    await contentsSheet(page).getByRole('button', { name: 'Buy', exact: true }).click();
+    await expect(toasts(page, "Waiting for a grown-up's approval")).toBeVisible();
+    expect(await wallet(page)).toEqual(before);
+    await page.evaluate(() => (window as any).__iap.approve());
+    await expect(receipt(page)).toBeVisible();
+    const after = await wallet(page);
+    if (key.startsWith('theme_')) await expect(receipt(page)).toContainText('Homeworld');
+    if (key === 'pack_crystalfrost' || key.startsWith('style_')) await expect(receipt(page)).toContainText('Styles');
+    expect(after.gems).toBe(before.gems + gems);
+    expect(after.tx).toHaveLength(before.tx.length + 1);
+    if (!consumable) {
+      const owned = await page.evaluate((productId) => {
+        const p = (window as any).__app.p;
+        return productId.endsWith('startercrew')
+          ? p.starter
+          : productId.endsWith('road00')
+            ? p.pass
+            : p.meta.productEntitlements?.includes(productId);
+      }, id);
+      expect(owned).toBe(true);
+    }
+    await receipt(page).getByRole('button', { name: 'Done', exact: true }).click();
+    await page.evaluate(([productId, txId]) => (window as any).__iap.replay(productId, txId), [id, after.tx[after.tx.length - 1]]);
+    expect(await wallet(page)).toEqual(after);
+    await expect(receipt(page)).toHaveCount(0);
+
+    if (!consumable) {
+      await page.evaluate((productId) => (window as any).__iap.revoke(productId), id);
+      const revoked = await page.evaluate((productId) => {
+        const p = (window as any).__app.p;
+        return productId.endsWith('startercrew')
+          ? !p.starter
+          : productId.endsWith('road00')
+            ? !p.pass
+            : !p.meta.productEntitlements?.includes(productId);
+      }, id);
+      expect(revoked).toBe(true);
+      expect((await wallet(page)).gems).toBe(after.gems);
+      await expect(receipt(page)).toHaveCount(0);
+    }
+    expectNoErrors(guard);
+  });
+}
+
+test('J3 fresh-install looks owner can open Styles before chapter 1', async ({ page }) => {
+  await freshInstall(page);
+  for (const suffix of [
+    'startercrew',
+    'road00',
+    'theme.tidepool',
+    'theme.cometcandy',
+    'pack.crystalfrost',
+    'style.nebula',
+    'style.firefly',
+  ]) {
+    await page.evaluate((id) => {
+      const app = (window as any).__app;
+      app.p.tutorial = true;
+      app.p.chapters = [];
+      app.p.starter = id === 'startercrew';
+      app.p.pass = id === 'road00';
+      app.p.meta.productEntitlements = id === 'startercrew' || id === 'road00' ? [] : [`com.pocketplanet.game.${id}`];
+      app.showStyles();
+    }, suffix);
+    await expect(page.locator('.host')).toContainText('Styles');
+    await expect(page.locator('.host')).not.toContainText('Opens after chapter 1');
+  }
 });

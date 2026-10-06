@@ -22,7 +22,7 @@ import {
   grantProduct,
   useStoredBooster,
 } from '../../../src/meta/economy';
-import { addTokens, claimEventTier, ensureEvent, eventActive, eventReady, isoWeek, tokensForLand } from '../../../src/meta/events';
+import { isoWeek } from '../../../src/meta/events';
 import { claimFestival, ensureFestival, festivalActive, festivalReady, spotFestival } from '../../../src/meta/festivals';
 import { habitatsReady, claimHabitat } from '../../../src/meta/habitats';
 import {
@@ -75,7 +75,7 @@ import { settleHomeworldRound } from '../../../src/meta/roundSettlement';
 import { refreshLandmarkSnapshots } from '../../../src/meta/landmarks';
 import { LANDMARKS, type LandmarkDef, type LandmarkRoute } from '../../../src/meta/tuning';
 import { applyReward, chestsReady, openChest } from '../../../src/meta/progression';
-import { claimRoad, roadReady } from '../../../src/meta/starroad';
+import { claimRoad, grantRoadPass, roadReady } from '../../../src/meta/starroad';
 import { claimWish, ensureWishes, recordWishRound, swapWish } from '../../../src/meta/wishes';
 import { unlocked } from '../../../src/meta/unlocks';
 import { ALBUM_PAGES, claimMilestones, claimPage, pageDone } from '../../../src/meta/stickers';
@@ -115,6 +115,7 @@ export interface DayRow {
   idleDust: number;
   activeDust: number;
   freeGems: number;
+  roadPoints: number;
   idleActiveRatio: number | null;
   labBlocks: Partial<Record<Kind, string>>;
   homeLevel: number;
@@ -332,7 +333,6 @@ function claimReady(p: Profile, date: Date) {
   for (const tier of roadReady(p)) claimRoad(p, tier);
   for (const q of p.quests.list) claimWish(p, q.id, today(date));
   if (festivalActive(p)) for (const tier of festivalReady(p, date)) claimFestival(p, tier, date);
-  if (eventActive(p)) for (const tier of eventReady(p)) claimEventTier(p, tier);
   for (const habitat of habitatsReady(p)) claimHabitat(p, habitat.id);
   claimMilestones(p);
   for (const page of ALBUM_PAGES) if (pageDone(p, page.id)) claimPage(p, page.id);
@@ -474,7 +474,6 @@ function visit(
   const stuck = wishes.find((q) => !q.claimed && q.progress === 0 && Date.parse(dayKey) - Date.parse(q.born) >= 3 * DAY);
   if (stuck) swapWish(p, stuck.id, dayKey);
   if (festivalActive(p)) ensureFestival(p, date);
-  if (eventActive(p)) ensureEvent(p, isoWeek(date));
   if (voyageActive(p)) ensureVoyage(p, isoWeek(date));
   const firstRewards = claimReady(p, date);
   freeBoosters += firstRewards;
@@ -602,7 +601,6 @@ function visit(
     ledger.count('round_started');
     p.stats.plays++;
     p.stats.throws += result.totalThrows;
-    if (eventActive(p)) addTokens(p, tokensForLand(ensureEvent(p, isoWeek(date)), result.regions, result.arrivals.length));
     if (!result.stars) {
       ledger.count('round_failed');
       momentumLoss(p, dayKey);
@@ -667,10 +665,6 @@ function visit(
       if (festivalActive(p)) {
         spotFestival(p, date);
       }
-    }
-    if (eventActive(p)) {
-      const event = ensureEvent(p, isoWeek(date));
-      if (event.stars) addTokens(p, out.newStars * 4);
     }
     if (n % 10 === 0 && out.firstClear && !p.bosses.includes(n)) {
       p.bosses.push(n);
@@ -810,6 +804,7 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: {
       if (buys && day === 1) {
         grantProduct(p, 'com.pocketplanet.game.startercrew', 'sim-starter-crew');
         grantProduct(p, 'com.pocketplanet.game.road00', 'sim-cosmic-road');
+        grantRoadPass(p);
       }
       if (buys && day % 7 === 1) grantProduct(p, 'com.pocketplanet.game.gems500', `sim-gems-${day}`);
       for (let v = 0; v < visits; v++) {
@@ -891,6 +886,7 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: {
         idleDust,
         activeDust,
         freeGems,
+        roadPoints: p.roadPoints,
         idleActiveRatio: activeDust ? idleDust / activeDust : idleDust ? Infinity : null,
         labBlocks,
         homeLevel: p.home.level,

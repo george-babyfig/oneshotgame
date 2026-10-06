@@ -446,14 +446,11 @@ test.describe('J2 every tab and screen [en]', () => {
     await expect(backButton(page), 'a tab root has no Back').toHaveCount(0);
     // Wishes: three creature-voiced asks
     await expect(page.locator('.host .wishes-panel .wish')).toHaveCount(3);
-    // Star Road → Back; Star Road → Pass → Back → Back (a two-deep stack)
-    await go(page, info, guard, () => entry(page, '.mission-entry', 'Star Road').click(), 'road', 'road');
+    // Cosmic Road → Back. The Pass has no non-owner kid-side link.
+    await go(page, info, guard, () => entry(page, '.mission-entry', 'Cosmic Road').click(), 'road', 'road');
     await goBack(page, info, 'button', 'missions', 'road');
-    await go(page, info, guard, () => entry(page, '.mission-entry', 'Star Road').click(), 'road', 'road-2');
-    if (await page.locator('.host .pass-cta').count()) {
-      await go(page, info, guard, () => page.locator('.host .pass-cta').first().click(), 'pass', 'road-pass');
-      await goBack(page, info, 'swipe', 'road', 'pass');
-    } else info.annotations.push({ type: 'skipped-step', description: 'Star Road shows no Cosmic Pass link' });
+    await go(page, info, guard, () => entry(page, '.mission-entry', 'Cosmic Road').click(), 'road', 'road-2');
+    await expect(page.locator('.host .rhead button')).toHaveCount(0);
     await goBack(page, info, 'swipe', 'missions', 'road');
     // Star Map (chapter chests ready) → Back
     await go(page, info, guard, () => entry(page, '.mission-entry', 'Star Map').click(), 'map', 'starmap');
@@ -461,11 +458,10 @@ test.describe('J2 every tab and screen [en]', () => {
     // Weekly Voyage → swipe back
     await go(page, info, guard, () => entry(page, '.mission-entry', 'Weekly Voyage').click(), 'voyage', 'voyage');
     await goBack(page, info, 'swipe', 'missions', 'voyage');
-    // Calendar, Inbox, Event and Festival are sheets over Missions
+    // Calendar, Inbox and Festival are sheets over Missions.
     await sheet(page, info, guard, () => entry(page, '.mission-entry', 'Star Calendar').click(), 'missions-calendar');
     await sheet(page, info, guard, () => entry(page, '.mission-entry', 'Inbox').click(), 'missions-inbox');
-    if (await entry(page, '.mission-entry', 'Event').count())
-      await sheet(page, info, guard, () => entry(page, '.mission-entry', 'Event').click(), 'missions-event');
+    await expect(entry(page, '.mission-entry', 'Event')).toHaveCount(0);
     await sheet(page, info, guard, () => entry(page, '.mission-entry', 'Festival').click(), 'missions-festival');
     // Stardust is a balance display; Passport remains a shortcut.
     await expect(page.locator('.topbar button.pill.dust')).toHaveCount(0);
@@ -538,7 +534,7 @@ test.describe('J2 every tab and screen [en]', () => {
 
     // ---- sub-screens cover the tab bar (Back is the way out); a tab switch starts a fresh stack
     await openTab(page, 'missions');
-    await go(page, info, guard, () => entry(page, '.mission-entry', 'Star Road').click(), 'road', 'road-3');
+    await go(page, info, guard, () => entry(page, '.mission-entry', 'Cosmic Road').click(), 'road', 'road-3');
     await expect(page.locator('.main-tabs'), 'a pushed screen has no tab bar').toHaveCount(0);
     await goBack(page, info, 'button', 'missions', 'road');
     await openTab(page, 'collection');

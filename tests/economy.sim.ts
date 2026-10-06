@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { exchangeRates, landmarkSummary, simulate, type Career } from './sim/economy/career';
-import { LANDMARKS } from '../src/meta/tuning';
+import { COSMETICS, LANDMARKS, ROAD00_GEM_SINGLE_IDS } from '../src/meta/tuning';
 
 const CURRENCIES = ['dust', 'gems', 'stone', 'dew', 'leaf', 'ember', 'frost'] as const;
 const fmt = (n: number | null) => (n === null ? '—' : Number.isFinite(n) ? String(Math.round(n)) : '∞');
@@ -33,7 +33,8 @@ function landmarkPace(career: Career) {
       const activeDays =
         opened === undefined || finished === undefined
           ? null
-          : career.days.filter((row) => row.active && row.day >= opened && row.day <= finished).length;
+          : // The site may open late in a visit; count the following active days.
+            career.days.filter((row) => row.active && row.day > opened && row.day <= finished).length;
       return { site: site.id, stage, opened, finished, activeDays };
     }),
   );
@@ -147,6 +148,16 @@ if (process.env.SIM === '1') {
     expect.soft(idleMisses, 'Regular active days 1–60 idle ≤1.5× active').toEqual([]);
     console.log(`Free gems ≥95 per active day: ${regular.freeGemsPerActiveDay.toFixed(1)}`);
     expect.soft(regular.freeGemsPerActiveDay, 'Regular free gems ≥95 per active day').toBeGreaterThanOrEqual(95);
+    const roadFinishDay = regular.days.find((row) => row.roadPoints >= 200)?.day;
+    console.log(`Regular Cosmic Road free lane finish day: ${roadFinishDay ?? 'unreached'}`);
+    expect.soft(roadFinishDay, 'Regular finishes the free Road lane in 6–8 weeks').toBeGreaterThanOrEqual(42);
+    expect.soft(roadFinishDay, 'Regular finishes the free Road lane in 6–8 weeks').toBeLessThanOrEqual(56);
+    const roadFreeGemSupply = regular.days.slice(0, 56).reduce((sum, row) => sum + row.freeGems, 0);
+    const roadNewGemSinks = ROAD00_GEM_SINGLE_IDS.reduce((sum, id) => sum + (COSMETICS.find((look) => look.id === id)?.gems ?? 0), 0);
+    console.log(
+      `Road 0 new gem sinks/free supply: ${roadNewGemSinks}/${roadFreeGemSupply} = ${(roadNewGemSinks / roadFreeGemSupply).toFixed(3)}`,
+    );
+    expect.soft(roadNewGemSinks / roadFreeGemSupply, 'new Road gem sinks cover ≥0.8× free supply').toBeGreaterThanOrEqual(0.8);
     const wins = regular.days.reduce((sum, row) => sum + row.wins, 0);
     console.log(
       `Free boosters per campaign win: ${(regular.freeBoosters / wins).toFixed(3)}; Greenhouses ${(regular.greenhouseBoosters / wins).toFixed(3)} (${wins} wins)`,
@@ -160,7 +171,7 @@ if (process.env.SIM === '1') {
     expect
       .soft(
         regular.days.slice(0, 60).reduce((n, day) => n + (day.spent.dust_cosmetic ?? 0), 0),
-        'Regular buys a stardust look by day 60',
+        'Regular buys a stardust look by day 60 with retired Event dust restored in Voyage',
       )
       .toBeGreaterThan(0);
     expect
@@ -237,6 +248,24 @@ if (process.env.SIM === '1') {
       expect(regular.homeLevelDays[5]).toBeGreaterThanOrEqual(28);
       expect(regular.days.filter((x) => x.day <= 60 && x.active && (x.idleActiveRatio ?? 0) > 1.5)).toEqual([]);
       expect(regular.freeGemsPerActiveDay).toBeGreaterThanOrEqual(95);
+      const nightRoadFinish = regular.days.find((row) => row.roadPoints >= 200)?.day;
+      const nightFree56 = regular.days.slice(0, 56).reduce((sum, row) => sum + row.freeGems, 0);
+      const nightSinks = ROAD00_GEM_SINGLE_IDS.reduce((sum, id) => sum + (COSMETICS.find((look) => look.id === id)?.gems ?? 0), 0);
+      const nightLookDay = regular.days.find((row) => (row.spent.dust_cosmetic ?? 0) > 0)?.day;
+      const nightDust60 = regular.days.slice(0, 60).reduce(
+        (sum, row) =>
+          sum +
+          Object.entries(row.earned)
+            .filter(([key]) => key.startsWith('dust_'))
+            .reduce((n, [, value]) => n + value, 0),
+        0,
+      );
+      console.log(
+        `Nightly Road/economy: first dust look day ${nightLookDay}, finish day ${nightRoadFinish}, 60-day dust ${nightDust60}, sinks/free ${nightSinks}/${nightFree56} = ${(nightSinks / nightFree56).toFixed(3)}`,
+      );
+      expect(nightRoadFinish).toBeGreaterThanOrEqual(42);
+      expect(nightRoadFinish).toBeLessThanOrEqual(56);
+      expect(nightSinks / nightFree56).toBeGreaterThanOrEqual(0.8);
       expect(regular.freeBoosters / wins).toBeLessThanOrEqual(0.5);
       expect(regular.greenhouseBoosters / wins).toBeLessThanOrEqual(1 / 3);
       for (const currency of CURRENCIES) expect(regular.reachableSinks[currency]).toBe(true);

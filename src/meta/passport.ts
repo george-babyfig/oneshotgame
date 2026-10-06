@@ -11,6 +11,7 @@ import { ALL_COMBO_STAMPS } from './reactions';
 import { REMIX_TITLES, remixFrame, remixTotal } from './remix';
 import { LANDMARKS } from './tuning';
 import { friendLevel } from './homeworld';
+import { owns } from './cosmetics';
 
 // Names are proper nouns: they stay the same in every language, like a gamer tag.
 export const NAME_A = [
@@ -108,7 +109,7 @@ export function titlesOwned(p: Profile): TitleDef[] {
   LANDMARKS.forEach((site, index) => {
     if (p.home.landmarks[site.id].stage === 4) out.push({ id: `landmark:${site.id}`, text: landmarkTitles[index], gold: true });
   });
-  if (p.pass && !p.settings.hidePaidLooks) out.push({ id: 'pass', text: 'Star Captain', gold: true });
+  if (owns(p, 'title_star_captain') && !p.settings.hidePaidLooks) out.push({ id: 'pass', text: 'Star Captain', gold: true });
   return out;
 }
 
@@ -139,8 +140,8 @@ export const BANNERS: BannerDef[] = [
     unlocked: (p) => p.rank >= 4 || p.chapters.includes(4),
     how: 'Open chapter 4 chest',
   },
-  { id: 6, name: 'Aurora', colors: ['#6ef2c0', '#6a4dff'], unlocked: (p) => p.starter, how: 'Starter Crew' },
-  { id: 7, name: 'Gilded', colors: ['#ffd24a', '#8a4a10'], unlocked: (p) => p.pass, how: 'Cosmic Pass' },
+  { id: 6, name: 'Aurora Passport banner', colors: ['#6ef2c0', '#6a4dff'], unlocked: (p) => owns(p, 'banner_aurora'), how: 'Starter Crew' },
+  { id: 7, name: 'Gilded Passport banner', colors: ['#c5a966', '#584c3b'], unlocked: (p) => owns(p, 'banner_gilded'), how: 'Cosmic Road' },
 ];
 
 export function currentBanner(p: Profile): BannerDef {

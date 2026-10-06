@@ -2,7 +2,8 @@
 // Run with DUMP_KEYS=1 to write the key list to src/locales/_keys.json.
 import { FESTIVALS } from '../src/meta/festivals';
 import { ALBUM_PAGES, SCRAP_BGS, STICKERS } from '../src/meta/stickers';
-import { PORTS, VOYAGE_NAMES } from '../src/meta/voyage';
+import { PORTS, THEME_PORTS, VOYAGE_NAMES } from '../src/meta/voyage';
+import { ROAD_CATALOG } from '../src/meta/starroad';
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -132,7 +133,9 @@ export function allKeys(): string[] {
   ALBUM_PAGES.forEach((pg) => add(pg.name));
   SCRAP_BGS.forEach((b) => add(b.name));
   PORTS.forEach(add);
+  Object.values(THEME_PORTS).forEach((ports) => ports.forEach(add));
   VOYAGE_NAMES.forEach(add);
+  ROAD_CATALOG.forEach((road) => add(road.name));
   WISH_TEMPLATES.forEach((wish) => add(wish.text));
   Object.values(NEW_FEATURE).forEach(add);
   Object.values(FACTS).forEach((fact) => (add(fact.element), add(fact.job)));

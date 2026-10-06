@@ -3,19 +3,19 @@ import type { App } from '../app';
 import { t } from '../../i18n';
 import { unlocked } from '../../meta/unlocks';
 import { chestsReady } from '../../meta/progression';
-import { roadReady } from '../../meta/starroad';
+import { currentRoad, roadReady } from '../../meta/starroad';
 import { today } from '../../meta/profile';
 import { canStamp } from '../../meta/calendar';
 import { letterOf } from '../../meta/inbox';
 import { wishesPanel } from '../flows/wishes';
-import { eventReady } from '../../meta/events';
 import { festivalReady } from '../../meta/festivals';
 import { STYLES_RELEASE } from '../../meta/cosmetics';
 import { menuParticles } from '../motion';
+import { refundQuietUntil } from '../../meta/economy';
 
 export function showMissions(app: App) {
   const p = app.p;
-  document.documentElement.classList.toggle('styles-new', p.stylesNewSeen !== STYLES_RELEASE);
+  document.documentElement.classList.toggle('styles-new', p.stylesNewSeen !== STYLES_RELEASE && refundQuietUntil(p) <= Date.now());
   const open = unlocked(p, 'quests');
   const entry = (label: string, ready: number, action: () => void, enabled = true, reason = '') => {
     const button = btn(
@@ -38,7 +38,7 @@ export function showMissions(app: App) {
         'div',
         { class: 'scroll' },
         open ? wishesPanel(app) : h('p', { class: 'locked-note' }, t('Opens at planet {n}', { n: 12 })),
-        open ? entry(t('Star Road'), roadReady(p).length, () => app.showRoad()) : null,
+        open ? entry(t(currentRoad(p).name), roadReady(p, currentRoad(p).id).length, () => app.showRoad()) : null,
         open && chestsReady(p).length ? entry(t('Star Map'), chestsReady(p).length, () => app.showStarMap()) : null,
         open
           ? entry(
@@ -51,7 +51,6 @@ export function showMissions(app: App) {
           : null,
         open ? entry(t('Inbox'), p.mail.filter((mail) => !mail.claimed && !!letterOf(mail)?.gift).length, () => app.inbox()) : null,
         open && unlocked(p, 'voyage') ? entry(t('Weekly Voyage'), 0, () => app.showVoyage()) : null,
-        open && unlocked(p, 'weekly_event') ? entry(t('Event'), eventReady(p).length, () => app.events()) : null,
         open && unlocked(p, 'festival') ? entry(t('Festival'), festivalReady(p).length, () => app.festival()) : null,
       ),
     ),
