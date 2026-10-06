@@ -44,7 +44,7 @@ export function festivalFlow(app: App) {
             [
               rewardText(tier.reward).join('  '),
               tier.sticker ? t('+ sticker') : '',
-              tier.acc ? t('+ {name} for residents', { name: t(accName) }) : '',
+              tier.acc ? t('+ {name} for friends', { name: t(accName) }) : '',
             ]
               .filter(Boolean)
               .join(' '),
@@ -62,7 +62,7 @@ export function festivalFlow(app: App) {
                   const reveal = modal([
                     h('div', { class: 'celebrate-stage' }, model, curtain),
                     h('div', { class: 'm-title' }, t(accName)),
-                    h('p', null, t('Your residents can now wear the {name}!', { name: t(accName) })),
+                    h('p', null, t('Your friends can now wear the {name}!', { name: t(accName) })),
                     btn(t('Awesome'), 'primary wide', () => reveal.close()),
                   ]);
                   celebrate('costume', {

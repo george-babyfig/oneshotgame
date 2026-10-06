@@ -18,12 +18,29 @@ import { forecastTroubles } from '../src/core/troubles';
 import type { LevelScene } from '../src/ui/game';
 import type { TraitId } from '../src/core/world';
 import { protectedWallSectors } from '../src/ui/art/troubles';
+import { recordHomeworldWin } from '../src/meta/homeworld';
 
 function resident(species: string) {
   return { species, fp: 0, lastReq: 0, rewarded: 0 };
 }
 
 describe('Buddy help', () => {
+  it('grows friendship once per eligible win with the selected resident Buddy', () => {
+    const p = defaultProfile();
+    p.level = 18;
+    p.home.residents.push(resident('otter'), resident('newt'));
+    setBuddy(p, 'otter');
+    const win = { mode: 'campaign' as const, planetKey: 'campaign:18', buddySpecies: 'otter', at: Date.now() };
+    recordHomeworldWin(p, win);
+    recordHomeworldWin(p, win);
+    expect(p.home.residents.map((r) => r.fp)).toEqual([1, 0]);
+    recordHomeworldWin(p, { ...win, mode: 'voyage' });
+    recordHomeworldWin(p, { ...win, mode: 'zen' });
+    expect(p.home.residents[0].fp).toBe(3);
+    recordHomeworldWin(p, { ...win, mode: 'daily' });
+    recordHomeworldWin(p, { ...win, buddySpecies: null });
+    expect(p.home.residents.map((r) => r.fp)).toEqual([3, 0]);
+  });
   it('switches the active shield, refreshes the forecast and clears the landing preview', () => {
     const planet = newPlanet((sector) => (sector === 1 ? { life: 2 } : {}));
     const state = roundState(planet, true, [{ id: 'vent', source: 0 }]);

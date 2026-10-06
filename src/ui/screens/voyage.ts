@@ -191,7 +191,7 @@ function stopSheet(app: App, i: number) {
       { class: 'muted' },
       first ? t('Reward: {r}', { r: rewardText(VOYAGE_REWARDS[i]).join('  ') }) : t('Already cleared — replay for more stars.'),
     ),
-    btn(tp(L.throws + p.upgrades.throws, 'Set off! · {n} throw', 'Set off! · {n} throws'), 'primary big wide', () => {
+    btn(tp(L.throws, 'Set off! · {n} throw', 'Set off! · {n} throws'), 'primary big wide', () => {
       m.close();
       play(app, i);
     }),
@@ -209,6 +209,8 @@ function play(app: App, i: number) {
     {
       rules: rulesForLevel(Math.min(L.n, p.level)),
       label: t('Voyage · Stop {n}', { n: i + 1 }),
+      // A new weekly route can replace this stop while the round is open.
+      homeworldWinEligible: () => p.voyage.week === week,
       onEnd: (r) => ended(app, i, week, r),
     },
     NO_BOOSTERS,

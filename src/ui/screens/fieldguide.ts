@@ -87,7 +87,7 @@ export function showFieldGuide(app: App, page: GuidePage = 'basics') {
     h('p', null, t('🪨 Rock raises land · ☄️ Ice makes oceans · 🌱 Seeds grow life · 🔥 Magma heats & builds volcanoes')),
     h('p', null, t('🦌 Creatures appear when the right lands meet — a Forest next to an Ocean brings Otters!')),
     h('p', null, t('★ Reach the life target before your throws run out. Tap the small bubble to swap objects.')),
-    h('p', null, t('✨ Finished planets orbit your galaxy and make stardust, even while you are away.')),
+    h('p', null, t('✨ Finished planets orbit your galaxy. Campaign wins keep your Vault working.')),
   );
   const objects = h(
     'div',

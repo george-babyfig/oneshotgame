@@ -1,5 +1,4 @@
-// Homeworld screen: drag to spin your planet, tap a plot to build, collect,
-// upgrade or clear meteor rocks. Residents wander between the buildings.
+// Homeworld screen: drag to spin your planet and tap a plot to build or collect.
 import { h, btn, fmt, modal, toast } from '../dom';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
@@ -8,13 +7,7 @@ import {
   BUILDINGS,
   BUILDING_TYPES,
   BUILD_TIME,
-  DEBRIS_DUST,
   FRIEND_LEVELS,
-  MAX_LEVEL,
-  MAX_RING,
-  PRODUCES,
-  RING_CHAPTER,
-  RING_COST,
   RING_PLOTS,
   anyReady,
   build,
@@ -24,30 +17,26 @@ import {
   canExpand,
   canUpgrade,
   candidates,
-  capHours,
-  charm,
-  clearDebris,
+  chaptersDone,
+  chooseGreenhouse,
   collect,
   collectAll,
   denCapacity,
   drones,
+  effLevel,
   expand,
   expeditionBack,
   expeditionLoot,
   expeditionOptions,
   finishExpedition,
   friendLevel,
-  fulfil,
   invite,
   isFull,
   moveBuilding,
-  rateOf,
   ready,
-  requestOf,
   sendHome,
   startExpedition,
   tickHome,
-  requestsWaiting,
   RESIDENT_ACCS,
   accAvailable,
   wearAcc,
@@ -68,7 +57,7 @@ import { SPECIES_BY_ID } from '../../core/world';
 import { currentLook } from '../../meta/cosmetics';
 import { drawCreature, critterCanvas } from '../art/critters';
 import { drawKeeper } from '../art/keeper';
-import { drawDebris, drawDrone, drawStructure } from '../art/structures';
+import { drawDrone, drawStructure } from '../art/structures';
 import { shareCanvas } from '../postcard';
 import { ensureFestival, festivalActive } from '../../meta/festivals';
 import { CONSTELLATION_BY_ID, constellationsReady } from '../../meta/constellations';
@@ -84,10 +73,15 @@ import { KINDS, type Kind } from '../../core/world';
 import { MATS, MAT_EMOJI } from '../../meta/constellations';
 import { labLevel, labPlot, labBuildCost, canBuildLab, buildLab, suggestedFirstLab, formState } from '../../meta/labs';
 import { firstHourStep, firstHourLab, firstHourFriend } from '../../meta/firsthour';
-import { LAB_NAME, LAB_TEXT, LAB_FIRST_COPY, ESSENCE_NAME } from '../../meta/labcopy';
+import { LAB_NAME, LAB_LEVEL, LAB_TEXT, LAB_FIRST_COPY, ESSENCE_NAME } from '../../meta/labcopy';
 import { labCard } from './labcard';
 import { showFirstFriend } from '../flows/labmoments';
 import { showLaunchBay } from './launchbay';
+import { HOME_LEVEL_REQUIREMENTS } from '../../meta/tuning';
+import type { HomeworldLevel } from '../../meta/homeworldTypes';
+import { homeworldNextUp } from '../../meta/nextup';
+import { celebrate } from '../celebrate';
+import { unlocked } from '../../meta/unlocks';
 
 const TAU = Math.PI * 2;
 
@@ -130,13 +124,13 @@ function structIcon(type: BuildingType, lv: number, px: number, kind?: Kind) {
 
 export const REASON: Record<BuildCheck | 'locked', string> = {
   ok: '',
-  ring: 'Expand your planet first',
+  ring: 'Grow your Homeworld first',
   max: 'You have the most of these',
   drones: 'All drones are busy',
   dust: 'Not enough stardust',
   gems: 'Not enough gems',
   busy: 'Already being built',
-  debris: 'Clear the meteor rock first',
+  debris: 'This plot is taken',
   occupied: 'This plot is taken',
   maxlv: 'Fully upgraded',
   locked: 'Unlock this object first',
@@ -179,7 +173,7 @@ export function showHomeworld(app: App) {
 
   const canvas = h('canvas', { class: 'hw-canvas' }) as HTMLCanvasElement;
   const panel = h('div', { class: 'hw-panel' });
-  const ringLbl = h('small', { class: 'muted' });
+  const levelBadge = btn('', 'hw-level-badge', () => levelSheet(app, () => showHomeworld(app)));
   const pouchHeader = btn('', 'ghost hw-pouch-head', () => essenceSheet(app));
   pouchHeader.setAttribute('aria-label', t(LAB_TEXT.pouch));
   const plotButtons = home.plots.map((_, i) => btn('', 'hw-plot-access', () => tapPlot(i)));
@@ -238,18 +232,6 @@ export function showHomeworld(app: App) {
       renderPanel();
       return;
     }
-    if (home.debris.includes(i)) {
-      const d = clearDebris(p, i);
-      const q = surf(plotAngle(i), 10);
-      burst(q.x, q.y, '#c9c2ff');
-      floatText(i, `✨${d}`);
-      sfx.coin();
-      haptic.medium();
-      app.save();
-      selected = i;
-      renderPanel();
-      return;
-    }
     if (ready(home, i) > 0) doCollect(i);
     selected = i;
     sfx.click();
@@ -269,7 +251,7 @@ export function showHomeworld(app: App) {
     }
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const time = calm ? 0.5 : (now - t0) / 1000;
-    const R = Math.min(w, hh) * (0.2 + home.ring * 0.028);
+    const R = Math.min(w, hh) * (0.2 + home.level * 0.028);
     geo = { cx: w / 2, cy: hh * 0.55, R, w, h: hh };
     if (!drag) {
       rot += vel;
@@ -303,9 +285,9 @@ export function showHomeworld(app: App) {
         g.globalAlpha = 1;
       }
     });
-    // atmosphere + ring hint
+    // The atmosphere grows brighter with each Homeworld Level.
     const atm = g.createRadialGradient(geo.cx, geo.cy, R * 0.9, geo.cx, geo.cy, R * 1.9);
-    atm.addColorStop(0, 'rgba(110,200,255,0.35)');
+    atm.addColorStop(0, `rgba(110,200,255,${0.18 + home.level * 0.05})`);
     atm.addColorStop(1, 'rgba(110,200,255,0)');
     g.fillStyle = atm;
     g.beginPath();
@@ -351,6 +333,27 @@ export function showHomeworld(app: App) {
     g.beginPath();
     g.arc(geo.cx, geo.cy, R, 0, TAU);
     g.fill();
+    // Each level adds a permanent skyline marker; Level 5 gains a light ring.
+    for (let mark = 2; mark <= home.level; mark++) {
+      const a = -Math.PI / 2 + (mark - 2) * 0.42;
+      const x = geo.cx + Math.cos(a) * R * 0.84;
+      const y = geo.cy + Math.sin(a) * R * 0.84;
+      g.fillStyle = ['#83f4cd', '#ffe69a', '#c3aaff', '#eefbff'][mark - 2];
+      g.beginPath();
+      g.moveTo(x, y - 5);
+      g.lineTo(x + 4, y);
+      g.lineTo(x, y + 5);
+      g.lineTo(x - 4, y);
+      g.closePath();
+      g.fill();
+    }
+    if (home.level === 5) {
+      g.strokeStyle = '#e5f9ff';
+      g.lineWidth = 3;
+      g.beginPath();
+      g.ellipse(geo.cx, geo.cy, R * 1.18, R * 0.34, -0.2, 0, TAU);
+      g.stroke();
+    }
     // a few lakes that turn with the planet
     for (let i = 0; i < 4; i++) {
       const a = rot * 0.999 + i * 1.7;
@@ -379,17 +382,12 @@ export function showHomeworld(app: App) {
       g.ellipse(0, 0, s * 0.42, s * 0.1, 0, 0, TAU);
       g.fill();
       const b = home.plots[i];
-      if (home.debris.includes(i)) drawDebris(g, s, time + i);
-      else if (b)
-        drawStructure(
-          g,
-          b.type,
-          b.type === 'lab' && b.kind ? labLevel(p, b.kind) : b.lv,
-          s,
-          time + i * 0.3,
-          !!b.done && b.done > nowMs,
-          b.type === 'lab' ? { kind: b.kind, formOn: !!b.kind && formState(p, b.kind).on } : undefined,
-        );
+      if (b)
+        drawStructure(g, b.type, b.type === 'lab' && b.kind ? labLevel(p, b.kind) : b.lv, s, time + i * 0.3, !!b.done && b.done > nowMs, {
+          homeLevel: home.level,
+          growth: b.type === 'greenhouse' ? (b.greenhouse?.winsTowardNext ?? 0) : undefined,
+          ...(b.type === 'lab' ? { kind: b.kind, formOn: !!b.kind && formState(p, b.kind).on } : {}),
+        });
       else if (i === selected) {
         g.fillStyle = 'rgba(255,255,255,0.7)';
         g.font = `700 ${Math.round(s * 0.4)}px Fredoka, ui-rounded, system-ui, sans-serif`;
@@ -421,7 +419,7 @@ export function showHomeworld(app: App) {
         g.arc(lq.x, lq.y + bob, s * 0.2, 0, TAU);
         g.fill();
         g.font = `${Math.round(s * 0.22)}px system-ui, sans-serif`;
-        g.fillText({ dust: '✨', gem: '💎', booster: '🌠' }[PRODUCES[b.type]!], lq.x, lq.y + bob + 1);
+        g.fillText('🌱', lq.x, lq.y + bob + 1);
       }
       g.textBaseline = 'alphabetic';
     }
@@ -598,10 +596,8 @@ export function showHomeworld(app: App) {
       p.mats,
       p.lab,
       home.firstHour,
-      home.ring,
-      home.debris,
+      home.level,
       home.residents.length,
-      requestsWaiting(home, now),
       !!home.expedition,
       expeditionBack(home, now),
       home.plots.map((b, i) => (b ? [b.type, b.lv, !!b.done && b.done > now, ready(home, i, now)] : 0)),
@@ -628,13 +624,16 @@ export function showHomeworld(app: App) {
     // keep the top bar's stardust/gems in step with what the panel just did
     const bar = canvas.parentElement?.querySelector('.topbar');
     if (bar) bar.replaceWith(app.topBar(app.canGoBack()));
-    ringLbl.textContent = ` ${t('Ring {n}', { n: home.ring })}`;
+    levelBadge.textContent = t('Level {n}', { n: home.level });
+    levelBadge.setAttribute(
+      'aria-label',
+      home.level >= 5 ? t('Homeworld Level 5, fully grown') : t('Homeworld Level {n}. See the next level', { n: home.level }),
+    );
     pouchHeader.textContent = MATS.map((mat) => `${MAT_EMOJI[mat]}${fmt(p.mats[mat] ?? 0)}`).join(' ');
     plotButtons.forEach((button, index) => {
       const building = home.plots[index];
-      const description = home.debris.includes(index)
-        ? t('Meteor rock')
-        : building?.type === 'lab' && building.kind
+      const description =
+        building?.type === 'lab' && building.kind
           ? t('{name}, level {level}', { name: t(LAB_NAME[building.kind]), level: labLevel(p, building.kind) })
           : building
             ? t('{name}, level {level}', { name: t(BUILDINGS[building.type].name), level: building.lv })
@@ -650,17 +649,6 @@ export function showHomeworld(app: App) {
       kids.push(btn(t('Cancel'), 'ghost wide', () => ((moving = -1), renderPanel())));
     } else if (i < 0) {
       // overview
-      const busy = busyDrones(home, now);
-      kids.push(
-        h(
-          'div',
-          { class: 'hw-stats' },
-          h('span', null, `🛸 ${drones(p) - busy}/${drones(p)}`, h('small', null, t('drones free'))),
-          h('span', null, `🏡 ${home.residents.length}/${denCapacity(home)}`, h('small', null, t('residents'))),
-          h('span', null, `💖 ${charm(home)}`, h('small', null, t('charm'))),
-        ),
-      );
-      kids.push(h('p', { class: 'muted hw-hint' }, t('Drag to spin your planet. Tap a plot to build.')));
       if (firstHourStep(p) !== 'done')
         kids.push(
           btn(t(firstHourStep(p) === 'lab' ? LAB_TEXT.firstLab : LAB_TEXT.firstFriend), 'primary wide', () =>
@@ -670,7 +658,7 @@ export function showHomeworld(app: App) {
       kids.push(
         h(
           'div',
-          { class: 'row' },
+          { class: 'row hw-primary-actions' },
           btn(t('Collect all'), `primary${anyReady(home, now) ? '' : ' dim'}`, () => {
             const c = collectAll(p, now);
             if (!c.dust && !c.gems && !Object.keys(c.boosters).length) return toast(t('Nothing to collect yet'));
@@ -681,7 +669,85 @@ export function showHomeworld(app: App) {
             app.save();
             renderPanel();
           }),
-          btn(t('Residents'), 'ghost', () => residentsSheet(app, renderPanel)),
+          btn(t('Friends'), 'ghost', () => residentsSheet(app, renderPanel)),
+        ),
+      );
+      const busy = busyDrones(home, now);
+      kids.push(
+        h(
+          'div',
+          { class: 'hw-stats' },
+          h('span', null, `🛸 ${drones(p) - busy}/${drones(p)}`, h('small', null, t('drones free'))),
+          h('span', null, `🏡 ${home.residents.length}/${denCapacity(home)}`, h('small', null, t('friends'))),
+        ),
+      );
+      kids.push(h('p', { class: 'muted hw-hint' }, t('Drag to spin your planet. Tap a plot to build.')));
+      const next = homeworldNextUp(p, now);
+      const nextPlot = home.plots.findIndex((b, index) => !!b && ((!!b.done && b.done <= now) || ready(home, index, now) > 0));
+      kids.push(
+        h(
+          'div',
+          { class: 'hw-overview' },
+          h('div', { class: 'sec-title' }, t('Overview')),
+          btn(
+            h('span', { class: 'stack' }, h('b', null, t('Next Up')), h('small', null, next.title), h('small', null, next.subtitle)),
+            'ghost wide hw-next-up',
+            () => {
+              if (firstHourStep(p) !== 'done') firstHourSheet(app, renderPanel);
+              else if (nextPlot >= 0) {
+                selected = nextPlot;
+                renderPanel();
+              } else levelSheet(app, () => showHomeworld(app));
+            },
+          ),
+          home.level < 5
+            ? h('div', null, h('p', { class: 'muted' }, t('Next Level checklist')), levelChecklist(app, (home.level + 1) as HomeworldLevel))
+            : null,
+          h('p', { class: 'muted' }, t('For your next throw')),
+          ...(Object.keys(LAB_NAME) as Kind[]).map((kind) =>
+            h(
+              'div',
+              { class: 'hw-lab-summary' },
+              h('b', null, t(LAB_NAME[kind]), labPlot(p, kind) >= 0 ? ` · ${t('Lv {n}', { n: labLevel(p, kind) })}` : ''),
+              h(
+                'small',
+                null,
+                labPlot(p, kind) >= 0
+                  ? t(labLevel(p, kind) === 1 ? KINDS[kind].stats.job : LAB_LEVEL[kind][labLevel(p, kind) as 2 | 3 | 4 | 5])
+                  : !unlocked(p, kind)
+                    ? t(LAB_TEXT.unlockPlanet, { n: KINDS[kind].unlock })
+                    : t('Build this Lab to help your shots'),
+              ),
+            ),
+          ),
+          ...[
+            ...new Set(
+              home.plots.filter((building): building is NonNullable<typeof building> => !!building).map((building) => building.type),
+            ),
+          ]
+            .filter((type) => type !== 'lab')
+            .map((type) =>
+              h(
+                'div',
+                { class: 'hw-lab-summary' },
+                h('b', null, t(BUILDINGS[type].name)),
+                h(
+                  'small',
+                  null,
+                  type === 'greenhouse'
+                    ? t('Grows a booster for a future throw')
+                    : type === 'den'
+                      ? unlocked(p, 'buddy')
+                        ? t('Friends can join your throw as a Buddy')
+                        : t('Friends can live in your Den')
+                      : type === 'launch_bay'
+                        ? unlocked(p, 'launcher_swoop')
+                          ? t('Choose the launcher for your next throw')
+                          : t('Launchers open as you finish planets')
+                        : t('Makes your Homeworld your own'),
+                ),
+              ),
+            ),
         ),
       );
       kids.push(
@@ -692,7 +758,7 @@ export function showHomeworld(app: App) {
             btn(expeditionLabel(), expeditionBack(home, now) ? 'gem' : 'ghost', () => expeditionSheet(app, renderPanel)),
             expeditionLabel,
           ),
-          btn(home.ring >= MAX_RING ? t('Max size') : t('Expand'), 'ghost', () => expandSheet(app, () => showHomeworld(app))),
+          btn(home.level >= 5 ? t('Fully grown') : t('Next Level'), 'ghost', () => levelSheet(app, () => showHomeworld(app))),
         ),
       );
       kids.push(
@@ -704,9 +770,6 @@ export function showHomeworld(app: App) {
         ),
       );
       kids.push(btn(`✨ ${t('Star Atlas')}${constellationsReady(p) ? ' •' : ''}`, 'ghost wide', () => app.showSky()));
-    } else if (home.debris.includes(i)) {
-      kids.push(h('div', { class: 'hw-title' }, t('Meteor rock')));
-      kids.push(h('p', { class: 'muted' }, t('Tap it to clear it away (+{n} stardust).', { n: DEBRIS_DUST })));
     } else if (!b) {
       kids.push(h('div', { class: 'hw-title' }, t('Empty plot')));
       kids.push(
@@ -778,7 +841,7 @@ export function showHomeworld(app: App) {
                 null,
                 locked
                   ? check === 'ring'
-                    ? t('Ring {n}', { n: d.ring })
+                    ? t('Level {n}', { n: d.ring })
                     : t('Max')
                   : d.gems
                     ? `💎${d.gems}`
@@ -803,34 +866,86 @@ export function showHomeworld(app: App) {
             'div',
             null,
             h('div', { class: 'hw-title' }, t(d.name), d.decor ? null : h('small', { class: 'muted' }, ` ${t('Lv {n}', { n: b.lv })}`)),
-            h('p', { class: 'muted' }, t(d.desc)),
+            h(
+              'p',
+              { class: 'muted' },
+              d.decor
+                ? t('Decoration for your Homeworld')
+                : b.type === 'greenhouse'
+                  ? t('Grow a chosen booster by winning rounds')
+                  : t(d.desc),
+            ),
           ),
         ),
       );
       if (building) {
         const done = b.done!;
         kids.push(h('div', { class: 'hw-timer' }, t('Ready at {time}', { time: whenText(done, now, getLang()) })));
-      } else if (PRODUCES[b.type]) {
-        const kind = PRODUCES[b.type]!;
-        const perH = rateOf(b);
-        const every = fmtTime(3600e3 / perH);
+      } else if (b.type === 'greenhouse') {
+        const state = b.greenhouse ?? { choice: 'shower', winsTowardNext: 0, stored: 0 };
         kids.push(
           h(
             'div',
             { class: 'hw-prod' },
-            h(
-              'span',
-              null,
-              kind === 'dust'
-                ? t('{n} stardust / hour', { n: perH })
-                : kind === 'gem'
-                  ? t('1 gem every {time}', { time: every })
-                  : t('1 booster every {time}', { time: every }),
-            ),
-            h('span', null, t('Holds {h}h', { h: capHours(home, now) })),
+            t('Stored {stored}/{cap} · {wins}/6 wins', {
+              stored: state.stored,
+              cap: Math.min(3, effLevel(b, now)),
+              wins: state.winsTowardNext,
+            }),
           ),
         );
-      } else if (b.type === 'den') kids.push(h('div', { class: 'hw-prod' }, t('Room for {n} residents', { n: b.lv + 1 })));
+        const stock = state.storedByType ?? { shower: 0, spark: 0, scope: 0, [state.choice]: state.stored };
+        kids.push(
+          h(
+            'p',
+            { class: 'muted' },
+            state.stored
+              ? (['shower', 'spark', 'scope'] as const)
+                  .filter((id) => stock[id] > 0)
+                  .map((id) =>
+                    t('Stored: {n} {name}', {
+                      n: stock[id],
+                      name: t({ shower: 'Comet Shower', spark: 'Life Spark', scope: 'Star Scope' }[id]),
+                    }),
+                  )
+                  .join(' · ')
+              : t('Nothing stored yet'),
+          ),
+        );
+        kids.push(
+          h(
+            'p',
+            { class: 'muted' },
+            isFull(home, i, now)
+              ? t('Full! Collect to keep growing.')
+              : t(
+                  state.winsTowardNext < 2
+                    ? 'A sprout is growing'
+                    : state.winsTowardNext < 4
+                      ? 'A bud is growing'
+                      : 'A flower is nearly ready',
+                ),
+          ),
+        );
+        kids.push(h('p', { class: 'muted' }, t('Choose what grows next. Changing it keeps your progress.')));
+        kids.push(
+          h(
+            'div',
+            { class: 'row hw-greenhouse-choices' },
+            ...(['shower', 'spark', 'scope'] as const).map((choice) => {
+              const label = { shower: 'Comet Shower', spark: 'Life Spark', scope: 'Star Scope' }[choice];
+              const button = btn(t(label), state.choice === choice ? 'primary' : 'ghost', () => {
+                if (chooseGreenhouse(p, i, choice)) {
+                  app.save();
+                  renderPanel();
+                }
+              });
+              button.setAttribute('aria-pressed', String(state.choice === choice));
+              return button;
+            }),
+          ),
+        );
+      } else if (b.type === 'den') kids.push(h('div', { class: 'hw-prod' }, t('Room for {n} friends', { n: b.lv + 1 })));
       else if (b.type === 'launch_bay')
         kids.push(
           h(
@@ -843,8 +958,7 @@ export function showHomeworld(app: App) {
             }),
           ),
         );
-      else if (b.type === 'observatory') kids.push(h('div', { class: 'hw-prod' }, t('Producers hold +{n}h', { n: b.lv * 2 })));
-      else kids.push(h('div', { class: 'hw-prod' }, t('+{n} charm', { n: d.charm ?? 0 })));
+      else kids.push(h('div', { class: 'hw-prod' }, t('Decoration for your Homeworld')));
       const row: HTMLElement[] = [];
       if (ready(home, i, now) > 0)
         row.push(
@@ -871,9 +985,9 @@ export function showHomeworld(app: App) {
               },
             ),
           );
-        } else if (b.lv >= MAX_LEVEL) row.push(h('div', { class: 'ws-state' }, t('✓ Max level')));
+        } else if (c === 'maxlv') row.push(h('div', { class: 'ws-state' }, t('✓ Max level')));
       }
-      if (b.type === 'den') row.push(btn(t('Residents'), 'ghost', () => residentsSheet(app, renderPanel)));
+      if (b.type === 'den') row.push(btn(t('Friends'), 'ghost', () => residentsSheet(app, renderPanel)));
       if (b.type === 'launch_bay') {
         row.push(btn(t('Launch Bay'), 'primary', () => showLaunchBay(app)));
         if (!building)
@@ -922,7 +1036,7 @@ export function showHomeworld(app: App) {
       'div',
       { class: 'screen page homeworld' },
       app.topBar(),
-      h('div', { class: 'page-title' }, t('Homeworld'), ringLbl, pouchHeader),
+      h('div', { class: 'page-title' }, t('Homeworld'), levelBadge, pouchHeader),
       canvas,
       h('nav', { class: 'hw-plot-list', 'aria-label': t('Homeworld plots') }, ...plotButtons),
       panel,
@@ -1061,44 +1175,18 @@ function residentsSheet(app: App, after: () => void) {
   const p = app.p;
   const home = p.home;
   const cap = denCapacity(home);
-  const now = Date.now();
   const rows = home.residents.map((r) => {
     const sp = SPECIES_BY_ID[r.species];
     const lv = friendLevel(r.fp);
     const away = home.expedition?.species === r.species;
-    const req = away ? null : requestOf(r, now, home.ring);
     const next = FRIEND_LEVELS[lv] ?? null;
-    let reqEl: HTMLElement;
-    if (away) reqEl = h('small', { class: 'muted' }, t('On an expedition'));
-    else if (!req) reqEl = h('small', { class: 'muted' }, t('Happy! Check back later.'));
-    else {
-      const label =
-        req.kind === 'treat'
-          ? t('Wants a treat · ✨{n}', { n: req.dust ?? 0 })
-          : req.kind === 'pat'
-            ? t('Wants a pat on the head')
-            : t('Wants a {name} nearby', { name: t(BUILDINGS[req.decor!].name) });
-      reqEl = btn(label, 'primary small', () => {
-        const res = fulfil(p, r.species);
-        if (res.result === 'dust') return toast(t('Not enough stardust'));
-        if (res.result === 'decor') return toast(t('Build a {name} first', { name: t(BUILDINGS[req.decor!].name) }));
-        if (res.result !== 'ok') return;
-        sfx.coin();
-        haptic.success();
-        if (res.levelUp)
-          toast(
-            res.levelUp >= FRIEND_LEVELS.length
-              ? t('{name} is your best friend! +💎{g} and a memento', { name: t(sp.name), g: res.gems ?? 0 })
-              : t('Friendship level {n} with {name}! +💎{g}', { n: res.levelUp, name: t(sp.name), g: res.gems ?? 0 }),
-            'good',
-          );
-        else toast(t('{name} is delighted 💖', { name: t(sp.name) }), 'good');
-        app.save();
-        m.close();
-        residentsSheet(app, after);
-        after();
-      });
-    }
+    const friendNote = away
+      ? t('On an expedition')
+      : unlocked(p, 'buddy')
+        ? t('Wins with this Buddy and Wishes grow friendship')
+        : unlocked(p, 'quests')
+          ? t('Wishes grow friendship')
+          : t('Your friend is at home here');
     return h(
       'div',
       { class: 'hw-res' },
@@ -1133,7 +1221,7 @@ function residentsSheet(app: App, after: () => void) {
           '💖'.repeat(lv) + '🤍'.repeat(FRIEND_LEVELS.length - lv),
           next !== null ? h('small', { class: 'muted' }, ` ${r.fp}/${next}`) : null,
         ),
-        reqEl,
+        h('small', { class: 'muted' }, friendNote),
       ),
       away
         ? null
@@ -1184,7 +1272,7 @@ function residentsSheet(app: App, after: () => void) {
         )
       : null;
   const m = modal([
-    h('div', { class: 'm-title' }, t('Residents'), h('small', { class: 'muted' }, ` ${home.residents.length}/${cap}`)),
+    h('div', { class: 'm-title' }, t('Friends'), h('small', { class: 'muted' }, ` ${home.residents.length}/${cap}`)),
     ...rows,
     cap === 0 ? h('p', { class: 'muted' }, t('Build a Critter Den so creatures can move in.')) : null,
     free > 0 && cands.length
@@ -1248,14 +1336,14 @@ function expeditionSheet(app: App, after: () => void) {
   if (!opts.length) {
     modal([
       h('div', { class: 'm-title' }, t('Expedition')),
-      h('p', { class: 'muted' }, t('Build a Launch Bay (Ring 2) to send residents on expeditions.')),
+      h('p', { class: 'muted' }, t('Build a Launch Bay at Level 2 to send friends on expeditions.')),
     ]);
     return;
   }
   if (!home.residents.length) {
     modal([
       h('div', { class: 'm-title' }, t('Expedition')),
-      h('p', { class: 'muted' }, t('Invite a resident first — they love to explore.')),
+      h('p', { class: 'muted' }, t('Invite a friend first — they love to explore.')),
     ]);
     return;
   }
@@ -1346,37 +1434,119 @@ function expeditionCard(species: string, planetName: string, colors: string[], f
   return c;
 }
 
-function expandSheet(app: App, after: () => void) {
+function levelOpening(level: HomeworldLevel): string {
+  switch (level) {
+    case 1:
+      return t('Six plots and your first Labs');
+    case 2:
+      return t('Two more plots, Greenhouse and Launch Bay');
+    case 3:
+      return t('Two more plots and a third drone');
+    case 4:
+      return t('Two more plots and stronger Labs');
+    case 5:
+      return t('Fourteen plots, a ring of light and crystal buildings');
+  }
+}
+
+function levelChecklist(app: App, level: HomeworldLevel): HTMLElement {
+  const p = app.p;
+  const need = HOME_LEVEL_REQUIREMENTS[level];
+  const item = (done: boolean, label: string) => h('div', { class: `hw-check${done ? ' done' : ''}` }, done ? '✓ ' : '○ ', label);
+  return h(
+    'div',
+    { class: 'hw-level-checklist' },
+    item(chaptersDone(p) >= need.chapter, t('Finish chapter {n}', { n: need.chapter })),
+    item(p.dust >= need.dust, t('✨ {have}/{need} stardust', { have: fmt(p.dust), need: fmt(need.dust) })),
+    ...Object.entries(need.essence).map(([mat, count]) =>
+      item(
+        (p.mats[mat as keyof typeof p.mats] ?? 0) >= count,
+        t('{name}: {have}/{need}', {
+          name: t(ESSENCE_NAME[mat as keyof typeof ESSENCE_NAME]),
+          have: p.mats[mat as keyof typeof p.mats] ?? 0,
+          need: count,
+        }),
+      ),
+    ),
+  );
+}
+
+function levelSheet(app: App, after: () => void) {
   const p = app.p;
   const home = p.home;
-  if (home.ring >= MAX_RING) {
-    modal([h('div', { class: 'm-title' }, t('Expand')), h('p', null, t('Your Homeworld is fully grown. 🌍'))]);
+  if (home.level >= 5) {
+    modal([h('div', { class: 'm-title' }, t('Homeworld Level 5')), h('p', null, t('Your Homeworld is fully grown. 🌍'))]);
     return;
   }
-  const r = home.ring + 1;
+  const r = (home.level + 1) as HomeworldLevel;
   const check = canExpand(p);
   const unlocks = BUILDING_TYPES.filter((x) => BUILDINGS[x].ring === r).map((x) => t(BUILDINGS[x].name));
+  const planet = (level: number, label: string) =>
+    h(
+      'div',
+      { class: 'hw-planet-stage' },
+      h(
+        'div',
+        { class: `hw-mini-planet level-${level}`, 'aria-hidden': 'true' },
+        ...Array.from({ length: level + 1 }, (_, i) => h('i', { style: `--i:${i}` })),
+      ),
+      h('small', null, label),
+    );
   const m = modal([
-    h('div', { class: 'm-title' }, t('Grow to Ring {n}', { n: r })),
+    h('div', { class: 'm-title' }, t('Grow your Homeworld to Level {n}', { n: r })),
+    h('div', { class: 'hw-level-preview' }, planet(home.level, t('Now')), planet(r, t('Next'))),
     h(
       'div',
       { class: 'howto' },
-      h('p', null, t('🌍 {n} plots (now {m})', { n: RING_PLOTS[r], m: RING_PLOTS[home.ring] })),
-      h('p', null, t('⬆️ Buildings can reach level {n}', { n: r })),
+      h('p', null, levelOpening(r)),
+      h('p', null, t('🌍 {n} plots (now {m})', { n: RING_PLOTS[r], m: RING_PLOTS[home.level] })),
+      h('p', null, t('⬆️ Labs can reach level {n}', { n: Math.min(5, r + 1) })),
       unlocks.length ? h('p', null, t('🏗️ New: {list}', { list: unlocks.join(', ') })) : null,
-      h('p', { class: check === 'chapter' ? 'bad' : '' }, t('📜 Needs chapter {n} finished', { n: RING_CHAPTER[r] })),
+      levelChecklist(app, r),
     ),
-    btn(`✨${fmt(RING_COST[r])}`, check === 'ok' ? 'primary wide' : 'ghost wide dim', () => {
+    btn(t('Grow to Level {n}', { n: r }), check === 'ok' ? 'primary wide' : 'ghost wide dim', () => {
       const res = expand(p);
-      if (res === 'chapter') return toast(t('Finish chapter {n} first', { n: RING_CHAPTER[r] }));
-      if (res === 'dust') return toast(t('Not enough stardust'));
+      if (res === 'chapter') return toast(t('Finish chapter {n} first', { n: HOME_LEVEL_REQUIREMENTS[r].chapter }));
+      if (res === 'dust' || res === 'essence') return toast(t('Check what your next Level needs'));
       if (res !== 'ok') return;
-      sfx.levelUp();
-      haptic.success();
-      toast(t('Your Homeworld grew to Ring {n}!', { n: r }), 'good');
       app.save();
       m.close();
       after();
+      const skyline = h(
+        'div',
+        { class: `hw-skyline-change level-${r}`, 'aria-hidden': 'true' },
+        planet(r - 1, t('Before')),
+        planet(r, t('After')),
+      );
+      const celebration = modal(
+        [
+          skyline,
+          h('div', { class: 'm-title' }, t('Homeworld Level {n}!', { n: r })),
+          h('p', null, levelOpening(r)),
+          btn(t('Wonderful!'), 'primary wide', () => {
+            show.skip();
+            celebration.close();
+          }),
+        ],
+        { cls: 'hw-level-up' },
+      );
+      const show = celebrate('homeworld', {
+        root: celebration.el,
+        reduceMotion: effectiveReduceMotion(p),
+        duration: 1700,
+        beats: [
+          {
+            at: 120,
+            play: (instant) => {
+              if (!instant) {
+                sfx.levelUp();
+                haptic.heavy();
+              }
+              skyline.classList.add('grown');
+            },
+          },
+        ],
+      });
     }),
   ]);
 }
@@ -1489,7 +1659,7 @@ function renderPhoto(app: App, src: HTMLCanvasElement, frame: Frame): HTMLCanvas
   g.font = font(500, 36);
   g.fillStyle = frame === 'polaroid' ? '#6a6480' : '#c9c2ff';
   g.fillText(
-    `${SEASON_EMOJI[season]} ${t(SEASON_NAMES[season])} · ${t('Ring {n}', { n: p.home.ring })} · ${new Date().toLocaleDateString(getLang() || undefined)}`,
+    `${SEASON_EMOJI[season]} ${t(SEASON_NAMES[season])} · ${t('Level {n}', { n: p.home.level })} · ${new Date().toLocaleDateString(getLang() || undefined)}`,
     W / 2,
     pad + 40 + size + 150,
   );

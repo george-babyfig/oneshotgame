@@ -35,8 +35,6 @@ import {
   PAINTS,
   BOSS_REWARD,
   COST_K,
-  RATE,
-  BASE_CAP_HOURS,
   DEBRIS_DUST,
   CHAPTER_REWARD,
   CHAPTER_RANK_REWARD,
@@ -50,6 +48,7 @@ import {
   GALAXY_RATE,
   INBOX_GIFTS,
 } from '../src/meta/tuning';
+import { VAULT_RATES, VAULT_STORAGE_HOURS, VAULT_UPGRADE_COSTS } from '../src/meta/economy';
 
 function total(value: unknown): number {
   if (typeof value === 'number') return value;
@@ -96,8 +95,6 @@ it('pins totals of every central balance table', () => {
       PAINTS,
       BOSS_REWARD,
       COST_K,
-      RATE,
-      BASE_CAP_HOURS,
       DEBRIS_DUST,
       CHAPTER_REWARD,
       CHAPTER_RANK_REWARD,
@@ -110,16 +107,27 @@ it('pins totals of every central balance table', () => {
       EXPEDITION_REWARD,
       GALAXY_RATE,
       INBOX_GIFTS,
+      VAULT_RATES,
+      VAULT_STORAGE_HOURS,
+      VAULT_UPGRADE_COSTS,
     }).map(([key, value]) => [key, total(value)]),
   );
   totals.PRODUCT_PRICE_CENTS = PRODUCTS.reduce((sum, product) => sum + Math.round(Number(product.fallbackPrice.slice(1)) * 100), 0);
+  // BUILDINGS: the three retired producers have no active purchase price.
+  // UPGRADES: only the four Vault tiers remain in the shop; old shot perks are refunded by migration.
+  // LAB_COST: a lower final dust payment lets a player who wins more rounds finish sooner.
+  // LAB_ESSENCE_COST: the final step needs more earned Essence to gate it on play.
+  // VISITOR_DUST: small gifts remain secondary to active campaign income at three visits/day.
+  // VAULT_RATES: five slower win-fuelled rates keep every Regular day under the idle cap.
+  // VAULT_STORAGE_HOURS: the decided 4/6/8/10/12-hour capacity shape remains pinned.
+  // VAULT_UPGRADE_COSTS: the decided four tier payments remain pinned.
+  // RATE and BASE_CAP_HOURS were removed with the old hourly producers.
   expect(totals).toMatchInlineSnapshot(`
     {
       "ALBUM_PAGES": 300,
-      "BASE_CAP_HOURS": 6,
       "BOOSTERS": 510,
       "BOSS_REWARD": 530,
-      "BUILDINGS": 12553,
+      "BUILDINGS": 7897,
       "BUILD_TIME": 23730000,
       "CALENDAR": 4950,
       "CALENDAR_REPEAT_ITEM_GEMS": 40,
@@ -134,7 +142,7 @@ it('pins totals of every central balance table', () => {
       "DEBRIS_DUST": 60,
       "DYES": 84,
       "EVENT_TIERS": 1679,
-      "EXPEDITION_REWARD": 140,
+      "EXPEDITION_REWARD": 25,
       "FESTIVAL_TIERS": 865,
       "FINISH_DUST_PER_THROW": 15,
       "FIRST_HOUR_REWARD": 100,
@@ -144,8 +152,8 @@ it('pins totals of every central balance table', () => {
       "HABITATS": 4515,
       "INBOX_GIFTS": 412,
       "LAB_BUILD_COST": 300,
-      "LAB_COST": 11600,
-      "LAB_ESSENCE_COST": 225,
+      "LAB_COST": 9100,
+      "LAB_ESSENCE_COST": 265,
       "LAB_FEATS": 15,
       "MILESTONE_REWARD": 10,
       "PAINTS": 510,
@@ -153,14 +161,16 @@ it('pins totals of every central balance table', () => {
       "PRODUCT_PRICE_CENTS": 4493,
       "QUESTS": 175,
       "QUEST_BONUS": 21,
-      "RATE": 612.5857142857143,
       "RESIDENT_ACCS": 94,
       "RING_COST": 48500,
       "RUSH_REWARD": 5.6,
       "SKINS": 450,
       "STAR_ROAD": 12584,
-      "UPGRADES": 15850,
-      "VISITOR_DUST": 180,
+      "UPGRADES": 32000,
+      "VAULT_RATES": 100,
+      "VAULT_STORAGE_HOURS": 40,
+      "VAULT_UPGRADE_COSTS": 32000,
+      "VISITOR_DUST": 17,
       "VOYAGE_REWARDS": 1697,
       "WELCOME_BACK_GEMS": 30,
       "WIN_REWARD": 87,

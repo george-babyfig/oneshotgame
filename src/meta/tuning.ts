@@ -1,7 +1,7 @@
 // Canonical prices, rewards and costs. Review changes against the tuning snapshot.
 // DIFFICULTY_DUST stays in core/levels.ts so core never imports meta.
 import { version } from '../../package.json';
-import { t, tp } from '../i18n';
+import { t } from '../i18n';
 import { unlocked } from './unlocks';
 
 export const GAME_NAME = 'Comet Garden';
@@ -129,38 +129,19 @@ export type BoosterId = 'shower' | 'spark' | 'scope';
 export const BOOSTERS: Record<BoosterId, { name: string; emoji: string; desc: string; dust: number; gems: number }> = {
   shower: { name: 'Comet Shower', emoji: '🌠', desc: '+3 throws this level', dust: 180, gems: 25 },
   spark: { name: 'Life Spark', emoji: '✨', desc: 'Start with three meadows already growing', dust: 150, gems: 20 },
-  scope: { name: 'Star Scope', emoji: '🔭', desc: 'Full-length aim guide this level', dust: 120, gems: 15 },
+  scope: { name: 'Star Scope', emoji: '🔭', desc: 'See the next 5 objects and a longer aim line this round', dust: 120, gems: 15 },
 };
 
-// Permanent upgrades bought with stardust.
+// Legacy upgrade ids stay in saves until the one-time refund migration runs.
 export type UpgradeId = 'scope' | 'throws' | 'splash' | 'vault';
-export const UPGRADES: Record<UpgradeId, { name: string; emoji: string; desc: (lv: number) => string; costs: number[] }> = {
-  scope: {
-    name: 'Aim Guide',
-    emoji: '🎯',
-    desc: (lv) => t('Aim line length: {x}', { x: t(['short', 'medium', 'long', 'full'][lv]) }),
-    costs: [250, 700, 1600],
-  },
-  throws: {
-    name: 'Extra Throws',
-    emoji: '🪨',
-    desc: (lv) => tp(lv, '+{n} throw every level', '+{n} throws every level'),
-    costs: [400, 1200, 3000],
-  },
-  splash: {
-    name: 'Wide Impact',
-    emoji: '💥',
-    desc: (lv) => (lv ? t('Impacts spread one region further') : t('Normal impact size')),
-    costs: [5000],
-  },
+export const UPGRADES: Record<'vault', { name: string; emoji: string; desc: (lv: number) => string; costs: number[] }> = {
   vault: {
     name: 'Stardust Vault',
     emoji: '🏦',
-    desc: (lv) => t('Galaxy stores up to {n}h of stardust', { n: [4, 8, 12, 24][lv] }),
-    costs: [300, 900, 2500],
+    desc: () => t('Wins keep the Vault working. One campaign win adds two hours.'),
+    costs: [1000, 3000, 8000, 20000],
   },
 };
-export const VAULT_HOURS = [4, 8, 12, 24];
 
 // Atmosphere skins (cosmetic glow around every planet).
 export interface SkinDef {
@@ -190,8 +171,9 @@ export const DAILY_REWARD = { baseGems: 5, gemsPerStar: 5 };
 export const RUSH_REWARD = { dustPerScore: 0.6, bestGems: 5 };
 export const CHALLENGE_REWARD = { winGems: 10, dust: 50 };
 export const CONTINUE_COST = 50;
-export const LAB_COST = [0, 0, 400, 1200, 3000, 7000];
-export const LAB_ESSENCE_COST = [0, 0, 10, 25, 50, 140];
+// The final step asks for more campaign Essence and less saved stardust.
+export const LAB_COST = [0, 0, 400, 1200, 3000, 4500];
+export const LAB_ESSENCE_COST = [0, 0, 10, 25, 50, 180];
 export const LAB_BUILD_COST = 300;
 export const LAB_FEATS = { fusion: 10, guard: 5 };
 export const FIRST_HOUR_REWARD = { dust: 100 };
@@ -311,23 +293,24 @@ export const EVENT_TIERS: EventTier[] = [
 
 export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   lab: { type: 'lab', name: 'Lab', desc: 'Your shots learn tricks', ring: 1, cost: LAB_BUILD_COST, max: 6 },
-  mill: { type: 'mill', name: 'Stardust Mill', desc: 'Makes stardust while you are away', ring: 1, cost: 150, max: 3 },
+  // Legacy save types have no build path or player-facing copy.
+  mill: { type: 'mill', name: '', desc: '', ring: 1, cost: 0, max: 0 },
   den: { type: 'den', name: 'Critter Den', desc: 'A home for creatures from your Lifebook', ring: 1, cost: 250, max: 2 },
   greenhouse: { type: 'greenhouse', name: 'Greenhouse', desc: 'Grows boosters for your levels', ring: 2, cost: 600, max: 2 },
   launch_bay: { type: 'launch_bay', name: 'Launch Bay', desc: 'Choose, tune and try your launchers', ring: 2, cost: 800, max: 1 },
-  grove: { type: 'grove', name: 'Crystal Grove', desc: 'Slowly grows gems', ring: 3, cost: 2000, max: 2 },
+  grove: { type: 'grove', name: '', desc: '', ring: 3, cost: 0, max: 0 },
   observatory: {
     type: 'observatory',
-    name: 'Observatory',
-    desc: 'Every producer stores more before it is full',
+    name: '',
+    desc: '',
     ring: 3,
-    cost: 2500,
-    max: 1,
+    cost: 0,
+    max: 0,
   },
   fountain: {
     type: 'fountain',
     name: 'Star Fountain',
-    desc: 'Decoration · residents love it',
+    desc: 'Decoration for your Homeworld',
     ring: 1,
     cost: 300,
     decor: true,
@@ -337,7 +320,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   lantern: {
     type: 'lantern',
     name: 'Moon Lantern',
-    desc: 'Decoration · residents love it',
+    desc: 'Decoration for your Homeworld',
     ring: 1,
     cost: 200,
     decor: true,
@@ -347,7 +330,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   flowers: {
     type: 'flowers',
     name: 'Comet Flowers',
-    desc: 'Decoration · residents love it',
+    desc: 'Decoration for your Homeworld',
     ring: 2,
     cost: 400,
     decor: true,
@@ -357,7 +340,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   statue: {
     type: 'statue',
     name: 'Keeper Statue',
-    desc: 'Decoration · residents adore it',
+    desc: 'Decoration for your Homeworld',
     ring: 1,
     cost: 5000,
     gems: 0,
@@ -370,6 +353,20 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
 export const BUILD_TIME = [0, 30e3, 5 * 60e3, 30 * 60e3, 2 * 3600e3, 4 * 3600e3];
 
 export const RING_COST = [0, 0, 1500, 5000, 12000, 30000];
+export const HOME_LEVEL_REQUIREMENTS: Record<
+  1 | 2 | 3 | 4 | 5,
+  {
+    chapter: number;
+    dust: number;
+    essence: Partial<Record<'stone' | 'dew' | 'leaf' | 'ember' | 'frost', number>>;
+  }
+> = {
+  1: { chapter: 0, dust: 0, essence: {} },
+  2: { chapter: 1, dust: 1500, essence: { leaf: 20, dew: 20 } },
+  3: { chapter: 3, dust: 5000, essence: { stone: 40, ember: 30 } },
+  4: { chapter: 5, dust: 12000, essence: { frost: 40, dew: 40, leaf: 40 } },
+  5: { chapter: 8, dust: 30000, essence: { stone: 60, dew: 60, leaf: 60, ember: 60, frost: 60 } },
+};
 
 export const DYES: Dye[] = [
   { id: 'snow', name: 'Snow', color: '#f4f6ff' },
@@ -540,7 +537,7 @@ export const CONSTELLATIONS: Constellation[] = [
 import type { Cosmetic } from './cosmetics';
 import type { Habitat } from './habitats';
 import type { AlbumPage } from './stickers';
-import type { Paint, Produce } from './homeworld';
+import type { Paint } from './homeworld';
 const c = (x: Cosmetic) => x;
 
 export const COSMETICS: Cosmetic[] = [
@@ -807,14 +804,6 @@ export const BOSS_REWARD: Reward = { gems: 30, dust: 500 };
 
 export const COST_K = [0, 1, 2.5, 6, 14, 30];
 
-export const RATE: Record<Produce, number[]> = {
-  dust: [0, 40, 70, 110, 160, 230],
-  booster: [0, 1 / 6, 1 / 5, 1 / 4, 1 / 3.5, 1 / 3],
-  gem: [0, 1 / 6, 1 / 5, 1 / 4, 1 / 3, 1 / 2.5],
-};
-
-export const BASE_CAP_HOURS = 6;
-
 // Formula inputs keep their previous values; changes here are balance changes.
 export const CHAPTER_REWARD = { baseGems: 25, gemsPerChapter: 5, dustPerChapter: 200 };
 // Seven retired rank payouts are spread over the first seven chapter chests.
@@ -824,10 +813,12 @@ export const DISCOVERY_DUST = 50;
 export const COMBO_STAMP_DUST = 30;
 export const CALENDAR_REPEAT_ITEM_GEMS = 40;
 export const FINISH_DUST_PER_THROW = 15;
-export const VISITOR_DUST = { common: 20, uncommon: 30, rare: 50, legendary: 80 };
+// Three short visits can yield many gifts; each gift stays a small keepsake.
+export const VISITOR_DUST = { common: 2, uncommon: 3, rare: 5, legendary: 7 };
 export const FRIENDSHIP_REWARD_GEMS_PER_LEVEL = 5;
 export const FRIENDSHIP_TREAT = { baseDust: 40, dustPerLevel: 30 };
-export const EXPEDITION_REWARD = { dustPerHour: 120, eightHourGems: 6, fourHourGems: 2, eightHourThreshold: 8, fourHourThreshold: 4 };
+// M11 career including live trips exceeded idle ≤1.5×; reduce only trip stardust (120 → 5) until M13 redesign.
+export const EXPEDITION_REWARD = { dustPerHour: 5, eightHourGems: 6, fourHourGems: 2, eightHourThreshold: 8, fourHourThreshold: 4 };
 export const GALAXY_RATE = { base: 6, perStar: 3, perSpecies: 2 };
 export const INBOX_GIFTS: Record<string, Reward> = {
   welcome: { gems: 20 },

@@ -41,6 +41,7 @@ if (typeof document !== 'undefined') {
 
 export function settingsFlow(app: App) {
   const s: Settings = app.p.settings;
+  const aim = s;
   const tog = (label: string, key: Toggle) => {
     const b = h('button', { class: `toggle${s[key] ? ' on' : ''}`, role: 'switch', 'aria-checked': String(s[key]) }, label, h('i'));
     b.addEventListener('click', async () => {
@@ -175,6 +176,27 @@ export function settingsFlow(app: App) {
     tog(t('Music'), 'music'),
     tog(t('Haptics'), 'haptics'),
     tog(t('Reduce motion'), 'reduceMotion'),
+    h(
+      'div',
+      { class: 'setting-with-help' },
+      (() => {
+        const b = h(
+          'button',
+          { class: `toggle${aim.fullAimLine ? ' on' : ''}`, role: 'switch', 'aria-checked': String(aim.fullAimLine === true) },
+          t('Full aim line'),
+          h('i'),
+        );
+        b.addEventListener('click', () => {
+          aim.fullAimLine = !aim.fullAimLine;
+          b.classList.toggle('on', aim.fullAimLine);
+          b.setAttribute('aria-checked', String(aim.fullAimLine));
+          app.save();
+          sfx.click();
+        });
+        return b;
+      })(),
+      h('small', { class: 'muted' }, t('Shows the whole aim path for every launcher.')),
+    ),
     h('label', { class: 'toggle lang' }, t('Language'), lang),
     h('label', { class: 'toggle lang' }, t('Text size'), size),
     h('label', { class: 'toggle lang' }, t('Planet colours'), colours),

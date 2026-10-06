@@ -27,7 +27,7 @@ import type { LevelScene } from './game';
 export const MAX_PULL = 150;
 export const PULL_TO_SPEED = 6.2;
 export const SCOPE_STEPS = [16, 28, 44, 90] as const;
-/** Paid Aim Guide levels retain their visible value until the upgrade retires. */
+/** Callers use level 2 for standard reach; Star Scope and the assist show the full path. */
 export function visibleAimSteps(
   id: import('../core/launchers').LauncherId,
   tune: import('../core/launchers').Tune,

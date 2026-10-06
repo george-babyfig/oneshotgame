@@ -365,8 +365,14 @@ describe('time: the clock moved back or forward', () => {
     p.level = 24;
     p.galaxy = [{ n: 1, name: 'Pebble', hue: 40, stars: 3, species: ['otter'], life: 60, colors: [] }];
     p.lastCollect = NOW - 5 * HOUR;
-    p.home.plots[0] = { type: 'mill', lv: 2, since: NOW - 4 * HOUR };
-    p.home.plots[1] = { type: 'grove', lv: 1, since: NOW - 3 * HOUR, done: NOW + 25 * 60000 };
+    p.home.plots[0] = {
+      type: 'greenhouse',
+      lv: 2,
+      since: NOW - 4 * HOUR,
+      greenhouse: { choice: 'scope', winsTowardNext: 2, stored: 1 },
+    };
+    p.home.plots[1] = { type: 'launch_bay', lv: 1, since: NOW - 3 * HOUR, done: NOW + 25 * 60000 };
+    p.vault.bankedProductionMs = 2 * HOUR;
     p.home.lastTick = NOW;
     p.daily = { last: today(new Date(NOW)), streak: 17 };
     return p;

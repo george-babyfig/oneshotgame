@@ -75,6 +75,7 @@ export function passportCard(app: App, compact = false) {
       h('div', { class: 'pp-name' }, passportName(p)),
       h('div', { class: `pp-title${title?.gold ? ' gold' : ''}` }, title ? t(title.text) : ''),
       h('div', { class: 'pp-num' }, t('Explorer {id}', { id: explorerId(p) })),
+      p.level >= 5 ? h('div', { class: 'pp-home-level' }, t('Homeworld Level {n}', { n: p.home.level })) : null,
     ),
     compact
       ? null

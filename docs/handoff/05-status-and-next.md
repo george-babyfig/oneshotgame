@@ -1,4 +1,4 @@
-# 05: Status and next steps (as of 6 October 2026, third session, after M10.5 and the decision-29 generator fix)
+# 05: Status and next steps (as of 6 October 2026, third session, after M11)
 
 ## Where things stand
 
@@ -38,6 +38,7 @@
 | M10 Labs                                                                    | (this push)          | Six Lab buildings with one instant ladder each (Labs only ever help, decision 44), Guard perks, optional top forms, Essences, the two-step first hour, VoiceOver plot list, J5                                                                                |
 | Launch-hardening sprint (from docs/product/LAUNCH-READINESS.md)             | (this push)          | Share crash, privacy manifest, Game Center registration, in-app privacy text, icon alpha, iOS 15.4, six declared languages, release script, save recovery, achievements-only Game Center, J4, CI archive and smoke jobs                                       |
 | M10.5 Launchers and the Launch Bay + decision-29 generator fix              | (this push)          | Launch roster Sling/Swoop/Zip/Thumper (decision 51; three more wait for M15), the Launch Bay with tunes and free practice, Comet Pier progress; raw-v2 generator for planets 61-120 (lint 62 → 17 flags) with shadow gates restored                           |
+| M11 Homeworld Level and a fair economy                                      | (this push)          | Homeworld Levels 1-5, the win-fuelled Vault, the Greenhouse choice, Upgrades/Mills/Groves/Observatory retired with refunds, stardust looks, a v4 save migration; every economy band green on two seeds (decisions 52-53)                                      |
 
 Each milestone's "✅ built" note in [ROADMAP-v2.md](../product/ROADMAP-v2.md) section 8 lists what shipped and the choices made while building.
 
@@ -45,9 +46,9 @@ Each milestone's "✅ built" note in [ROADMAP-v2.md](../product/ROADMAP-v2.md) s
 
 **Deferred to M12:** the other five looks products (Themes, the Planet Pack, Style Singles) arrive with their art. Starter Crew is currently the Aurora atmosphere, the Explorer suit, a trail and a Passport banner; the hat, launcher and paint are added in M12, free to existing buyers. **Also deferred to M12 (decision 29):** bringing the raw "shadow" level generator into the same difficulty band as the hand-reviewed campaign salts.
 
-## Next: M11 Homeworld Level and a fair economy
+## Next: M11.5 Homeworld Life
 
-M10, M10.5, the launch-hardening sprint and the decision-29 generator fix are built. Next is **M11** (Homeworld Level, the Vault, the Greenhouse, retiring Upgrades/Mills/Groves/Observatory; decisions 22 and 23 defaults apply), then **M11.5** Homeworld Life and **M12** Star Roads, Styles and launch prep (decisions 48-50). Build maps for all three were written from ROADMAP-v2 §8 and HOMEWORLD.md; re-create them if the scratchpad is gone. **The launch audit** is `docs/product/LAUNCH-READINESS.md`: it lists the remaining studio work, everything only the owner can do (Apple account, agreements, hosting, trademark, devices, playtests), and the owner checklist (also in Linear). **Decisions 33-47** are open with defaults applied (ROADMAP-v2 §10).
+M10, M10.5, the launch-hardening sprint and the decision-29 generator fix are built. M11 is built too. Next is **M11.5** Homeworld Life (routines, weather, lands, five Landmarks), then **M12** Star Roads, Styles and launch prep (decisions 48-50). Build maps for all three were written from ROADMAP-v2 §8 and HOMEWORLD.md; re-create them if the scratchpad is gone. **The launch audit** is `docs/product/LAUNCH-READINESS.md`: it lists the remaining studio work, everything only the owner can do (Apple account, agreements, hosting, trademark, devices, playtests), and the owner checklist (also in Linear). **Decisions 33-47** are open with defaults applied (ROADMAP-v2 §10).
 
 ## Next: the rest of ROADMAP-v2
 
@@ -69,13 +70,13 @@ The plan is **[docs/product/ROADMAP-v2.md](../product/ROADMAP-v2.md)**, with [HO
 | M9        | Remix (REMIX.md)                                                                               | M    | ✅ built |
 | M10       | Labs: your shots learn tricks                                                                  | L    | ✅ built |
 | M10.5     | Launchers and the Launch Bay                                                                   | L    | ✅ built |
-| M11       | Homeworld Level and a fair economy                                                             | M    | **Next** |
-| M11.5     | Homeworld Life: friends' days, lands and Landmarks (needs decision 25)                         | L    |          |
+| M11       | Homeworld Level and a fair economy                                                             | M    | ✅ built |
+| M11.5     | Homeworld Life: friends' days, lands and Landmarks (needs decision 25)                         | L    | **Next** |
 | M12       | Star Roads, the Styles catalogue and launch prep (store package, site and rename partly done)  | L    |          |
 | M13–M17   | After launch: friends and trips, Road 1, content drop, Collector's Edition, Homeworld Horizons | —    |          |
 
 - **Difficulty, the headline principle:** in the owner's words, "we dont want it too hard at the beginning but also not too easy, as both will cause a user to lose interest". The difficulty program (FLIGHT.md, M8) now has a floor and a ceiling per chapter, with decision 28's "Kid-first" bands: M3's ladder moves were the first step.
-- **Owner decisions** 1–47 are in ROADMAP-v2 section 10. Decisions 1 and 28–32 are answered; 33 (Remix difficulty) and 34–51 (M10, M10.5, M12 and launch defaults) are open with defaults applied; the stated defaults apply to the rest unless the owner says otherwise. M11.5 still needs decision 25.
+- **Owner decisions** 1–47 are in ROADMAP-v2 section 10. Decisions 1 and 28–32 are answered; 33 (Remix difficulty) and 34–53 (M10, M10.5, M11, M12 and launch defaults) are open with defaults applied; the stated defaults apply to the rest unless the owner says otherwise. M11.5 still needs decision 25.
 
 ## Baseline data (from M1)
 
@@ -99,7 +100,7 @@ Targets for later milestones:
 - **The shadow-layout generator must be brought into band before launch** (decision 29, M12). The hand-reviewed campaign salts (planets 1–60) pass every difficulty band and lint gate; the raw generator that produces unreviewed "shadow" layouts still runs about 10 points harder for casual play on planets 21–60 and is only a CI Watch, not a gate.
 - **Casual bonks on obstacle teaching planets ran a bit above target after M7.5** (about 1.1–1.6 per round against a ≤1.0 target). M8's phase E report lists the bonk bands as now passing, since the obstacle Watch was explicitly handed to M8's difficulty program to own — but this hasn't been independently spot-checked since, so verify it before relying on it.
 - **Gate v2 needs a T0 check:** English and hiragana number words may be readable by children aged 9–11. Test it with real children before launch.
-- **Glossary `BUILT` is current.** `tests/glossary.test.ts` lists M0 through M10.5 in `BUILT`; update it again the moment M11 ships.
+- **Glossary `BUILT` is current.** `tests/glossary.test.ts` lists M0 through M11 in `BUILT`; update it again the moment M11.5 ships.
 - **Glossary watch list:** `tests/glossary.test.ts` prints known translation inconsistencies still to fix. M3 fixed the Japanese galaxy/festival words and some Spanish/Portuguese wording; the rename pass (`db1872f`) fixed more (the Grown-ups area reading like an adult-content label in es/pt/ja, broken Japanese "Your Keeper", German Keeper/Supernova gender, Portuguese "lançamento"); check the printed list for what's left.
 - **Rate button:** "Rate Comet Garden" in Settings can't fall back to the App Store page until the app has a store ID.
 - **Voyage map previews all look alike.** They show each stop's starting planet, which is mostly bare rock.

@@ -1041,6 +1041,7 @@ export function roundState(scene: LevelScene): RoundState {
     combo: { ...scene.combo },
     comboCharge: scene.comboCharge,
     throwsLeft: scene.throwsLeft,
+    continuesUsed: scene.continuesUsed,
     bonus: scene.bonus,
     regionBests: scene.regionBests,
     arrived: [...scene.arrived],

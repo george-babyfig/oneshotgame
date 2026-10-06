@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultProfile } from '../src/meta/profile';
-import { nextUp } from '../src/meta/nextup';
+import { homeworldNextUp, nextUp } from '../src/meta/nextup';
 import { ensureWishes } from '../src/meta/wishes';
 
 describe('nextUp', () => {
@@ -38,5 +38,13 @@ describe('nextUp', () => {
     p.chapters = [1, 2];
     p.home.plots[0] = { type: 'den', lv: 1, since: 0, done: 5 };
     expect(nextUp(p, 5)).toMatchObject({ kind: 'claim', action: 'homeworld' });
+  });
+  it('shows one Homeworld task and puts a grown booster first', () => {
+    const p = defaultProfile();
+    p.level = 11;
+    p.home.firstHour = 2;
+    expect(homeworldNextUp(p).title).toBe('Homeworld Level 2');
+    p.home.plots[0] = { type: 'greenhouse', lv: 1, since: 0, greenhouse: { choice: 'spark', winsTowardNext: 0, stored: 1 } };
+    expect(homeworldNextUp(p)).toMatchObject({ kind: 'claim', title: 'A booster is ready' });
   });
 });

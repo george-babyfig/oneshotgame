@@ -4,9 +4,8 @@ import { sfx } from '../audio';
 import { DIFFICULTY_DUST, TWISTS, type LevelDef } from '../../core/levels';
 import { BIOMES, KINDS, SPECIES_BY_ID, traitOf, lifeScore, type BiomeId, type TraitId } from '../../core/world';
 import { BOOSTERS, type BoosterId } from '../../meta/config';
-import { spendDust } from '../../meta/economy';
+import { buyGemBooster, canBuyGemBooster, spendDust, useStoredBooster } from '../../meta/economy';
 import { chapterOf } from '../../meta/progression';
-import { momentumActive, MOMENTUM_PERKS } from '../../meta/momentum';
 import { projectileCanvas } from '../art/projectiles';
 import { critterCanvas } from '../art/critters';
 import { sparkStart } from '../fx';
@@ -67,8 +66,7 @@ export function preLevel(app: App, n: number) {
   const chosen = { shower: false, spark: false, scope: false };
   const fromInventory = { shower: false, spark: false, scope: false };
   const explained = new Set<BoosterId>();
-  const perk = momentumActive(p) ? MOMENTUM_PERKS[p.momentum.streak] : null;
-  const free = (id: BoosterId) => (id === 'spark' && !!perk?.spark) || (id === 'scope' && !!perk?.scope);
+  const free = (id: BoosterId) => id === 'scope' && !!scene.o.momentumScope;
   const panel = h('div', { class: 'level-info', role: 'group', 'aria-label': t('Planet details') });
   panel.inert = true;
   const entranceGate = h('div', { class: 'level-info-gate', 'aria-hidden': 'true' });
@@ -84,7 +82,7 @@ export function preLevel(app: App, n: number) {
     if (count) ledger.count('boosters_used', count);
     for (const id of Object.keys(chosen) as BoosterId[]) {
       if (!chosen[id]) continue;
-      if (fromInventory[id]) p.boosters[id]--;
+      if (fromInventory[id]) scene.gemBoosterUsed ||= useStoredBooster(p, id) === true;
       else spendDust(p, BOOSTERS[id].dust, 'booster');
     }
     if (count) app.save();
@@ -170,6 +168,15 @@ export function preLevel(app: App, n: number) {
             h('div', { class: 'm-title' }, t(b.name)),
             h('p', null, t(b.desc)),
             getButton,
+            canBuyGemBooster(p, id)
+              ? btn(t('Get 1 for 💎{price}', { price: b.gems }), 'ghost wide', () => {
+                  if (buyGemBooster(p, id)) {
+                    choose(id);
+                    app.save();
+                  }
+                  confirm.close();
+                })
+              : null,
             btn(t('Cancel'), 'ghost wide', () => confirm.close()),
           ]);
         });

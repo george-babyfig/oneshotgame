@@ -4,13 +4,16 @@ import { earn, spend, type SpendSink } from './wallet';
 // happened, so the UI can celebrate it and tests can pin it down.
 import { BIOMES, SPECIES_BY_ID, type Planet } from '../core/world';
 import { DIFFICULTY_DUST, type Difficulty } from '../core/levels';
-import { PIGGY_MAX, PIGGY_PER_WIN, PRODUCT_BY_ID, VAULT_HOURS, GEMS_PER_NEW_SPECIES } from './config';
+import { PIGGY_MAX, PIGGY_PER_WIN, PRODUCT_BY_ID, GEMS_PER_NEW_SPECIES } from './config';
+import { BOOSTERS, type BoosterId } from './config';
 import { type GalaxyPlanet, type Profile } from './profile';
+import type { HomeworldLevel, WonRoundEvent } from './homeworldTypes';
 import { collectAll, pendingHomeProduction } from './homeworld';
 import { openVisitor } from './visitors';
 import { WELCOME_BACK_GEMS } from './tuning';
 import { t } from '../i18n';
 import { addRoadPoints } from './roadpoints';
+import { takeWonContinues } from './continues';
 
 /** Stardust per hour produced by one galaxy planet. */
 export function planetRate(g: Pick<GalaxyPlanet, 'stars' | 'species'>) {
@@ -21,47 +24,134 @@ export function galaxyRate(p: Profile) {
   return p.galaxy.reduce((a, g) => a + planetRate(g), 0);
 }
 
-export function vaultHours(p: Profile) {
-  return VAULT_HOURS[Math.min(p.upgrades.vault, VAULT_HOURS.length - 1)];
+// Win fuel is generous enough to fill the Vault; rates keep its collected dust
+// secondary to the rewards from playing, even on a quiet Regular day.
+export const VAULT_RATES = [10, 15, 20, 25, 30] as const;
+export const VAULT_STORAGE_HOURS = [4, 6, 8, 10, 12] as const;
+export const VAULT_UPGRADE_COSTS = [1000, 3000, 8000, 20000] as const;
+const HOUR = 3_600_000;
+const MAX_FUEL = 12 * HOUR;
+
+export function vaultTier(p: Profile): HomeworldLevel {
+  return Math.min(5, Math.max(1, Math.floor(p.upgrades.vault) + 1)) as HomeworldLevel;
 }
 
-/** Keep the last collect time as a high-water mark through clock rollbacks. */
+/** The galaxy can grow freely; the Vault's tier limits actual income. */
+export function vaultRate(p: Profile): number {
+  return Math.min(galaxyRate(p), VAULT_RATES[vaultTier(p) - 1]);
+}
+
+export function vaultHours(p: Profile) {
+  return VAULT_STORAGE_HOURS[vaultTier(p) - 1];
+}
+
+function projectedVault(p: Profile, now: number) {
+  const v = p.vault;
+  const highWater = Math.max(v.lastTick, p.lastCollect);
+  const rate = vaultRate(p);
+  const cap = rate * vaultHours(p);
+  const elapsed = Math.max(0, now - highWater);
+  const remaining = Math.max(0, cap - v.storedDust);
+  const used = rate ? Math.min(elapsed, v.bankedProductionMs, (remaining / rate) * HOUR) : 0;
+  return {
+    storedDust: Math.max(v.storedDust, Math.min(cap, v.storedDust + (used / HOUR) * rate)),
+    fuel: v.bankedProductionMs - used,
+    tick: Math.max(now, highWater),
+  };
+}
+
+/** Settle once against a clock high-water mark; a full Vault saves its fuel. */
+export function settleVault(p: Profile, now = Date.now()) {
+  const next = projectedVault(p, now);
+  p.vault.storedDust = next.storedDust;
+  p.vault.bankedProductionMs = next.fuel;
+  p.vault.lastTick = next.tick;
+  p.vault.tier = vaultTier(p);
+  p.lastCollect = next.tick;
+}
+
 export function fixClock(p: Profile, now = Date.now()) {
-  if (p.lastCollect > now) return;
+  settleVault(p, now);
 }
 
 export function pendingDust(p: Profile, now = Date.now()) {
-  const hours = Math.min(vaultHours(p), Math.max(0, now - p.lastCollect) / 3600000);
-  return Math.floor(galaxyRate(p) * hours);
+  return Math.floor(projectedVault(p, now).storedDust);
 }
 
 /** Time (ms epoch) at which the vault will be full. */
 export function vaultFullAt(p: Profile) {
-  return p.lastCollect + vaultHours(p) * 3600000;
+  const rate = vaultRate(p);
+  const highWater = Math.max(p.vault.lastTick, p.lastCollect);
+  if (!rate) return highWater;
+  const needed = (Math.max(0, rate * vaultHours(p) - p.vault.storedDust) / rate) * HOUR;
+  return needed > p.vault.bankedProductionMs ? highWater : highWater + needed;
 }
 
 export function collectDust(p: Profile, now = Date.now(), multiplier = 1) {
-  const d = pendingDust(p, now) * multiplier;
+  settleVault(p, now);
+  const d = Math.floor(p.vault.storedDust) * multiplier;
   if (d <= 0) return 0;
   earn(p, 'dust', d, 'vault');
-  p.lastCollect = now;
+  p.vault.storedDust -= Math.floor(p.vault.storedDust);
   return d;
+}
+
+export function creditVaultWin(p: Profile, event: WonRoundEvent) {
+  if (event.mode !== 'campaign') return;
+  settleVault(p, event.at);
+  p.vault.bankedProductionMs = Math.min(MAX_FUEL, p.vault.bankedProductionMs + 2 * HOUR);
+}
+
+export function buyVaultTier(p: Profile, now = Date.now()): boolean {
+  const tier = vaultTier(p);
+  if (tier === 5 || !spend(p, 'dust', VAULT_UPGRADE_COSTS[tier - 1], 'upgrade')) return false;
+  settleVault(p, now);
+  p.upgrades.vault = tier;
+  p.vault.tier = vaultTier(p);
+  return true;
+}
+
+/** Keep paid stock identifiable so a bought helper cannot raise Essence income. */
+export function canBuyGemBooster(p: Profile, id: BoosterId): boolean {
+  return p.gems >= BOOSTERS[id].gems;
+}
+
+export function buyGemBooster(p: Profile, id: BoosterId): boolean {
+  if (!canBuyGemBooster(p, id)) return false;
+  if (!spend(p, 'gems', BOOSTERS[id].gems, 'booster')) return false;
+  p.boosters[id]++;
+  p.gemBoosters[id]++;
+  return true;
+}
+
+export function useStoredBooster(p: Profile, id: BoosterId): boolean | null {
+  if (p.boosters[id] <= 0) return null;
+  const earned = p.boosters[id] - p.gemBoosters[id];
+  p.boosters[id]--;
+  if (earned > 0) return false;
+  p.gemBoosters[id]--;
+  return true;
 }
 
 export function awayCollectables(p: Profile, awayMs: number, now = Date.now()) {
   const vault = pendingDust(p, now);
   const home = pendingHomeProduction(p.home, now);
   const visitors = p.visitors.reduce((sum, gift) => sum + gift.dust, 0);
-  const vaultFull = galaxyRate(p) > 0 && now >= vaultFullAt(p);
+  const vaultFull = vault > 0 && vault >= Math.floor(vaultRate(p) * vaultHours(p));
   const ready = vaultFull || home.dust > 0 || home.gems > 0 || home.boosters > 0 || p.visitors.length > 0;
   return {
     vault,
     home,
     visitors,
     visitorCount: p.visitors.length,
-    welcomeGems: awayMs >= 3 * 86400000 ? WELCOME_BACK_GEMS : 0,
+    welcomeGems: welcomeBackGems(p, awayMs, now),
     show: p.tutorial && awayMs >= 30 * 60_000 && (awayMs >= 4 * 3600000 || ready),
   };
+}
+
+function welcomeBackGems(p: Profile, awayMs: number, now: number): number {
+  // One gift per observed absence, even if the same forward timestamp is replayed.
+  return awayMs >= 3 * 86400000 && now >= p.meta.lastSeen && p.meta.lastSeen > (p.meta.lastWelcomeAt ?? 0) ? WELCOME_BACK_GEMS : 0;
 }
 
 /** Collect all earnings accumulated while away. */
@@ -76,8 +166,11 @@ export function collectAway(p: Profile, awayMs: number, now = Date.now()) {
     visitors += gift.dust;
     visitorCount++;
   }
-  const welcomeGems = awayMs >= 3 * 86400000 ? WELCOME_BACK_GEMS : 0;
-  if (welcomeGems) earn(p, 'gems', welcomeGems, 'welcome_back');
+  const welcomeGems = welcomeBackGems(p, awayMs, now);
+  if (welcomeGems) {
+    earn(p, 'gems', welcomeGems, 'welcome_back');
+    p.meta.lastWelcomeAt = now;
+  }
   return { vault, home, visitors, visitorCount, welcomeGems };
 }
 
@@ -103,6 +196,8 @@ export interface LevelOutcome {
   dust: number;
   gems: number;
   firstClear: boolean;
+  /** A continued first clear still opens the planet, with replay-rate Essence. */
+  essenceFirstClear: boolean;
   newStars: number; // stars gained over previous best
   entry: GalaxyPlanet;
   unlockedLevel: boolean;
@@ -128,6 +223,10 @@ export interface WinInput {
   /** Meteor-finale stardust for unused throws. */
   bonusDust?: number;
   day?: string;
+  /** Continues in this winning attempt, excluding older failed attempts. */
+  continuesUsed?: number;
+  /** A gem-bought booster was used in this winning attempt. */
+  gemBoosterUsed?: boolean;
 }
 
 /** Record a won campaign level. */
@@ -136,6 +235,9 @@ export function applyLevelWin(p: Profile, w: WinInput): LevelOutcome {
   const difficulty = w.difficulty ?? 'normal';
   const prev = p.stars[n] ?? 0;
   const firstClear = prev === 0;
+  const oldCounter = takeWonContinues(p, n);
+  const usedContinues = w.continuesUsed ?? oldCounter;
+  const essenceFirstClear = firstClear && usedContinues === 0 && !w.gemBoosterUsed;
   const newStars = Math.max(0, stars - prev);
   const dust =
     (WIN_REWARD.baseDust + stars * WIN_REWARD.dustPerStar + (firstClear ? WIN_REWARD.firstClearDust : 0)) * DIFFICULTY_DUST[difficulty] +
@@ -170,7 +272,8 @@ export function applyLevelWin(p: Profile, w: WinInput): LevelOutcome {
   }
   const unlockedLevel = n === p.level;
   if (unlockedLevel) p.level++;
-  return { dust, gems, firstClear, newStars, entry, unlockedLevel };
+  creditVaultWin(p, { mode: 'campaign', planetKey: `campaign:${n}`, buddySpecies: p.buddy.species, at: Date.now() });
+  return { dust, gems, firstClear, essenceFirstClear, newStars, entry, unlockedLevel };
 }
 
 /** First-time Lifebook discovery. Returns false if it was already known. */

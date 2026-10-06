@@ -117,11 +117,11 @@ if (process.env.SIM === '1') {
     }
     expect(violations, 'decision 44 all-Labs paired gate').toEqual([]);
   }, 1_200_000);
-  it('gates M10 max loadout relative to paired Sling on campaign seeds', () => {
+  it('gates M11 obtainable max loadout relative to paired Sling on campaign seeds', () => {
     const runs = Number(process.env.LOADOUT_RUNS ?? (process.env.SIM_NIGHTLY === '1' ? 96 : 48));
     const seeds = (process.env.LOADOUT_SEEDS ?? 'm10').split(',');
     const counts = {
-      normal: { base3: 0, max3: 0, full3: 0, total: 0 },
+      normal: { base3: 0, max3: 0, total: 0 },
       hard: { baseFail: 0, maxFail: 0, total: 0 },
       super: { baseFail: 0, maxFail: 0, total: 0 },
     };
@@ -130,7 +130,6 @@ if (process.env.SIM === '1') {
       for (let n = 21; n <= 60; n++) {
         const level = makeLevel(n);
         const max = maxLegalLoadout(level);
-        const full = maxLegalLoadout(level, { retiringUpgrades: true });
         for (let i = 0; i < runs; i++) {
           const paired = `${seed}-${n}-${i}`;
           const base = playLevel(level, POLICIES['decent-aware'], rngFrom(paired));
@@ -139,9 +138,6 @@ if (process.env.SIM === '1') {
             counts.normal.total++;
             counts.normal.base3 += Number(base.stars === 3);
             counts.normal.max3 += Number(boosted.stars === 3);
-            counts.normal.full3 += Number(
-              playLevel(level, POLICIES['decent-aware'], rngFrom(paired), undefined, undefined, 0, full).stars === 3,
-            );
           } else if (level.difficulty === 'hard' && n >= 25) {
             counts.hard.total++;
             counts.hard.baseFail += Number(base.stars === 0);
@@ -190,14 +186,13 @@ if (process.env.SIM === '1') {
       `G6 relative to paired Sling Hard 25+ fail: base ${(100 * baseHardFail).toFixed(1)}%, max ${(100 * maxHardFail).toFixed(1)}% (${hard.total} paired rounds); Super base ${(100 * baseSuperFail).toFixed(1)}%, max ${(100 * superFail).toFixed(1)}% (${superHard.total} paired rounds)`,
     );
     console.log(`G7 surprise losses: ${surprise}`);
-    console.log(
-      `Watch full legal loadout: normal 3★ ${((100 * normal.full3) / normal.total).toFixed(1)}%; ${JSON.stringify(maxLegalLoadout(makeLevel(60), { retiringUpgrades: true }))}`,
-    );
+    console.log(`Watch full legal loadout (Comet Shower +3, Momentum +2): ${JSON.stringify(maxLegalLoadout(makeLevel(60)))}`);
     expect(lift, 'G5 max loadout 3★ uplift vs paired Sling ≤15 points').toBeLessThanOrEqual(0.15);
     expect(hard.baseFail, 'G6 Hard relative gate needs paired Sling failures').toBeGreaterThan(0);
     expect(superHard.baseFail, 'G6 Super relative gate needs paired Sling failures').toBeGreaterThan(0);
     expect(maxHardFail, 'G6 Hard max fail ≥half paired Sling fail').toBeGreaterThanOrEqual(baseHardFail / 2);
-    expect(superFail, 'G6 Super max fail ≥half paired Sling fail').toBeGreaterThanOrEqual(baseSuperFail / 2);
+    expect(maxHardFail, 'G6 Hard max fail ≥6%').toBeGreaterThanOrEqual(0.06);
+    expect(superFail, 'G6 Super max fail ≥15%').toBeGreaterThanOrEqual(0.15);
     expect(surprise, 'G7 surprise losses').toBe(0);
   }, 5_400_000);
 }

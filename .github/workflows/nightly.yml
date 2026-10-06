@@ -47,11 +47,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: SIM_NIGHTLY=1 npm run sim:economy
+      - run: SIM_NIGHTLY=1 npm run sim:economy:all
 
   loadout:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5

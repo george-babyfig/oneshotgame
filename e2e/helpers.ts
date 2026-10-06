@@ -21,6 +21,11 @@ export const BROWSER_LOCALE: Record<LocaleId, string> = {
 };
 export const ALL_LOCALES: LocaleId[] = ['en', 'es', 'fr', 'de', 'pt', 'ja', 'pseudo'];
 
+/** Fix wall time before creating a profile so Vault fuel and build timers are deterministic. */
+export async function installJourneyClock(page: Page, at = '2026-10-06T12:00:00.000Z') {
+  await page.clock.install({ time: new Date(at) });
+}
+
 /** `LOCALE=ja,pseudo npx playwright test` narrows the matrix. */
 export function localesToRun(): LocaleId[] {
   const env = process.env.LOCALE?.trim();
@@ -556,7 +561,7 @@ export async function launcherBayReady(page: Page) {
     const p = a.p;
     p.home.firstHour = 2;
     p.home.intro = true;
-    p.home.ring = 2;
+    p.home.level = 2;
     p.home.plots[0] = { type: 'launch_bay', lv: 2, since: Date.now() };
     p.chapters = [1, 2, 3, 4, 5, 6];
     p.launcher.flings.swoop = 120;

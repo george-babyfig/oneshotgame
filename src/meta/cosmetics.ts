@@ -6,14 +6,15 @@ import { spend } from './wallet';
 // retroactive and never need a save migration.
 import type { Profile } from './profile';
 import { STAR_ROAD } from './progression';
-import { t } from '../i18n';
+import { getLang, t } from '../i18n';
 import { HABITATS } from './habitats';
 import { dyeColors } from './dyes';
 
 export type Slot = 'suit' | 'hat' | 'launcher' | 'trail' | 'emote';
 export const SLOTS: Slot[] = ['suit', 'hat', 'launcher', 'trail', 'emote'];
 
-export type Source = 'free' | 'gems' | 'road' | 'pass' | 'chapter' | 'habitat' | 'starter' | 'event' | 'calendar' | 'constellation';
+export type Source =
+  'free' | 'gems' | 'dust' | 'road' | 'pass' | 'chapter' | 'habitat' | 'starter' | 'event' | 'calendar' | 'constellation';
 /** Presentation tier only (frame colour); it never affects odds because nothing is random. */
 export type Tier = 'basic' | 'fancy' | 'epic';
 
@@ -24,6 +25,7 @@ export interface Cosmetic {
   source: Source;
   tier: Tier;
   gems?: number;
+  dust?: number;
   /** Chapter number or habitat id. */
   unlock?: number | string;
   /** Palette: suits [body, trim, visor]; launchers/trails their main colours. */
@@ -113,6 +115,89 @@ export const SHOWTIME_COSMETICS: Cosmetic[] = [
     colors: ['#a6adf0', '#fff0b8'],
   },
 ];
+/** Optional permanent sinks; prices rise within each named series. */
+export const STARDUST_COSMETICS: Cosmetic[] = [
+  {
+    id: 'suit_sunseed',
+    slot: 'suit',
+    name: 'Sunseed Suit',
+    source: 'dust',
+    tier: 'fancy',
+    dust: 5000,
+    colors: ['#e4ba62', '#f7e9aa', '#57443c'],
+    set: 'Sunseed',
+  },
+  {
+    id: 'hat_sunseed',
+    slot: 'hat',
+    name: 'Sunseed Crown',
+    source: 'dust',
+    tier: 'fancy',
+    dust: 10000,
+    colors: ['#f4d574', '#a1c981'],
+    set: 'Sunseed',
+  },
+  {
+    id: 'tr_sunseed',
+    slot: 'trail',
+    name: 'Sunseed Trail',
+    source: 'dust',
+    tier: 'epic',
+    dust: 18000,
+    colors: ['#fff2ad', '#e4b960'],
+    set: 'Sunseed',
+  },
+  {
+    id: 'l_sunseed',
+    slot: 'launcher',
+    name: 'Sunseed Launcher look',
+    source: 'dust',
+    tier: 'epic',
+    dust: 25000,
+    colors: ['#f1cd7a'],
+    set: 'Sunseed',
+  },
+  {
+    id: 'suit_moonbloom',
+    slot: 'suit',
+    name: 'Moonbloom Suit',
+    source: 'dust',
+    tier: 'fancy',
+    dust: 12000,
+    colors: ['#8e8fc4', '#d9d8ef', '#42466d'],
+    set: 'Moonbloom',
+  },
+  {
+    id: 'hat_moonbloom',
+    slot: 'hat',
+    name: 'Moonbloom Crown',
+    source: 'dust',
+    tier: 'fancy',
+    dust: 22000,
+    colors: ['#c0bce8', '#8599c4'],
+    set: 'Moonbloom',
+  },
+  {
+    id: 'tr_moonbloom',
+    slot: 'trail',
+    name: 'Moonbloom Trail',
+    source: 'dust',
+    tier: 'epic',
+    dust: 35000,
+    colors: ['#d0d4ff', '#909acb'],
+    set: 'Moonbloom',
+  },
+  {
+    id: 'l_moonbloom',
+    slot: 'launcher',
+    name: 'Moonbloom Launcher look',
+    source: 'dust',
+    tier: 'epic',
+    dust: 50000,
+    colors: ['#b3ade2'],
+    set: 'Moonbloom',
+  },
+];
 // Look IDs and sources stay stable for saved outfits and paid entitlements.
 const LOOK_NAMES: Record<string, string> = {
   l_pad: 'Classic',
@@ -123,10 +208,11 @@ const LOOK_NAMES: Record<string, string> = {
 export const COSMETICS: Cosmetic[] = [
   ...BASE_COSMETICS.map((item) => ({ ...item, name: LOOK_NAMES[item.id] ?? item.name })),
   ...SHOWTIME_COSMETICS,
+  ...STARDUST_COSMETICS,
 ];
 
 export const COSMETIC_BY_ID: Record<string, Cosmetic> = Object.fromEntries(COSMETICS.map((x) => [x.id, x]));
-export const STYLES_RELEASE = 'm6.5';
+export const STYLES_RELEASE = 'm11';
 
 export function isPaidLook(x: Cosmetic): boolean {
   return x.source === 'starter' || x.source === 'pass';
@@ -175,6 +261,7 @@ export function owns(p: Profile, id: string): boolean {
     case 'free':
       return true;
     case 'gems':
+    case 'dust':
     case 'event':
       return p.wardrobe.includes(id);
     case 'starter':
@@ -218,8 +305,9 @@ export function equip(p: Profile, id: string): boolean {
 
 export function buyCosmetic(p: Profile, id: string): boolean {
   const x = COSMETIC_BY_ID[id];
-  if (!x || x.source !== 'gems' || owns(p, id) || !x.gems || p.gems < x.gems) return false;
-  spend(p, 'gems', x.gems, 'cosmetic');
+  if (!x || (x.source !== 'gems' && x.source !== 'dust') || owns(p, id)) return false;
+  if (x.source === 'gems' ? !x.gems || !spend(p, 'gems', x.gems, 'cosmetic') : !x.dust || !spend(p, 'dust', x.dust, 'cosmetic'))
+    return false;
   p.wardrobe.push(id);
   return true;
 }
@@ -242,6 +330,8 @@ export function sourceText(x: Cosmetic): string {
       return t('Free');
     case 'gems':
       return `💎${x.gems}`;
+    case 'dust':
+      return t('✨{n}', { n: x.dust?.toLocaleString(getLang() || undefined) ?? '0' });
     case 'starter':
       return t('Try on');
     case 'chapter':

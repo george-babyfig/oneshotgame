@@ -60,7 +60,7 @@ it('uses short, gentle and accurate Lab copy', () => {
 function readyProfile() {
   const p = defaultProfile(T0);
   p.level = 61;
-  p.home.ring = 5;
+  p.home.level = 5;
   p.dust = 100_000;
   p.mats = { stone: 500, frost: 500, leaf: 1000, ember: 500, dew: 500 };
   return p;
@@ -73,11 +73,20 @@ describe('Lab ladder and first hour', () => {
       { dust: 400, essence: 'leaf', amount: 10 },
       { dust: 1200, essence: 'leaf', amount: 25 },
       { dust: 3000, essence: 'leaf', amount: 50 },
-      { dust: 7000, essence: 'leaf', amount: 140 },
+      { dust: 4500, essence: 'leaf', amount: 180 },
     ]);
-    expect(LAB_ESSENCE_COST.slice(2)).toEqual([10, 25, 50, 140]);
-    p.home.ring = 1;
+    expect(LAB_ESSENCE_COST.slice(2)).toEqual([10, 25, 50, 180]);
+    p.home.level = 1;
     expect(labCap(p)).toBe(2);
+    for (const [homeLevel, cap] of [
+      [2, 3],
+      [3, 4],
+      [4, 5],
+      [5, 5],
+    ] as const) {
+      p.home.level = homeLevel;
+      expect(labCap(p)).toBe(cap);
+    }
     p.lab.seed = 5;
     expect(labLevel(p, 'seed')).toBe(5);
     p.level = 14;
@@ -136,7 +145,7 @@ describe('Lab ladder and first hour', () => {
     p.level = 11;
     expect(canLevelLab(p, 'rock')).toBe('untaught');
     p.level = 61;
-    p.home.ring = 1;
+    p.home.level = 1;
     expect(canLevelLab(p, 'rock')).toBe('cap');
   });
 
@@ -172,7 +181,7 @@ describe('Lab ladder and first hour', () => {
   it('first hour builds one Lab, gives a Den and friend, and pays 100 dust once', () => {
     const p = readyProfile();
     p.level = 5;
-    p.home.ring = 1;
+    p.home.level = 1;
     p.seen = ['bunny'];
     expect(firstHourStep(p)).toBe('lab');
     expect(firstHourLab(p, 'rock', 0, T0)).toBe('ok');

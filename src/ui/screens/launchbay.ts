@@ -92,8 +92,8 @@ function pierCard(app: App): HTMLElement {
   const stage = pier.stage;
   if (stage === 4) return h('p', { class: 'bay-progress' }, t('Comet Pier finished'));
   const progress =
-    p.home.ring < 4
-      ? t('Comet Pier opens at Homeworld Ring 4')
+    p.home.level < 4
+      ? t('Comet Pier opens at Homeworld Level 4')
       : stage === 0
         ? t('Win 3 Hard planets ({hard} of 3) or get 3 stars on 6 planets ({stars} of 6)', {
             hard: Math.min(3, pier.hardWins),
@@ -104,9 +104,9 @@ function pierCard(app: App): HTMLElement {
           : stage === 2
             ? t('Make Fusions: {have} of 10', { have: Math.min(10, pier.fusions) })
             : t('Leaf {leaf} of 40 · Dew {dew} of 30', { leaf: fmt(p.mats.leaf ?? 0), dew: fmt(p.mats.dew ?? 0) });
-  const canFinish = p.home.ring >= 4 && stage === 3 && (p.mats.leaf ?? 0) >= 40 && (p.mats.dew ?? 0) >= 30;
+  const canFinish = p.home.level >= 4 && stage === 3 && (p.mats.leaf ?? 0) >= 40 && (p.mats.dew ?? 0) >= 30;
   const finish = btn(t('Finish Comet Pier'), canFinish ? 'primary' : 'ghost dim', () => {
-    if (p.home.ring < 4) return toast(t('Comet Pier opens at Homeworld Ring 4'));
+    if (p.home.level < 4) return toast(t('Comet Pier opens at Homeworld Level 4'));
     if (!finishCometPier(p)) return toast(t('Gather 40 leaf and 30 dew to finish the Comet Pier'));
     sfx.chest();
     haptic.success();

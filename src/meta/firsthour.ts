@@ -19,7 +19,7 @@ export function firstHourLab(
   now = Date.now(),
 ): BuildCheck | 'locked' {
   if (firstHourStep(p) !== 'lab') return 'locked';
-  // Meteor rocks can cover every empty plot before planet 5 is reached.
+  // Old saves may still carry debris before the migration clears it.
   if (plot < 0) {
     plot = p.home.plots.findIndex((b) => !b);
     if (plot >= 0) p.home.debris = p.home.debris.filter((i) => i !== plot);
@@ -40,7 +40,7 @@ export function firstHourFriend(p: Profile, now = Date.now()): { species: string
       plot = p.home.plots.findIndex((b) => !b);
       if (plot >= 0) p.home.debris = p.home.debris.filter((i) => i !== plot);
     }
-    // An already filled ring keeps its buildings; the welcome Den gets a plot of its own.
+    // An already filled Homeworld keeps its buildings; the welcome Den gets a plot.
     if (plot < 0) plot = p.home.plots.push(null) - 1;
     p.home.plots[plot] = { type: 'den', lv: 1, since: now };
   }

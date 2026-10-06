@@ -44,7 +44,6 @@ export type UnlockId =
   | 'passport_setup'
   | 'workshop'
   | 'object_lab'
-  | 'upgrades'
   | 'inbox'
   | 'steam'
   | 'rainGarden'
@@ -228,7 +227,6 @@ export const UNLOCKS: readonly Unlock[] = [
   { id: 'passport_setup', planet: 0, placement: 'home' },
   { id: 'workshop', planet: 18, placement: 'collection' },
   { id: 'object_lab', planet: HOME_UNLOCK_LEVEL, placement: 'collection' },
-  { id: 'upgrades', planet: 14, placement: 'home' },
   { id: 'inbox', planet: 1, placement: 'home', button: true, letter: 'welcome' },
 ];
 
@@ -259,7 +257,6 @@ export function unlocked(p: Profile, id: UnlockId): boolean {
   if (id === 'sticker_album' && (p.album.fest.length > 0 || p.album.pagesClaimed.length > 0)) return true;
   if (id === 'passport' && p.passport.set) return true;
   if (id === 'object_lab' && Object.values(p.lab).some((level) => level > 1)) return true;
-  if (id === 'upgrades' && Object.values(p.upgrades).some((level) => level > 0)) return true;
   if (id === 'buddy') return p.level >= 18 && p.home.residents.length > 0;
   if (id === 'passport_setup') return p.stats.wins >= 1;
   if (id === 'star_calendar') return p.level >= row.planet;

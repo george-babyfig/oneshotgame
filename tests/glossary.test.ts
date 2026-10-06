@@ -40,7 +40,7 @@ const MILESTONES = [
 type Milestone = (typeof MILESTONES)[number];
 
 /** Milestones that are built. Later milestones append themselves here when they ship. */
-export const BUILT: Milestone[] = ['M0', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M6.5', 'M7', 'M7.5', 'M8', 'M9', 'M10', 'M10.5'];
+export const BUILT: Milestone[] = ['M0', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M6.5', 'M7', 'M7.5', 'M8', 'M9', 'M10', 'M10.5', 'M11'];
 
 const built = (m: Milestone) => BUILT.includes(m);
 
@@ -789,6 +789,16 @@ function sourceStrings(): { where: string; s: string }[] {
   return out;
 }
 
+/** Data tables pass their descriptions through t(variable), so literal-call scanning misses them. */
+function dataTableStrings(): { where: string; s: string }[] {
+  return walk('src/meta', '.ts').flatMap((file) =>
+    [...readFileSync(file, 'utf8').matchAll(/\b(?:desc|name|title|body):\s*'((?:[^'\\]|\\.)*)'/g)].map((m) => ({
+      where: rel(file),
+      s: m[1],
+    })),
+  );
+}
+
 /** Every English player-facing string: the key list, every locale's keys, and t()/tp() literals. */
 function englishStrings(): { where: string; s: string }[] {
   const seen = new Set<string>();
@@ -1001,6 +1011,15 @@ describe('glossary: each noun is translated the same way everywhere', () => {
 });
 
 describe('glossary: retired words', () => {
+  it('M11 retired wording has no active calls or data-table strings', () => {
+    const bad = RETIRED.filter((r) => r.retiredIn === 'M11').flatMap((r) =>
+      [...sourceStrings(), ...dataTableStrings()]
+        .filter(({ s }) => hitsBanned(r, s))
+        .map(({ where, s }) => `${r.word} → ${where}: ${JSON.stringify(s)}`),
+    );
+    expect(bad, bad.join('\n')).toEqual([]);
+  });
+
   it('words retired in a built milestone are gone from every language', () => {
     const bad = RETIRED.filter((r) => built(r.retiredIn)).flatMap((r) =>
       bannedHits(r).map((h) => `${r.word} (retired in ${r.retiredIn}) → ${h}`),

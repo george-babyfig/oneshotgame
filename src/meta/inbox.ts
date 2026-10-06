@@ -151,7 +151,7 @@ const RULES: Rule[] = [
     letter: () => ({
       from: MC,
       title: '{e} has begun!',
-      body: 'All month long, every creature on your planets wears a festival costume. Spot them to earn a sticker and a keepsake your residents can wear.',
+      body: 'All month long, every creature on your planets wears a festival costume. Spot them to earn a sticker and a keepsake your friends can wear.',
       gift: INBOX_GIFTS.festival,
     }),
   },

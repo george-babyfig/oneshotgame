@@ -191,8 +191,8 @@ export interface Loadout {
   continues?: number;
 }
 
-/** M11 will retire splash and Extra Throws; keep both configurations measurable. */
-export function maxLegalLoadout(level: LevelDef, opts: { retiringUpgrades?: boolean; masterSeed?: string } = {}): Loadout {
+/** Only currently obtainable power belongs in the max-loadout gate. */
+export function maxLegalLoadout(level: LevelDef, opts: { masterSeed?: string } = {}): Loadout {
   const shield: TraitId | null =
     level.n < 18
       ? null
@@ -208,23 +208,19 @@ export function maxLegalLoadout(level: LevelDef, opts: { retiringUpgrades?: bool
     mods: {
       ...NO_MODIFIERS,
       ...maxLabModifiers(),
-      extraThrows: opts.retiringUpgrades ? 5 : 0,
-      scopeLevel: opts.retiringUpgrades ? 3 : 0,
-      splash: opts.retiringUpgrades ? 1 : 0,
+      extraThrows: 0,
+      scopeLevel: 0,
+      splash: 0,
       momentum: 3,
       buddy: species ? { species, acc: '' } : null,
       buddyShield: species ? shield : null,
       boosters: { shower: true, spark: true, scope: true },
       launcher: STAR_SLING_SELECTION,
     },
-    // Decision 35 gates the post-M11 loadout; retiring Extra Throws stay in the full-loadout Watch.
-    extraThrows: opts.retiringUpgrades ? 10 : 0,
+    extraThrows: 3 + 2, // Comet Shower and tier-3 Momentum are both legal.
     lifeSpark: true,
   };
-  // The retiring-upgrades configuration is a Watch; carry the gated pick into it.
-  const bestLauncher = opts.retiringUpgrades
-    ? maxLegalLoadout(level, { masterSeed: opts.masterSeed }).mods.launcher.id
-    : bestLauncherFor(level, opts.masterSeed ?? 'pick-max', result);
+  const bestLauncher = bestLauncherFor(level, opts.masterSeed ?? 'pick-max', result);
   result.mods.launcher = { id: bestLauncher, tune: bestLauncher === 'sling' ? 1 : 4 };
   return result;
 }

@@ -77,7 +77,7 @@ export const LAB_FIRST_COPY: Record<Kind, string> = {
 export const LAB_TEXT = {
   next: 'For your next throw',
   later: 'A new trick, later',
-  ring: 'Grow your Homeworld to Ring {n}',
+  ring: 'Grow your Homeworld to Level {n}',
   needBuilding: 'Build this Lab first',
   needDust: 'Collect more stardust',
   needEssence: 'Grow more {colour} lands',
@@ -117,7 +117,7 @@ export const LAB_TEXT = {
   labBuildCost: '{name} · ✨{n}',
   unlockBody: 'Build your first Lab. Welcome a friend.',
   letterBody:
-    'We found you a quiet little world. Build your first Lab and welcome a friend. Your Homeworld grows with every chapter you finish.',
+    'We found you a quiet little world. Build your first Lab and welcome a friend. Finish chapters and gather stardust and Essences to grow your Homeworld.',
   atlasNeed: 'Finish more planets to collect Essences',
   atlasIntro: 'Campaign planets give Essences from their lands. Fill bundles to relight the constellations above your Homeworld.',
   dyeNeed: 'Needs {cost} — finish more campaign planets for Essences',

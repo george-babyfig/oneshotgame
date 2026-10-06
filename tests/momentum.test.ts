@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { momentumLoss, momentumWin, MOMENTUM_PERKS } from '../src/meta/momentum';
+import { momentumLoss, momentumRoundPerk, momentumWin, MOMENTUM_PERKS } from '../src/meta/momentum';
 import { defaultProfile } from '../src/meta/profile';
 import { MOMENTUM_UNLOCK } from '../src/meta/unlocks';
 
@@ -28,5 +28,20 @@ describe('Momentum pause', () => {
     momentumWin(p);
     expect(p.momentum.streak).toBe(3);
     expect(p.stats.bestStreak).toBe(3);
+  });
+
+  it('readies one Scope at tier three and returns it after eight wins without loss resetting progress', () => {
+    const p = defaultProfile();
+    p.level = MOMENTUM_UNLOCK;
+    for (let i = 0; i < 3; i++) momentumWin(p);
+    expect(momentumRoundPerk(p)).toMatchObject({ throws: 2, spark: false, scope: true });
+    momentumLoss(p, '2026-10-06');
+    expect(momentumRoundPerk(p).scope).toBe(false);
+    momentumWin(p);
+    expect(momentumRoundPerk(p).scope).toBe(true);
+    momentumWin(p, true, true);
+    expect(momentumRoundPerk(p).scope).toBe(false);
+    for (let i = 0; i < 8; i++) momentumWin(p);
+    expect(momentumRoundPerk(p).scope).toBe(true);
   });
 });

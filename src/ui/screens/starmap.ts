@@ -34,6 +34,8 @@ export function showStarMap(app: App, remixChapter = 0, focusChapter = 0) {
   if (addRemixLetter(p)) app.save();
   const cur = chapterOf(p.level);
   const ready = chestsReady(p);
+  const homeworldLevel =
+    p.level >= 5 ? h('div', { class: 'starmap-homeworld-level' }, t('Homeworld Level {n}', { n: p.home.level })) : null;
   const chapters: HTMLElement[] = [];
   // show finished chapters, the current one and one teaser
   for (let n = 1; n <= cur.n + 1; n++) {
@@ -175,6 +177,7 @@ export function showStarMap(app: App, remixChapter = 0, focusChapter = 0) {
       { class: 'screen page' },
       app.topBar(true),
       h('div', { class: 'page-title' }, t('Star Map · {n}★', { n: totalStars(p) })),
+      homeworldLevel,
       scroll,
     ),
     'map',

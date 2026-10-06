@@ -2,7 +2,7 @@ import { BOSS_REWARD } from '../../meta/tuning';
 // After a won level: record it, celebrate, and point at what's next.
 import { h, btn, fmt, modal } from '../dom';
 import { sfx } from '../audio';
-import { planetRate, applyLevelWin } from '../../meta/economy';
+import { applyLevelWin } from '../../meta/economy';
 import { applyReward, chestsReady, roadReady } from '../../meta/progression';
 import { recordWishRound, wishClaimable } from '../../meta/wishes';
 import { today } from '../../meta/profile';
@@ -15,7 +15,6 @@ import type { App } from '../app';
 import { sharePostcard } from '../postcard';
 import { addTokens, ensureEvent, eventActive, eventReady } from '../../meta/events';
 import { planetName, t, tp } from '../../i18n';
-import { homeUnlocked, speedUpBuilds } from '../../meta/homeworld';
 import { addDrops, essenceDropsFor } from '../../meta/constellations';
 import { essenceLine, helpedLine } from '../../meta/helped';
 import { renderPlanet } from '../art/planet';
@@ -103,8 +102,8 @@ export function helpEndModal(scene: LevelScene, rungs: HelpRung[]) {
               ? tipFor(scene.L)
               : rung === 'buddyThrows'
                 ? buddyGift
-                  ? t('Your Buddy brings 2 extra throws for this attempt.')
-                  : t('Here, try these! 2 extra throws for this attempt.')
+                  ? t('Your Buddy lends 2 more throws for this attempt.')
+                  : t('Here, try these! 2 more throws for this attempt.')
                 : t('Three places will glow on your next try.'),
           ),
         ]),
@@ -137,6 +136,8 @@ export function levelResults(app: App, r: LevelResult) {
     hue: r.level.hue,
     difficulty: r.level.difficulty,
     bonusDust: r.leftover * FINISH_DUST_PER_THROW,
+    continuesUsed: r.continuesUsed,
+    gemBoosterUsed: r.gemBoosterUsed,
   });
   const newReactions: ReactionId[] = [];
   if (!r.reactionRecorded) for (const id of r.reactionEvents ?? r.reactions ?? []) if (recordReaction(p, id).first) newReactions.push(id);
@@ -152,10 +153,11 @@ export function levelResults(app: App, r: LevelResult) {
   if (eventActive(p) && eventReady(p).length)
     extras.push(h('div', { class: 'nudge' }, t('{emoji} Event reward ready!', { emoji: ensureEvent(p).emoji })));
   if (unlocked(p, 'quests') && wishClaimable(p)) extras.push(h('div', { class: 'nudge' }, t('A Wish is ready to claim!')));
-  // The campaign is the only Essence source; a replay pays half per colour.
-  const drops = essenceDropsFor(r.planet, r.stars, out.firstClear);
+  // The campaign is the only Essence source; a replay pays half per colour, and so does a win
+  // after a continue, so gems never speed up Lab progress (M11 economy gate).
+  const drops = essenceDropsFor(r.planet, r.stars, out.essenceFirstClear);
   if (Object.keys(drops).length) {
-    addDrops(p, drops, out.firstClear ? 'material_drop_first_clear' : 'material_drop_replay');
+    addDrops(p, drops, out.essenceFirstClear ? 'material_drop_first_clear' : 'material_drop_replay');
     app.save();
   }
   if (r.boss && !p.bosses.includes(n)) {
@@ -166,11 +168,7 @@ export function levelResults(app: App, r: LevelResult) {
       h('div', { class: 'nudge boss' }, t('☄️ Guardian defeated! +💎{g} +✨{d}', { g: BOSS_REWARD.gems ?? 0, d: BOSS_REWARD.dust ?? 0 })),
     );
   }
-  // every campaign win nudges the Homeworld's drones along
-  if (homeUnlocked(p) && speedUpBuilds(p.home)) {
-    app.save();
-    extras.push(h('div', { class: 'nudge' }, t('🛸 Your drones built 10 minutes faster!')));
-  }
+  if (app.roundBuildsSpedUp) extras.push(h('div', { class: 'nudge' }, t('🛸 Your drones built 10 minutes faster!')));
   const home = () => {
     m.close();
     app.showHome();
@@ -241,7 +239,7 @@ export function levelResults(app: App, r: LevelResult) {
             { class: 'purpose-orbit' },
             planetCanvas,
             h('span', { class: 'purpose-dust', 'aria-hidden': 'true' }, '✨'),
-            h('p', null, t('Your planet now makes stardust for you.')),
+            h('p', null, t('Campaign wins keep your Vault working.')),
           )
         : null,
       h('div', { class: 'rewards' }, ...rewards),
@@ -257,9 +255,7 @@ export function levelResults(app: App, r: LevelResult) {
         : null,
       ...fusionCards,
       creatureCard,
-      firstEverWin
-        ? null
-        : h('p', { class: 'muted' }, t("It now makes ✨{rate}/hour for you, even while you're away.", { rate: planetRate(out.entry) })),
+      firstEverWin ? null : h('p', { class: 'muted' }, t('Campaign wins keep your Vault working.')),
       ...extras,
       firstEverWin
         ? null

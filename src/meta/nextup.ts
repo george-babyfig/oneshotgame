@@ -7,6 +7,9 @@ import { CONSTELLATIONS } from './tuning';
 import { habitatProgress, HABITATS } from './habitats';
 import { firstHourStep } from './firsthour';
 import { LAB_TEXT } from './labcopy';
+import { HOME_LEVEL_REQUIREMENTS } from './tuning';
+import { canExpand, chaptersDone } from './homeworld';
+import type { HomeworldLevel } from './homeworldTypes';
 
 export interface NextUp {
   kind: 'unlock' | 'claim' | 'wish' | 'goal' | 'play';
@@ -29,8 +32,7 @@ export interface NextUp {
     | 'voyage'
     | 'event'
     | 'festival'
-    | 'modes'
-    | 'upgrades';
+    | 'modes';
 }
 
 export const NEW_FEATURE: Record<string, string> = {
@@ -67,7 +69,6 @@ const TARGETS: Record<string, NextUp['action']> = {
   challenge: 'modes',
   quest_spot: 'missions',
   quest_voyage: 'missions',
-  upgrades: 'upgrades',
 };
 
 /** One gentle suggestion, with actions understood by the Play tab. */
@@ -117,4 +118,56 @@ export function nextUp(p: Profile, _now: number): NextUp {
       action: 'lifebook',
     };
   return { kind: 'play', title: t('Play planet {n}', { n: p.level }), subtitle: t('A new planet is waiting'), action: 'play' };
+}
+
+/** One specific, actionable suggestion in the Homeworld overview. */
+export function homeworldNextUp(p: Profile, now = Date.now()): NextUp {
+  const first = firstHourStep(p);
+  if (first !== 'done')
+    return {
+      kind: 'goal',
+      title: t(first === 'lab' ? LAB_TEXT.firstLab : LAB_TEXT.firstFriend),
+      subtitle: t(LAB_TEXT.firstReward),
+      action: 'homeworld',
+    };
+  if (p.home.plots.some((b) => b?.done && b.done <= now))
+    return { kind: 'claim', title: t('A Homeworld build is ready'), subtitle: t('Tap its plot to see what opened'), action: 'homeworld' };
+  if (p.home.plots.some((b) => b?.type === 'greenhouse' && (b.greenhouse?.stored ?? 0) > 0))
+    return { kind: 'claim', title: t('A booster is ready'), subtitle: t('Collect it from your Greenhouse'), action: 'homeworld' };
+  if (p.home.level >= 5)
+    return {
+      kind: 'goal',
+      title: t('Your Homeworld is fully grown'),
+      subtitle: t('Make it your own with friends and looks'),
+      action: 'homeworld',
+    };
+  const level = (p.home.level + 1) as HomeworldLevel;
+  const need = HOME_LEVEL_REQUIREMENTS[level];
+  if (chaptersDone(p) < need.chapter)
+    return {
+      kind: 'goal',
+      title: t('Homeworld Level {n}', { n: level }),
+      subtitle: t('Finish chapter {n}', { n: need.chapter }),
+      action: 'homeworld',
+    };
+  if (p.dust < need.dust)
+    return {
+      kind: 'goal',
+      title: t('Homeworld Level {n}', { n: level }),
+      subtitle: t('Collect stardust for your next Level'),
+      action: 'homeworld',
+    };
+  if (canExpand(p) === 'ok')
+    return {
+      kind: 'goal',
+      title: t('Homeworld Level {n}', { n: level }),
+      subtitle: t('Your next Level is ready'),
+      action: 'homeworld',
+    };
+  return {
+    kind: 'goal',
+    title: t('Homeworld Level {n}', { n: level }),
+    subtitle: t('See the Essence your next Level needs'),
+    action: 'homeworld',
+  };
 }

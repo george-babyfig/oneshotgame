@@ -2,265 +2,213 @@ import { describe, expect, it } from 'vitest';
 import { defaultProfile } from '../src/meta/profile';
 import {
   BUILD_TIME,
-  DEBRIS_EVERY,
-  RING_PLOTS,
-  WIN_SPEEDUP,
+  BUILDING_TYPES,
   build,
   buildCost,
-  bayLevel,
-  busyDrones,
   canExpand,
   canUpgrade,
-  collect,
+  collectAll,
   denCapacity,
+  drones,
   expand,
   finishExpedition,
-  fulfil,
   invite,
-  isFull,
-  moveBuilding,
-  ready,
-  requestOf,
-  speedUpBuilds,
+  retireBuildings,
   startExpedition,
   tickBuilds,
-  tickDebris,
+  tickHome,
   upgrade,
-  clearDebris,
+  wearAcc,
+  sendHome,
+  addFriendship,
+  speedUpBuilds,
+  moveBuilding,
 } from '../src/meta/homeworld';
+import { HOME_LEVEL_REQUIREMENTS } from '../src/meta/tuning';
 
-const H = 3600e3;
 const T0 = Date.UTC(2026, 8, 1, 12);
-
+const H = 3600e3;
 function rich() {
   const p = defaultProfile(T0);
-  p.dust = 1e6;
-  p.gems = 1000;
-  p.level = 45; // four chapters done
+  p.dust = 1_000_000;
+  p.level = 91;
+  p.mats = { stone: 1000, dew: 1000, leaf: 1000, ember: 1000, frost: 1000 };
   return p;
 }
 
-describe('homeworld', () => {
-  it('builds the Bay at Ring 2 with its exact level costs and timers', () => {
+describe('Homeworld levels', () => {
+  it('requires chapters, dust and every Essence before paying atomically', () => {
     const p = rich();
-    expect([1, 2, 3, 4, 5].map((lv) => buildCost('launch_bay', lv))).toEqual([800, 2000, 4800, 11200, 24000]);
-    expect(BUILD_TIME).toEqual([0, 30_000, 300_000, 1_800_000, 7_200_000, 14_400_000]);
-    expect(build(p, 0, 'launch_bay', T0)).toBe('ring');
-    p.home.ring = 2;
-    expect(build(p, 0, 'launch_bay', T0)).toBe('ok');
-    expect(p.dust).toBe(1e6 - 800);
-    expect(bayLevel(p.home, T0)).toBe(0);
-    tickBuilds(p.home, T0 + BUILD_TIME[1]);
-    expect(bayLevel(p.home, T0 + BUILD_TIME[1])).toBe(1);
-  });
-  it('builds with a drone and finishes on time', () => {
-    const p = rich();
-    expect(build(p, 0, 'den', T0)).toBe('ok');
-    expect(p.dust).toBe(1e6 - 250);
-    expect(busyDrones(p.home, T0)).toBe(1);
-    expect(tickBuilds(p.home, T0 + BUILD_TIME[1] - 1)).toEqual([]);
-    expect(tickBuilds(p.home, T0 + BUILD_TIME[1])).toEqual([0]);
-    expect(busyDrones(p.home, T0 + BUILD_TIME[1])).toBe(0);
-  });
-
-  it('limits drones (2 free, 3 with the pass) but never for decorations', () => {
-    const p = rich();
-    p.home.ring = 2;
-    build(p, 0, 'den', T0);
-    build(p, 1, 'launch_bay', T0);
-    expect(build(p, 2, 'greenhouse', T0)).toBe('drones');
-    expect(build(p, 2, 'lantern', T0)).toBe('ok');
-    p.pass = true;
-    expect(build(p, 3, 'greenhouse', T0)).toBe('ok');
-  });
-
-  it('gates buildings and upgrades by ring', () => {
-    const p = rich();
-    expect(build(p, 0, 'greenhouse', T0)).toBe('ring');
-    build(p, 0, 'den', T0);
-    tickBuilds(p.home, T0 + H);
-    expect(canUpgrade(p, 0, T0 + H)).toBe('ring'); // lv2 needs ring 2
-    expect(expand(p)).toBe('ok');
-    expect(p.home.plots.length).toBe(RING_PLOTS[2]);
-    expect(upgrade(p, 0, T0 + H)).toBe('ok');
-    expect(p.home.plots[0]!.lv).toBe(2);
-  });
-
-  it('ring expansion needs finished chapters', () => {
-    const p = rich();
-    p.level = 5;
+    p.level = 10;
     expect(canExpand(p)).toBe('chapter');
     p.level = 11;
-    expect(canExpand(p)).toBe('ok');
+    p.dust = 1499;
+    expect(canExpand(p)).toBe('dust');
+    p.dust = 1500;
+    p.mats.leaf = 19;
+    const before = { dust: p.dust, mats: { ...p.mats } };
+    expect(canExpand(p)).toBe('essence');
+    expect(expand(p)).toBe('essence');
+    expect(p.dust).toBe(before.dust);
+    expect(p.mats).toEqual(before.mats);
+    p.mats.leaf = 20;
+    expect(expand(p)).toBe('ok');
+    expect(p.home.level).toBe(2);
+    expect(p.home.plots).toHaveLength(8);
+    expect(p.dust).toBe(0);
+    expect(p.mats).toMatchObject({ leaf: 0, dew: 980 });
   });
 
-  it('produces up to a cap and keeps partial progress', () => {
+  it('opens visible plot space and a free third drone at Level 3', () => {
     const p = rich();
-    p.home.plots[0] = { type: 'mill', lv: 1, since: T0, done: T0 + BUILD_TIME[1] }; // existing producer save
-    const start = T0 + BUILD_TIME[1];
-    tickBuilds(p.home, start);
-    expect(ready(p.home, 0, start + 0.5 * H)).toBe(20);
-    const c = collect(p, 0, start + 0.5 * H + 30e3); // 20.33 units
-    expect(c.dust).toBe(20);
-    // the leftover third of a unit is kept
-    expect(ready(p.home, 0, start + 0.5 * H + 30e3 + 60e3)).toBe(1);
-    // capped at 6 hours of production
-    expect(ready(p.home, 0, start + 100 * H)).toBe(40 * 6);
-    expect(isFull(p.home, 0, start + 100 * H)).toBe(true);
+    expect(drones(p)).toBe(2);
+    p.pass = true;
+    expect(drones(p)).toBe(3);
+    p.pass = false;
+    expect(build(p, 0, 'launch_bay', T0)).toBe('ring');
+    expect(expand(p)).toBe('ok');
+    expect(build(p, 0, 'launch_bay', T0)).toBe('ok');
+    expect(expand(p)).toBe('ok');
+    expect(p.home.level).toBe(3);
+    expect(p.home.plots).toHaveLength(10);
+    expect(drones(p)).toBe(3);
+    expect(expand(p)).toBe('ok');
+    expect(p.home.plots).toHaveLength(12);
+    expect(expand(p)).toBe('ok');
+    expect(p.home.plots).toHaveLength(14);
+    expect(canExpand(p)).toBe('max');
   });
 
-  it('a campaign win speeds builds up; no gem skips exist', () => {
+  it('refuses a third concurrent build at Level 2, permits decoration and opens the drone at Level 3', () => {
     const p = rich();
-    build(p, 0, 'den', T0);
-    tickBuilds(p.home, T0 + H);
     expand(p);
-    upgrade(p, 0, T0 + H);
-    const done = p.home.plots[0]!.done!;
-    expect(speedUpBuilds(p.home, WIN_SPEEDUP, T0 + H)).toBe(1);
-    expect(p.home.plots[0]!.done).toBe(Math.max(T0 + H, done - WIN_SPEEDUP));
+    expect(build(p, 0, 'den', T0)).toBe('ok');
+    expect(build(p, 1, 'greenhouse', T0)).toBe('ok');
+    expect(build(p, 2, 'launch_bay', T0)).toBe('drones');
+    expect(build(p, 2, 'fountain', T0)).toBe('ok');
+    expand(p);
+    expect(build(p, 3, 'launch_bay', T0)).toBe('ok');
   });
 
-  it('moves buildings to empty plots', () => {
+  it('charges all four level payments and never charges an old level again', () => {
     const p = rich();
-    build(p, 0, 'lantern', T0);
-    expect(moveBuilding(p.home, 0, 3)).toBe(true);
-    expect(p.home.plots[3]?.type).toBe('lantern');
-    expect(moveBuilding(p.home, 3, 3)).toBe(false);
+    const beforeDust = p.dust;
+    const beforeMats = { ...p.mats };
+    for (const level of [2, 3, 4, 5] as const) {
+      expect(expand(p)).toBe('ok');
+      expect(p.home.level).toBe(level);
+      expect(p.home.plots).toHaveLength(4 + level * 2);
+    }
+    expect(beforeDust - p.dust).toBe(48_500);
+    expect(p.mats).toEqual({
+      stone: beforeMats.stone! - 100,
+      dew: beforeMats.dew! - 120,
+      leaf: beforeMats.leaf! - 120,
+      ember: beforeMats.ember! - 90,
+      frost: beforeMats.frost! - 100,
+    });
+    expect(expand(p)).toBe('max');
+    expect(beforeDust - p.dust).toBe(48_500);
   });
 
-  it('residents move into dens and grant friendship', () => {
+  it('uses the specified costs and protects the old level during upgrades', () => {
     const p = rich();
-    p.seen = ['otter', 'fox', 'deer'];
-    expect(invite(p, 'otter')).toBe(false); // no den yet
-    build(p, 0, 'den', T0);
-    expect(denCapacity(p.home, T0)).toBe(0); // still under construction
+    expect(HOME_LEVEL_REQUIREMENTS[4].essence.frost).toBe(40);
+    expect(HOME_LEVEL_REQUIREMENTS[5].essence.frost).toBe(60);
+    expect([1, 2, 3, 4, 5].map((lv) => buildCost('den', lv))).toEqual([250, 630, 1500, 3500, 7500]);
+    expect([1, 2, 3].map((lv) => buildCost('greenhouse', lv))).toEqual([600, 1500, 3600]);
+    expect([1, 2, 3, 4, 5].map((lv) => buildCost('launch_bay', lv))).toEqual([800, 2000, 4800, 11200, 24000]);
+    expect(BUILD_TIME).toEqual([0, 30_000, 300_000, 1_800_000, 7_200_000, 14_400_000]);
+    expect(build(p, 0, 'den', T0)).toBe('ok');
     tickBuilds(p.home, T0 + H);
     expect(denCapacity(p.home, T0 + H)).toBe(2);
-    expect(invite(p, 'otter')).toBe(true);
-    expect(invite(p, 'unicorn')).toBe(false); // not discovered
-    const r = p.home.residents[0];
-    let now = T0 + H;
-    let done = 0;
-    for (let i = 0; i < 40 && done < 3; i++, now += 6 * H) {
-      const req = requestOf(r, now, p.home.ring)!;
-      if (req.kind === 'decor' && !p.home.plots.some((b) => b?.type === req.decor)) build(p, 1 + i, req.decor!, now);
-      if (fulfil(p, 'otter', now).result === 'ok') done++;
-      expect(requestOf(r, now, p.home.ring)).toBeNull();
-    }
-    expect(r.fp).toBeGreaterThanOrEqual(3);
+    expect(canUpgrade(p, 0, T0 + H)).toBe('ring');
+    expand(p);
+    expect(upgrade(p, 0, T0 + H)).toBe('ok');
+    expect(denCapacity(p.home, T0 + H + 1)).toBe(2);
+    tickBuilds(p.home, T0 + 2 * H);
+    expect(denCapacity(p.home, T0 + 2 * H)).toBe(3);
+  });
+});
+
+describe('retirements and preservation', () => {
+  it('hides retired producers and refunds paid building tiers once, including upgrades in flight', () => {
+    const p = rich();
+    expect(BUILDING_TYPES).not.toContain('mill');
+    expect(BUILDING_TYPES).not.toContain('grove');
+    expect(BUILDING_TYPES).not.toContain('observatory');
+    expect(build(p, 0, 'mill', T0)).toBe('max');
+    p.home.plots[0] = { type: 'mill', lv: 2, since: T0, done: T0 + H };
+    p.home.plots[1] = { type: 'grove', lv: 1, since: T0 };
+    p.home.plots[2] = { type: 'observatory', lv: 3, since: T0 };
+    p.home.debris = [3];
+    const expected = 150 + 380 + 2000 + 2500 + 6250 + 15000;
+    const before = p.dust;
+    expect(retireBuildings(p)).toBe(expected);
+    expect(p.dust).toBe(before + expected);
+    expect(p.home.plots.slice(0, 3)).toEqual([null, null, null]);
+    expect(p.home.debris).toEqual([]);
+    expect(retireBuildings(p)).toBe(0);
+    tickHome(p, T0 + 3 * H);
+    expect(collectAll(p, T0 + 3 * H)).toEqual({ dust: 0, gems: 0, boosters: {} });
   });
 
-  it('expeditions return with loot and friendship', () => {
+  it('keeps the existing Bay expedition and residents', () => {
     const p = rich();
     p.seen = ['otter'];
     expand(p);
     build(p, 0, 'den', T0);
     build(p, 1, 'launch_bay', T0);
     tickBuilds(p.home, T0 + H);
-    invite(p, 'otter');
-    expect(startExpedition(p, 'otter', 4, T0 + H)).toBe(false); // tower lv1: 1h only
+    expect(invite(p, 'otter')).toBe(true);
     expect(startExpedition(p, 'otter', 1, T0 + H)).toBe(true);
     expect(finishExpedition(p, T0 + H + 30 * 60e3)).toBeNull();
-    const dust = p.dust;
-    const got = finishExpedition(p, T0 + 2 * H)!;
-    expect(got.dust).toBeGreaterThan(0);
-    expect(p.dust).toBe(dust + got.dust);
-    expect(p.home.residents[0].fp).toBeGreaterThan(0);
-  });
-
-  it('meteor debris falls on empty plots only, capped', () => {
-    const p = rich();
-    ['lantern', 'lantern', 'lantern', 'fountain', 'fountain'].forEach((d, i) => build(p, i, d as 'lantern', T0));
-    tickDebris(p.home, T0 + 20 * DEBRIS_EVERY);
-    expect(p.home.debris.length).toBe(1); // only plot 5 was free
-    expect(p.home.debris[0]).toBe(5);
-    expect(clearDebris(p, 5)).toBeGreaterThan(0);
-    expect(p.home.debris).toEqual([]);
+    const fp = p.home.residents[0].fp;
+    expect(finishExpedition(p, T0 + 2 * H)?.dust).toBeGreaterThan(0);
+    expect(p.home.lastTick).toBe(T0 + 2 * H);
+    expect(startExpedition(p, 'otter', 1, T0 + H)).toBe(false);
+    expect(finishExpedition(p, T0 + 2 * H)).toBeNull();
+    expect(p.home.residents[0].fp).toBe(fp);
   });
 });
 
-describe('resident dress-up and outfit presets', async () => {
-  const H = await import('../src/meta/homeworld');
-  const C = await import('../src/meta/cosmetics');
-  it('accessories unlock with friendship or are bought once with gems', () => {
-    const p = defaultProfile();
-    p.seen = ['otter'];
-    p.home.residents = [{ species: 'otter', fp: 0, lastReq: -1, rewarded: 1 }];
-    expect(H.wearAcc(p, 'otter', 'bow')).toBe('locked');
-    p.home.residents[0].fp = 3;
-    expect(H.wearAcc(p, 'otter', 'bow')).toBe('ok');
-    p.gems = 30;
-    expect(H.wearAcc(p, 'otter', 'shades')).toBe('gems');
-    p.gems = 100;
-    expect(H.wearAcc(p, 'otter', 'shades')).toBe('ok');
-    expect(p.gems).toBe(60);
-    expect(H.wearAcc(p, 'otter', 'shades')).toBe('ok');
-    expect(p.gems).toBe(60); // bought once
-  });
-  it('saves and loads outfits, falling back for items no longer owned', () => {
-    const p = defaultProfile();
-    p.wardrobe = ['hat_sprout'];
-    C.equip(p, 'hat_sprout');
-    C.savePreset(p, 1);
-    C.equip(p, 'hat_antenna');
-    expect(C.loadPreset(p, 1)).toBe(true);
-    expect(C.currentLook(p).hat).toBe('hat_sprout');
-    p.wardrobe = [];
-    C.loadPreset(p, 1);
-    expect(C.currentLook(p).hat).toBe(C.DEFAULT_LOOK.hat);
-    expect(C.loadPreset(p, 2)).toBe(false);
-  });
-});
-
-describe('homeworld exploit fixes', async () => {
-  const Hw = await import('../src/meta/homeworld');
-  it('saying goodbye and re-inviting does not reset friendship or requests', () => {
+describe('Homeworld exploit guards', () => {
+  it('remembers friendship and its paid levels after a creature leaves and returns', () => {
     const p = rich();
     p.seen = ['bunny'];
-    Hw.build(p, 0, 'den', T0);
-    Hw.tickBuilds(p.home, T0 + H);
-    Hw.invite(p, 'bunny');
-    const r = p.home.residents[0];
-    r.fp = 4;
-    r.rewarded = 2;
-    r.lastReq = Hw.period(T0 + H);
-    Hw.sendHome(p, 'bunny');
-    Hw.invite(p, 'bunny');
-    expect(p.home.residents[0]).toMatchObject({ fp: 4, rewarded: 2, lastReq: Hw.period(T0 + H) });
-    expect(Hw.requestOf(p.home.residents[0], T0 + H)).toBeNull();
+    build(p, 0, 'den', T0);
+    tickBuilds(p.home, T0 + H);
+    expect(invite(p, 'bunny')).toBe(true);
+    const resident = p.home.residents[0];
+    addFriendship(p, resident, 9);
+    const earned = p.gems;
+    expect(sendHome(p, 'bunny')).toBe(true);
+    expect(invite(p, 'bunny')).toBe(true);
+    expect(p.home.residents[0]).toMatchObject({ fp: 9, rewarded: resident.rewarded });
+    addFriendship(p, p.home.residents[0], 0);
+    expect(p.gems).toBe(earned);
   });
-  it('win speed-ups only shorten builds still running, never into the past', () => {
+
+  it('never speeds completed builds into the past', () => {
     const p = rich();
-    Hw.build(p, 0, 'den', T0); // done at T0 + 30s
-    expect(Hw.speedUpBuilds(p.home, Hw.WIN_SPEEDUP, T0 + H)).toBe(0);
-    Hw.tickBuilds(p.home, T0 + H);
-    expect(p.home.plots[0]!.since).toBe(T0 + BUILD_TIME[1]);
+    build(p, 0, 'den', T0);
+    expect(speedUpBuilds(p.home, 600_000, T0 + H)).toBe(0);
+    tickBuilds(p.home, T0 + H);
+    expect(p.home.plots[0]?.since).toBe(T0 + BUILD_TIME[1]);
   });
-  it('upgrading keeps the previous level working until done', () => {
+
+  it('charges a gem accessory only once and moves a building without losing it', () => {
     const p = rich();
-    p.level = 45;
-    Hw.expand(p);
-    Hw.build(p, 0, 'den', T0);
-    Hw.tickBuilds(p.home, T0 + H);
-    expect(Hw.denCapacity(p.home, T0 + H)).toBe(2);
-    Hw.upgrade(p, 0, T0 + H);
-    expect(Hw.denCapacity(p.home, T0 + H + 1)).toBe(2);
-    Hw.tickBuilds(p.home, T0 + 3 * H);
-    expect(Hw.denCapacity(p.home, T0 + 3 * H)).toBe(3);
-  });
-  it('a level-1 greenhouse produces within its cap', () => {
-    const p = rich();
-    p.level = 45;
-    Hw.expand(p);
-    Hw.build(p, 0, 'greenhouse', T0);
-    Hw.tickBuilds(p.home, T0 + H);
-    expect(Hw.ready(p.home, 0, T0 + 100 * H)).toBeGreaterThan(0);
-  });
-  it('friendship from expeditions pays each level once', () => {
-    const p = rich();
-    const r = { species: 'otter', fp: 0, lastReq: -1, rewarded: 1 };
-    const g = p.gems;
-    Hw.addFriendship(p, r, 9); // level 1 -> 3
-    expect(p.gems).toBe(g + 10 + 15);
+    p.seen = ['otter'];
+    build(p, 0, 'den', T0);
+    tickBuilds(p.home, T0 + H);
+    invite(p, 'otter');
+    p.gems = 100;
+    expect(wearAcc(p, 'otter', 'shades')).toBe('ok');
+    expect(p.gems).toBe(60);
+    expect(wearAcc(p, 'otter', 'shades')).toBe('ok');
+    expect(p.gems).toBe(60);
+    expect(moveBuilding(p.home, 0, 1)).toBe(true);
+    expect(p.home.plots[1]?.type).toBe('den');
   });
 });

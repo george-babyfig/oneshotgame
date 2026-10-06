@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SPECIES } from '../src/core/world';
 import { defaultProfile } from '../src/meta/profile';
 import { addVisitors, openVisitor, rollVisitors } from '../src/meta/visitors';
+import { VISITOR_DUST } from '../src/meta/tuning';
 
 describe('visitors', () => {
   const now = 10 * 60 * 60 * 1000;
@@ -18,7 +19,7 @@ describe('visitors', () => {
     expect(a.map((v) => v.species)).toEqual(Array.from({ length: a.length }, (_, i) => p.seen[i % p.seen.length]));
     for (const v of a) {
       const rarity = SPECIES.find((s) => s.id === v.species)?.rarity ?? 'common';
-      expect(v.dust).toBe({ common: 20, uncommon: 30, rare: 50, legendary: 80 }[rarity]);
+      expect(v.dust).toBe(VISITOR_DUST[rarity]);
       expect(v.gems).toBe(0);
     }
   });

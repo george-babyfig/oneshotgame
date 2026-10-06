@@ -88,6 +88,7 @@ jobs:
   economy:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # Three paired 90-day careers; the four diagnostic personas run nightly.
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5

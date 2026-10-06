@@ -790,6 +790,7 @@ export function endModal(scene: LevelScene, stars: number) {
     scene.modalOpen = null;
     ledger.count('continues_bought');
     scene.o.onContinue?.();
+    scene.continuesUsed++;
     scene.throwsLeft += CONTINUE_THROWS;
     scene.throwsTotal += CONTINUE_THROWS;
     sfx.gem();
@@ -882,6 +883,8 @@ export function finish(scene: LevelScene, stars: number) {
       throwsUsed: scene.throwsUsed,
       throwsTotal: scene.throwsTotal,
       leftover: scene.leftover,
+      continuesUsed: scene.continuesUsed,
+      gemBoosterUsed: scene.gemBoosterUsed,
       boss: scene.L.twist === 'boss' && scene.bossHp <= 0,
       comboBest: scene.combo.best,
       comboIcons: [...scene.comboIconsBest],

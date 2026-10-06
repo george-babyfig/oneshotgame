@@ -7,8 +7,10 @@ import {
   expectKidSafe,
   expectNoErrors,
   freshInstall,
+  installJourneyClock,
   launcherBayReady,
   localesToRun,
+  midGame,
   planetFiveHomeworld,
   snap,
   tr,
@@ -29,9 +31,104 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
     test.use({ locale: BROWSER_LOCALE[loc] });
 
     for (const reduceMotion of [false, true]) {
+      test(`Level 1 to 2, Vault and Greenhouse choice; Reduce Motion ${reduceMotion}`, async ({ page }, info) => {
+        test.skip(info.project.name !== 'chromium-320x568', 'M11 locale matrix runs at 320×568');
+        await installJourneyClock(page);
+        await page.emulateMedia({ reducedMotion: reduceMotion ? 'reduce' : 'no-preference' });
+        const guard = watchErrors(page);
+        await freshInstall(page, { title: 'tap' });
+        await midGame(page, { level: 11 });
+        await page.evaluate(() => {
+          const a = (window as any).__app;
+          a.p.home.level = 1;
+          a.p.settings.reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+          a.p.home.firstHour = 2;
+          a.p.home.intro = true;
+          a.p.home.plots = Array(6).fill(null);
+          a.p.dust = 2000;
+          a.p.mats.leaf = 20;
+          a.p.mats.dew = 20;
+          a.selectTab('homeworld');
+        });
+        await expect(page.locator('.hw-level-badge')).toContainText(tr(loc, 'Level {n}', { n: 1 }));
+        await snap(page, info, guard, 'j5-level-1');
+        await expectKidSafe(page, loc);
+        await page.locator('.hw-level-badge').click();
+        await expect(page.locator(OPEN_MODAL).last()).toContainText(tr(loc, 'Grow your Homeworld to Level {n}', { n: 2 }));
+        await snap(page, info, guard, 'j5-level-checklist');
+        await expectKidSafe(page, loc);
+        await page
+          .locator(OPEN_MODAL)
+          .last()
+          .getByRole('button', { name: tr(loc, 'Grow to Level {n}', { n: 2 }) })
+          .click();
+        await expect(page.locator('.hw-level-up')).toBeVisible();
+        expect((await state(page)).home.level).toBe(2);
+        expect((await state(page)).dust).toBe(500);
+        expect((await state(page)).mats.leaf).toBe(0);
+        expect((await state(page)).mats.dew).toBe(0);
+        await expect(page.locator('.hw-level-up')).toHaveClass(reduceMotion ? /celebrate-still/ : /hw-level-up/);
+        await snap(page, info, guard, 'j5-level-up');
+        await expectKidSafe(page, loc);
+        await page.locator('.hw-level-up button').click();
+        await page.evaluate(() => {
+          const a = (window as any).__app;
+          a.p.home.plots[0] = {
+            type: 'greenhouse',
+            lv: 1,
+            since: Date.now(),
+            greenhouse: { choice: 'shower', winsTowardNext: 0, stored: 0 },
+          };
+          a.showHomeworld();
+        });
+        await selectPlot(page, 0);
+        await page
+          .locator('.hw-greenhouse-choices')
+          .getByRole('button', { name: tr(loc, 'Life Spark') })
+          .click();
+        expect((await state(page)).home.plots[0].greenhouse.choice).toBe('spark');
+        await page.evaluate(async () => {
+          const a = (window as any).__app;
+          const rules = await (window as any).__e2eImport('/src/meta/homeworld.ts');
+          for (let n = 0; n < 6; n++)
+            rules.recordGreenhouseWin(a.p, { mode: 'campaign', planetKey: `j5-${n}`, buddySpecies: null, at: Date.now() });
+          a.showHomeworld();
+        });
+        await expect(page.locator('.hw-panel')).toContainText(
+          tr(loc, 'Stored {stored}/{cap} · {wins}/6 wins', { stored: 1, cap: 1, wins: 0 }),
+        );
+        await snap(page, info, guard, 'j5-greenhouse');
+        await expectKidSafe(page, loc);
+        await page
+          .locator('.hw-panel')
+          .getByRole('button', { name: tr(loc, 'Collect') })
+          .click();
+        expect((await state(page)).boosters.spark).toBeGreaterThan(0);
+        await page.evaluate(async () => {
+          const a = (window as any).__app;
+          const economy = await (window as any).__e2eImport('/src/meta/economy.ts');
+          economy.creditVaultWin(a.p, { mode: 'campaign', planetKey: 'j5-vault', buddySpecies: null, at: Date.now() });
+          a.save();
+        });
+        await page.clock.fastForward(3_600_000);
+        await page.locator('[data-tab="home"]').click();
+        await expect(page.locator('.dust-btn')).toContainText('✨');
+        await page.locator('.dust-btn').click();
+        await expect(page.locator('.vault-sheet')).toBeVisible();
+        await snap(page, info, guard, 'j5-vault');
+        await expectKidSafe(page, loc);
+        await expect(page.locator('.vault-sheet button.primary')).toBeVisible();
+        const dustBeforeCollect = (await state(page)).dust;
+        await page.locator('.vault-sheet button.primary').click();
+        expect((await state(page)).dust).toBeGreaterThan(dustBeforeCollect);
+        expectNoErrors(guard);
+      });
+    }
+
+    for (const reduceMotion of [false, true]) {
       test(`first hour, Labs and pouch; Reduce Motion ${reduceMotion}`, async ({ page }, info) => {
         test.skip(info.project.name !== 'chromium-320x568', 'J5 locale matrix runs at 320×568');
-        await page.clock.install();
+        await installJourneyClock(page);
         await page.emulateMedia({ reducedMotion: reduceMotion ? 'reduce' : 'no-preference' });
         const guard = watchErrors(page);
         await freshInstall(page, { title: 'tap' });
@@ -102,7 +199,7 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
 
         await page.evaluate(() => {
           const a = (window as any).__app;
-          a.p.home.ring = 2;
+          a.p.home.level = 2;
           a.p.level = 12; // Rock Fusion is untaught until planet 25.
           a.save();
           a.showHomeworld();
@@ -233,7 +330,7 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
       await expect(page.locator('.bay-card[data-launcher="sling"]')).toContainText(tr(loc, 'Try it'));
       await page.evaluate(() => {
         const a = (window as any).__app;
-        a.p.home.ring = 4;
+        a.p.home.level = 4;
         a.p.home.plots[0] = { type: 'launch_bay', lv: 3, since: Date.now(), done: Date.now() + 300000 };
         a.p.cometPier.stage = 3;
         a.p.launcher.tunes.swoop = 1;

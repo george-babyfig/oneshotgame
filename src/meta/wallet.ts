@@ -38,7 +38,8 @@ export type EarnSource =
   | 'habitat'
   | 'album'
   | 'inbox'
-  | 'generic_reward';
+  | 'generic_reward'
+  | 'migration_refund';
 export type SpendSink =
   | 'continue'
   | 'booster'

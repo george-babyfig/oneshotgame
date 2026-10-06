@@ -16,7 +16,7 @@ export const labLevel = (p: Profile, kind: Kind): number => Math.max(1, Math.min
 export function labLevels(p: Profile): Record<Kind, number> {
   return Object.fromEntries((Object.keys(KINDS) as Kind[]).map((kind) => [kind, labLevel(p, kind)])) as Record<Kind, number>;
 }
-export const labCap = (p: Profile): number => Math.min(LAB_MAX, p.home.ring + 1);
+export const labCap = (p: Profile): number => Math.min(LAB_MAX, p.home.level + 1);
 export function labCost(kind: Kind, toLevel: 2 | 3 | 4 | 5) {
   return { dust: LAB_COST[toLevel], essence: LAB_ESSENCE[kind], amount: LAB_ESSENCE_COST[toLevel] };
 }
@@ -60,7 +60,6 @@ export function canBuildLab(p: Profile, plot: number, kind: Kind, now = Date.now
   const h = p.home;
   if (now < (h.lastTick ?? 0)) return 'busy';
   if (plot < 0 || plot >= h.plots.length || h.plots[plot]) return 'occupied';
-  if (h.debris.includes(plot)) return 'debris';
   if (busyDrones(h, now) >= drones(p)) return 'drones';
   if (p.dust < labBuildCost(p, kind)) return 'dust';
   return 'ok';

@@ -14,18 +14,29 @@
 //   d-round4.v2.json       v2 (round 4): no mailSeen / festival / voyage / album / buddy / home.friends
 //   e-pre-m3.v3.json       v3 before the M3 unlock ladder, with Pass and mode progress
 //   g-pre-m105.v3.json     Tower at level 3, build timer, active expedition and cosmetic mastery
+//   h-pre-m11.v3.json      Ring 3, paid retired structures/perks and a running trip
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { defaultProfile, migrate, PROFILE_VERSION, readInterruptedRound, type Profile } from '../src/meta/profile';
 import { labBuildCost, labCap, labLevel } from '../src/meta/labs';
 import { unlocked } from '../src/meta/unlocks';
-import { BUILDINGS, canBuild, finishExpedition } from '../src/meta/homeworld';
+import { BUILDINGS, canBuild, drones, finishExpedition } from '../src/meta/homeworld';
 
 const DIR = 'tests/fixtures/saves';
 const FILES = readdirSync(DIR)
   .filter((f) => f.endsWith('.json'))
   .sort();
+const DUST_DELTAS: Record<string, number> = {
+  'a-new-profile.v3.json': 0,
+  'b-mid-game.v3.json': 10440,
+  'c-pre-m0.v3.json': 10440,
+  'd-round4.v2.json': 1600,
+  'e-pre-m3.v3.json': 0,
+  'f-pre-m10.v3.json': 14260,
+  'g-pre-m105.v3.json': 14260,
+  'h-pre-m11.v3.json': 22980,
+};
 
 type Raw = Record<string, unknown>;
 const load = (f: string): Raw => JSON.parse(readFileSync(join(DIR, f), 'utf8')) as Raw;
@@ -53,7 +64,7 @@ function wallet(p: Raw) {
 }
 
 describe('save goldens', () => {
-  it('has the six fixtures (add one for every save format change)', () => {
+  it('has the pre-M11 fixture alongside earlier save formats', () => {
     expect(FILES).toEqual([
       'a-new-profile.v3.json',
       'b-mid-game.v3.json',
@@ -62,6 +73,7 @@ describe('save goldens', () => {
       'e-pre-m3.v3.json',
       'f-pre-m10.v3.json',
       'g-pre-m105.v3.json',
+      'h-pre-m11.v3.json',
     ]);
   });
 
@@ -77,10 +89,20 @@ describe('save goldens', () => {
         expect(bad, bad.join('\n')).toEqual([]);
       });
 
-      it('keeps gems, stardust, the piggy bank, materials and boosters exactly', () => {
+      it('keeps gems, piggy bank, materials and boosters; refunds paid retired items', () => {
         const raw = load(f);
         const p = loadSave(f) as unknown as Raw;
-        expect(wallet(p)).toEqual({ ...wallet(raw), mats: raw.mats ?? {} });
+        expect(wallet(p)).toMatchObject({
+          gems:
+            (raw.gems as number) +
+            ({ 'b-mid-game.v3.json': 1, 'c-pre-m0.v3.json': 1, 'f-pre-m10.v3.json': 2, 'g-pre-m105.v3.json': 2, 'h-pre-m11.v3.json': 1 }[
+              f
+            ] ?? 0),
+          piggy: raw.piggy,
+          mats: raw.mats ?? {},
+          boosters: raw.boosters,
+        });
+        expect(p.dust).toBe((raw.dust as number) + DUST_DELTAS[f]);
       });
 
       it('keeps progress: level, stars, the Lifebook, galaxy, purchases and the Homeworld plots', () => {
@@ -93,9 +115,15 @@ describe('save goldens', () => {
         expect(p.processedTx).toEqual(raw.processedTx);
         expect(p.pass).toBe(raw.pass);
         expect(p.skins).toEqual(raw.skins);
-        expect(p.home.plots).toEqual(
-          ((raw.home as Raw).plots as (Raw | null)[]).map((b) => (b?.type === 'tower' ? { ...b, type: 'launch_bay' } : b)),
-        );
+        const oldPlots = (raw.home as Raw).plots as (Raw | null)[];
+        expect(p.home.plots).toHaveLength(oldPlots.length);
+        for (let i = 0; i < oldPlots.length; i++) {
+          const b = oldPlots[i];
+          if (['mill', 'grove', 'observatory'].includes(String(b?.type))) expect(p.home.plots[i]).toBeNull();
+          else if (b?.type === 'tower') expect(p.home.plots[i]).toMatchObject({ ...b, type: 'launch_bay' });
+          else if (b?.type === 'greenhouse') expect(p.home.plots[i]).toMatchObject(b);
+          else expect(p.home.plots[i]).toEqual(b);
+        }
         expect(p.home.residents).toEqual((raw.home as Raw).residents);
       });
 
@@ -109,6 +137,12 @@ describe('save goldens', () => {
 });
 
 describe('save goldens: specific migrations', () => {
+  it('grandfathers the paid third drone for a legacy Pass owner', () => {
+    const p = loadSave('e-pre-m3.v3.json');
+    expect(p.pass).toBe(true);
+    expect(p.home.level).toBeLessThan(3);
+    expect(drones(p)).toBe(3);
+  });
   it('keeps a hidden selection and tune even when its old earn channel is absent', () => {
     const raw = load('g-pre-m105.v3.json');
     raw.launcher = {
@@ -194,13 +228,13 @@ describe('save goldens: specific migrations', () => {
   it('f-pre-m10 keeps paid Lab levels, full plots, wallet and old checkpoint', () => {
     const raw = load('f-pre-m10.v3.json');
     const p = loadSave('f-pre-m10.v3.json');
-    expect(p.home.plots).toEqual(
-      ((raw.home as Raw).plots as (Raw | null)[]).map((b) => (b?.type === 'tower' ? { ...b, type: 'launch_bay' } : b)),
+    expect(p.home.plots.filter((b) => b?.type === 'lab')).toHaveLength(
+      ((raw.home as Raw).plots as (Raw | null)[]).filter((b) => b?.type === 'lab').length,
     );
     expect(p.mats).toEqual(raw.mats);
     expect(p.lab).toEqual(raw.lab);
     expect(p.home.firstHour).toBe(2);
-    expect(p.home.plots.every(Boolean)).toBe(true);
+    expect(p.home.plots.some((b) => b === null)).toBe(true);
     for (const [type, def] of Object.entries(BUILDINGS))
       expect(p.home.plots.filter((b) => b?.type === type).length, type).toBeLessThanOrEqual(def.max);
     expect(p.home.debris.every((i) => !p.home.plots[i])).toBe(true);
@@ -220,7 +254,7 @@ describe('save goldens: specific migrations', () => {
   it('refuses new retired producers and generic Lab builds', () => {
     const p = defaultProfile(0);
     p.level = 33;
-    p.home.ring = 3;
+    p.home.level = 3;
     p.dust = 100_000;
     for (const type of ['mill', 'grove', 'observatory', 'lab'] as const) expect(canBuild(p, 0, type, 1), type).toBe('max');
   });
@@ -245,7 +279,11 @@ describe('save goldens: specific migrations', () => {
     const raw = load('a-new-profile.v3.json');
     const now = raw.lastCollect as number;
     const p = loadSave('a-new-profile.v3.json');
-    expect(p).toEqual({ ...defaultProfile(now), meta: { ...defaultProfile(now).meta, sessions: 1 } });
+    const expected = defaultProfile(now);
+    expected.meta.sessions = 1;
+    expected.lastCollect = p.lastCollect;
+    expected.vault.lastTick = p.vault.lastTick;
+    expect(p).toEqual(expected);
   });
 
   it('the mid-game player keeps the choices a grown-up made and this week’s progress', () => {

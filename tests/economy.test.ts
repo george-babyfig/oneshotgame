@@ -1,11 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { defaultProfile, migrate, totalStars } from '../src/meta/profile';
-import { applyLevelWin, collectDust, grantProduct, pendingDust, planetRate } from '../src/meta/economy';
+import {
+  applyLevelWin,
+  buyGemBooster,
+  useStoredBooster,
+  buyVaultTier,
+  collectDust,
+  creditVaultWin,
+  grantProduct,
+  pendingDust,
+  vaultFullAt,
+  vaultRate,
+  VAULT_RATES,
+} from '../src/meta/economy';
 import { CALENDAR_DAYS, stamp } from '../src/meta/calendar';
-import { owns } from '../src/meta/cosmetics';
+import { STARDUST_COSMETICS, buyCosmetic, owns } from '../src/meta/cosmetics';
 import { chestsReady, claimRoad, openChest, roadReady, STAR_ROAD } from '../src/meta/progression';
 import { makeLevel } from '../src/core/levels';
 import { clonePlanet } from '../src/core/world';
+import { clearFails } from '../src/meta/continues';
+import { readFileSync } from 'node:fs';
 
 const win = (p = defaultProfile(0), n = 1, stars = 2) => {
   const L = makeLevel(n);
@@ -13,6 +27,19 @@ const win = (p = defaultProfile(0), n = 1, stars = 2) => {
 };
 
 describe('economy', () => {
+  it('wires this winning attempt and replay-rate Essence through the live results flow', () => {
+    const flow = readFileSync('src/ui/flows/results.ts', 'utf8');
+    expect(flow).toMatch(/applyLevelWin\(p,\s*\{[^}]*continuesUsed:\s*r\.continuesUsed/s);
+    expect(flow).toMatch(/applyLevelWin\(p,\s*\{[^}]*gemBoosterUsed:\s*r\.gemBoosterUsed/s);
+    const hud = readFileSync('src/ui/hud.ts', 'utf8');
+    expect(hud).toContain('continuesUsed: scene.continuesUsed');
+    expect(hud).toContain('gemBoosterUsed: scene.gemBoosterUsed');
+    const prelevel = readFileSync('src/ui/flows/prelevel.ts', 'utf8');
+    expect(prelevel).toContain('buyGemBooster(p, id)');
+    expect(prelevel).toContain('scene.gemBoosterUsed ||= useStoredBooster(p, id) === true');
+    expect(flow).toContain('essenceDropsFor(r.planet, r.stars, out.essenceFirstClear)');
+    expect(flow).toContain("out.essenceFirstClear ? 'material_drop_first_clear' : 'material_drop_replay'");
+  });
   it('first clear pays more and unlocks the next level', () => {
     const { p, out } = win();
     expect(out.firstClear).toBe(true);
@@ -26,14 +53,126 @@ describe('economy', () => {
     expect(p.stars[1]).toBe(3);
   });
 
-  it('stardust accrues per hour and caps at the vault size', () => {
+  it('keeps a continued first clear while marking its Essence for replay rates', () => {
+    const p = defaultProfile(0);
+    p.level = 11;
+    p.fails[11] = 1;
+    p.continuesUsed[11] = 1;
+    clearFails(p, 11); // the UI clears retry counters before showing results
+    const level = makeLevel(11);
+    const out = applyLevelWin(p, {
+      n: 11,
+      stars: 2,
+      score: 100,
+      planet: clonePlanet(level.start),
+      name: level.name,
+      hue: level.hue,
+      continuesUsed: 1,
+    });
+    expect(out.firstClear).toBe(true);
+    expect(out.essenceFirstClear).toBe(false);
+    expect(p.level).toBe(12);
+    const clean = makeLevel(12);
+    const next = applyLevelWin(p, {
+      n: 12,
+      stars: 2,
+      score: 100,
+      planet: clonePlanet(clean.start),
+      name: clean.name,
+      hue: clean.hue,
+    });
+    expect(next.essenceFirstClear).toBe(true);
+  });
+
+  it('keeps first-clear Essence after a failed continued attempt and a clean win', () => {
+    const p = defaultProfile(0);
+    p.level = 15;
+    p.continuesUsed[15] = 1;
+    clearFails(p, 15);
+    const level = makeLevel(15);
+    const out = applyLevelWin(p, {
+      n: 15,
+      stars: 2,
+      score: 100,
+      planet: clonePlanet(level.start),
+      name: level.name,
+      hue: level.hue,
+      continuesUsed: 0,
+    });
+    expect(out.essenceFirstClear).toBe(true);
+    expect(p.continuesUsed[15]).toBeUndefined();
+  });
+
+  it('separates earned and gem-bought stock and marks only a paid-helper win for replay Essence', () => {
+    const p = defaultProfile(0);
+    p.gems = 100;
+    expect(buyGemBooster(p, 'scope')).toBe(true);
+    expect(p.boosters.scope).toBe(2);
+    expect(p.gemBoosters.scope).toBe(1);
+    expect(useStoredBooster(p, 'scope')).toBe(false);
+    expect(useStoredBooster(p, 'scope')).toBe(true);
+    const level = makeLevel(1);
+    const out = applyLevelWin(p, {
+      n: 1,
+      stars: 2,
+      score: 100,
+      planet: clonePlanet(level.start),
+      name: level.name,
+      hue: level.hue,
+      gemBoosterUsed: true,
+    });
+    expect(out.firstClear).toBe(true);
+    expect(out.essenceFirstClear).toBe(false);
+  });
+
+  it('Vault needs campaign wins, caps production and preserves fuel while full', () => {
     const { p } = win();
+    p.vault.lastTick = 0;
     p.lastCollect = 0;
-    const rate = planetRate(p.galaxy[0]);
+    p.vault.bankedProductionMs = 0;
+    const rate = vaultRate(p);
+    expect(pendingDust(p, 3600000)).toBe(0);
+    creditVaultWin(p, { mode: 'campaign', planetKey: 'campaign:1', buddySpecies: null, at: 0 });
+    expect(vaultFullAt(p)).toBe(0); // two hours of fuel cannot fill four hours of storage
     expect(pendingDust(p, 3600000)).toBe(rate);
-    expect(pendingDust(p, 100 * 3600000)).toBe(rate * 4);
+    expect(pendingDust(p, 100 * 3600000)).toBe(rate * 2);
     expect(collectDust(p, 3600000)).toBe(rate);
     expect(pendingDust(p, 3600000)).toBe(0);
+    expect(collectDust(p, 3600000)).toBe(0);
+    expect(pendingDust(p, 0)).toBe(0);
+    expect(collectDust(p, 7200000)).toBe(rate);
+    for (let i = 0; i < 8; i++) creditVaultWin(p, { mode: 'campaign', planetKey: `campaign:${i}`, buddySpecies: null, at: 7200000 });
+    expect(p.vault.bankedProductionMs).toBe(12 * 3600000);
+    expect(vaultFullAt(p)).toBe(7200000 + 4 * 3600000);
+    expect(pendingDust(p, 100 * 3600000)).toBe(rate * 4);
+    collectDust(p, 100 * 3600000);
+    expect(p.vault.bankedProductionMs).toBe(8 * 3600000);
+  });
+
+  it('Vault upgrade spends the decided prices and caps a large galaxy', () => {
+    const p = defaultProfile(0);
+    p.galaxy = Array.from({ length: 30 }, (_, n) => ({ n, name: '', hue: 0, stars: 3, species: ['a'], life: 0, colors: [] }));
+    p.dust = 32_000;
+    expect(vaultRate(p)).toBe(VAULT_RATES[0]);
+    expect(VAULT_RATES.every((rate, i) => i === 0 || rate > VAULT_RATES[i - 1])).toBe(true);
+    for (const [i, rate] of VAULT_RATES.slice(1).entries()) {
+      expect(buyVaultTier(p, 0)).toBe(true);
+      expect(p.vault.tier).toBe(i + 2);
+      expect(vaultRate(p)).toBe(rate);
+    }
+    expect(p.dust).toBe(0);
+    expect(buyVaultTier(p, 0)).toBe(false);
+  });
+
+  it('offers permanent stardust looks in two rising-price series', () => {
+    const p = defaultProfile(0);
+    expect(STARDUST_COSMETICS.map((x) => x.dust)).toEqual([5000, 10000, 18000, 25000, 12000, 22000, 35000, 50000]);
+    p.dust = 5000;
+    expect(buyCosmetic(p, 'suit_sunseed')).toBe(true);
+    expect(p.dust).toBe(0);
+    expect(owns(p, 'suit_sunseed')).toBe(true);
+    expect(buyCosmetic(p, 'suit_sunseed')).toBe(false);
+    expect(p.wardrobe).toEqual(['suit_sunseed']);
   });
 
   it('star calendar stamps once a day and never resets after a gap', () => {
@@ -122,7 +261,7 @@ describe('progression', () => {
 
   it('migrates v1 saves', () => {
     const p = migrate({ gems: 99, level: 5, stars: { 1: 3, 2: 2 }, galaxy: [{ n: 1, name: 'a', hue: 1, stars: 3, species: [], life: 9 }] });
-    expect(p.v).toBe(3);
+    expect(p.v).toBe(4);
     expect(p.gems).toBe(99);
     expect(p.galaxy[0].colors).toEqual([]);
     expect(p.settings.reduceMotion).toBe(false);

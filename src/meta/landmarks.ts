@@ -29,7 +29,7 @@ const counts = (mode: PierMode) => ['campaign', 'voyage', 'zen', 'daily'].includ
 
 /** Count real stepRound events once, at the step callback. */
 export function recordCometPierStep(p: Profile, step: Pick<StepResult, 'troubleEvents' | 'reactions'>, mode: PierMode): void {
-  if (!counts(mode) || p.home.ring < 4) return;
+  if (!counts(mode) || p.home.level < 4) return;
   if (p.cometPier.stage === 1) p.cometPier.troubles += step.troubleEvents.filter((e) => e.kind === 'settled').length;
   if (p.cometPier.stage === 2) p.cometPier.fusions += step.reactions.filter((r) => REACTIONS[r.id].kind === 'fusion').length;
   advanceCometPier(p);
@@ -37,7 +37,7 @@ export function recordCometPierStep(p: Profile, step: Pick<StepResult, 'troubleE
 
 /** A win is recorded only once per planet by the caller. */
 export function recordCometPierWin(p: Profile, mode: PierMode, planet: string | number, hard: boolean, stars: number): void {
-  if (!counts(mode) || p.home.ring < 4 || p.cometPier.stage !== 0) return;
+  if (!counts(mode) || p.home.level < 4 || p.cometPier.stage !== 0) return;
   const key = `${mode}:${planet}`;
   if (hard && !p.cometPier.hardPlanets.includes(key)) {
     p.cometPier.hardPlanets.push(key);
@@ -61,7 +61,7 @@ export function cometPierStageProgress(p: Profile): { done: number; total: numbe
 /** Each stage starts with fresh counters when it opens. */
 export function advanceCometPier(p: Profile): number {
   const pier = p.cometPier;
-  if (p.home.ring < 4) return pier.stage;
+  if (p.home.level < 4) return pier.stage;
   if (pier.stage === 0 && (pier.hardWins >= 3 || pier.normalThreeStars >= 6)) {
     pier.stage = 1;
     pier.troubles = 0;
@@ -97,6 +97,6 @@ export function finishCometPier(p: Profile): boolean {
 /** The Bay can explain why the final Pier action is unavailable. */
 export function cometPierFinishStatus(p: Profile): 'ready' | 'locked' | 'resources' | 'finished' {
   if (p.cometPier.stage === 4) return 'finished';
-  if (p.home.ring < 4 || p.cometPier.stage !== 3) return 'locked';
+  if (p.home.level < 4 || p.cometPier.stage !== 3) return 'locked';
   return balance(p, 'leaf') >= 40 && balance(p, 'dew') >= 30 ? 'ready' : 'resources';
 }

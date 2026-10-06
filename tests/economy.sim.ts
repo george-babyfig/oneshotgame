@@ -39,10 +39,10 @@ if (process.env.SIM === '1') {
       new URL('./sim/economy/report.json', import.meta.url),
       JSON.stringify(report, (_key, value) => (value === Infinity ? 'Infinity' : value), 2) + '\n',
     );
-    console.log('Player         Level  Dust    Gems  Free gems/day  Max idle/active  Lab  Upgrades  Buildings  Looks  Ledger');
+    console.log('Player         Level  Dust    Gems  Free gems/day  Max idle/active  Lab  Home5  Upgrades  Buildings  Looks  Ledger');
     for (const c of careers) {
       console.log(
-        `${c.type.padEnd(14)} ${String(c.days[89].level).padStart(5)} ${String(c.final.dust).padStart(7)} ${String(c.final.gems).padStart(6)} ${String(Math.round(c.freeGemsPerActiveDay)).padStart(13)} ${fmt(c.maxIdleActiveRatio).padStart(16)} ${fmt(c.exhausted.lab).padStart(4)} ${fmt(c.exhausted.upgrades).padStart(9)} ${fmt(c.exhausted.buildings).padStart(10)} ${fmt(c.exhausted.looks).padStart(6)} ${String(c.ledgerBytes).padStart(7)}`,
+        `${c.type.padEnd(14)} ${String(c.days[89].level).padStart(5)} ${String(c.final.dust).padStart(7)} ${String(c.final.gems).padStart(6)} ${String(Math.round(c.freeGemsPerActiveDay)).padStart(13)} ${fmt(c.maxIdleActiveRatio).padStart(16)} ${fmt(c.exhausted.lab).padStart(4)} ${fmt(c.homeLevelDays[5] ?? null).padStart(6)} ${fmt(c.exhausted.upgrades).padStart(9)} ${fmt(c.exhausted.buildings).padStart(10)} ${fmt(c.exhausted.looks).padStart(6)} ${String(c.ledgerBytes).padStart(7)}`,
       );
     }
     const regular = careers.find((x) => x.type === 'Regular')!;
@@ -62,17 +62,58 @@ if (process.env.SIM === '1') {
     console.log(
       `G1 Regular all 5: ${fmt(regular.exhausted.lab)}; G2 Engaged all 5: ${fmt(engaged.exhausted.lab)}; G3 Essence-blocked after day 60: ${essenceBlockedAfter60.join(',') || 'none'}; G4 Payer all 5: ${fmt(payer.exhausted.lab)} (💎${payer.spent.gems_continue ?? 0} on legal continues)`,
     );
-    expect(regular.exhausted.lab, 'G1 Regular reaches all Labs 5 within 90 days').not.toBeNull();
-    expect(regular.exhausted.lab!, 'G1 Regular all Labs 5 no earlier than day 28').toBeGreaterThanOrEqual(28);
-    expect(engaged.exhausted.lab, 'G2 Engaged reaches all Labs 5').not.toBeNull();
-    expect(engaged.exhausted.lab!, 'G2 Engaged at least 30% faster').toBeLessThanOrEqual(0.7 * regular.exhausted.lab!);
-    expect(essenceBlockedAfter60, 'G3 no single-Essence starvation after day 60').toEqual([]);
-    expect(payer.exhausted.lab, 'G4 Payer reaches all Labs 5').not.toBeNull();
-    expect(payer.spent.gems_continue ?? 0, 'G4 Payer exercises the legal gem continue path').toBeGreaterThan(0);
-    expect(payer.exhausted.lab!, 'G4 payer cannot max earlier than Regular').toBeGreaterThanOrEqual(regular.exhausted.lab!);
+    expect.soft(regular.exhausted.lab, 'G1 Regular reaches all Labs 5 within 90 days').not.toBeNull();
+    expect.soft(regular.exhausted.lab!, 'G1 Regular all Labs 5 no earlier than day 28').toBeGreaterThanOrEqual(28);
+    expect.soft(engaged.exhausted.lab, 'G2 Engaged reaches all Labs 5').not.toBeNull();
+    expect.soft(engaged.exhausted.lab!, 'G2 Engaged at least 30% faster').toBeLessThanOrEqual(0.7 * regular.exhausted.lab!);
+    expect.soft(essenceBlockedAfter60, 'G3 no single-Essence starvation after day 60').toEqual([]);
+    expect.soft(payer.exhausted.lab, 'G4 Payer reaches all Labs 5').not.toBeNull();
+    expect.soft(payer.spent.gems_continue ?? 0, 'G4 Payer exercises the legal gem continue path').toBeGreaterThan(0);
+    expect.soft(payer.exhausted.lab!, 'G4 payer cannot max earlier than Regular').toBeGreaterThanOrEqual(regular.exhausted.lab!);
+    expect.soft(regular.homeLevelDays[5] ?? 0, 'Homeworld Level 5 no earlier than Regular day 28').toBeGreaterThanOrEqual(28);
+    expect
+      .soft(payer.homeLevelDays[5] ?? 0, 'payer cannot buy Level 5 earlier than Regular')
+      .toBeGreaterThanOrEqual(regular.homeLevelDays[5] ?? 0);
+    console.log(
+      `Homeworld Level 5: Regular day ${regular.homeLevelDays[5] ?? 'unreached'}, Engaged day ${engaged.homeLevelDays[5] ?? 'unreached'}, Payer day ${payer.homeLevelDays[5] ?? 'unreached'}; day-60 Watch ${regular.homeLevelDays[5] && regular.homeLevelDays[5]! <= 60 ? 'green' : 'miss — apply decision 22 frost fallback'}`,
+    );
     const idleMisses = regular.days.filter((x) => x.day <= 60 && x.active && (x.idleActiveRatio ?? 0) > 1.5).map((x) => x.day);
-    if (idleMisses.length) console.log(`⚠ Idle/active stardust >1.5 on Regular days ${idleMisses.join(', ')}`);
-    if (regular.freeGemsPerActiveDay < 95) console.log(`⚠ Regular free gems/active day ${regular.freeGemsPerActiveDay.toFixed(1)} <95`);
+    console.log(
+      `Idle ≤1.5× active: ${idleMisses.length ? `FAIL days ${idleMisses.join(', ')}` : 'PASS'}; max ${Math.max(...regular.days.slice(0, 60).map((x) => x.idleActiveRatio ?? 0)).toFixed(2)}×`,
+    );
+    console.log(
+      `Regular daily idle/active days 1–60: ${regular.days
+        .slice(0, 60)
+        .map((x) => `${x.day}:${(x.idleActiveRatio ?? 0).toFixed(2)}`)
+        .join(' ')}`,
+    );
+    expect.soft(idleMisses, 'Regular active days 1–60 idle ≤1.5× active').toEqual([]);
+    console.log(`Free gems ≥95 per active day: ${regular.freeGemsPerActiveDay.toFixed(1)}`);
+    expect.soft(regular.freeGemsPerActiveDay, 'Regular free gems ≥95 per active day').toBeGreaterThanOrEqual(95);
+    const wins = regular.days.reduce((sum, row) => sum + row.wins, 0);
+    console.log(
+      `Free boosters per campaign win: ${(regular.freeBoosters / wins).toFixed(3)}; Greenhouses ${(regular.greenhouseBoosters / wins).toFixed(3)} (${wins} wins)`,
+    );
+    expect.soft(regular.freeBoosters / wins, 'free boosters ≤0.5 per planet win').toBeLessThanOrEqual(0.5);
+    expect.soft(regular.greenhouseBoosters / wins, 'Greenhouses ≤1/3 per planet win').toBeLessThanOrEqual(1 / 3);
+    console.log(`Day 60 reachable sinks: ${JSON.stringify(regular.reachableSinks)}`);
+    console.log(
+      `Day 60 balances: ${JSON.stringify(regular.days[59].balance)}; free booster sources ${JSON.stringify(regular.boosterSources)}`,
+    );
+    expect
+      .soft(
+        regular.days.slice(0, 60).reduce((n, day) => n + (day.spent.dust_cosmetic ?? 0), 0),
+        'Regular buys a stardust look by day 60',
+      )
+      .toBeGreaterThan(0);
+    expect
+      .soft(
+        regular.days.slice(0, 60).reduce((n, day) => n + (day.spent.gems_cosmetic ?? 0), 0),
+        'Regular buys a gem look by day 60',
+      )
+      .toBeGreaterThan(0);
+    for (const currency of CURRENCIES) expect.soft(regular.reachableSinks[currency], `${currency} has a day-60 sink`).toBe(true);
+    expect.soft(replayShare(regular), 'replay Essence share ≤30%').toBeLessThanOrEqual(30);
     if (regular.exhausted.upgrades !== null && regular.exhausted.upgrades < 28)
       console.log(`⚠ Regular upgrades maxed on day ${regular.exhausted.upgrades}, before day 28`);
     for (const channel of rates.channels)
@@ -86,11 +127,28 @@ if (process.env.SIM === '1') {
       const regular = await simulate('Regular', 'night2');
       const engaged = await simulate('Engaged', 'night2');
       const payer = await simulate('Payer', 'night2');
+      for (const career of [regular, engaged, payer]) assertAccounting(career);
       const lateBlocks = regular.days.filter(
         (day) => day.day > 60 && Object.values(day.labBlocks).some((reason) => reason?.startsWith('essence:')),
       );
       console.log(
         `Nightly economy seed: Regular ${regular.exhausted.lab}, Engaged ${engaged.exhausted.lab}, Payer ${payer.exhausted.lab}, late Essence blocks ${lateBlocks.length}`,
+      );
+      console.log(
+        `Nightly Homeworld Level 5: Regular ${regular.homeLevelDays[5]}, Engaged ${engaged.homeLevelDays[5]}, Payer ${payer.homeLevelDays[5]}`,
+      );
+      console.log(
+        `Nightly Regular daily idle/active days 1–60: ${regular.days
+          .slice(0, 60)
+          .map((x) => `${x.day}:${(x.idleActiveRatio ?? 0).toFixed(2)}`)
+          .join(' ')}`,
+      );
+      console.log(
+        `Nightly idle max ${Math.max(...regular.days.slice(0, 60).map((x) => x.idleActiveRatio ?? 0)).toFixed(2)}×; free gems/day ${regular.freeGemsPerActiveDay.toFixed(1)}`,
+      );
+      const wins = regular.days.reduce((sum, day) => sum + day.wins, 0);
+      console.log(
+        `Nightly free boosters/win ${(regular.freeBoosters / wins).toFixed(3)}; Greenhouses ${(regular.greenhouseBoosters / wins).toFixed(3)}; sources ${JSON.stringify(regular.boosterSources)}; day-60 sinks ${JSON.stringify(regular.reachableSinks)}`,
       );
       console.log(
         `Nightly W1 replay Essence share ${replayShare(regular).toFixed(1)}%; W2 ${regular.firstLab ?? 'none'} level 2 day ${regular.firstLab ? (regular.labDays[regular.firstLab][2] ?? 'unreached') : 'unreached'}`,
@@ -102,5 +160,15 @@ if (process.env.SIM === '1') {
       expect(lateBlocks).toEqual([]);
       expect(payer.exhausted.lab).not.toBeNull();
       expect(payer.exhausted.lab!).toBeGreaterThanOrEqual(regular.exhausted.lab!);
+      expect(payer.homeLevelDays[5]).toBeGreaterThanOrEqual(regular.homeLevelDays[5]!);
+      expect(regular.homeLevelDays[5]).toBeGreaterThanOrEqual(28);
+      expect(regular.days.filter((x) => x.day <= 60 && x.active && (x.idleActiveRatio ?? 0) > 1.5)).toEqual([]);
+      expect(regular.freeGemsPerActiveDay).toBeGreaterThanOrEqual(95);
+      expect(regular.freeBoosters / wins).toBeLessThanOrEqual(0.5);
+      expect(regular.greenhouseBoosters / wins).toBeLessThanOrEqual(1 / 3);
+      for (const currency of CURRENCIES) expect(regular.reachableSinks[currency]).toBe(true);
+      expect(regular.days.slice(0, 60).reduce((n, day) => n + (day.spent.dust_cosmetic ?? 0), 0)).toBeGreaterThan(0);
+      expect(regular.days.slice(0, 60).reduce((n, day) => n + (day.spent.gems_cosmetic ?? 0), 0)).toBeGreaterThan(0);
+      expect(replayShare(regular)).toBeLessThanOrEqual(30);
     }, 1_200_000);
 }

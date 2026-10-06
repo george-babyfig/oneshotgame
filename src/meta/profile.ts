@@ -2,7 +2,7 @@ import { loadKey, saveKey, saveKeyChecked, removeKey } from './storage';
 import type { BoosterId, UpgradeId } from './config';
 import type { Kind, Planet } from '../core/world';
 import type { ObstacleId, SkyState } from '../core/sky';
-import { defaultHome, type HomeState } from './homeworld';
+import { defaultHome, effLevel, migrateGreenhouses, retiredBuildingRefund, type HomeState } from './homeworld';
 import type { Mail } from './inbox';
 import { UNLOCKS } from './unlocks';
 import { restoreRound, serializeRound, type RoundState } from '../core/round';
@@ -19,6 +19,8 @@ import type { LauncherId, Tune } from '../core/launchers';
 import { isLauncherId, launcherBay } from './launchbay';
 import { isLaunchRosterId } from '../core/launchers';
 import { defaultCometPier, type CometPierProgress } from './landmarks';
+import type { VaultState } from './homeworldTypes';
+import { earn } from './wallet';
 
 export interface GalaxyPlanet {
   n: number;
@@ -41,6 +43,8 @@ export interface Settings {
   music: boolean;
   haptics: boolean;
   reduceMotion: boolean;
+  /** Accessibility assist; old saves default to the normal aim line. */
+  fullAimLine: boolean;
   planetColours: 'classic' | 'clear';
   /** Reminders; off until a grown-up turns them on behind the parental gate. */
   notifications: boolean;
@@ -104,6 +108,7 @@ export interface RoundCheckpoint {
   warmup?: boolean;
   practiceFirstClear?: boolean;
   practiceGifts?: number;
+  gemBoosterUsed?: boolean;
   skyState?: SkyState;
   practiceBonkUsed?: boolean;
 }
@@ -265,8 +270,13 @@ export interface Profile {
   combo: { best: number; stamps: number };
   galaxy: GalaxyPlanet[];
   lastCollect: number;
+  vault: VaultState;
   upgrades: Record<UpgradeId, number>;
+  /** One-time preserving M11 conversion and paid-value refunds. */
+  m11Migrated: boolean;
   boosters: Record<BoosterId, number>;
+  /** Subset of inventory bought with gems, kept separate from earned stock. */
+  gemBoosters: Record<BoosterId, number>;
   piggy: number;
   starter: boolean;
   /** Cosmic Pass owned: unlocks the premium Star Road lane. */
@@ -292,10 +302,18 @@ export interface Profile {
   /** An interrupted campaign round, including its rules version. */
   savedRound?: string;
   tutorial: boolean;
-  meta: { installed: number; lastSeen: number; sessions: number; rated: boolean; starterOffered: boolean; notifAsked: boolean };
+  meta: {
+    installed: number;
+    lastSeen: number;
+    sessions: number;
+    rated: boolean;
+    starterOffered: boolean;
+    notifAsked: boolean;
+    lastWelcomeAt: number;
+  };
   stats: Stats;
   /** Momentum win streak (0..3) and the day the free shield was last used. */
-  momentum: { streak: number; shieldDay: string; paused: boolean };
+  momentum: { streak: number; shieldDay: string; paused: boolean; scopeReady: boolean; scopeWins: number };
   /** Gifts left by visiting creatures, waiting to be opened. */
   visitors: VisitorGift[];
   mementos: string[];
@@ -385,7 +403,7 @@ export interface Profile {
 
 const KEY = 'pp.profile';
 const BACKUP_KEY = 'pp.profile.bak';
-export const PROFILE_VERSION = 3;
+export const PROFILE_VERSION = 4;
 
 export function defaultProfile(now = Date.now()): Profile {
   return {
@@ -405,8 +423,11 @@ export function defaultProfile(now = Date.now()): Profile {
     combo: { best: 0, stamps: 0 },
     galaxy: [],
     lastCollect: now,
+    vault: { tier: 1, bankedProductionMs: 0, storedDust: 0, lastTick: now },
     upgrades: { scope: 0, throws: 0, splash: 0, vault: 0 },
+    m11Migrated: true,
     boosters: { shower: 1, spark: 1, scope: 1 },
+    gemBoosters: { shower: 0, spark: 0, scope: 0 },
     piggy: 0,
     starter: false,
     pass: false,
@@ -428,6 +449,7 @@ export function defaultProfile(now = Date.now()): Profile {
       music: true,
       haptics: true,
       reduceMotion: false,
+      fullAimLine: false,
       planetColours: 'classic',
       notifications: false,
       gameCenter: false,
@@ -443,7 +465,7 @@ export function defaultProfile(now = Date.now()): Profile {
     },
     tutorial: false,
     savedRound: undefined,
-    meta: { installed: now, lastSeen: now, sessions: 0, rated: false, starterOffered: false, notifAsked: false },
+    meta: { installed: now, lastSeen: now, sessions: 0, rated: false, starterOffered: false, notifAsked: false, lastWelcomeAt: 0 },
     stats: {
       throws: 0,
       plays: 0,
@@ -459,7 +481,7 @@ export function defaultProfile(now = Date.now()): Profile {
       hardWins: 0,
       bestStreak: 0,
     },
-    momentum: { streak: 0, shieldDay: '', paused: false },
+    momentum: { streak: 0, shieldDay: '', paused: false, scopeReady: false, scopeWins: 0 },
     visitors: [],
     mementos: [],
     rank: 1,
@@ -534,6 +556,77 @@ function merge<T>(base: T, saved: unknown): T {
 export function migrate(raw: Record<string, unknown>): Profile {
   if (typeof raw.v === 'number' && raw.v > PROFILE_VERSION) throw new NewerProfileError();
   const p = merge(defaultProfile(), raw);
+  p.settings.fullAimLine = p.settings.fullAimLine === true;
+  p.momentum.scopeReady = p.momentum.scopeReady === true;
+  p.momentum.scopeWins = Number.isFinite(p.momentum.scopeWins) ? Math.max(0, Math.min(8, Math.floor(p.momentum.scopeWins))) : 0;
+  for (const id of ['shower', 'spark', 'scope'] as const) {
+    const count = p.gemBoosters[id];
+    p.gemBoosters[id] = Number.isFinite(count) ? Math.min(p.boosters[id], Math.max(0, Math.floor(count))) : 0;
+  }
+  if (raw.m11Migrated !== true) {
+    const migrationNow = Date.now();
+    const oldHome = raw.home as Record<string, unknown> | undefined;
+    const oldRing = oldHome?.ring;
+    if (typeof oldRing === 'number' && Number.isFinite(oldRing))
+      p.home.level = Math.max(1, Math.min(5, Math.floor(oldRing))) as HomeState['level'];
+    const historicalCosts = { scope: [250, 700, 1600], throws: [400, 1200, 3000], splash: [5000] } as const;
+    const paid = raw.upgrades && typeof raw.upgrades === 'object' ? (raw.upgrades as Record<string, unknown>) : {};
+    let refund = 0;
+    for (const id of ['scope', 'throws', 'splash'] as const) {
+      const n = typeof paid[id] === 'number' && Number.isFinite(paid[id]) ? Math.max(0, Math.floor(paid[id])) : 0;
+      refund += historicalCosts[id].slice(0, n).reduce((sum, cost) => sum + cost, 0);
+      p.upgrades[id] = 0;
+    }
+    // HEAD's capped producer accrual belongs to the player even when the building retires.
+    const observedNow = Math.max(migrationNow, p.home.lastTick ?? migrationNow);
+    const observatory = p.home.plots.find((b) => b?.type === 'observatory');
+    const capHours = 6 + (observatory ? Math.max(0, effLevel(observatory, observedNow)) * 2 : 0);
+    let producerDust = 0;
+    let producerGems = 0;
+    for (const building of p.home.plots) {
+      if (!building || (building.type !== 'mill' && building.type !== 'grove')) continue;
+      const start = building.done ? (building.done <= observedNow ? building.done : undefined) : building.since;
+      if (start === undefined) continue;
+      const hours = Math.min(capHours, Math.max(0, (observedNow - start) / 3_600_000));
+      const level = Math.max(0, Math.min(5, effLevel(building, observedNow)));
+      const rate = building.type === 'mill' ? [0, 40, 70, 110, 160, 230][level] : [0, 1 / 6, 1 / 5, 1 / 4, 1 / 3, 1 / 2.5][level];
+      if (building.type === 'mill') producerDust += Math.floor(hours * rate + 1e-9);
+      else producerGems += Math.floor(hours * rate + 1e-9);
+    }
+    earn(p, 'dust', producerDust, 'homeworld_producer');
+    earn(p, 'gems', producerGems, 'homeworld_producer');
+    // Historical build prices include a paid tier already in progress.
+    // The Observatory extended the old Greenhouse accrual cap, so migrate stock before its refund removes the plot.
+    migrateGreenhouses(p, migrationNow);
+    p.home.plots = p.home.plots.map((building) => {
+      if (!building || !['mill', 'grove', 'observatory'].includes(building.type)) return building;
+      refund += retiredBuildingRefund(building.type, building.lv);
+      return null;
+    });
+    p.home.debris = [];
+    const vaultCount = typeof paid.vault === 'number' && Number.isFinite(paid.vault) ? Math.max(0, Math.min(3, Math.floor(paid.vault))) : 0;
+    p.upgrades.vault = vaultCount;
+    const legacyHours = [4, 8, 12, 24][vaultCount];
+    const oldRate = p.galaxy.reduce((sum, g) => sum + 6 + g.stars * 3 + g.species.length * 2, 0);
+    const last = Number.isFinite(p.lastCollect) ? p.lastCollect : migrationNow;
+    const accrued = Math.floor(oldRate * Math.min(legacyHours, Math.max(0, migrationNow - last) / 3_600_000));
+    p.vault = {
+      tier: (vaultCount + 1) as VaultState['tier'],
+      bankedProductionMs: 0,
+      storedDust: accrued,
+      lastTick: Math.max(migrationNow, last),
+    };
+    p.lastCollect = p.vault.lastTick;
+    earn(p, 'dust', refund, 'migration_refund');
+    p.m11Migrated = true;
+  }
+  p.upgrades.vault = Number.isFinite(p.upgrades.vault) ? Math.max(0, Math.min(4, Math.floor(p.upgrades.vault))) : 0;
+  p.vault.tier = (p.upgrades.vault + 1) as VaultState['tier'];
+  p.vault.bankedProductionMs = Number.isFinite(p.vault.bankedProductionMs)
+    ? Math.max(0, Math.min(12 * 3_600_000, p.vault.bankedProductionMs))
+    : 0;
+  p.vault.storedDust = Number.isFinite(p.vault.storedDust) ? Math.max(0, p.vault.storedDust) : 0;
+  p.vault.lastTick = Number.isFinite(p.vault.lastTick) ? Math.max(0, p.vault.lastTick) : Date.now();
   // Preserve the occupied plot, build timer and independent expedition record.
   if (raw.m105Migrated !== true) {
     for (const building of p.home.plots) {
@@ -722,10 +815,11 @@ export async function loadProfile(): Promise<Profile> {
         loadNotice = 'newer';
         return defaultProfile();
       }
-      if (version !== PROFILE_VERSION) {
-        // Keep the first pre-migration bytes; later launches must not replace this rescue copy.
+      if (version !== PROFILE_VERSION || (parsed as Record<string, unknown>).m11Migrated !== true) {
+        // Keep first bytes per target migration; an older rescue must not hide the pre-M11 save.
         try {
           if (!(await loadKey('pp.profile.pre-migration'))) await saveKeyChecked('pp.profile.pre-migration', raw);
+          if (!(await loadKey(`pp.profile.pre-v${PROFILE_VERSION}`))) await saveKeyChecked(`pp.profile.pre-v${PROFILE_VERSION}`, raw);
         } catch {
           readOnly = true;
           loadNotice = 'read-only';

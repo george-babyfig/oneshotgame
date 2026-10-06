@@ -1,11 +1,19 @@
 import { makeLevel, rngFrom, starsFor, type LevelDef } from '../../../src/core/levels';
 import { KINDS, type Kind } from '../../../src/core/world';
 import { modifiersFor } from '../../../src/core/modifiers';
-import { BOOSTERS, SKINS, UPGRADES, type UpgradeId } from '../../../src/meta/config';
-import { COSMETICS, buyCosmetic, owns } from '../../../src/meta/cosmetics';
-import { essenceDropsFor, addDrops, type Mat } from '../../../src/meta/constellations';
+import { BOOSTERS, SKINS } from '../../../src/meta/config';
+import { COSMETICS, STARDUST_COSMETICS, buyCosmetic, owns } from '../../../src/meta/cosmetics';
+import { CONSTELLATIONS, essenceDropsFor, addDrops, unlockedConstellation, type Mat } from '../../../src/meta/constellations';
 import { stamp } from '../../../src/meta/calendar';
-import { applyLevelWin, collectDust, discoverSpecies, grantProduct } from '../../../src/meta/economy';
+import {
+  applyLevelWin,
+  buyGemBooster,
+  buyVaultTier,
+  collectDust,
+  discoverSpecies,
+  grantProduct,
+  useStoredBooster,
+} from '../../../src/meta/economy';
 import { addTokens, claimEventTier, ensureEvent, eventActive, eventReady, isoWeek, tokensForLand } from '../../../src/meta/events';
 import { claimFestival, ensureFestival, festivalActive, festivalReady, spotFestival } from '../../../src/meta/festivals';
 import { habitatsReady, claimHabitat } from '../../../src/meta/habitats';
@@ -20,10 +28,13 @@ import {
   expand,
   homeUnlocked,
   invite,
-  speedUpBuilds,
+  expeditionOptions,
+  finishExpedition,
+  startExpedition,
   tickBuilds,
   upgrade,
   wearAcc,
+  recordHomeworldWin,
 } from '../../../src/meta/homeworld';
 import { LAB_MAX } from '../../../src/core/labperks';
 import {
@@ -41,13 +52,13 @@ import {
 import { firstHourFriend, firstHourLab, firstHourStep } from '../../../src/meta/firsthour';
 import { clearLedger, ledger, ledgerSummary, serializedSize } from '../../../src/meta/ledger';
 import { dailyLevel, recordDaily } from '../../../src/meta/modes';
-import { momentumWin, momentumLoss } from '../../../src/meta/momentum';
+import { momentumRoundPerk, momentumWin, momentumLoss } from '../../../src/meta/momentum';
 import { defaultProfile, today, type Profile } from '../../../src/meta/profile';
 import { applyReward, claimRoad, chestsReady, openChest, roadReady } from '../../../src/meta/progression';
 import { claimWish, ensureWishes, recordWishRound, swapWish } from '../../../src/meta/wishes';
 import { unlocked } from '../../../src/meta/unlocks';
 import { ALBUM_PAGES, claimMilestones, claimPage, pageDone } from '../../../src/meta/stickers';
-import { BOSS_REWARD, RESIDENT_ACCS } from '../../../src/meta/tuning';
+import { BOSS_REWARD, DYES, HOME_LEVEL_REQUIREMENTS, RESIDENT_ACCS } from '../../../src/meta/tuning';
 import { addVisitors, openVisitor } from '../../../src/meta/visitors';
 import { clearStop, ensureVoyage, voyageActive, voyageLevel, VOYAGE_LEN } from '../../../src/meta/voyage';
 import { spend, type Currency } from '../../../src/meta/wallet';
@@ -59,10 +70,11 @@ import { vi } from 'vitest';
 const DAY = 86_400_000;
 const START = Date.UTC(2026, 0, 1, 12);
 const CURRENCIES: Currency[] = ['dust', 'gems', 'stone', 'dew', 'leaf', 'ember', 'frost'];
-const IDLE = new Set(['vault', 'homeworld_producer', 'visitor']);
+const IDLE = new Set(['vault', 'homeworld_producer', 'visitor', 'expedition']);
 const PAID_LOOKS = COSMETICS.filter((x) => x.source === 'gems');
 const purchasableLooks =
   PAID_LOOKS.length +
+  STARDUST_COSMETICS.length +
   SKINS.filter((x) => x.gems > 0).length +
   PAINTS.filter((x) => x.gems).length +
   RESIDENT_ACCS.filter((x) => x.gems).length;
@@ -84,6 +96,7 @@ export interface DayRow {
   freeGems: number;
   idleActiveRatio: number | null;
   labBlocks: Partial<Record<Kind, string>>;
+  homeLevel: number;
 }
 export interface Career {
   type: PlayerType;
@@ -104,10 +117,31 @@ export interface Career {
   replayEssenceWhileLeveling: number;
   firstEssenceWhileLeveling: number;
   replayDropsWhileLeveling: number;
+  homeLevelDays: Partial<Record<2 | 3 | 4 | 5, number>>;
+  freeBoosters: number;
+  greenhouseBoosters: number;
+  boosterSources: { greenhouse: number; trip: number; rewards: number; momentum: number };
+  reachableSinks: Record<Currency, boolean>;
 }
 
 const balances = (p: Profile): Record<Currency, number> =>
   Object.fromEntries(CURRENCIES.map((c) => [c, c === 'dust' || c === 'gems' ? p[c] : (p.mats[c] ?? 0)])) as Record<Currency, number>;
+
+function reachableSinks(p: Profile): Record<Currency, boolean> {
+  const matSink = (mat: Mat) =>
+    CONSTELLATIONS.some(
+      (c, i) => unlockedConstellation(p, i) && c.bundles.some((b) => !p.bundles.includes(b.id) && (b.need[mat] ?? 0) > 0),
+    ) || DYES.some((d) => !p.dyes.includes(d.id) && (d.cost?.[mat] ?? 0) > 0);
+  return {
+    dust: STARDUST_COSMETICS.some((x) => !owns(p, x.id)),
+    gems: COSMETICS.some((x) => x.source === 'gems' && !owns(p, x.id)),
+    stone: matSink('stone') || p.home.level < 5,
+    dew: matSink('dew') || p.home.level < 5,
+    leaf: matSink('leaf') || p.home.level < 5,
+    ember: matSink('ember') || p.home.level < 5,
+    frost: matSink('frost') || p.home.level < 5,
+  };
+}
 
 const totals = (economy: Record<string, number>, prefix: string) =>
   Object.fromEntries(
@@ -118,7 +152,7 @@ const totals = (economy: Record<string, number>, prefix: string) =>
 
 function attemptsFor(type: PlayerType, day: number): number {
   if (type === 'Waiting-room') return 3;
-  if (type === 'Engaged') return 12;
+  if (type === 'Engaged') return 13;
   if (type === 'Weekender') return new Date(START + (day - 1) * DAY).getUTCDay() % 6 === 0 ? 15 : 0;
   if (type === 'Lapsed' && day >= 15 && day <= 24) return 0;
   return 6;
@@ -129,6 +163,7 @@ function round(level: LevelDef, seed: string, loadout?: Loadout) {
 }
 
 function claimReady(p: Profile, date: Date) {
+  const before = Object.values(p.boosters).reduce((sum, count) => sum + count, 0);
   for (const chapter of chestsReady(p)) openChest(p, chapter);
   for (const tier of roadReady(p)) claimRoad(p, tier);
   for (const q of p.quests.list) claimWish(p, q.id, today(date));
@@ -137,9 +172,23 @@ function claimReady(p: Profile, date: Date) {
   for (const habitat of habitatsReady(p)) claimHabitat(p, habitat.id);
   claimMilestones(p);
   for (const page of ALBUM_PAGES) if (pageDone(p, page.id)) claimPage(p, page.id);
+  return Object.values(p.boosters).reduce((sum, count) => sum + count, 0) - before;
 }
 
-function buyLooks(p: Profile) {
+function buyLooks(p: Profile, type: PlayerType, day: number) {
+  if (type !== 'Collector') {
+    // A regular child samples both look shops while preserving visible Level and Lab goals.
+    if (day >= 50 && p.home.level >= 5 && p.dust >= 5_000) {
+      const dustLook = STARDUST_COSMETICS[0];
+      if (dustLook && !owns(p, dustLook.id)) buyCosmetic(p, dustLook.id);
+    }
+    if (type !== 'Payer' && day >= 20 && p.gems >= 500) {
+      const gemLook = PAID_LOOKS[0];
+      if (gemLook && !owns(p, gemLook.id)) buyCosmetic(p, gemLook.id);
+    }
+    return;
+  }
+  for (const x of STARDUST_COSMETICS) if (!owns(p, x.id)) buyCosmetic(p, x.id);
   for (const x of PAID_LOOKS) if (!owns(p, x.id)) buyCosmetic(p, x.id);
   for (const skin of SKINS) {
     if (!skin.gems || p.skins.includes(skin.id) || p.gems < skin.gems) continue;
@@ -155,7 +204,7 @@ function buyLooks(p: Profile) {
 }
 
 function spendPolicy(p: Profile, type: PlayerType, day: number, now: number) {
-  if (type === 'Collector') buyLooks(p);
+  if (type === 'Collector') buyLooks(p, type, day);
   const labBlocks: Partial<Record<Kind, string>> = {};
   if (homeUnlocked(p)) {
     while (canExpand(p) === 'ok') expand(p);
@@ -195,28 +244,25 @@ function spendPolicy(p: Profile, type: PlayerType, day: number, now: number) {
               : check;
     }
   }
-  for (const id of Object.keys(UPGRADES) as UpgradeId[]) {
-    const costs = UPGRADES[id].costs;
-    while (p.upgrades[id] < costs.length && spend(p, 'dust', costs[p.upgrades[id]], 'upgrade')) p.upgrades[id]++;
-  }
-  if (homeUnlocked(p)) {
+  // A Level 4 player with Chapter 8 open saves for the visible Level 5 payment.
+  const savingForHome = p.home.level === 4 && p.level >= 81;
+  // At these rates tiers 4/5 cannot repay 8k/20k within this career; Regular saves for visible goals.
+  if (!savingForHome) while (p.upgrades.vault < 2 && buyVaultTier(p, now)) {}
+  // A visible look gets one turn before optional building upgrades after core growth is paid.
+  buyLooks(p, type, day);
+  const savingForFirstLook = day >= 50 && p.home.level >= 5 && !!STARDUST_COSMETICS[0] && !owns(p, STARDUST_COSMETICS[0].id);
+  if (homeUnlocked(p) && !savingForHome && !savingForFirstLook) {
     for (const type of BUILDING_TYPES) {
-      if (type === 'lab' || type === 'mill' || type === 'grove' || type === 'observatory') continue;
+      if (type === 'lab') continue;
       if (p.home.plots.some((b) => b?.type === type)) continue;
       const plot = p.home.plots.findIndex((b, i) => !b && !p.home.debris.includes(i));
       if (plot >= 0) build(p, plot, type, now + 62_000);
     }
     for (const type of BUILDING_TYPES) {
-      if (type === 'lab' || type === 'mill' || type === 'grove' || type === 'observatory') continue;
+      if (type === 'lab') continue;
       while (p.home.plots.filter((b) => b?.type === type).length < BUILDINGS[type].max) {
         const missing = BUILDING_TYPES.filter(
-          (id) =>
-            id !== 'lab' &&
-            id !== 'mill' &&
-            id !== 'grove' &&
-            id !== 'observatory' &&
-            !p.home.plots.some((b) => b?.type === id) &&
-            BUILDINGS[id].ring <= p.home.ring,
+          (id) => id !== 'lab' && !p.home.plots.some((b) => b?.type === id) && BUILDINGS[id].ring <= p.home.level,
         ).length;
         const empty = p.home.plots.filter((b, i) => !b && !p.home.debris.includes(i)).length;
         if (empty <= missing) break;
@@ -227,7 +273,6 @@ function spendPolicy(p: Profile, type: PlayerType, day: number, now: number) {
     for (let plot = 0; plot < p.home.plots.length; plot++) while (upgrade(p, plot, now + 62_000) === 'ok') {}
     if (p.seen.length && !p.home.residents.length) invite(p, p.seen[0]);
   }
-  buyLooks(p);
   return labBlocks;
 }
 
@@ -250,8 +295,13 @@ function visit(
   while (openVisitor(p)) {}
   p.meta.lastSeen = now;
   tickBuilds(p.home, now);
+  const trip = finishExpedition(p, now);
   collectDust(p, now);
-  collectAll(p, now);
+  const greenhouse = collectAll(p, now);
+  const greenhouseBoosters = Object.values(greenhouse.boosters).reduce((sum, count) => sum + (count ?? 0), 0);
+  const tripBoosters = trip ? Object.values(trip.boosters).reduce((n, count) => n + (count ?? 0), 0) : 0;
+  const boosterSources = { greenhouse: greenhouseBoosters, trip: tripBoosters, rewards: 0, momentum: 0 };
+  let freeBoosters = greenhouseBoosters + tripBoosters;
   stamp(p, dayKey);
   const wishes = ensureWishes(p, dayKey);
   // A child can swap a card that has stayed out of reach across several visits.
@@ -260,7 +310,9 @@ function visit(
   if (festivalActive(p)) ensureFestival(p, date);
   if (eventActive(p)) ensureEvent(p, isoWeek(date));
   if (voyageActive(p)) ensureVoyage(p, isoWeek(date));
-  claimReady(p, date);
+  const firstRewards = claimReady(p, date);
+  freeBoosters += firstRewards;
+  boosterSources.rewards += firstRewards;
   let wins = 0;
   let replayEssenceWhileLeveling = 0;
   let firstEssenceWhileLeveling = 0;
@@ -268,10 +320,16 @@ function visit(
   for (let i = 0; i < budget; i++) {
     const shortKind = (Object.keys(KINDS) as Kind[]).find((kind) => canLevelLab(p, kind) === 'essence');
     const replay = shortKind ? bestDrops[LAB_ESSENCE[shortKind]]?.n : undefined;
-    const n = p.level > 120 ? (replay ?? 120) : p.level;
+    const nextHome = p.home.level < 5 ? HOME_LEVEL_REQUIREMENTS[(p.home.level + 1) as 2 | 3 | 4 | 5] : null;
+    const shortHomeMat =
+      nextHome && p.level > nextHome.chapter * 10
+        ? (Object.entries(nextHome.essence) as [Mat, number][]).find(([mat, need]) => (p.mats[mat] ?? 0) < need)?.[0]
+        : undefined;
+    const n = p.level > 120 ? (replay ?? (shortHomeMat ? bestDrops[shortHomeMat]?.n : undefined) ?? 120) : p.level;
     let level = levels.get(n);
     if (!level) levels.set(n, (level = makeLevel(n, 'PP')));
     let shower = false;
+    let gemBoosterUsed = false;
     if (day % 3 === 0 && i === 0) {
       if (!p.boosters.shower && spend(p, 'dust', BOOSTERS.shower.dust, 'booster')) p.boosters.shower++;
       if (p.boosters.shower) {
@@ -280,34 +338,60 @@ function visit(
         ledger.count('boosters_used');
       }
     }
+    const firstCampaignClear = n === p.level && !p.stars[n];
+    const availablePerk = momentumRoundPerk(p);
+    const perk = firstCampaignClear ? availablePerk : { ...availablePerk, scope: false };
+    let spark = perk.spark;
+    let scope = perk.scope;
+    if (n === p.level && (p.fails[n] ?? 0) > 0 && level.difficulty !== 'normal') {
+      for (const id of ['shower', 'spark', 'scope'] as const) {
+        if ((id === 'shower' && shower) || (id === 'spark' && spark) || (id === 'scope' && scope)) continue;
+        let paid = useStoredBooster(p, id);
+        if (paid === null && type === 'Payer' && buyGemBooster(p, id)) paid = useStoredBooster(p, id);
+        if (paid === null) continue;
+        gemBoosterUsed ||= paid;
+        ledger.count('boosters_used');
+        if (id === 'shower') shower = true;
+        if (id === 'spark') spark = true;
+        if (id === 'scope') scope = true;
+      }
+    }
+    const momentumBoosters = Number(perk.spark) + Number(perk.scope);
+    freeBoosters += momentumBoosters;
+    boosterSources.momentum += momentumBoosters;
     const canPayContinue =
       type === 'Payer' &&
+      // The §7.5 payer persona spends on difficult campaign planets.
+      level.difficulty !== 'normal' &&
       continueAllowed({
         mode: 'campaign',
         planet: n,
         won: false,
         cleared: !!p.stars[n],
         failsBefore: p.fails[n] ?? 0,
-        used: 0,
+        used: p.continuesUsed[n] ?? 0,
       });
-    const continues = canPayContinue ? Math.min(2, Math.floor(p.gems / CONTINUE_COST)) : 0;
+    const continues = canPayContinue ? Math.min(2 - (p.continuesUsed[n] ?? 0), Math.floor(p.gems / CONTINUE_COST)) : 0;
     const buddySpecies = suggestedBuddy(p, level.troubles);
     const result = round(level, `career-${masterSeed === 'default' ? '' : `${masterSeed}-`}${day}-${visitNo}-${i}-${n}`, {
       mods: modifiersFor('campaign', {
         lab: labLevels(p),
         forms: activeForms(p),
-        splash: p.upgrades.splash,
-        extraThrows: p.upgrades.throws,
+        splash: 0,
+        extraThrows: shower ? 3 : 0,
         momentum: p.momentum.streak,
-        boosters: { shower, spark: false, scope: false },
+        boosters: { shower, spark, scope },
         buddy: buddySpecies ? { species: buddySpecies, acc: '' } : null,
         buddyShield: buddyShieldFor(p, 'campaign', n, buddySpecies),
       }),
-      extraThrows: p.upgrades.throws + (shower ? 3 : 0),
-      lifeSpark: false,
+      extraThrows: (shower ? 3 : 0) + perk.throws,
+      lifeSpark: spark,
       continues,
     });
-    if (result.continuesUsed) spend(p, 'gems', CONTINUE_COST * result.continuesUsed, 'continue');
+    if (result.continuesUsed) {
+      spend(p, 'gems', CONTINUE_COST * result.continuesUsed, 'continue');
+      p.continuesUsed[n] = (p.continuesUsed[n] ?? 0) + result.continuesUsed;
+    }
     for (const step of result.labSteps) recordLabEvents(p, step, 'campaign');
     for (let turn = 0; turn < result.totalThrows; turn++) {
       const kind = level.queue[turn % level.queue.length];
@@ -325,7 +409,7 @@ function visit(
     }
     wins++;
     ledger.count('round_won');
-    momentumWin(p);
+    momentumWin(p, firstCampaignClear, perk.scope);
     if (p.level === n) clearFails(p, n);
     const out = applyLevelWin(p, {
       n,
@@ -335,19 +419,27 @@ function visit(
       name: level.name,
       hue: level.hue,
       difficulty: level.difficulty,
+      // The live results flow pays for throws left after the winning star.
+      bonusDust: 0, // The sim never taps Finish early; live rewards only an actual Finish tap.
+      continuesUsed: result.continuesUsed,
+      gemBoosterUsed,
       day: dayKey,
     });
+    recordHomeworldWin(p, { mode: 'campaign', planetKey: `campaign:${n}`, buddySpecies, at: now + i });
     recordWishRound(p, 'campaign', result.planet, dayKey, level.start);
-    const drops = essenceDropsFor(result.planet, result.stars, out.firstClear);
+    // A gem continue may finish a new planet, but its Essence uses the replay
+    // rate so purchasing throws never increases Lab or Homeworld currency.
+    const essenceFirstClear = out.essenceFirstClear;
+    const drops = essenceDropsFor(result.planet, result.stars, essenceFirstClear);
     if ((Object.keys(KINDS) as Kind[]).some((kind) => labLevel(p, kind) < LAB_MAX)) {
       const amount = Object.values(drops).reduce((sum, value) => sum + (value ?? 0), 0);
-      if (out.firstClear) firstEssenceWhileLeveling += amount;
+      if (essenceFirstClear) firstEssenceWhileLeveling += amount;
       else {
         replayEssenceWhileLeveling += amount;
         replayDropsWhileLeveling++;
       }
     }
-    addDrops(p, drops, out.firstClear ? 'material_drop_first_clear' : 'material_drop_replay');
+    addDrops(p, drops, essenceFirstClear ? 'material_drop_first_clear' : 'material_drop_replay');
     for (const [mat, amount] of Object.entries(drops) as [Mat, number][])
       if (!bestDrops[mat] || amount > bestDrops[mat]!.amount) bestDrops[mat] = { n, amount };
     for (const species of result.arrivals) {
@@ -364,8 +456,9 @@ function visit(
       p.bosses.push(n);
       applyReward(p, BOSS_REWARD, 'boss');
     }
-    if (homeUnlocked(p)) speedUpBuilds(p.home, undefined, now);
-    claimReady(p, date);
+    const rewards = claimReady(p, date);
+    freeBoosters += rewards;
+    boosterSources.rewards += rewards;
   }
   if (visitNo === 0 && unlocked(p, 'daily')) {
     const daily = dailyLevel(dayKey);
@@ -389,13 +482,32 @@ function visit(
     ledger.count('round_started');
     if (result.stars) {
       clearStop(p, stop, result.stars, dayKey);
+      recordHomeworldWin(p, { mode: 'voyage', planetKey: `voyage:${key}`, buddySpecies: null, at: now });
       recordWishRound(p, 'voyage', result.planet, dayKey, level.start);
       ledger.count('round_won');
     } else ledger.count('round_failed');
   }
-  claimReady(p, date);
+  const lastRewards = claimReady(p, date);
+  freeBoosters += lastRewards;
+  boosterSources.rewards += lastRewards;
   const labBlocks = spendPolicy(p, type, day, now);
-  return { wins, labBlocks, replayEssenceWhileLeveling, firstEssenceWhileLeveling, replayDropsWhileLeveling };
+  const nextVisitHours = visitNo < 2 ? 4 : 16;
+  const hours = expeditionOptions(p.home)
+    .filter((option) => option <= nextVisitHours)
+    .at(-1);
+  // Paired Regular/Payer players remember one short trip each active day.
+  if (hours && p.home.residents[0] && (!['Regular', 'Payer'].includes(type) || visitNo === 0))
+    startExpedition(p, p.home.residents[0].species, hours, now);
+  return {
+    wins,
+    labBlocks,
+    replayEssenceWhileLeveling,
+    firstEssenceWhileLeveling,
+    replayDropsWhileLeveling,
+    freeBoosters,
+    greenhouseBoosters,
+    boosterSources,
+  };
 }
 
 export async function simulate(type: PlayerType, masterSeed = 'default'): Promise<Career> {
@@ -416,29 +528,39 @@ export async function simulate(type: PlayerType, masterSeed = 'default'): Promis
   const bestDrops: Partial<Record<Mat, { n: number; amount: number }>> = {};
   const exhausted = { lab: null, upgrades: null, buildings: null, looks: null } as Career['exhausted'];
   const labDays = Object.fromEntries((Object.keys(KINDS) as Kind[]).map((kind) => [kind, {}])) as Career['labDays'];
+  const homeLevelDays: Career['homeLevelDays'] = {};
   let replayEssenceWhileLeveling = 0;
   let firstEssenceWhileLeveling = 0;
   let replayDropsWhileLeveling = 0;
+  let freeBoosters = 0;
+  let greenhouseBoosters = 0;
+  const boosterSources = { greenhouse: 0, trip: 0, rewards: 0, momentum: 0 };
+  let day60Sinks: Career['reachableSinks'] | null = null;
   try {
     for (let day = 1; day <= 90; day++) {
       const budget = attemptsFor(type, day);
-      const visits = budget ? (type === 'Waiting-room' ? 3 : 1) : 0;
+      const visits = budget ? (type === 'Weekender' ? 1 : 3) : 0;
       let wins = 0;
       let labBlocks: DayRow['labBlocks'] = {};
       const before = { ...ledgerSummary(START + (day - 1) * DAY).economy };
+      vi.setSystemTime(START + (day - 1) * DAY);
+      if (type === 'Payer' && day === 1) {
+        grantProduct(p, 'com.pocketplanet.game.startercrew', 'sim-starter-crew');
+        grantProduct(p, 'com.pocketplanet.game.road00', 'sim-cosmic-road');
+      }
+      if (type === 'Payer' && day % 7 === 1) grantProduct(p, 'com.pocketplanet.game.gems500', `sim-gems-${day}`);
       for (let v = 0; v < visits; v++) {
         const visitResult = visit(p, type, day, v, budget / visits, levels, voyageLevels, bestDrops, masterSeed);
         wins += visitResult.wins;
         replayEssenceWhileLeveling += visitResult.replayEssenceWhileLeveling;
         firstEssenceWhileLeveling += visitResult.firstEssenceWhileLeveling;
         replayDropsWhileLeveling += visitResult.replayDropsWhileLeveling;
+        freeBoosters += visitResult.freeBoosters;
+        greenhouseBoosters += visitResult.greenhouseBoosters;
+        for (const key of Object.keys(boosterSources) as (keyof typeof boosterSources)[])
+          boosterSources[key] += visitResult.boosterSources[key];
         labBlocks = visitResult.labBlocks;
       }
-      if (type === 'Payer' && day === 1) {
-        grantProduct(p, 'com.pocketplanet.game.startercrew', 'sim-starter-crew');
-        grantProduct(p, 'com.pocketplanet.game.road00', 'sim-cosmic-road');
-      }
-      if (type === 'Payer' && day % 7 === 1) grantProduct(p, 'com.pocketplanet.game.gems500', `sim-gems-${day}`);
       const now = START + (day - 1) * DAY + (visits ? (visits - 1) * 4 * 3_600_000 : 0);
       vi.setSystemTime(now);
       const economy = ledgerSummary(now).economy;
@@ -469,18 +591,19 @@ export async function simulate(type: PlayerType, masterSeed = 'default'): Promis
         freeGems,
         idleActiveRatio: activeDust ? idleDust / activeDust : idleDust ? Infinity : null,
         labBlocks,
+        homeLevel: p.home.level,
       });
+      if (day === 60) day60Sinks = reachableSinks(p);
+      for (const level of [2, 3, 4, 5] as const)
+        if (p.home.level >= level && homeLevelDays[level] === undefined) homeLevelDays[level] = day;
       for (const kind of Object.keys(KINDS) as Kind[])
         for (const level of [2, 3, 4, 5] as const)
           if (labLevel(p, kind) >= level && labDays[kind][level] === undefined) labDays[kind][level] = day;
       if (exhausted.lab === null && (Object.keys(KINDS) as Kind[]).every((k) => labLevel(p, k) === LAB_MAX)) exhausted.lab = day;
-      if (exhausted.upgrades === null && (Object.keys(UPGRADES) as UpgradeId[]).every((id) => p.upgrades[id] === UPGRADES[id].costs.length))
-        exhausted.upgrades = day;
+      if (exhausted.upgrades === null && p.upgrades.vault === 4) exhausted.upgrades = day;
       if (
         exhausted.buildings === null &&
-        BUILDING_TYPES.filter((id) => id !== 'lab' && id !== 'mill' && id !== 'grove' && id !== 'observatory').every((id) =>
-          p.home.plots.some((b) => b?.type === id),
-        )
+        BUILDING_TYPES.filter((id) => id !== 'lab').every((id) => p.home.plots.some((b) => b?.type === id))
       )
         exhausted.buildings = day;
       if (
@@ -513,6 +636,11 @@ export async function simulate(type: PlayerType, masterSeed = 'default'): Promis
       replayEssenceWhileLeveling,
       firstEssenceWhileLeveling,
       replayDropsWhileLeveling,
+      homeLevelDays,
+      freeBoosters,
+      greenhouseBoosters,
+      boosterSources,
+      reachableSinks: day60Sinks ?? reachableSinks(p),
     };
     for (const currency of CURRENCIES) {
       const total = (rows: Record<string, number>) =>
@@ -547,6 +675,7 @@ export function exchangeRates() {
     channels: [
       ...comparable.map((x) => ({ ...x, flag: x.dustPerGem > 2 * median })),
       ...PAID_LOOKS.map((x) => ({ channel: `look:${x.id}`, gems: x.gems ?? 0, dust: null, dustPerGem: null, flag: false })),
+      ...STARDUST_COSMETICS.map((x) => ({ channel: `look:${x.id}`, gems: null, dust: x.dust ?? 0, dustPerGem: null, flag: false })),
       ...SKINS.filter((x) => x.gems).map((x) => ({
         channel: `atmosphere:${x.id}`,
         gems: x.gems,

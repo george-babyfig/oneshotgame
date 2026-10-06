@@ -24,7 +24,7 @@ import { LAUNCH_ROSTER } from '../src/core/launchers';
 function rich() {
   const p = defaultProfile(0);
   p.level = 120;
-  p.home.ring = 5;
+  p.home.level = 5;
   p.home.plots[0] = { type: 'launch_bay', lv: 5, since: 0 };
   p.dust = 100_000;
   p.mats = { leaf: 1000, dew: 1000, stone: 1000 };
@@ -155,13 +155,13 @@ describe('Launch Bay tunes', () => {
 });
 
 describe('Comet Pier feat', () => {
-  it('starts Pier feats when Ring 4 opens', () => {
+  it('starts Pier feats when Level 4 opens', () => {
     const p = rich();
-    p.home.ring = 3;
+    p.home.level = 3;
     for (let n = 1; n <= 3; n++) recordCometPierWin(p, 'campaign', n, true, 1);
     expect(p.cometPier.hardWins).toBe(0);
     expect(p.cometPier.stage).toBe(0);
-    p.home.ring = 4;
+    p.home.level = 4;
     expect(advanceCometPier(p)).toBe(0);
     for (let n = 4; n <= 6; n++) recordCometPierWin(p, 'campaign', n, true, 1);
     expect(p.cometPier.stage).toBe(1);
@@ -197,7 +197,7 @@ describe('Comet Pier feat', () => {
   it('gives the Bay a clear reason before the final Pier action', () => {
     const p = defaultProfile();
     expect(finishCometPierWithResult(p)).toBe('locked');
-    p.home.ring = 4;
+    p.home.level = 4;
     p.cometPier.stage = 3;
     expect(finishCometPierWithResult(p)).toBe('resources');
   });

@@ -56,7 +56,7 @@ export function drawStructure(
   s: number,
   t: number,
   building = false,
-  opts: { kind?: Kind; formOn?: boolean } = {},
+  opts: { kind?: Kind; formOn?: boolean; homeLevel?: number; growth?: number } = {},
 ) {
   const k = 0.82 + lv * 0.06;
   g.save();
@@ -132,13 +132,16 @@ export function drawStructure(
       g.strokeStyle = 'rgba(255,255,255,0.7)';
       g.lineWidth = s * 0.025;
       g.stroke();
+      // Sprout, bud and flower are visible without a timer or progress bar.
+      const growth = Math.max(0, Math.min(5, opts.growth ?? 0));
       for (let i = -1; i <= 1; i++) {
         const sw = Math.sin(t * 2 + i) * 0.1;
         g.fillStyle = ['#5ecf5a', '#ff8fc8', '#7ae05a'][i + 1];
         g.beginPath();
-        g.ellipse(i * s * 0.14, -s * 0.24, s * 0.06, s * 0.12, sw, 0, Math.PI * 2);
+        g.ellipse(i * s * 0.14, -s * (0.17 + growth * 0.018), s * (0.04 + growth * 0.004), s * (0.06 + growth * 0.018), sw, 0, Math.PI * 2);
         g.fill();
       }
+      if (growth >= 2) circ(g, 0, -s * (0.3 + growth * 0.018), s * (growth >= 4 ? 0.09 : 0.055), growth >= 4 ? '#ff8fc8' : '#f1dc81');
       g.fillStyle = 'rgba(255,255,255,0.4)';
       g.beginPath();
       g.ellipse(-s * 0.14, -s * 0.34, s * 0.05, s * 0.1, -0.5, 0, Math.PI * 2);
@@ -316,6 +319,13 @@ export function drawStructure(
     }
   }
   g.restore();
+  if (opts.homeLevel === 5 && !building) {
+    // The crystal tier is shared by every finished structure at Homeworld Level 5.
+    g.save();
+    g.globalAlpha = 0.9;
+    star(g, 0, -s * 0.72, s * 0.08, '#d9faff');
+    g.restore();
+  }
   if (building) drawScaffold(g, s, t);
 }
 
@@ -353,29 +363,6 @@ export function drawDrone(g: G, x: number, y: number, s: number, t: number) {
   if (Math.sin(t * 9) > 0.3) {
     circ(g, 0, s * 0.2, s * 0.03, '#ffe066');
     circ(g, s * 0.05, s * 0.26, s * 0.02, '#ff8a3d');
-  }
-  g.restore();
-}
-
-/** A smoking meteor rock sitting on a plot. */
-export function drawDebris(g: G, s: number, t: number) {
-  g.save();
-  g.fillStyle = '#6a5a70';
-  g.beginPath();
-  const pts = [1, 0.8, 1.05, 0.9, 1, 0.85, 0.95];
-  pts.forEach((k, i) => {
-    const a = Math.PI + (i / (pts.length - 1)) * Math.PI;
-    g[i ? 'lineTo' : 'moveTo'](Math.cos(a) * s * 0.26 * k, Math.sin(a) * s * 0.24 * k);
-  });
-  g.closePath();
-  g.fill();
-  circ(g, -s * 0.06, -s * 0.1, s * 0.05, '#ff8a3d');
-  for (let i = 0; i < 3; i++) {
-    const u = (t * 0.6 + i / 3) % 1;
-    g.fillStyle = `rgba(200,190,220,${0.5 * (1 - u)})`;
-    g.beginPath();
-    g.arc(Math.sin(u * 6 + i) * s * 0.06, -s * 0.2 - u * s * 0.5, s * (0.05 + u * 0.08), 0, Math.PI * 2);
-    g.fill();
   }
   g.restore();
 }

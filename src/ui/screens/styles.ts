@@ -1,5 +1,5 @@
 // Styles: dress your Keeper and preview looks without changing the saved outfit.
-import { h, btn, toast } from '../dom';
+import { h, btn, fmt, toast } from '../dom';
 import { LAB_TEXT } from '../../meta/labcopy';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
@@ -488,6 +488,16 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
     action = btn(`${t('Buy')} 💎${item.gems}`, 'gem', () => {
       if (p.gems < (item.gems ?? 0)) return app.needGems();
       buyCosmetic(p, item.id);
+      equip(p, item.id);
+      sfx.coin();
+      haptic.success();
+      toast(t('{name} is yours!', { name: t(item.name) }), 'good');
+      app.save();
+      showStyles(app, slot);
+    });
+  else if (item.source === 'dust')
+    action = btn(`${t('Buy')} ✨${fmt(item.dust ?? 0)}`, 'dust-btn', () => {
+      if (!buyCosmetic(p, item.id)) return toast(t('Not enough stardust'));
       equip(p, item.id);
       sfx.coin();
       haptic.success();

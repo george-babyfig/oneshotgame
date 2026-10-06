@@ -35,7 +35,15 @@ function openLetter(app: App, m: Mail) {
   const box = modal([
     h('div', { class: 'letter' }, h('div', { class: 'letter-face' }, face(m)), h('small', null, t('From: {who}', { who: t(L.from, v) }))),
     h('div', { class: 'm-title' }, t(L.title, v)),
-    h('p', { class: 'letter-body' }, t(L.body, v)),
+    h(
+      'p',
+      { class: 'letter-body' },
+      m.kind === 'homeworld'
+        ? t(
+            'We found you a quiet little world. Build your first Lab and welcome a friend. Finish chapters and gather stardust and Essences to grow your Homeworld.',
+          )
+        : t(L.body, v),
+    ),
     gift ? h('div', { class: 'reward-list' }, ...rewardText(gift).map((x) => h('span', null, x))) : null,
     btn(gift ? t('Collect gift') : t('Close'), 'primary wide', () => {
       if (gift) {

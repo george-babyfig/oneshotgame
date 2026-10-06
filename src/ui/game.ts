@@ -68,7 +68,7 @@ export interface SceneOpts {
   roundMode?: 'practice';
   forcedLauncher?: boolean;
   rules?: RoundRules;
-  scopeLevel: number; // 0..3 aim guide length
+  scopeLevel: number; // 2 = standard line, 3 = full-line assist
   /** The player's Keeper outfit, launcher and trail. */
   look?: Look;
   /** Real-calendar season weather, and a meteor shower tonight (Supernova charges 2×). */
@@ -95,6 +95,7 @@ export interface SceneOpts {
   reduceMotion?: boolean;
   /** Momentum tier (0-3) active this level. */
   momentum?: number;
+  momentumScope?: boolean;
   /** Opening coach tip (0 = before the first throw). */
   coach?: Record<number, string>;
   gustTip?: string;
@@ -154,6 +155,8 @@ export interface LevelResult {
   throwsTotal: number;
   /** Throws left unused when the player finished early. */
   leftover: number;
+  continuesUsed?: number;
+  gemBoosterUsed?: boolean;
   /** A Comet Guardian was defeated on this planet. */
   boss?: boolean;
   comboBest?: number;
@@ -223,6 +226,8 @@ export interface Shot {
 }
 
 export class LevelScene {
+  continuesUsed = 0;
+  gemBoosterUsed = false;
   el: HTMLElement;
   canvas: HTMLCanvasElement;
   g: CanvasRenderingContext2D;

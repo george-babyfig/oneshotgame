@@ -1,9 +1,19 @@
 // Play: one clear next step beside the galaxy.
-import { h, btn, fmt, toast } from '../dom';
+import { h, btn, fmt, modal, toast } from '../dom';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
 import { levelMeta, TWISTS } from '../../core/levels';
-import { collectDust, galaxyRate, pendingDust, planetRate, vaultHours } from '../../meta/economy';
+import {
+  buyVaultTier,
+  collectDust,
+  pendingDust,
+  vaultHours,
+  vaultRate,
+  vaultTier,
+  VAULT_RATES,
+  VAULT_STORAGE_HOURS,
+  VAULT_UPGRADE_COSTS,
+} from '../../meta/economy';
 import { chapterOf } from '../../meta/progression';
 import { drawGalaxy } from '../art/galaxy';
 import { effectiveReduceMotion, flyReward, menuParticles } from '../motion';
@@ -21,45 +31,73 @@ export function showHome(app: App) {
   const next = levelMeta(p.level);
   const ch = chapterOf(p.level);
   const pending = pendingDust(p, now);
-  const rate = galaxyRate(p);
-  const full = rate > 0 && pending >= Math.floor(rate * vaultHours(p));
+  const rate = vaultRate(p);
+  const cap = Math.floor(rate * vaultHours(p));
+  const full = cap > 0 && pending >= cap;
+  const working = rate > 0 && p.vault.bankedProductionMs > Math.max(0, now - Math.max(p.vault.lastTick, p.lastCollect));
   const canvas = h('canvas', { class: 'galaxy', 'aria-label': t('Galaxy') });
   const picked = nextUp(p, now);
   const collect = btn(
     h(
       'span',
       { class: 'stack' },
-      h('b', null, pending ? t('Collect all ✨ {n}', { n: fmt(pending) }) : t('Collect all')),
+      h('b', null, t('Vault · ✨ {stored}/{cap}', { stored: fmt(pending), cap: fmt(cap) })),
       h(
         'small',
         null,
-        pending
-          ? full
-            ? t('Vault full! Upgrade it to store more')
-            : t('{n} stardust / hour', { n: fmt(rate) })
-          : t('Ready at {time}', {
-              time: new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(
-                new Date(p.lastCollect + (rate ? 3600000 / rate : 3600000)),
-              ),
-            }),
+        full ? t('Vault full') : !working ? t('Win a campaign planet to start your Vault') : t('Working: ✨ {n} an hour', { n: fmt(rate) }),
       ),
     ),
     `dust-btn${full ? ' full' : ''}`,
     () => {
-      const rect = collect.getBoundingClientRect();
-      const from = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-      const d = collectDust(p);
-      if (d) {
-        sfx.coin();
-        haptic.success();
-        toast(t('+{n} stardust', { n: fmt(d) }), 'good');
-        app.save();
-      }
-      app.showHome(true);
-      if (d) void flyReward(from, 'dust', d);
+      const tier = vaultTier(p);
+      const m = modal(
+        [
+          h('div', { class: 'm-title' }, t('Vault level {n}', { n: tier })),
+          h('p', null, t('Stored: ✨ {stored}/{cap}', { stored: fmt(pendingDust(p)), cap: fmt(Math.floor(vaultRate(p) * vaultHours(p))) })),
+          h('p', { class: 'muted' }, t('Wins keep the Vault working. One campaign win adds two hours.')),
+          pendingDust(p) > 0
+            ? btn(t('Collect ✨ {n}', { n: fmt(pendingDust(p)) }), 'primary wide', () => {
+                const rect = collect.getBoundingClientRect();
+                const d = collectDust(p);
+                if (d) {
+                  sfx.coin();
+                  haptic.success();
+                  app.save();
+                  toast(t('+{n} stardust', { n: fmt(d) }), 'good');
+                  void flyReward({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }, 'dust', d);
+                }
+                m.close();
+                app.showHome(true);
+              })
+            : h('p', { class: 'muted' }, t('Nothing to collect yet. Campaign wins keep your Vault working.')),
+          tier < 5
+            ? h(
+                'div',
+                null,
+                h(
+                  'p',
+                  { class: 'muted' },
+                  t('Next level: up to ✨{rate} an hour, holds {hours} hours', {
+                    rate: fmt(VAULT_RATES.at(tier) ?? VAULT_RATES[4]),
+                    hours: VAULT_STORAGE_HOURS.at(tier) ?? VAULT_STORAGE_HOURS[4],
+                  }),
+                ),
+                btn(t('Upgrade Vault · ✨ {n}', { n: fmt(VAULT_UPGRADE_COSTS[tier - 1]) }), 'ghost wide', () => {
+                  if (!buyVaultTier(p)) return toast(t('Not enough stardust'));
+                  sfx.levelUp();
+                  haptic.success();
+                  app.save();
+                  m.close();
+                  app.showHome(true);
+                }),
+              )
+            : h('p', { class: 'muted' }, t('Vault fully grown')),
+        ],
+        { cls: 'vault-sheet' },
+      );
     },
   );
-  collect.disabled = pending <= 0;
   const nextAction = () => {
     if (picked.action === 'missions') app.selectTab('missions');
     else if (picked.action === 'homeworld') app.selectTab('homeworld');
@@ -81,7 +119,6 @@ export function showHome(app: App) {
     else if (picked.action === 'event') app.events();
     else if (picked.action === 'festival') app.festival();
     else if (picked.action === 'modes') app.modes();
-    else if (picked.action === 'upgrades') app.showUpgrades();
     else if (p.level <= 3) app.startLevel(p.level);
     else app.preLevel(p.level);
   };
@@ -128,7 +165,7 @@ export function showHome(app: App) {
     look: currentLook(p),
     onTap: (g) => {
       sfx.click();
-      toast(`${planetName(g.name)} · ${'★'.repeat(g.stars)} · ✨${planetRate(g)}/h`);
+      toast(t('{name} · {stars} · Campaign wins keep your Vault working.', { name: planetName(g.name), stars: '★'.repeat(g.stars) }));
       app.showStarMap();
     },
   });

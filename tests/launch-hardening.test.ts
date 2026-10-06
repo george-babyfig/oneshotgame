@@ -81,9 +81,20 @@ describe('launch save protection', () => {
     keys.set('pp.profile', raw);
     await loadProfile();
     expect(keys.get('pp.profile.pre-migration')).toBe(raw);
+    expect(keys.get(`pp.profile.pre-v${PROFILE_VERSION}`)).toBe(raw);
     keys.set('pp.profile', JSON.stringify({ ...defaultProfile(0), v: PROFILE_VERSION - 1, level: 7 }));
     await loadProfile();
     expect(keys.get('pp.profile.pre-migration')).toBe(raw);
+    expect(keys.get(`pp.profile.pre-v${PROFILE_VERSION}`)).toBe(raw);
+  });
+
+  it('retains the M11 rescue alongside an older migration rescue', async () => {
+    keys.set('pp.profile.pre-migration', 'older v2 bytes');
+    const raw = JSON.stringify({ ...defaultProfile(0), v: PROFILE_VERSION - 1, level: 23 });
+    keys.set('pp.profile', raw);
+    await loadProfile();
+    expect(keys.get('pp.profile.pre-migration')).toBe('older v2 bytes');
+    expect(keys.get(`pp.profile.pre-v${PROFILE_VERSION}`)).toBe(raw);
   });
 
   it('refuses to downgrade a newer save', async () => {

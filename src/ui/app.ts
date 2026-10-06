@@ -35,7 +35,7 @@ import { firstTargets, helpAtFailCount, helpFor, helpThrowsForAttempt } from '..
 import { discoverSpecies, grantProduct, refundQuietUntil, revokeProduct, spendGems } from '../meta/economy';
 import { chapterOf } from '../meta/progression';
 import { ensureWishes } from '../meta/wishes';
-import { MOMENTUM_PERKS, momentumActive, momentumLoss, momentumWin } from '../meta/momentum';
+import { MOMENTUM_PERKS, momentumActive, momentumLoss, momentumRoundPerk, momentumWin } from '../meta/momentum';
 import { addVisitors } from '../meta/visitors';
 import { rankFlow } from './flows/rank';
 import { visitorsFlow } from './flows/visitors';
@@ -49,7 +49,6 @@ import { addTokens, ensureEvent, eventActive, tokensForLand } from '../meta/even
 import { eventFlow } from './flows/event';
 import { showHome } from './screens/home';
 import { showLifebook } from './screens/lifebook';
-import { showUpgrades } from './screens/upgrades';
 import { showShop } from './screens/shop';
 import { showStarMap } from './screens/starmap';
 import { showRoad } from './screens/road';
@@ -83,7 +82,7 @@ import { showVoyage } from './screens/voyage';
 import { showAlbum } from './screens/album';
 import { festivalFlow } from './flows/festival';
 import { ensureFestival, festivalActive, festivalLive, spotFestival } from '../meta/festivals';
-import { tickHome } from '../meta/homeworld';
+import { recordHomeworldWin, tickHome } from '../meta/homeworld';
 import { needsSlingGhost, pendingLauncherIntroAfterWin, resolveLauncher, SLING_SELECTION } from '../meta/launcherPick';
 import { launcherBay, recordLauncherFling, recordLauncherRound } from '../meta/launchbay';
 import { recordCometPierStep, recordCometPierWin } from '../meta/landmarks';
@@ -113,7 +112,6 @@ export function restoreSceneTroubles(scene: Pick<LevelScene, 'troubles' | 'buddy
 export type ScreenName =
   | 'home'
   | 'lifebook'
-  | 'upgrades'
   | 'shop'
   | 'map'
   | 'road'
@@ -134,6 +132,9 @@ export type Boosters = Record<BoosterId, boolean>;
 export const NO_BOOSTERS: Boosters = { shower: false, spark: false, scope: false };
 export type MainTab = 'home' | 'missions' | 'homeworld' | 'collection' | 'styles';
 const MAIN_TABS: MainTab[] = ['home', 'missions', 'homeworld', 'collection', 'styles'];
+
+// The optional setting survives in the profile; older saves simply default to off.
+const fullAimEnabled = (p: Profile) => p.settings.fullAimLine;
 
 export class ScreenHistory {
   private entries: ScreenName[] = [];
@@ -168,6 +169,7 @@ export class App {
   private homeSeenThisOpen = false;
   private popupShownThisOpen = false;
   private roundFirstCampaignClear = false;
+  roundBuildsSpedUp = false;
   private roundGenerationProfile: RoundCheckpoint['generationProfile'];
   private launcherIntroWinPlanet: number | null = null;
   private screenStack = new ScreenHistory();
@@ -344,6 +346,7 @@ export class App {
       warmup: !!scene.o.practice,
       practiceFirstClear: !!scene.o.practiceFirstClear,
       practiceGifts: scene.practiceGifts,
+      gemBoosterUsed: scene.gemBoosterUsed,
       skyState: { brokenRocks: [...scene.skyState.brokenRocks], ringBroken: scene.ringBroken },
       practiceBonkUsed: scene.practiceBonkUsed,
       mistTipShown: scene.mistTipShown,
@@ -422,7 +425,6 @@ export class App {
       fieldguide: () => this.showFieldGuide(),
       lifebook: () => this.showLifebook(),
       shop: () => this.showShop(),
-      upgrades: () => this.showUpgrades(),
       map: () => this.showStarMap(),
       road: () => this.showRoad(),
       workshop: () => this.showStyles(),
@@ -531,7 +533,6 @@ export class App {
       album: () => this.showAlbum(),
       sky: () => this.showSky(),
       shop: () => this.showShop(),
-      upgrades: () => this.showUpgrades(),
       map: () => this.showStarMap(),
       road: () => this.showRoad(),
       workshop: () => this.showStyles(),
@@ -630,10 +631,6 @@ export class App {
   showLifebook() {
     ledger.discover('lifebook', this.p.level);
     showLifebook(this);
-  }
-  showUpgrades() {
-    ledger.discover('upgrades', this.p.level);
-    showUpgrades(this);
   }
   showShop() {
     ledger.discover('shop', this.p.level);
@@ -817,9 +814,7 @@ export class App {
           ),
 
       h('div', { class: 'grow' }),
-      compact
-        ? h('span', { class: 'pill dust', 'aria-label': t('Stardust') }, `✨ ${fmt(this.p.dust)}`)
-        : h('button', { class: 'pill dust', 'aria-label': t('Stardust'), onclick: () => this.showUpgrades() }, `✨ ${fmt(this.p.dust)}`),
+      h('span', { class: 'pill dust', 'aria-label': t('Stardust') }, `✨ ${fmt(this.p.dust)}`),
       h('span', { class: 'pill gems', 'aria-label': t('Gems') }, `💎 ${fmt(this.p.gems)}`),
     );
   }
@@ -827,13 +822,16 @@ export class App {
   // ------------------------------------------------------------------ level flow
   sceneOpts(
     mode: RoundMode | 'tutorial',
-    extra: Partial<SceneOpts> & { practice?: boolean } & Pick<SceneOpts, 'onEnd'>,
+    extra: Partial<SceneOpts> & { practice?: boolean; homeworldWinEligible?: () => boolean } & Pick<SceneOpts, 'onEnd'>,
     boosters: Boosters = NO_BOOSTERS,
     tutorial = false,
   ): SceneOpts {
     const earnedForms: Kind[] = [];
+    let homeworldWinRecorded = false;
+    this.roundBuildsSpedUp = false;
     const skin = SKINS.find((s) => s.id === this.p.skin && (!this.p.settings.hidePaidLooks || (!s.starter && !s.pass))) ?? SKINS[0];
     const look = currentLook(this.p);
+    const aimLevel = tutorial || (fullAimEnabled(this.p) && !['daily', 'rush', 'challenge', 'remix'].includes(mode)) ? 3 : 2;
     const chosenLauncher = resolveLauncher(
       mode === 'tutorial' ? 'campaign' : mode,
       this.p.level,
@@ -843,9 +841,9 @@ export class App {
     );
     const mods = modifiersFor(mode === 'tutorial' ? 'campaign' : mode, {
       launcher: chosenLauncher,
-      scopeLevel: tutorial ? 3 : this.p.upgrades.scope,
-      splash: this.p.upgrades.splash,
-      extraThrows: this.p.upgrades.throws,
+      scopeLevel: aimLevel,
+      splash: 0,
+      extraThrows: 0,
       boosters,
       lab: labLevels(this.p),
       forms: activeForms(this.p),
@@ -953,6 +951,29 @@ export class App {
       ...extra,
       onEnd: (result) => {
         result.labEvents = this.scene?.roundLog.lab ?? [];
+        if (
+          result.won &&
+          result.throwsUsed >= 0 &&
+          (mode === 'campaign' || mode === 'tutorial' || mode === 'voyage' || mode === 'zen') &&
+          !extra.practice &&
+          (extra.homeworldWinEligible?.() ?? true) &&
+          this.scene?.o.roundMode !== 'practice' &&
+          !homeworldWinRecorded
+        ) {
+          homeworldWinRecorded = true;
+          const at = Date.now();
+          this.roundBuildsSpedUp =
+            (mode === 'campaign' || mode === 'tutorial') &&
+            at >= (this.p.home.lastTick ?? 0) &&
+            this.p.home.plots.some((building) => !!building?.done && building.done > at);
+          // One completed round owns Homeworld growth, Buddy friendship and campaign build speed.
+          recordHomeworldWin(this.p, {
+            mode: mode === 'tutorial' ? 'campaign' : mode,
+            planetKey: this.scene?.L.seed ?? result.level.seed,
+            buddySpecies: this.scene?.o.buddy?.species ?? null,
+            at,
+          });
+        }
         if (result.won && result.throwsUsed >= 0)
           recordCometPierWin(
             this.p,
@@ -971,7 +992,7 @@ export class App {
         extra.onEnd(result);
         for (const lab of earnedForms) showFormReveal(this, lab);
       },
-      scopeLevel: mods.scopeLevel,
+      scopeLevel: aimLevel,
       splash: mods.splash,
       extraThrows: mods.extraThrows,
       boosters: mods.boosters,
@@ -999,7 +1020,8 @@ export class App {
     if (!o.resume) this.p.stats.plays++;
     const tier =
       o.resume?.modifiers.momentum ?? (momentumActive(this.p) && !this.p.momentum.paused && !warmup ? this.p.momentum.streak : 0);
-    const perk = MOMENTUM_PERKS[tier];
+    const currentPerk = tier ? momentumRoundPerk(this.p) : MOMENTUM_PERKS[0];
+    const perk = this.roundFirstCampaignClear ? currentPerk : { ...currentPerk, scope: false };
     const merged: Boosters = { shower: boosters.shower, spark: boosters.spark || perk.spark, scope: boosters.scope || perk.scope };
     const debut = debutsAt(n).find((entry) => entry.id in KINDS && n > 2 && unlocked(this.p, entry.id));
     const opts = this.sceneOpts(
@@ -1021,6 +1043,7 @@ export class App {
           this.save();
         },
         momentum: tier,
+        momentumScope: perk.scope,
         practice: !!warmup,
         practiceFirstClear: this.roundFirstCampaignClear,
         coach: COACH[n],
@@ -1070,9 +1093,9 @@ export class App {
     opts.launcher = m.launcher ?? SLING_SELECTION;
     opts.showSlingGhost = needsSlingGhost(opts.launcher.id, this.p.launcher.completedRounds[opts.launcher.id] ?? 0);
     opts.mastered = (this.p.launcher.flings[opts.launcher.id] ?? 0) >= MASTERY_STEPS[MASTERY_STEPS.length - 1];
-    opts.scopeLevel = m.scopeLevel;
-    opts.splash = m.splash;
-    opts.extraThrows = m.extraThrows;
+    opts.scopeLevel = opts.competitive ? 2 : fullAimEnabled(this.p) ? 3 : 2;
+    opts.splash = 0;
+    opts.extraThrows = 0;
     opts.boosters = m.boosters;
     opts.lab = m.lab;
     opts.forms = m.forms ?? {};
@@ -1101,6 +1124,8 @@ export class App {
     scene.mistTipShown = !!s.mistTipShown;
     scene.gustTipShown = !!s.gustTipShown;
     scene.planet = s.state.planet;
+    scene.continuesUsed = s.state.continuesUsed ?? 0;
+    scene.gemBoosterUsed = !!s.gemBoosterUsed;
     scene.labSteps = s.labSteps ?? [];
     scene.labMarks = s.state.labMarks ?? { rock: [], seed: [] };
     restoreSceneTroubles(scene, s.state);
@@ -1199,7 +1224,7 @@ export class App {
       return;
     }
     clearFails(this.p, r.level.n);
-    momentumWin(this.p, this.roundFirstCampaignClear);
+    momentumWin(this.p, this.roundFirstCampaignClear, !!this.scene?.o.momentumScope);
     this.launcherIntroWinPlanet = r.level.n;
     levelResults(this, r);
   }
@@ -1429,7 +1454,7 @@ export function startLauncherPractice(app: App, id: LauncherId, tune: Tune): voi
     launcher: { id, tune },
     roundMode: 'practice',
     rules: rulesForLevel(1),
-    scopeLevel: 0,
+    scopeLevel: fullAimEnabled(app.p) ? 3 : 2,
     look: currentLook(app.p),
     splash: 0,
     extraThrows: 0,

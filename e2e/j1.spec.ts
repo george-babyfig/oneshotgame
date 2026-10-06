@@ -114,7 +114,7 @@ async function playPlanet(page: Page, info: TestInfo, guard: Guard, loc: LocaleI
   if (n === 1) {
     // the purpose moment on the first win
     await expect(results).toHaveClass(/first-win/);
-    await expect(results).toContainText(tr(loc, 'Your planet now makes stardust for you.'));
+    await expect(results).toContainText(tr(loc, 'Campaign wins keep your Vault working.'));
   }
   await snap(page, info, guard, `results-${n}`);
   await expectKidSafe(page, loc, `results ${n}`);

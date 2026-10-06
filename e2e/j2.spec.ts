@@ -310,9 +310,9 @@ test.describe('J2 every tab and screen [en]', () => {
     if (await entry(page, '.mission-entry', 'Event').count())
       await sheet(page, info, guard, () => entry(page, '.mission-entry', 'Event').click(), 'missions-event');
     await sheet(page, info, guard, () => entry(page, '.mission-entry', 'Festival').click(), 'missions-festival');
-    // top-bar shortcuts on a tab: stardust → Upgrades, Passport (the gem count is not a shop link since M5)
-    await go(page, info, guard, () => page.locator('.topbar button.pill.dust').click(), 'upgrades', 'missions-upgrades');
-    await goBack(page, info, 'button', 'missions', 'upgrades');
+    // Stardust is a balance display; Passport remains a shortcut.
+    await expect(page.locator('.topbar button.pill.dust')).toHaveCount(0);
+    await expect(page.locator('.topbar .pill.dust')).toHaveCount(1);
     await go(page, info, guard, () => page.locator('.topbar button.avatar').click(), 'passport', 'missions-passport');
     await goBack(page, info, 'swipe', 'missions', 'passport');
     // M5: real money lives only in Grown-ups, so the gem count is plain text, even after a chapter chest
@@ -420,6 +420,11 @@ for (const loc of localesToRun()) {
       for (const id of TABS.slice(1)) {
         await openTab(page, id);
         await snap(page, info, guard, `${id}-${loc}`);
+        if (id === 'homeworld') {
+          await page.locator('.hw-level-badge').click();
+          await snap(page, info, guard, `homeworld-level-${loc}`);
+          await dismissSheets(page);
+        }
       }
       // the new Field Guide (from Collection)
       await openTab(page, 'collection');
