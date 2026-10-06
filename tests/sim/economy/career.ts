@@ -1,9 +1,17 @@
 import { makeLevel, rngFrom, starsFor, type LevelDef } from '../../../src/core/levels';
-import { KINDS, type Kind } from '../../../src/core/world';
+import { KINDS, SPECIES, type Kind } from '../../../src/core/world';
 import { modifiersFor } from '../../../src/core/modifiers';
 import { BOOSTERS, SKINS } from '../../../src/meta/config';
 import { COSMETICS, STARDUST_COSMETICS, buyCosmetic, owns } from '../../../src/meta/cosmetics';
-import { CONSTELLATIONS, essenceDropsFor, addDrops, unlockedConstellation, type Mat } from '../../../src/meta/constellations';
+import {
+  CONSTELLATIONS,
+  essenceDropsFor,
+  addDrops,
+  fillBundle,
+  lightConstellation,
+  unlockedConstellation,
+  type Mat,
+} from '../../../src/meta/constellations';
 import { stamp } from '../../../src/meta/calendar';
 import {
   applyLevelWin,
@@ -34,7 +42,6 @@ import {
   tickBuilds,
   upgrade,
   wearAcc,
-  recordHomeworldWin,
 } from '../../../src/meta/homeworld';
 import { LAB_MAX } from '../../../src/core/labperks';
 import {
@@ -54,6 +61,19 @@ import { clearLedger, ledger, ledgerSummary, serializedSize } from '../../../src
 import { dailyLevel, recordDaily } from '../../../src/meta/modes';
 import { momentumRoundPerk, momentumWin, momentumLoss } from '../../../src/meta/momentum';
 import { defaultProfile, today, type Profile } from '../../../src/meta/profile';
+import {
+  activeLandmark,
+  finishLandmark,
+  landmarkFinishStatus,
+  landmarkOpen,
+  landmarkState,
+  recordLandmarkRound,
+  type LandmarkRoundEvent,
+} from '../../../src/meta/landmarks';
+import type { LandmarkId } from '../../../src/meta/homeworldLife';
+import { settleHomeworldRound } from '../../../src/meta/roundSettlement';
+import { refreshLandmarkSnapshots } from '../../../src/meta/landmarks';
+import { LANDMARKS, type LandmarkDef, type LandmarkRoute } from '../../../src/meta/tuning';
 import { applyReward, claimRoad, chestsReady, openChest, roadReady } from '../../../src/meta/progression';
 import { claimWish, ensureWishes, recordWishRound, swapWish } from '../../../src/meta/wishes';
 import { unlocked } from '../../../src/meta/unlocks';
@@ -97,6 +117,7 @@ export interface DayRow {
   idleActiveRatio: number | null;
   labBlocks: Partial<Record<Kind, string>>;
   homeLevel: number;
+  landmarkStages: Record<LandmarkId, number>;
 }
 export interface Career {
   type: PlayerType;
@@ -118,14 +139,155 @@ export interface Career {
   firstEssenceWhileLeveling: number;
   replayDropsWhileLeveling: number;
   homeLevelDays: Partial<Record<2 | 3 | 4 | 5, number>>;
+  landmarkOpenDays: Partial<Record<LandmarkId, number>>;
+  landmarkStageDays: Record<LandmarkId, Partial<Record<1 | 2 | 3 | 4, number>>>;
+  /** Route-specific opportunities at the site's opening, before any stage can consume them. */
+  landmarkRouteCapacity: Partial<Record<LandmarkId, number[][]>>;
+  landmarkRouteWitness: Partial<Record<LandmarkId, boolean[][]>>;
+  colourStrandingDays: number[];
   freeBoosters: number;
   greenhouseBoosters: number;
   boosterSources: { greenhouse: number; trip: number; rewards: number; momentum: number };
   reachableSinks: Record<Currency, boolean>;
 }
 
+export function landmarkSummary(career: Career): string {
+  return landmarkIds
+    .map((id) => `${id}:${[1, 2, 3, 4].map((stage) => career.landmarkStageDays[id][stage as 1 | 2 | 3 | 4] ?? '—').join('/')}`)
+    .join(' ');
+}
+
 const balances = (p: Profile): Record<Currency, number> =>
   Object.fromEntries(CURRENCIES.map((c) => [c, c === 'dust' || c === 'gems' ? p[c] : (p.mats[c] ?? 0)])) as Record<Currency, number>;
+
+const landmarkIds = LANDMARKS.map((site) => site.id);
+
+function routeCapacity(p: Profile, route: LandmarkRoute, levels: { n: number; level: LevelDef }[]): number {
+  const unseen = levels.filter(({ n }) => !(p.stars[n] ?? 0));
+  switch (route.metric) {
+    case 'newKinds':
+      return SPECIES.filter((species) => !p.seen.includes(species.id)).length;
+    case 'arrivals':
+      return SPECIES.length;
+    case 'newStars':
+      return levels.reduce((sum, { n }) => sum + Math.max(0, 3 - (p.stars[n] ?? 0)), 0);
+    case 'threeStars':
+      return levels.filter(({ n }) => (p.stars[n] ?? 0) < 3).length;
+    case 'normalThreeStars':
+      return levels.filter(({ n, level }) => level.difficulty === 'normal' && (p.stars[n] ?? 0) < 3).length;
+    case 'hardWins':
+      return unseen.filter(({ level }) => level.difficulty !== 'normal').length;
+    case 'settledVent':
+    case 'settledVine':
+    case 'settled':
+      return levels.filter(({ level }) =>
+        level.troubles.some((trouble) =>
+          route.metric === 'settled' ? true : trouble.id === (route.metric === 'settledVent' ? 'vent' : 'vine'),
+        ),
+      ).length;
+    case 'bestFriends':
+    case 'friendLevelThree':
+      return p.seen.length;
+    case 'constellations':
+      return CONSTELLATIONS.length;
+    case 'bundles':
+      return (
+        p.bundles.length +
+        CONSTELLATIONS.filter((item, index) => index < 2 || item.id === 'kite').reduce(
+          (sum, item) => sum + item.bundles.filter((bundle) => !p.bundles.includes(bundle.id)).length,
+          0,
+        )
+      );
+    case 'grown':
+      return levels.reduce((sum, { level }) => sum + level.start.sectors.length, 0);
+    case 'reaction':
+    case 'fusions':
+    case 'supernovas':
+      return levels.length;
+  }
+}
+
+function routeCapacities(p: Profile, site: LandmarkDef): number[][] {
+  const levels = Array.from({ length: 120 }, (_, index) => ({ n: index + 1, level: makeLevel(index + 1, 'PP') }));
+  return site.stages.map((stage) => stage.routes.map((route) => routeCapacity(p, route, levels)));
+}
+
+/** Try each route without its alternative on a copy of the Regular player's opening save. */
+function routeWitnesses(p: Profile, site: LandmarkDef): boolean[][] {
+  const levels = Array.from({ length: 120 }, (_, index) => ({ n: index + 1, level: makeLevel(index + 1, 'PP') }));
+  return site.stages.map((stageDef, stage) =>
+    stageDef.routes.map((route, lane) => {
+      const copy = structuredClone(p);
+      for (const prior of LANDMARKS.slice(0, LANDMARKS.indexOf(site))) copy.home.landmarks[prior.id].stage = 4;
+      copy.level = Math.max(copy.level, 30);
+      copy.home.level = Math.max(copy.home.level, site.level) as typeof copy.home.level;
+      copy.home.landmarks[site.id].stage = stage as 0 | 1 | 2;
+      copy.home.landmarks[site.id].progress[stage * 2] = 0;
+      copy.home.landmarks[site.id].progress[stage * 2 + 1] = 0;
+      if (site.id === 'comet_pier') {
+        copy.cometPier.stage = stage as 0 | 1 | 2;
+        if (stage === 1) copy.cometPier.troubles = 0;
+        if (stage === 2) copy.cometPier.fusions = 0;
+      }
+      const done = () => (copy.home.landmarks[site.id].progress[stage * 2 + lane] ?? 0) >= route.target;
+      if (route.metric === 'bestFriends' || route.metric === 'friendLevelThree') {
+        copy.home.residents.forEach((resident) => (resident.fp = Math.min(resident.fp, 8)));
+        for (const saved of Object.values(copy.home.friends)) saved.fp = Math.min(saved.fp, 8);
+        for (const species of p.seen.slice(0, route.metric === 'bestFriends' ? 1 : route.target))
+          copy.home.friends[species] = { fp: route.metric === 'bestFriends' ? 25 : 8, lastReq: 0, rewarded: 0 };
+        refreshLandmarkSnapshots(copy);
+        return done();
+      }
+      if (route.metric === 'constellations' || route.metric === 'bundles') {
+        copy.constellations = route.metric === 'constellations' ? CONSTELLATIONS.slice(0, route.target).map((item) => item.id) : [];
+        copy.bundles =
+          route.metric === 'bundles'
+            ? CONSTELLATIONS.flatMap((item) => item.bundles.map((bundle) => bundle.id)).slice(0, route.target)
+            : [];
+        refreshLandmarkSnapshots(copy);
+        return done();
+      }
+      const candidates = levels.filter(({ n, level }) => {
+        if (route.metric === 'hardWins') return level.difficulty !== 'normal' && !(p.stars[n] ?? 0);
+        if (route.metric === 'normalThreeStars') return level.difficulty === 'normal' && (p.stars[n] ?? 0) < 3;
+        if (route.metric === 'threeStars' || route.metric === 'newStars') return (p.stars[n] ?? 0) < 3;
+        if (route.metric === 'settled' || route.metric === 'settledVent' || route.metric === 'settledVine')
+          return level.troubles.some(
+            (trouble) => route.metric === 'settled' || trouble.id === (route.metric === 'settledVent' ? 'vent' : 'vine'),
+          );
+        return true;
+      });
+      for (const { n, level } of candidates) {
+        const species = SPECIES[n % SPECIES.length]?.id;
+        const stars = ['threeStars', 'normalThreeStars', 'newStars'].includes(route.metric) ? 3 : 1;
+        const event: LandmarkRoundEvent = {
+          mode: 'campaign',
+          roundKey: `witness:${site.id}:${stage}:${lane}:${n}`,
+          planetKey: `campaign:${n}`,
+          at: 1,
+          won: true,
+          stars,
+          difficulty: level.difficulty,
+          newStars: ['threeStars', 'normalThreeStars', 'newStars'].includes(route.metric) ? Math.max(0, 3 - (p.stars[n] ?? 0)) : 0,
+          firstPlanetWin: !(p.stars[n] ?? 0),
+          firstArrivals: route.metric === 'arrivals' || route.metric === 'newKinds' ? [species] : [],
+          knownKindsBefore: p.seen,
+          improvedSectors: route.metric === 'grown' ? { [route.biomes![0]]: 3 } : {},
+          improvedSectorIds: route.metric === 'grown' ? { [route.biomes![0]]: [0, 1, 2] } : {},
+          fusions: route.metric === 'fusions' ? 1 : 0,
+          supernovas: route.metric === 'supernovas' ? 1 : 0,
+          settledTroubles: route.metric === 'settled' ? 1 : 0,
+          settledVent: route.metric === 'settledVent' ? 1 : 0,
+          settledVine: route.metric === 'settledVine' ? 1 : 0,
+          reactions: route.metric === 'reaction' ? { [route.reaction!]: 1 } : {},
+        };
+        recordLandmarkRound(copy, event);
+        if (done()) return true;
+      }
+      return done();
+    }),
+  );
+}
 
 function reachableSinks(p: Profile): Record<Currency, boolean> {
   const matSink = (mat: Mat) =>
@@ -159,6 +321,7 @@ function attemptsFor(type: PlayerType, day: number): number {
 }
 
 function round(level: LevelDef, seed: string, loadout?: Loadout) {
+  // The landing preview and Trouble HUD expose these one-step outcomes; the bot reads no later throws.
   return playLevel(level, POLICIES.decent, rngFrom(seed), undefined, undefined, 0, loadout);
 }
 
@@ -286,6 +449,8 @@ function visit(
   voyageLevels: Map<string, LevelDef>,
   bestDrops: Partial<Record<Mat, { n: number; amount: number }>>,
   masterSeed: string,
+  landmarkRouteCapacity: Career['landmarkRouteCapacity'],
+  landmarkRouteWitness: Career['landmarkRouteWitness'],
 ) {
   const now = START + (day - 1) * DAY + visitNo * 4 * 3_600_000;
   vi.setSystemTime(now);
@@ -325,7 +490,43 @@ function visit(
       nextHome && p.level > nextHome.chapter * 10
         ? (Object.entries(nextHome.essence) as [Mat, number][]).find(([mat, need]) => (p.mats[mat] ?? 0) < need)?.[0]
         : undefined;
-    const n = p.level > 120 ? (replay ?? (shortHomeMat ? bestDrops[shortHomeMat]?.n : undefined) ?? 120) : p.level;
+    let n = p.level > 120 ? (replay ?? (shortHomeMat ? bestDrops[shortHomeMat]?.n : undefined) ?? 120) : p.level;
+    const landmark = activeLandmark(p);
+    if (landmark && !landmarkRouteCapacity[landmark.id]) {
+      landmarkRouteCapacity[landmark.id] = routeCapacities(p, landmark);
+      const add = ledger.add;
+      try {
+        // Synthetic route witnesses use cloned wallets, outside the career ledger.
+        ledger.add = () => {};
+        landmarkRouteWitness[landmark.id] = routeWitnesses(p, landmark);
+      } finally {
+        ledger.add = add;
+      }
+    }
+    if (landmark?.id === 'sky_bridge' && landmarkState(p, 'sky_bridge').stage === 2) {
+      // A player can revisit a known Trouble planet for the visible "cool or clear" route.
+      const counted = landmarkState(p, 'sky_bridge').planets ?? [];
+      const trouble = [...levels.entries()]
+        .reverse()
+        .find(
+          ([planet, def]) =>
+            planet < p.level &&
+            def.troubles.some((event) => event.id === 'vent' || event.id === 'vine') &&
+            !counted.some(
+              (key) => key.startsWith(`feat:2:campaign:${planet}:settledVent:`) || key.startsWith(`feat:2:campaign:${planet}:settledVine:`),
+            ),
+        );
+      if (trouble) n = trouble[0];
+    }
+    if (landmark?.id === 'keepers_beacon' && landmarkState(p, 'keepers_beacon').stage === 0) {
+      // The alternative asks for five distinct three-star Normal planets.
+      const counted = landmarkState(p, 'keepers_beacon').planets ?? [];
+      const normal = [...levels.entries()].find(
+        ([planet, def]) =>
+          planet < p.level && def.difficulty === 'normal' && (p.stars[planet] ?? 0) < 3 && !counted.includes(`campaign:${planet}`),
+      );
+      if (normal) n = normal[0];
+    }
     let level = levels.get(n);
     if (!level) levels.set(n, (level = makeLevel(n, 'PP')));
     let shower = false;
@@ -411,6 +612,7 @@ function visit(
     ledger.count('round_won');
     momentumWin(p, firstCampaignClear, perk.scope);
     if (p.level === n) clearFails(p, n);
+    const knownKindsBefore = [...p.seen];
     const out = applyLevelWin(p, {
       n,
       stars: result.stars,
@@ -425,7 +627,24 @@ function visit(
       gemBoosterUsed,
       day: dayKey,
     });
-    recordHomeworldWin(p, { mode: 'campaign', planetKey: `campaign:${n}`, buddySpecies, at: now + i });
+    const planetKey = `campaign:${n}`;
+    settleHomeworldRound(p, {
+      mode: 'campaign',
+      roundKey: `career:${masterSeed}:${day}:${visitNo}:${i}:${n}`,
+      planetKey,
+      at: now + i,
+      planet: result.planet,
+      startPlanet: level.start,
+      won: true,
+      writesProgress: true,
+      stars: result.stars,
+      difficulty: level.difficulty,
+      newStars: out.newStars,
+      firstPlanetWin: out.firstClear,
+      knownKindsBefore,
+      buddySpecies,
+      steps: result.landmarkSteps,
+    });
     recordWishRound(p, 'campaign', result.planet, dayKey, level.start);
     // A gem continue may finish a new planet, but its Essence uses the replay
     // rate so purchasing throws never increases Lab or Homeworld currency.
@@ -466,6 +685,24 @@ function visit(
     ledger.count('round_started');
     ledger.count('round_won');
     recordDaily(p, dayKey, result.score, starsFor(result.score, daily.stars));
+    if (result.stars)
+      settleHomeworldRound(p, {
+        mode: 'daily',
+        roundKey: `career:${masterSeed}:daily:${dayKey}`,
+        planetKey: `daily:${dayKey}`,
+        at: now,
+        planet: result.planet,
+        startPlanet: daily.start,
+        won: true,
+        writesProgress: true,
+        stars: result.stars,
+        difficulty: daily.difficulty,
+        newStars: result.stars,
+        firstPlanetWin: true,
+        knownKindsBefore: [...p.seen],
+        buddySpecies: null,
+        steps: result.landmarkSteps,
+      });
     recordWishRound(p, 'daily', result.planet, dayKey, daily.start);
   }
   if (voyageActive(p) && budget > 0 && p.voyage.cleared < VOYAGE_LEN) {
@@ -481,8 +718,26 @@ function visit(
     for (const step of result.labSteps) recordLabEvents(p, step, 'voyage');
     ledger.count('round_started');
     if (result.stars) {
+      const previousStopStars = p.voyage.stars[stop] ?? 0;
       clearStop(p, stop, result.stars, dayKey);
-      recordHomeworldWin(p, { mode: 'voyage', planetKey: `voyage:${key}`, buddySpecies: null, at: now });
+      const planetKey = `voyage:${key}`;
+      settleHomeworldRound(p, {
+        mode: 'voyage',
+        roundKey: `career:${masterSeed}:voyage:${day}:${key}`,
+        planetKey,
+        at: now,
+        planet: result.planet,
+        startPlanet: level.start,
+        won: true,
+        writesProgress: true,
+        stars: result.stars,
+        difficulty: level.difficulty,
+        newStars: Math.max(0, result.stars - previousStopStars),
+        firstPlanetWin: previousStopStars === 0,
+        knownKindsBefore: [...p.seen],
+        buddySpecies: null,
+        steps: result.landmarkSteps,
+      });
       recordWishRound(p, 'voyage', result.planet, dayKey, level.start);
       ledger.count('round_won');
     } else ledger.count('round_failed');
@@ -510,7 +765,9 @@ function visit(
   };
 }
 
-export async function simulate(type: PlayerType, masterSeed = 'default'): Promise<Career> {
+/** `purchases: false` plays the Payer persona without buying anything: the paired control for "money never buys growth". */
+export async function simulate(type: PlayerType, masterSeed = 'default', opts: { purchases?: boolean } = {}): Promise<Career> {
+  const buys = type === 'Payer' && opts.purchases !== false;
   await clearLedger();
   vi.useFakeTimers();
   vi.setSystemTime(START);
@@ -529,6 +786,11 @@ export async function simulate(type: PlayerType, masterSeed = 'default'): Promis
   const exhausted = { lab: null, upgrades: null, buildings: null, looks: null } as Career['exhausted'];
   const labDays = Object.fromEntries((Object.keys(KINDS) as Kind[]).map((kind) => [kind, {}])) as Career['labDays'];
   const homeLevelDays: Career['homeLevelDays'] = {};
+  const landmarkOpenDays: Career['landmarkOpenDays'] = {};
+  const landmarkStageDays = Object.fromEntries(landmarkIds.map((id) => [id, {}])) as Career['landmarkStageDays'];
+  const landmarkRouteCapacity: Career['landmarkRouteCapacity'] = {};
+  const landmarkRouteWitness: Career['landmarkRouteWitness'] = {};
+  const colourStrandingDays: number[] = [];
   let replayEssenceWhileLeveling = 0;
   let firstEssenceWhileLeveling = 0;
   let replayDropsWhileLeveling = 0;
@@ -544,13 +806,25 @@ export async function simulate(type: PlayerType, masterSeed = 'default'): Promis
       let labBlocks: DayRow['labBlocks'] = {};
       const before = { ...ledgerSummary(START + (day - 1) * DAY).economy };
       vi.setSystemTime(START + (day - 1) * DAY);
-      if (type === 'Payer' && day === 1) {
+      if (buys && day === 1) {
         grantProduct(p, 'com.pocketplanet.game.startercrew', 'sim-starter-crew');
         grantProduct(p, 'com.pocketplanet.game.road00', 'sim-cosmic-road');
       }
-      if (type === 'Payer' && day % 7 === 1) grantProduct(p, 'com.pocketplanet.game.gems500', `sim-gems-${day}`);
+      if (buys && day % 7 === 1) grantProduct(p, 'com.pocketplanet.game.gems500', `sim-gems-${day}`);
       for (let v = 0; v < visits; v++) {
-        const visitResult = visit(p, type, day, v, budget / visits, levels, voyageLevels, bestDrops, masterSeed);
+        const visitResult = visit(
+          p,
+          type,
+          day,
+          v,
+          budget / visits,
+          levels,
+          voyageLevels,
+          bestDrops,
+          masterSeed,
+          landmarkRouteCapacity,
+          landmarkRouteWitness,
+        );
         wins += visitResult.wins;
         replayEssenceWhileLeveling += visitResult.replayEssenceWhileLeveling;
         firstEssenceWhileLeveling += visitResult.firstEssenceWhileLeveling;
@@ -563,6 +837,33 @@ export async function simulate(type: PlayerType, masterSeed = 'default'): Promis
       }
       const now = START + (day - 1) * DAY + (visits ? (visits - 1) * 4 * 3_600_000 : 0);
       vi.setSystemTime(now);
+      if (activeLandmark(p)?.id === 'keepers_beacon' && landmarkState(p, 'keepers_beacon').stage === 2) {
+        // The career lights the two visible constellations using saved Essences.
+        for (const constellation of CONSTELLATIONS.filter((entry) => entry.id !== 'kite').slice(0, 2)) {
+          for (const bundle of constellation.bundles) fillBundle(p, constellation.id, bundle.id);
+          lightConstellation(p, constellation.id);
+        }
+      }
+      // A ready delivery is a deliberate play-earned build, never a paid shortcut.
+      const site = activeLandmark(p);
+      if (site) {
+        refreshLandmarkSnapshots(p);
+        if (landmarkFinishStatus(p, site.id) === 'ready') finishLandmark(p, site.id, now);
+      }
+      for (const id of landmarkIds) {
+        if (landmarkOpen(p, id) && landmarkOpenDays[id] === undefined) landmarkOpenDays[id] = day;
+        const stage = landmarkState(p, id).stage;
+        for (const reached of [1, 2, 3, 4] as const)
+          if (stage >= reached && landmarkStageDays[id][reached] === undefined) landmarkStageDays[id][reached] = day;
+      }
+      const delivery = activeLandmark(p);
+      if (
+        delivery &&
+        landmarkState(p, delivery.id).stage === 3 &&
+        Object.entries(delivery.delivery).some(([mat, need]) => (p.mats[mat as Mat] ?? 0) < need!) &&
+        (['leaf', 'stone', 'dew'] as const).some((mat) => (p.mats[mat] ?? 0) > 300)
+      )
+        colourStrandingDays.push(day);
       const economy = ledgerSummary(now).economy;
       const delta = Object.fromEntries(Object.entries(economy).map(([k, value]) => [k, value - (before[k] ?? 0)]));
       const earned = totals(delta, 'earn_');
@@ -592,6 +893,7 @@ export async function simulate(type: PlayerType, masterSeed = 'default'): Promis
         idleActiveRatio: activeDust ? idleDust / activeDust : idleDust ? Infinity : null,
         labBlocks,
         homeLevel: p.home.level,
+        landmarkStages: Object.fromEntries(landmarkIds.map((id) => [id, landmarkState(p, id).stage])) as Record<LandmarkId, number>,
       });
       if (day === 60) day60Sinks = reachableSinks(p);
       for (const level of [2, 3, 4, 5] as const)
@@ -637,6 +939,11 @@ export async function simulate(type: PlayerType, masterSeed = 'default'): Promis
       firstEssenceWhileLeveling,
       replayDropsWhileLeveling,
       homeLevelDays,
+      landmarkOpenDays,
+      landmarkStageDays,
+      landmarkRouteCapacity,
+      landmarkRouteWitness,
+      colourStrandingDays,
       freeBoosters,
       greenhouseBoosters,
       boosterSources,

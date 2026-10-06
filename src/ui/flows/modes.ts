@@ -86,7 +86,15 @@ export function modesFlow(app: App) {
       ),
     );
   });
-  const m = modal([h('div', { class: 'm-title' }, t('Modes')), ...rows], { cls: 'tall' });
+  const m = modal(
+    [
+      h('div', { class: 'm-title' }, t('Modes')),
+      ...rows,
+      // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
+      btn(t('Back'), 'ghost wide', () => m.close()),
+    ],
+    { cls: 'tall' },
+  );
 }
 
 function startMode(app: App, mode: Mode) {

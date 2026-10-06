@@ -37,6 +37,7 @@ import { helpEndModal } from './flows/results';
 import { PRACTICE_GIFT_LINE } from '../meta/coach';
 import { t } from '../i18n';
 import type { LauncherSelection } from '../meta/launcherPick';
+import type { RoundStepEvidence } from '../meta/roundSettlement';
 
 export function shouldShowRoundIntro(id: string, gentle: boolean): boolean {
   return !gentle || !['vent', 'vine', 'frost', 'traits_intro', 'buddy'].includes(id);
@@ -62,6 +63,9 @@ export function roundIntroCandidates(
 }
 
 export interface SceneOpts {
+  roundKey?: string;
+  /** Seen when the round opened, before arrival callbacks update the profile. */
+  knownKindsBefore?: string[];
   launcher: LauncherSelection;
   showSlingGhost?: boolean;
   /** Bay practice is an isolated round; the first-clear aid remains `practice`. */
@@ -137,7 +141,6 @@ export interface SceneOpts {
   /** The owner records first discoveries and pays their fixed reward. */
   onReaction?: (id: ReactionId) => { first: boolean };
   onLabStep?: (step: Pick<import('../core/round').StepResult, 'reactions' | 'troubleEvents'> & { kind: Kind }) => void;
-  onPierStep?: (step: Pick<import('../core/round').StepResult, 'reactions' | 'troubleEvents'>) => void;
   onCombo?: (links: number, reaction?: ReactionId, superFusion?: boolean) => void;
   onPairTried?: (first: Kind, second: Kind) => void;
   eventEmoji?: string;
@@ -328,6 +331,7 @@ export class LevelScene {
   coachEvents = new Set<CoachEvent>();
   practiceGifts = 0;
   roundLog: RoundEventLog = emptyRoundLog();
+  landmarkSteps: RoundStepEvidence[] = [];
   labSteps: (Pick<import('../core/round').StepResult, 'reactions' | 'troubleEvents'> & { kind: Kind })[] = [];
   labMarks: RoundState['labMarks'] = { rock: [], seed: [] };
   skipperBounces = 0;

@@ -9,6 +9,8 @@ import { t } from '../i18n';
 import { FUSION_IDS } from './reactions';
 import { ALL_COMBO_STAMPS } from './reactions';
 import { REMIX_TITLES, remixFrame, remixTotal } from './remix';
+import { LANDMARKS } from './tuning';
+import { friendLevel } from './homeworld';
 
 // Names are proper nouns: they stay the same in every language, like a gamer tag.
 export const NAME_A = [
@@ -102,6 +104,10 @@ export function titlesOwned(p: Profile): TitleDef[] {
   }
   const remixStars = remixTotal(p);
   for (const row of REMIX_TITLES) if (remixStars >= row.stars) out.push({ id: `remix:total:${row.stars}`, text: row.title, gold: true });
+  const landmarkTitles = [t('Green Thumb'), t('Sky Finder'), t('Bridge Builder'), t('Harbour Keeper'), t('Keeper of Light')];
+  LANDMARKS.forEach((site, index) => {
+    if (p.home.landmarks[site.id].stage === 4) out.push({ id: `landmark:${site.id}`, text: landmarkTitles[index], gold: true });
+  });
   if (p.pass && !p.settings.hidePaidLooks) out.push({ id: 'pass', text: 'Star Captain', gold: true });
   return out;
 }
@@ -246,6 +252,18 @@ export function passportStats(p: Profile): { label: string; value: number | stri
     { label: t('Daily Planets'), value: p.stats.dailies },
     { label: t('Best win streak'), value: p.stats.bestStreak },
     { label: t('Mementos'), value: p.mementos.length },
+    { label: t('Landmarks finished'), value: LANDMARKS.filter((site) => p.home.landmarks[site.id].stage === 4).length },
+    { label: t('Best friends'), value: bestFriends(p).length },
     { label: t('Days exploring'), value: days },
   ];
+}
+
+/** Friends keep their friendship when they move home, so the Passport remembers them. */
+export function bestFriends(p: Profile): { species: string; nick?: string }[] {
+  const friends = new Map<string, { species: string; nick?: string }>();
+  for (const [species, saved] of Object.entries(p.home.friends))
+    if (friendLevel(saved.fp) >= 5) friends.set(species, { species, nick: saved.nick });
+  for (const resident of p.home.residents)
+    if (friendLevel(resident.fp) >= 5) friends.set(resident.species, { species: resident.species, nick: resident.nick });
+  return [...friends.values()];
 }

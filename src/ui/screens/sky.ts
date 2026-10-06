@@ -22,6 +22,7 @@ import { COSMETIC_BY_ID, currentLook } from '../../meta/cosmetics';
 import { itemCanvas } from '../art/keeper';
 import type { App } from '../app';
 import { t } from '../../i18n';
+import { landmarkState } from '../../meta/landmarks';
 
 /** Draw a constellation's stars and lines; lit stars = filled bundles. */
 export function drawConstellation(
@@ -92,85 +93,88 @@ function starCanvas(app: App, c: Constellation, done: boolean) {
 export function showSky(app: App) {
   const p = app.p;
   const look = currentLook(p);
-  const cards = CONSTELLATIONS.map((c, i) => {
+  const cards = CONSTELLATIONS.flatMap((c, i) => {
+    if (c.id === 'kite' && landmarkState(p, 'skyglass').stage < 4) return [];
     const open = unlockedConstellation(p, i);
     const lit = p.constellations.includes(c.id);
     const full = constellationFull(p, c);
     const item = c.reward.item && COSMETIC_BY_ID[c.reward.item] ? c.reward.item : null;
-    return h(
-      'div',
-      { class: `const-card${lit ? ' lit' : ''}${open ? '' : ' locked'}` },
+    return [
       h(
         'div',
-        { class: 'const-head' },
-        starCanvas(app, c, lit),
+        { class: `const-card${lit ? ' lit' : ''}${open ? '' : ' locked'}` },
         h(
           'div',
-          { class: 'grow' },
-          h('b', null, t(c.name)),
+          { class: 'const-head' },
+          starCanvas(app, c, lit),
           h(
-            'small',
-            null,
-            lit
-              ? t('✦ Shining in your sky')
-              : open
-                ? t('{n}/{m} bundles', { n: c.bundles.filter((b) => bundleDone(p, b.id)).length, m: c.bundles.length })
-                : t('Restore the one before first'),
-          ),
-          h('div', { class: 'const-reward' }, item ? itemCanvas(item, look, 30) : null, h('span', null, rewardText(c.reward).join('  '))),
-        ),
-      ),
-      open && !lit
-        ? h(
             'div',
-            { class: 'bundles' },
-            ...c.bundles.map((b) => {
-              const done = bundleDone(p, b.id);
-              const can = canFill(p, b);
-              return h(
-                'div',
-                { class: `bundle${done ? ' done' : ''}` },
-                h(
+            { class: 'grow' },
+            h('b', null, t(c.name)),
+            h(
+              'small',
+              null,
+              lit
+                ? t('✦ Shining in your sky')
+                : open
+                  ? t('{n}/{m} bundles', { n: c.bundles.filter((b) => bundleDone(p, b.id)).length, m: c.bundles.length })
+                  : t('Restore the one before first'),
+            ),
+            h('div', { class: 'const-reward' }, item ? itemCanvas(item, look, 30) : null, h('span', null, rewardText(c.reward).join('  '))),
+          ),
+        ),
+        open && !lit
+          ? h(
+              'div',
+              { class: 'bundles' },
+              ...c.bundles.map((b) => {
+                const done = bundleDone(p, b.id);
+                const can = canFill(p, b);
+                return h(
                   'div',
-                  { class: 'need' },
-                  ...Object.entries(b.need).map(([m, n]) =>
-                    h(
-                      'span',
-                      { class: (p.mats[m as Mat] ?? 0) >= (n ?? 0) || done ? 'ok' : '' },
-                      `${MAT_EMOJI[m as Mat]} ${done ? '' : `${p.mats[m as Mat] ?? 0}/`}${n}`,
+                  { class: `bundle${done ? ' done' : ''}` },
+                  h(
+                    'div',
+                    { class: 'need' },
+                    ...Object.entries(b.need).map(([m, n]) =>
+                      h(
+                        'span',
+                        { class: (p.mats[m as Mat] ?? 0) >= (n ?? 0) || done ? 'ok' : '' },
+                        `${MAT_EMOJI[m as Mat]} ${done ? '' : `${p.mats[m as Mat] ?? 0}/`}${n}`,
+                      ),
                     ),
                   ),
-                ),
-                done
-                  ? h('b', { class: 'tick' }, '✓')
-                  : btn(t('Fill'), can ? 'primary small' : 'ghost small dim', () => {
-                      if (!fillBundle(p, c.id, b.id)) return toast(t(LAB_TEXT.atlasNeed));
-                      sfx.chest();
-                      haptic.success();
-                      app.save();
-                      showSky(app);
-                    }),
-              );
-            }),
-            full
-              ? btn(t('✨ Light up {name}', { name: t(c.name) }), 'gem wide', () => {
-                  const r = lightConstellation(p, c.id);
-                  if (!r) return;
-                  sfx.levelUp();
-                  haptic.success();
-                  app.save();
-                  showSky(app);
-                  const m = modal([
-                    h('div', { class: 'm-title' }, t('{name} shines again!', { name: t(c.name) })),
-                    item ? h('div', { class: 'pe-av' }, itemCanvas(item, look, 96)) : null,
-                    h('div', { class: 'reward-list' }, ...rewardText(r).map((x) => h('span', null, x))),
-                    btn(t('Nice!'), 'primary wide', () => m.close()),
-                  ]);
-                })
-              : null,
-          )
-        : null,
-    );
+                  done
+                    ? h('b', { class: 'tick' }, '✓')
+                    : btn(t('Fill'), can ? 'primary small' : 'ghost small dim', () => {
+                        if (!fillBundle(p, c.id, b.id)) return toast(t(LAB_TEXT.atlasNeed));
+                        sfx.chest();
+                        haptic.success();
+                        app.save();
+                        showSky(app);
+                      }),
+                );
+              }),
+              full
+                ? btn(t('✨ Light up {name}', { name: t(c.name) }), 'gem wide', () => {
+                    const r = lightConstellation(p, c.id);
+                    if (!r) return;
+                    sfx.levelUp();
+                    haptic.success();
+                    app.save();
+                    showSky(app);
+                    const m = modal([
+                      h('div', { class: 'm-title' }, t('{name} shines again!', { name: t(c.name) })),
+                      item ? h('div', { class: 'pe-av' }, itemCanvas(item, look, 96)) : null,
+                      h('div', { class: 'reward-list' }, ...rewardText(r).map((x) => h('span', null, x))),
+                      btn(t('Nice!'), 'primary wide', () => m.close()),
+                    ]);
+                  })
+                : null,
+            )
+          : null,
+      ),
+    ];
   });
   const bag = h(
     'div',

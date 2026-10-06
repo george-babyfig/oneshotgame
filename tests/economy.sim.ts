@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
-import { exchangeRates, simulate, type Career } from './sim/economy/career';
+import { exchangeRates, landmarkSummary, simulate, type Career } from './sim/economy/career';
+import { LANDMARKS } from '../src/meta/tuning';
 
 const CURRENCIES = ['dust', 'gems', 'stone', 'dew', 'leaf', 'ember', 'frost'] as const;
 const fmt = (n: number | null) => (n === null ? '—' : Number.isFinite(n) ? String(Math.round(n)) : '∞');
@@ -24,12 +25,27 @@ function assertAccounting(career: Career) {
   if (career.type === 'Engaged') expect(career.ledgerBytes).toBeLessThanOrEqual(16 * 1024);
 }
 
+function landmarkPace(career: Career) {
+  return LANDMARKS.flatMap((site) =>
+    ([1, 2, 3] as const).map((stage) => {
+      const opened = stage === 1 ? career.landmarkOpenDays[site.id] : career.landmarkStageDays[site.id][(stage - 1) as 1 | 2];
+      const finished = career.landmarkStageDays[site.id][stage];
+      const activeDays =
+        opened === undefined || finished === undefined
+          ? null
+          : career.days.filter((row) => row.active && row.day >= opened && row.day <= finished).length;
+      return { site: site.id, stage, opened, finished, activeDays };
+    }),
+  );
+}
+
 if (process.env.SIM === '1') {
   it('gates three paired 90-day Lab careers and checks wallet accounting', async () => {
+    const masterSeed = process.env.ECONOMY_SEED ?? 'default';
     const start = performance.now();
     const careers: Career[] = [];
     for (const type of ['Regular', 'Engaged', 'Payer'] as const) {
-      const career = await simulate(type);
+      const career = await simulate(type, masterSeed);
       assertAccounting(career);
       careers.push(career);
     }
@@ -44,10 +60,34 @@ if (process.env.SIM === '1') {
       console.log(
         `${c.type.padEnd(14)} ${String(c.days[89].level).padStart(5)} ${String(c.final.dust).padStart(7)} ${String(c.final.gems).padStart(6)} ${String(Math.round(c.freeGemsPerActiveDay)).padStart(13)} ${fmt(c.maxIdleActiveRatio).padStart(16)} ${fmt(c.exhausted.lab).padStart(4)} ${fmt(c.homeLevelDays[5] ?? null).padStart(6)} ${fmt(c.exhausted.upgrades).padStart(9)} ${fmt(c.exhausted.buildings).padStart(10)} ${fmt(c.exhausted.looks).padStart(6)} ${String(c.ledgerBytes).padStart(7)}`,
       );
+      console.log(`${c.type} Landmarks: ${landmarkSummary(c)}; colour stranding ${c.colourStrandingDays.length} days`);
     }
     const regular = careers.find((x) => x.type === 'Regular')!;
     const engaged = careers.find((x) => x.type === 'Engaged')!;
     const payer = careers.find((x) => x.type === 'Payer')!;
+    const pace = landmarkPace(regular);
+    for (const site of LANDMARKS)
+      site.stages.forEach((stage, index) =>
+        stage.routes.forEach((route, lane) => {
+          expect(
+            regular.landmarkRouteCapacity[site.id]?.[index]?.[lane] ?? 0,
+            `${site.id} stage ${index + 1} route ${lane + 1} has enough Regular opportunities on its own`,
+          ).toBeGreaterThanOrEqual(route.target);
+          expect(
+            regular.landmarkRouteWitness[site.id]?.[index]?.[lane] ?? false,
+            `${site.id} stage ${index + 1} route ${lane + 1} completes on the Regular opening save`,
+          ).toBe(true);
+        }),
+      );
+    console.log(`Landmark feat pace: ${JSON.stringify(pace)}`);
+    for (const row of pace) {
+      expect.soft(row.activeDays, `${row.site} stage ${row.stage} reached within five active days`).not.toBeNull();
+      if (row.activeDays !== null) expect.soft(row.activeDays, `${row.site} stage ${row.stage} ≤5 active days`).toBeLessThanOrEqual(5);
+      if (row.activeDays !== null) expect.soft(row.activeDays, `${row.site} stage ${row.stage} ≤3 active days`).toBeLessThanOrEqual(3);
+    }
+    console.log(`Landmark Beacon day-35 Watch: ${regular.landmarkStageDays.keepers_beacon[4] ?? 'unreached'}`);
+    expect.soft(regular.landmarkStageDays.keepers_beacon[4] ?? 0, 'Beacon finish no earlier than day 35').toBeGreaterThanOrEqual(35);
+    console.log(`Landmark colour-stranding Watch: ${JSON.stringify(regular.colourStrandingDays)}`);
     console.log(
       `W1 replay Essence share while leveling ${replayShare(regular).toFixed(1)}% (${regular.replayDropsWhileLeveling} replay drops)`,
     );
@@ -68,12 +108,29 @@ if (process.env.SIM === '1') {
     expect.soft(engaged.exhausted.lab!, 'G2 Engaged at least 30% faster').toBeLessThanOrEqual(0.7 * regular.exhausted.lab!);
     expect.soft(essenceBlockedAfter60, 'G3 no single-Essence starvation after day 60').toEqual([]);
     expect.soft(payer.exhausted.lab, 'G4 Payer reaches all Labs 5').not.toBeNull();
-    expect.soft(payer.spent.gems_continue ?? 0, 'G4 Payer exercises the legal gem continue path').toBeGreaterThan(0);
-    expect.soft(payer.exhausted.lab!, 'G4 payer cannot max earlier than Regular').toBeGreaterThanOrEqual(regular.exhausted.lab!);
+    // Whether the Payer meets a Hard loss worth a continue depends on the seed; the nightly second seed gates the path.
+    console.log(`Watch G4 continue path: Payer spent 💎${payer.spent.gems_continue ?? 0} on legal continues (seed ${masterSeed})`);
+    // Decision 55: G4's money check is Payer vs the same persona without purchases (below); vs Regular is a Watch.
+    console.log(`Watch G4 spending style: Payer all Labs 5 day ${fmt(payer.exhausted.lab)} vs Regular ${fmt(regular.exhausted.lab)}`);
     expect.soft(regular.homeLevelDays[5] ?? 0, 'Homeworld Level 5 no earlier than Regular day 28').toBeGreaterThanOrEqual(28);
+    // Money never buys growth: the Payer is gated against the same persona with no purchases. Spending gems on
+    // boosters is open to every child (Regular holds thousands of free gems), so Payer vs Regular is a Watch.
+    const unpaid = await simulate('Payer', masterSeed, { purchases: false });
+    assertAccounting(unpaid);
+    const beacon = (career: Career) => career.landmarkStageDays.keepers_beacon[4] ?? Infinity;
     expect
-      .soft(payer.homeLevelDays[5] ?? 0, 'payer cannot buy Level 5 earlier than Regular')
-      .toBeGreaterThanOrEqual(regular.homeLevelDays[5] ?? 0);
+      .soft(payer.homeLevelDays[5] ?? Infinity, 'purchases cannot buy Level 5 earlier')
+      .toBeGreaterThanOrEqual(unpaid.homeLevelDays[5] ?? Infinity);
+    expect
+      .soft(payer.exhausted.lab ?? Infinity, 'purchases cannot max Labs earlier')
+      .toBeGreaterThanOrEqual(unpaid.exhausted.lab ?? Infinity);
+    expect.soft(beacon(payer), 'purchases cannot finish the Beacon earlier').toBeGreaterThanOrEqual(beacon(unpaid));
+    console.log(
+      `Purchases control: Payer Level 5 day ${payer.homeLevelDays[5]}, Labs ${payer.exhausted.lab}, Beacon ${beacon(payer)}; same persona without purchases ${unpaid.homeLevelDays[5]}, ${unpaid.exhausted.lab}, ${beacon(unpaid)}; gems spent on boosters ${payer.spent.gems_booster ?? 0} vs ${unpaid.spent.gems_booster ?? 0}`,
+    );
+    console.log(
+      `Watch spending style: Payer Level 5 day ${payer.homeLevelDays[5]} vs Regular ${regular.homeLevelDays[5]} (Regular ends with ${regular.final.gems} unspent free gems)`,
+    );
     console.log(
       `Homeworld Level 5: Regular day ${regular.homeLevelDays[5] ?? 'unreached'}, Engaged day ${engaged.homeLevelDays[5] ?? 'unreached'}, Payer day ${payer.homeLevelDays[5] ?? 'unreached'}; day-60 Watch ${regular.homeLevelDays[5] && regular.homeLevelDays[5]! <= 60 ? 'green' : 'miss — apply decision 22 frost fallback'}`,
     );
@@ -127,13 +184,22 @@ if (process.env.SIM === '1') {
       const regular = await simulate('Regular', 'night2');
       const engaged = await simulate('Engaged', 'night2');
       const payer = await simulate('Payer', 'night2');
-      for (const career of [regular, engaged, payer]) assertAccounting(career);
+      const unpaid = await simulate('Payer', 'night2', { purchases: false });
+      for (const career of [regular, engaged, payer, unpaid]) assertAccounting(career);
       const lateBlocks = regular.days.filter(
         (day) => day.day > 60 && Object.values(day.labBlocks).some((reason) => reason?.startsWith('essence:')),
       );
       console.log(
         `Nightly economy seed: Regular ${regular.exhausted.lab}, Engaged ${engaged.exhausted.lab}, Payer ${payer.exhausted.lab}, late Essence blocks ${lateBlocks.length}`,
       );
+      const pace = landmarkPace(regular);
+      console.log(`Nightly Landmark feat pace: ${JSON.stringify(pace)}`);
+      for (const row of pace) {
+        expect(row.activeDays, `night2 ${row.site} stage ${row.stage} reached`).not.toBeNull();
+        expect(row.activeDays!, `night2 ${row.site} stage ${row.stage} within five active days`).toBeLessThanOrEqual(5);
+        expect(row.activeDays!, `night2 ${row.site} stage ${row.stage} within three active days`).toBeLessThanOrEqual(3);
+      }
+      expect(regular.landmarkStageDays.keepers_beacon[4] ?? 0, 'night2 Beacon finish day').toBeGreaterThanOrEqual(35);
       console.log(
         `Nightly Homeworld Level 5: Regular ${regular.homeLevelDays[5]}, Engaged ${engaged.homeLevelDays[5]}, Payer ${payer.homeLevelDays[5]}`,
       );
@@ -159,8 +225,15 @@ if (process.env.SIM === '1') {
       expect(engaged.exhausted.lab!).toBeLessThanOrEqual(0.7 * regular.exhausted.lab!);
       expect(lateBlocks).toEqual([]);
       expect(payer.exhausted.lab).not.toBeNull();
-      expect(payer.exhausted.lab!).toBeGreaterThanOrEqual(regular.exhausted.lab!);
-      expect(payer.homeLevelDays[5]).toBeGreaterThanOrEqual(regular.homeLevelDays[5]!);
+      expect(payer.spent.gems_continue ?? 0, 'night2 G4 Payer exercises the legal gem continue path').toBeGreaterThan(0);
+      // Decision 55: purchases never move a milestone earlier than the same player without them.
+      expect(payer.exhausted.lab!, 'night2 purchases cannot max Labs earlier').toBeGreaterThanOrEqual(unpaid.exhausted.lab ?? Infinity);
+      expect(payer.homeLevelDays[5] ?? Infinity, 'night2 purchases cannot buy Level 5 earlier').toBeGreaterThanOrEqual(
+        unpaid.homeLevelDays[5] ?? Infinity,
+      );
+      console.log(
+        `Nightly Watch spending style: Payer Labs ${payer.exhausted.lab} / Level 5 ${payer.homeLevelDays[5]} vs Regular ${regular.exhausted.lab} / ${regular.homeLevelDays[5]}; unpaid twin ${unpaid.exhausted.lab} / ${unpaid.homeLevelDays[5]}`,
+      );
       expect(regular.homeLevelDays[5]).toBeGreaterThanOrEqual(28);
       expect(regular.days.filter((x) => x.day <= 60 && x.active && (x.idleActiveRatio ?? 0) > 1.5)).toEqual([]);
       expect(regular.freeGemsPerActiveDay).toBeGreaterThanOrEqual(95);

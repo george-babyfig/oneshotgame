@@ -35,7 +35,18 @@ export function showStarMap(app: App, remixChapter = 0, focusChapter = 0) {
   const cur = chapterOf(p.level);
   const ready = chestsReady(p);
   const homeworldLevel =
-    p.level >= 5 ? h('div', { class: 'starmap-homeworld-level' }, t('Homeworld Level {n}', { n: p.home.level })) : null;
+    p.level >= 5
+      ? h(
+          'div',
+          {
+            class: `starmap-homeworld-level${p.home.level === 5 ? ' glowing' : ''}`,
+            'aria-label': p.home.level === 5 ? t('Homeworld Level 5, glowing') : t('Homeworld Level {n}', { n: p.home.level }),
+          },
+          p.home.level === 5 ? '✦ ' : '',
+          t('Homeworld Level {n}', { n: p.home.level }),
+          p.home.level === 5 ? ' ✦' : '',
+        )
+      : null;
   const chapters: HTMLElement[] = [];
   // show finished chapters, the current one and one teaser
   for (let n = 1; n <= cur.n + 1; n++) {

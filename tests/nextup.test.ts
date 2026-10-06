@@ -47,4 +47,22 @@ describe('nextUp', () => {
     p.home.plots[0] = { type: 'greenhouse', lv: 1, since: 0, greenhouse: { choice: 'spark', winsTowardNext: 0, stored: 1 } };
     expect(homeworldNextUp(p)).toMatchObject({ kind: 'claim', title: 'A booster is ready' });
   });
+  it('puts waiting celebrations ahead of a ready Landmark, then shows delivery instead of a completed feat', () => {
+    const p = defaultProfile();
+    p.level = 30;
+    p.home.level = 5;
+    p.home.firstHour = 2;
+    for (const id of ['sprout_garden', 'skyglass', 'sky_bridge'] as const) p.home.landmarks[id].stage = 4;
+    p.cometPier.stage = 4;
+    p.home.landmarks.keepers_beacon.stage = 3;
+    p.home.seen.celebrations.push('keepers_beacon:stage:3');
+    expect(homeworldNextUp(p)).toMatchObject({ homeTarget: 'celebration' });
+    p.home.seen.celebrations = [];
+    expect(homeworldNextUp(p)).toMatchObject({
+      homeTarget: 'landmark',
+      subtitle: 'Bring Essences to finish this Landmark',
+    });
+    p.mats.leaf = p.mats.stone = p.mats.dew = 50;
+    expect(homeworldNextUp(p)).toMatchObject({ homeTarget: 'landmark', subtitle: 'Your Landmark is ready to finish' });
+  });
 });

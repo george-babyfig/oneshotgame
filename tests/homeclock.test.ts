@@ -39,4 +39,10 @@ describe('clock guards', () => {
     expect(homeBadge(p, 0)).toBe(0);
     expect(homeBadge(p, 10_000)).toBe(1);
   });
+  it('badges a waiting celebration', () => {
+    const p = defaultProfile(0);
+    p.level = 30;
+    p.home.seen.celebrations.push('sprout_garden:stage:1');
+    expect(homeBadge(p, 0)).toBe(1);
+  });
 });

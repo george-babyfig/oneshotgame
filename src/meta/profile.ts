@@ -1,8 +1,16 @@
 import { loadKey, saveKey, saveKeyChecked, removeKey } from './storage';
 import type { BoosterId, UpgradeId } from './config';
-import type { Kind, Planet } from '../core/world';
+import { BIOMES, type BiomeId, type Kind, type Planet } from '../core/world';
 import type { ObstacleId, SkyState } from '../core/sky';
-import { defaultHome, effLevel, migrateGreenhouses, retiredBuildingRefund, type HomeState } from './homeworld';
+import {
+  defaultHome,
+  effLevel,
+  migrateGreenhouses,
+  ownedIsleDecorations,
+  retiredBuildingRefund,
+  RING_PLOTS,
+  type HomeState,
+} from './homeworld';
 import type { Mail } from './inbox';
 import { UNLOCKS } from './unlocks';
 import { restoreRound, serializeRound, type RoundState } from '../core/round';
@@ -20,6 +28,7 @@ import { isLauncherId, launcherBay } from './launchbay';
 import { isLaunchRosterId } from '../core/launchers';
 import { defaultCometPier, type CometPierProgress } from './landmarks';
 import type { VaultState } from './homeworldTypes';
+import type { LandmarkId, LandmarkStage, LandmarkState } from './homeworldLife';
 import { earn } from './wallet';
 
 export interface GalaxyPlanet {
@@ -73,6 +82,8 @@ export interface RoundCheckpoint {
   state: RoundState;
   modifiers: RoundModifiers;
   labSteps?: (Pick<import('../core/round').StepResult, 'reactions' | 'troubleEvents'> & { kind: Kind })[];
+  roundKey?: string;
+  landmarkSteps?: import('./roundSettlement').RoundStepEvidence[];
   throwsLeft: number;
   throwsUsed: number;
   throwsTotal: number;
@@ -164,6 +175,7 @@ export function readInterruptedRound(p: Profile): RoundCheckpoint | null {
       s.n > p.level ||
       (s.mode !== undefined && s.mode !== 'campaign' && s.mode !== 'remix') ||
       (s.mode === 'remix' && (s.seedPrefix !== 'RX' || !remixUnlocked(p, Math.ceil(s.n / 10)))) ||
+      (s.mode !== 'remix' && s.seedPrefix !== undefined && s.seedPrefix !== 'PP') ||
       (s.seedPrefix === 'RX' && s.mode !== 'remix') ||
       !Number.isInteger(s.qi) ||
       s.qi < 0 ||
@@ -217,6 +229,8 @@ export function clearInterruptedRound(p: Profile): void {
 }
 
 export interface Stats {
+  /** Winning campaign, Voyage and Zen final sectors, by land. */
+  grown: Partial<Record<BiomeId, number>>;
   throws: number;
   plays: number;
   wins: number;
@@ -274,6 +288,8 @@ export interface Profile {
   upgrades: Record<UpgradeId, number>;
   /** One-time preserving M11 conversion and paid-value refunds. */
   m11Migrated: boolean;
+  /** M11.5 Homeworld Life state has been validated once. */
+  m115Migrated: boolean;
   boosters: Record<BoosterId, number>;
   /** Subset of inventory bought with gems, kept separate from earned stock. */
   gemBoosters: Record<BoosterId, number>;
@@ -403,7 +419,7 @@ export interface Profile {
 
 const KEY = 'pp.profile';
 const BACKUP_KEY = 'pp.profile.bak';
-export const PROFILE_VERSION = 4;
+export const PROFILE_VERSION = 5;
 
 export function defaultProfile(now = Date.now()): Profile {
   return {
@@ -426,6 +442,7 @@ export function defaultProfile(now = Date.now()): Profile {
     vault: { tier: 1, bankedProductionMs: 0, storedDust: 0, lastTick: now },
     upgrades: { scope: 0, throws: 0, splash: 0, vault: 0 },
     m11Migrated: true,
+    m115Migrated: true,
     boosters: { shower: 1, spark: 1, scope: 1 },
     gemBoosters: { shower: 0, spark: 0, scope: 0 },
     piggy: 0,
@@ -467,6 +484,7 @@ export function defaultProfile(now = Date.now()): Profile {
     savedRound: undefined,
     meta: { installed: now, lastSeen: now, sessions: 0, rated: false, starterOffered: false, notifAsked: false, lastWelcomeAt: 0 },
     stats: {
+      grown: {},
       throws: 0,
       plays: 0,
       wins: 0,
@@ -556,6 +574,71 @@ function merge<T>(base: T, saved: unknown): T {
 export function migrate(raw: Record<string, unknown>): Profile {
   if (typeof raw.v === 'number' && raw.v > PROFILE_VERSION) throw new NewerProfileError();
   const p = merge(defaultProfile(), raw);
+  // Saved art choices are advisory; malformed IDs and counts never unlock lands or sites.
+  const savedHome = raw.home && typeof raw.home === 'object' && !Array.isArray(raw.home) ? (raw.home as Record<string, unknown>) : {};
+  const savedStats = raw.stats && typeof raw.stats === 'object' && !Array.isArray(raw.stats) ? (raw.stats as Record<string, unknown>) : {};
+  const savedGrown =
+    savedStats.grown && typeof savedStats.grown === 'object' && !Array.isArray(savedStats.grown)
+      ? (savedStats.grown as Record<string, unknown>)
+      : {};
+  p.stats.grown = {};
+  for (const id of Object.keys(BIOMES) as BiomeId[]) {
+    if (id === 'barren') continue;
+    const n = savedGrown[id];
+    if (typeof n === 'number' && Number.isFinite(n) && n >= 0) p.stats.grown[id] = Math.min(Number.MAX_SAFE_INTEGER, Math.floor(n));
+  }
+  const savedGaps = Array.isArray(savedHome.gaps) ? savedHome.gaps : [];
+  p.home.gaps = Array.from({ length: p.home.plots.length }, (_, i) => {
+    const id = savedGaps[i];
+    return typeof id === 'string' && id !== 'barren' && Object.hasOwn(BIOMES, id) && (p.stats.grown[id as BiomeId] ?? 0) >= 10
+      ? (id as BiomeId)
+      : null;
+  });
+  const savedLandmarks =
+    savedHome.landmarks && typeof savedHome.landmarks === 'object' && !Array.isArray(savedHome.landmarks)
+      ? (savedHome.landmarks as Record<string, unknown>)
+      : {};
+  for (const id of Object.keys(p.home.landmarks) as LandmarkId[]) {
+    const value = savedLandmarks[id];
+    const row = value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+    const stage = row.stage;
+    const state: LandmarkState = {
+      stage: (typeof stage === 'number' && Number.isFinite(stage) ? Math.max(0, Math.min(4, Math.floor(stage))) : 0) as LandmarkStage,
+      progress: Array.isArray(row.progress)
+        ? row.progress.slice(0, 16).map((n) => (typeof n === 'number' && Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0))
+        : [],
+      rewarded: Array.isArray(row.rewarded)
+        ? [...new Set(row.rewarded.filter((key): key is string => typeof key === 'string' && /^[a-z0-9:_-]{1,80}$/i.test(key)))].slice(
+            0,
+            32,
+          )
+        : [],
+      rounds: Array.isArray(row.rounds)
+        ? [...new Set(row.rounds.filter((key): key is string => typeof key === 'string' && key.length <= 150))].slice(-64)
+        : [],
+      arrivals: Array.isArray(row.arrivals)
+        ? [...new Set(row.arrivals.filter((key): key is string => typeof key === 'string' && key.length <= 80))]
+        : [],
+      planets: Array.isArray(row.planets)
+        ? [...new Set(row.planets.filter((key): key is string => typeof key === 'string' && key.length <= 150))]
+        : [],
+    };
+    if (typeof row.done === 'number' && Number.isFinite(row.done) && row.done >= 0 && state.stage === 4) state.done = row.done;
+    p.home.landmarks[id] = state;
+  }
+  const homeSeen =
+    savedHome.seen && typeof savedHome.seen === 'object' && !Array.isArray(savedHome.seen)
+      ? (savedHome.seen as Record<string, unknown>)
+      : {};
+  p.home.seen = {
+    celebrations: Array.isArray(homeSeen.celebrations)
+      ? [...new Set(homeSeen.celebrations.filter((id): id is string => typeof id === 'string' && /^[a-z0-9:_-]{1,100}$/i.test(id)))]
+      : [],
+  };
+  p.home.grownRoundKeys = Array.isArray(savedHome.grownRoundKeys)
+    ? [...new Set(savedHome.grownRoundKeys.filter((key): key is string => typeof key === 'string' && key.length <= 150))].slice(-64)
+    : [];
+  p.m115Migrated = true;
   p.settings.fullAimLine = p.settings.fullAimLine === true;
   p.momentum.scopeReady = p.momentum.scopeReady === true;
   p.momentum.scopeWins = Number.isFinite(p.momentum.scopeWins) ? Math.max(0, Math.min(8, Math.floor(p.momentum.scopeWins))) : 0;
@@ -675,6 +758,53 @@ export function migrate(raw: Record<string, unknown>): Profile {
       ? [...new Set(pier[key].filter((value): value is string => typeof value === 'string' && value.length <= 80))]
       : [];
   pier.stage = Number.isFinite(pier.stage) ? (Math.max(0, Math.min(4, Math.floor(pier.stage))) as CometPierProgress['stage']) : 0;
+  if (raw.m115Migrated !== true) {
+    // The Pier's M10.5 ledger already paid its completed feat stages.
+    const site = p.home.landmarks.comet_pier;
+    site.stage = Math.max(site.stage, pier.stage) as LandmarkStage;
+    for (let stage = 0; stage < Math.min(3, pier.stage); stage++) {
+      const key = `comet_pier:stage:${stage + 1}`;
+      if (!site.rewarded.includes(key)) site.rewarded.push(key);
+    }
+    if (pier.stage === 4 && site.done === undefined) site.done = Date.now();
+    const bestFriends = new Map([
+      ...Object.entries(p.home.friends ?? {}).map(([species, friend]) => [species, friend] as const),
+      ...p.home.residents.map((friend) => [friend.species, friend] as const),
+    ]);
+    for (const [species, friend] of bestFriends) {
+      if (friend.rewarded < 5) continue;
+      const letterId = `best-${species}`;
+      let letter = p.mail.find((m) => m.id === letterId);
+      if (letter?.claimed !== true && (letter || !p.mailSeen.includes(letterId))) {
+        // A pre-M11.5 unclaimed letter owed 25 gems; pay now and keep the letter readable.
+        earn(p, 'gems', 25, 'buddy');
+        if (letter) letter.claimed = true;
+        else {
+          letter = { id: letterId, kind: 'best', at: Date.now(), read: false, claimed: true, vars: { c: species } };
+          p.mail.unshift(letter);
+          p.mailSeen.push(letterId);
+        }
+      }
+      if (letter?.claimed) {
+        const id = `friend:${species}:level:5`;
+        if (!p.home.seen.celebrations.includes(id)) p.home.seen.celebrations.push(id);
+      }
+    }
+  }
+  // Legacy Pier may be complete out of order; other saved sites must follow the path.
+  for (const [id, previous] of [
+    ['skyglass', 'sprout_garden'],
+    ['sky_bridge', 'skyglass'],
+    ['keepers_beacon', 'sky_bridge'],
+  ] as const) {
+    const site = p.home.landmarks[id];
+    if (p.home.landmarks[previous].stage !== 4 && site.stage > 0) {
+      site.stage = 0;
+      site.progress = [0, 0, 0, 0, 0, 0];
+      site.rewarded = [];
+      site.done = undefined;
+    }
+  }
   const oldHome = raw.home as Partial<HomeState> | undefined;
   if (oldHome && !Object.hasOwn(oldHome, 'firstHour') && (p.home.intro || p.home.plots.some(Boolean))) p.home.firstHour = 2;
   if (!p.remix || typeof p.remix !== 'object' || Array.isArray(p.remix)) p.remix = {};
@@ -741,6 +871,16 @@ export function migrate(raw: Record<string, unknown>): Profile {
     // v2 → v3: the daily streak became Star Calendar stamps; start the calendar fresh
     p.daily.streak = 0;
   }
+  p.home.level = Math.max(1, Math.min(5, Math.floor(p.home.level || 1))) as HomeState['level'];
+  p.home.gaps = Array.from({ length: RING_PLOTS[p.home.level] }, (_, i) => p.home.gaps[i] ?? null);
+  const isle = Array.isArray(savedHome.isleDecor) ? savedHome.isleDecor : [];
+  const ownedIsle = ownedIsleDecorations(p);
+  p.home.isleDecor = Array.from({ length: 3 }, (_, i) => {
+    const id = isle[i];
+    return p.home.landmarks.sky_bridge.stage === 4 && typeof id === 'string' && ownedIsle.includes(id) && !isle.slice(0, i).includes(id)
+      ? id
+      : null;
+  });
   p.v = PROFILE_VERSION;
   return p;
 }
@@ -815,7 +955,11 @@ export async function loadProfile(): Promise<Profile> {
         loadNotice = 'newer';
         return defaultProfile();
       }
-      if (version !== PROFILE_VERSION || (parsed as Record<string, unknown>).m11Migrated !== true) {
+      if (
+        version !== PROFILE_VERSION ||
+        (parsed as Record<string, unknown>).m11Migrated !== true ||
+        (parsed as Record<string, unknown>).m115Migrated !== true
+      ) {
         // Keep first bytes per target migration; an older rescue must not hide the pre-M11 save.
         try {
           if (!(await loadKey('pp.profile.pre-migration'))) await saveKeyChecked('pp.profile.pre-migration', raw);

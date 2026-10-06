@@ -10,11 +10,21 @@ import { LAB_TEXT } from './labcopy';
 import { HOME_LEVEL_REQUIREMENTS } from './tuning';
 import { canExpand, chaptersDone } from './homeworld';
 import type { HomeworldLevel } from './homeworldTypes';
+import { activeLandmark, landmarkFinishStatus } from './landmarks';
+import { canLevelLab, labLevel } from './labs';
+import { LAB_NAME } from './labcopy';
+import { KINDS, type Kind } from '../core/world';
+import { LAUNCHER_ESSENCE, TUNE_COST, launcherBay } from './launchbay';
+import { bayLevel } from './homeworld';
+
+const landmarkAsk = (site: NonNullable<ReturnType<typeof activeLandmark>>, stage: number): string =>
+  stage === 3 ? 'Bring Essences to finish this Landmark' : site.stages[stage].ask;
 
 export interface NextUp {
   kind: 'unlock' | 'claim' | 'wish' | 'goal' | 'play';
   title: string;
   subtitle: string;
+  homeTarget?: 'celebration' | 'landmark' | 'level' | 'lab' | 'launcher' | 'planet';
   action:
     | 'play'
     | 'missions'
@@ -122,6 +132,14 @@ export function nextUp(p: Profile, _now: number): NextUp {
 
 /** One specific, actionable suggestion in the Homeworld overview. */
 export function homeworldNextUp(p: Profile, now = Date.now()): NextUp {
+  if (p.home.seen.celebrations.length)
+    return {
+      kind: 'claim',
+      title: t('A Homeworld celebration is waiting'),
+      subtitle: t('See what you earned'),
+      action: 'homeworld',
+      homeTarget: 'celebration',
+    };
   const first = firstHourStep(p);
   if (first !== 'done')
     return {
@@ -130,17 +148,67 @@ export function homeworldNextUp(p: Profile, now = Date.now()): NextUp {
       subtitle: t(LAB_TEXT.firstReward),
       action: 'homeworld',
     };
+  const site = activeLandmark(p);
+  if (site && landmarkFinishStatus(p, site.id) === 'ready')
+    return {
+      kind: 'claim',
+      title: t(site.name),
+      subtitle: t('Your Landmark is ready to finish'),
+      action: 'homeworld',
+      homeTarget: 'landmark',
+    };
+  if (p.home.level < 5 && canExpand(p) === 'ok')
+    return {
+      kind: 'claim',
+      title: t('Homeworld Level {n}', { n: p.home.level + 1 }),
+      subtitle: t('Your next Level is ready'),
+      action: 'homeworld',
+      homeTarget: 'level',
+    };
+  const lab = (Object.keys(KINDS) as Kind[]).find((kind) => canLevelLab(p, kind) === 'ok');
+  if (lab)
+    return {
+      kind: 'goal',
+      title: t('Grow your {name}', { name: t(LAB_NAME[lab]) }),
+      subtitle: t('Lab Level {n} is ready', { n: labLevel(p, lab) + 1 }),
+      action: 'homeworld',
+      homeTarget: 'lab',
+    };
+  const launcher = launcherBay.owned(p).find((id) => {
+    if (id === 'sling') return false;
+    const next = launcherBay.tune(p, id) + 1;
+    if (next > 4) return false;
+    const cost = TUNE_COST[next as 2 | 3 | 4];
+    return (
+      bayLevel(p.home) >= cost.bay &&
+      (p.launcher.flings[id] ?? 0) >= cost.flings &&
+      p.dust >= cost.dust &&
+      (p.mats[LAUNCHER_ESSENCE[id]!] ?? 0) >= cost.essence
+    );
+  });
+  if (launcher)
+    return { kind: 'goal', title: t('Tune a launcher'), subtitle: t('Visit your Launch Bay'), action: 'homeworld', homeTarget: 'launcher' };
   if (p.home.plots.some((b) => b?.done && b.done <= now))
     return { kind: 'claim', title: t('A Homeworld build is ready'), subtitle: t('Tap its plot to see what opened'), action: 'homeworld' };
   if (p.home.plots.some((b) => b?.type === 'greenhouse' && (b.greenhouse?.stored ?? 0) > 0))
     return { kind: 'claim', title: t('A booster is ready'), subtitle: t('Collect it from your Greenhouse'), action: 'homeworld' };
-  if (p.home.level >= 5)
+  if (p.home.level >= 5) {
+    if (site)
+      return {
+        kind: 'goal',
+        title: t(site.name),
+        subtitle: t(landmarkAsk(site, p.home.landmarks[site.id].stage)),
+        action: 'homeworld',
+        homeTarget: 'landmark',
+      };
     return {
-      kind: 'goal',
-      title: t('Your Homeworld is fully grown'),
-      subtitle: t('Make it your own with friends and looks'),
-      action: 'homeworld',
+      kind: 'play',
+      title: t('Play planet {n}', { n: p.level }),
+      subtitle: t('A new planet is waiting'),
+      action: 'play',
+      homeTarget: 'planet',
     };
+  }
   const level = (p.home.level + 1) as HomeworldLevel;
   const need = HOME_LEVEL_REQUIREMENTS[level];
   if (chaptersDone(p) < need.chapter)
@@ -157,17 +225,26 @@ export function homeworldNextUp(p: Profile, now = Date.now()): NextUp {
       subtitle: t('Collect stardust for your next Level'),
       action: 'homeworld',
     };
-  if (canExpand(p) === 'ok')
+  if (canExpand(p) === 'essence')
     return {
       kind: 'goal',
       title: t('Homeworld Level {n}', { n: level }),
-      subtitle: t('Your next Level is ready'),
+      subtitle: t('See the Essence your next Level needs'),
       action: 'homeworld',
     };
+  if (site)
+    return {
+      kind: 'goal',
+      title: t(site.name),
+      subtitle: t(landmarkAsk(site, p.home.landmarks[site.id].stage)),
+      action: 'homeworld',
+      homeTarget: 'landmark',
+    };
   return {
-    kind: 'goal',
-    title: t('Homeworld Level {n}', { n: level }),
-    subtitle: t('See the Essence your next Level needs'),
-    action: 'homeworld',
+    kind: 'play',
+    title: t('Play planet {n}', { n: p.level }),
+    subtitle: t('A new planet is waiting'),
+    action: 'play',
+    homeTarget: 'planet',
   };
 }

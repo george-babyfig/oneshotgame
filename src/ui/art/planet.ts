@@ -1,10 +1,41 @@
 // Procedural planet renderer: smooth terrain, water, props, clouds and lighting.
-import { BIOMES, SECTORS, type Planet, type Sector } from '../../core/world';
+import { BIOMES, SECTORS, type BiomeId, type Planet, type Sector } from '../../core/world';
 import { landColor, type PlanetPalette } from '../../core/palette';
 import { drawCachedProps } from './props';
 import { shade } from './color';
 
 type G = CanvasRenderingContext2D;
+
+/** A small land between Homeworld plots. Its shape stays legible at phone size. */
+export function drawHomeworldLand(g: G, biome: BiomeId, x: number, y: number, size: number, angle: number) {
+  const land = BIOMES[biome];
+  g.save();
+  g.translate(x, y);
+  g.rotate(angle + Math.PI / 2);
+  g.fillStyle = land.color;
+  g.strokeStyle = 'rgba(255,255,255,.65)';
+  g.lineWidth = Math.max(1, size * 0.035);
+  g.beginPath();
+  g.ellipse(0, 0, size * 0.36, size * 0.13, 0, 0, Math.PI * 2);
+  g.fill();
+  g.stroke();
+  g.fillStyle = 'rgba(13,30,35,.65)';
+  if (land.sea) {
+    for (let i = -1; i <= 1; i++) {
+      g.beginPath();
+      g.arc(i * size * 0.15, -size * 0.01, size * 0.055, Math.PI, 0);
+      g.stroke();
+    }
+  } else {
+    g.beginPath();
+    g.moveTo(-size * 0.12, -size * 0.04);
+    g.lineTo(0, -size * 0.23);
+    g.lineTo(size * 0.12, -size * 0.04);
+    g.closePath();
+    g.fill();
+  }
+  g.restore();
+}
 
 let activePalette: PlanetPalette = 'classic';
 let remixRim = false;

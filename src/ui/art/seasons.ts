@@ -1,6 +1,7 @@
 // Seasonal weather drawn over scenes: snow, blossoms, fireflies, leaves, and
 // meteor streaks during real meteor showers. Stateless: positions come from time.
-import type { Season } from '../../meta/seasons';
+import { SEASON_DRESSING, type Season } from '../../meta/seasons';
+import type { FriendActivity } from '../../meta/friends';
 
 type G = CanvasRenderingContext2D;
 const fr = (x: number) => x - Math.floor(x);
@@ -69,6 +70,125 @@ export function drawSeason(g: G, w: number, h: number, time: number, season: Sea
       }
     }
   }
+  g.restore();
+}
+
+/** Homeworld-only weather layer; a zero time value is a complete still illustration. */
+export function drawHomeworldWeather(g: G, w: number, h: number, kind: string, time: number, still: boolean) {
+  if (kind === 'clear') return;
+  const phase = still ? 0 : time;
+  const count = kind === 'snow' ? 18 : kind === 'drizzle' ? 24 : kind === 'starry' ? 14 : 10;
+  g.save();
+  g.lineWidth = kind === 'drizzle' ? 1.5 : 1;
+  for (let i = 0; i < count; i++) {
+    const x = fr(rnd(i, 27) + (still ? 0 : phase * (kind === 'breezy' ? 0.025 : 0.04))) * w;
+    const y = fr(rnd(i, 29) + (still ? 0 : phase * (0.03 + rnd(i, 31) * 0.02))) * h;
+    g.globalAlpha = 0.35 + rnd(i, 33) * 0.35;
+    if (kind === 'drizzle') {
+      g.strokeStyle = '#b9d8f7';
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo(x - 4, y + 12);
+      g.stroke();
+    } else if (kind === 'snow') {
+      g.fillStyle = '#f5fbff';
+      g.beginPath();
+      g.arc(x, y, 1.4 + rnd(i, 35) * 1.8, 0, Math.PI * 2);
+      g.fill();
+    } else if (kind === 'starry') {
+      g.fillStyle = '#fff5d5';
+      g.beginPath();
+      g.arc(x, y, 1.5 + rnd(i, 35), 0, Math.PI * 2);
+      g.fill();
+    } else if (kind === 'breezy') {
+      g.strokeStyle = '#d8f5e9';
+      g.beginPath();
+      g.moveTo(x, y);
+      g.quadraticCurveTo(x + 8, y - 4, x + 17, y);
+      g.stroke();
+    }
+  }
+  g.restore();
+}
+
+/** Static season trim is cheap enough to draw on the rotating rim. */
+export function drawSeasonRim(g: G, cx: number, cy: number, radius: number, season: Season): void {
+  const dressing = SEASON_DRESSING[season];
+  g.save();
+  g.strokeStyle = dressing.groundTint;
+  g.globalAlpha = 0.58;
+  g.lineWidth = season === 'winter' ? 5 : 3;
+  g.beginPath();
+  g.arc(cx, cy, radius - 2, 0, Math.PI * 2);
+  g.stroke();
+  g.fillStyle = dressing.groundTint;
+  for (let i = 0; i < 16; i++) {
+    const a = (i * Math.PI * 2) / 16;
+    const x = cx + Math.cos(a) * radius * 0.92;
+    const y = cy + Math.sin(a) * radius * 0.92;
+    g.beginPath();
+    if (dressing.rim === 'snow') g.arc(x, y, 3, 0, Math.PI * 2);
+    else if (dressing.rim === 'leaves') g.ellipse(x, y, 4, 2, a, 0, Math.PI * 2);
+    else if (dressing.rim === 'petals') g.ellipse(x, y, 3, 2, a, 0, Math.PI * 2);
+    else g.arc(x, y, 1.5, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.restore();
+}
+
+/** A roof-level cue makes all four building dressings visible in still mode. */
+export function drawSeasonTrim(g: G, x: number, y: number, size: number, season: Season): void {
+  const dressing = SEASON_DRESSING[season];
+  g.save();
+  g.translate(x, y);
+  g.strokeStyle = dressing.groundTint;
+  g.fillStyle = dressing.buildings === 'lights' ? '#fff5a8' : dressing.groundTint;
+  g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(-size * 0.25, -size * 0.46);
+  g.quadraticCurveTo(0, -size * 0.56, size * 0.25, -size * 0.46);
+  g.stroke();
+  for (let i = -1; i <= 1; i++) {
+    g.beginPath();
+    g.arc(i * size * 0.19, -size * 0.5, dressing.buildings === 'wreaths' ? 2.5 : 1.7, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.restore();
+}
+
+const ACTIVITY_ICON: Partial<Record<FriendActivity, string>> = {
+  stir: '✦',
+  head_home: '⌂',
+  walk_home: '➜',
+  sleep: 'z',
+  night_wander: '✦',
+  sunbathe: '☀',
+  splash: '∿',
+  tend_flowers: '✿',
+  climb: '▲',
+  float: '◌',
+  warm_lantern: '✦',
+  fountain_bubbles: '◌',
+  flower_picnic: '✿',
+  stargaze: '★',
+  landmark_rest: '♡',
+  puddle_dance: '∿',
+  snow_play: '❄',
+  huddle: '❄',
+  leaf_play: '🍂',
+  petal_play: '🌸',
+  signature: '✦',
+};
+
+export function drawFriendActivity(g: G, activity: FriendActivity, x: number, y: number, size: number): void {
+  const icon = ACTIVITY_ICON[activity];
+  if (!icon) return;
+  g.save();
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.font = `${Math.max(11, Math.round(size * 0.38))}px system-ui`;
+  g.fillStyle = activity === 'sleep' ? '#dbe9ff' : '#fff2c9';
+  g.fillText(icon, x + size * 0.3, y - size * 0.62);
   g.restore();
 }
 

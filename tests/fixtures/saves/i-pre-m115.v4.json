@@ -1,0 +1,300 @@
+{
+  "v": 4,
+  "gems": 30,
+  "dust": 0,
+  "level": 31,
+  "stars": {},
+  "remix": {},
+  "roadPoints": 0,
+  "roadDay": {
+    "day": "",
+    "earned": 0
+  },
+  "seen": [],
+  "skySeen": [],
+  "gustSeen": false,
+  "fusionsFound": [],
+  "reactionPairsTried": [],
+  "combo": {
+    "best": 0,
+    "stamps": 0
+  },
+  "galaxy": [],
+  "lastCollect": 1788264000000,
+  "vault": {
+    "tier": 1,
+    "bankedProductionMs": 0,
+    "storedDust": 0,
+    "lastTick": 1788264000000
+  },
+  "upgrades": {
+    "scope": 0,
+    "throws": 0,
+    "splash": 0,
+    "vault": 0
+  },
+  "m11Migrated": true,
+  "boosters": {
+    "shower": 1,
+    "spark": 1,
+    "scope": 1
+  },
+  "gemBoosters": {
+    "shower": 0,
+    "spark": 0,
+    "scope": 0
+  },
+  "piggy": 0,
+  "starter": false,
+  "pass": false,
+  "m3Migrated": true,
+  "legacyUnlocks": [],
+  "roadPass": [],
+  "skin": "classic",
+  "skins": ["classic"],
+  "processedTx": [],
+  "pendingPiggy": null,
+  "pendingPurchaseRecords": [],
+  "daily": {
+    "last": "",
+    "streak": 0
+  },
+  "quests": {
+    "day": "",
+    "list": [],
+    "bonusClaimed": false
+  },
+  "road": [],
+  "chapters": [],
+  "dailyPlanet": {
+    "day": "",
+    "best": 0,
+    "stars": 0,
+    "rewarded": false
+  },
+  "settings": {
+    "sound": true,
+    "music": true,
+    "haptics": true,
+    "reduceMotion": false,
+    "fullAimLine": false,
+    "planetColours": "classic",
+    "notifications": false,
+    "gameCenter": false,
+    "lang": "",
+    "hemi": "north",
+    "textSize": "standard",
+    "hidePaidLooks": false,
+    "spendingReminder": null,
+    "breakAfterRounds": null,
+    "parentPin": null,
+    "gatePausedUntil": 0,
+    "gentle": false
+  },
+  "tutorial": false,
+  "meta": {
+    "installed": 1788264000000,
+    "lastSeen": 1788264000000,
+    "sessions": 0,
+    "rated": false,
+    "starterOffered": false,
+    "notifAsked": false,
+    "lastWelcomeAt": 0
+  },
+  "stats": {
+    "throws": 0,
+    "plays": 0,
+    "wins": 0,
+    "bestLife": 0,
+    "creatures": 0,
+    "threeStars": 0,
+    "dailies": 0,
+    "rushBest": 0,
+    "rushPlays": 0,
+    "zenThrows": 0,
+    "challenges": 0,
+    "hardWins": 0,
+    "bestStreak": 0
+  },
+  "momentum": {
+    "streak": 0,
+    "shieldDay": "",
+    "paused": false,
+    "scopeReady": false,
+    "scopeWins": 0
+  },
+  "visitors": [],
+  "mementos": ["otter"],
+  "rank": 1,
+  "m4RankPaidThrough": 0,
+  "habitats": [],
+  "challengeLog": [],
+  "zen": null,
+  "event": {
+    "week": "",
+    "tokens": 0,
+    "claimed": []
+  },
+  "gcReported": [],
+  "look": {
+    "suit": "suit_sky",
+    "hat": "hat_antenna",
+    "launcher": "l_pad",
+    "trail": "tr_dots",
+    "emote": "em_cheer"
+  },
+  "avatar": {
+    "face": 0,
+    "skin": 3,
+    "hair": 0,
+    "hairColor": 0,
+    "eyes": 0,
+    "expression": "happy"
+  },
+  "wardrobe": [],
+  "favourites": [],
+  "stylesNewSeen": "",
+  "mastery": {},
+  "launcher": {
+    "selected": "sling",
+    "tunes": {},
+    "flings": {},
+    "completedRounds": {},
+    "comboThreePlanets": []
+  },
+  "cometPier": {
+    "hardWins": 3,
+    "normalThreeStars": 0,
+    "hardPlanets": ["campaign:11", "campaign:12", "campaign:13"],
+    "normalPlanets": [],
+    "troubles": 8,
+    "fusions": 0,
+    "stage": 2
+  },
+  "m105Migrated": true,
+  "passport": {
+    "first": -1,
+    "second": -1,
+    "set": false,
+    "title": "",
+    "banner": 0,
+    "frame": 0,
+    "badges": [],
+    "badgesSet": false
+  },
+  "home": {
+    "level": 3,
+    "ring": 3,
+    "firstHour": 0,
+    "labFreeUsed": false,
+    "plots": [
+      {
+        "type": "den",
+        "lv": 2,
+        "since": 1788264000000
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "residents": [
+      {
+        "species": "otter",
+        "fp": 25,
+        "lastReq": -1,
+        "rewarded": 5
+      }
+    ],
+    "expedition": null,
+    "debris": [],
+    "lastDebris": 1788264000000,
+    "lastTick": 1788264000000,
+    "intro": false,
+    "paint": {
+      "ground": "meadow",
+      "sea": "blue"
+    },
+    "paints": [],
+    "friends": {
+      "otter": {
+        "fp": 25,
+        "lastReq": -1,
+        "rewarded": 5
+      }
+    },
+    "accs": []
+  },
+  "lab": {},
+  "feats": {},
+  "forms": {},
+  "formsSeen": [],
+  "flings": {},
+  "sightings": {},
+  "mail": [
+    {
+      "id": "best-otter",
+      "kind": "best",
+      "at": 1788264000000,
+      "read": true,
+      "claimed": true,
+      "vars": {
+        "c": "otter"
+      }
+    }
+  ],
+  "mailSeen": ["best-otter"],
+  "bosses": [],
+  "presets": [null, null, null],
+  "mats": {},
+  "bundles": [],
+  "constellations": [],
+  "dyes": [],
+  "dye": {
+    "main": null,
+    "trim": null
+  },
+  "festival": {
+    "key": "",
+    "spotted": 0,
+    "claimed": []
+  },
+  "voyage": {
+    "week": "",
+    "base": 8,
+    "cleared": 0,
+    "stars": []
+  },
+  "voyageDone": 0,
+  "fails": {},
+  "continuesUsed": {},
+  "visits": {},
+  "album": {
+    "fest": [],
+    "milestones": 0,
+    "pagesClaimed": [],
+    "pages": [
+      {
+        "bg": 0,
+        "items": []
+      },
+      {
+        "bg": 1,
+        "items": []
+      },
+      {
+        "bg": 0,
+        "items": []
+      }
+    ]
+  },
+  "buddy": {
+    "species": null,
+    "acc": null
+  }
+}

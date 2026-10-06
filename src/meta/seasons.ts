@@ -12,6 +12,22 @@ export function seasonOf(d: Date, hemi: Hemisphere = 'north'): Season {
 export const SEASON_EMOJI: Record<Season, string> = { spring: '🌸', summer: '☀️', autumn: '🍂', winter: '❄️' };
 export const SEASON_NAMES: Record<Season, string> = { spring: 'Spring', summer: 'Summer', autumn: 'Autumn', winter: 'Winter' };
 
+/** Art cues only; no season changes a reward or a round rule. */
+export const SEASON_DRESSING: Record<
+  Season,
+  {
+    groundTint: string;
+    skyTint: string;
+    rim: 'petals' | 'warm' | 'leaves' | 'snow';
+    buildings: 'garlands' | 'bunting' | 'wreaths' | 'lights';
+  }
+> = {
+  spring: { groundTint: '#a8dd80', skyTint: '#ccefff', rim: 'petals', buildings: 'garlands' },
+  summer: { groundTint: '#e1d38a', skyTint: '#ffe2a6', rim: 'warm', buildings: 'bunting' },
+  autumn: { groundTint: '#d9a16e', skyTint: '#e6c3ab', rim: 'leaves', buildings: 'wreaths' },
+  winter: { groundTint: '#dae7ed', skyTint: '#cbdcf5', rim: 'snow', buildings: 'lights' },
+};
+
 /** Real annual meteor showers (peak dates, both hemispheres can see them). */
 export interface SkyEvent {
   id: string;

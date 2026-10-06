@@ -61,7 +61,7 @@ export function eventFlow(app: App) {
       : until.key === 'until {day}'
         ? t('until {day}', until.vars)
         : t('until {date}', until.vars);
-  modal(
+  const box = modal(
     [
       h(
         'div',
@@ -75,6 +75,8 @@ export function eventFlow(app: App) {
         t('{desc} in any mode to earn {emoji}. A new event starts every Monday.', { desc: t(ev.desc), emoji: ev.emoji }),
       ),
       body,
+      // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
+      btn(t('Back'), 'ghost wide', () => box.close()),
     ],
     { cls: 'tall', onClose: () => app.refresh() },
   );

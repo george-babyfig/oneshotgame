@@ -226,6 +226,8 @@ export function settingsFlow(app: App) {
       await clearLedger();
       app.startLevel(1, { tutorial: true });
     }),
+    // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
+    btn(t('Back'), 'ghost wide', () => m.close()),
     version,
   ]);
 }
@@ -291,7 +293,7 @@ export function grownupSettings(app: App): HTMLElement[] {
 }
 
 function credits() {
-  modal([
+  const box = modal([
     h('div', { class: 'm-title' }, t('Credits')),
     h(
       'div',
@@ -301,5 +303,7 @@ function credits() {
       h('p', null, t('Built with Capacitor, Vite and TypeScript.')),
       h('p', null, t('Thank you for playing! 🪐')),
     ),
+    // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
+    btn(t('Back'), 'ghost wide', () => box.close()),
   ]);
 }

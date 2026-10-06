@@ -60,6 +60,7 @@ export type UnlockId =
   | 'launcher_thumper'
   | 'launcher_pinpoint'
   | 'launcher_skipper'
+  | 'landmark_signpost'
   | ObstacleId;
 
 export interface Unlock {
@@ -205,6 +206,13 @@ export const UNLOCKS: readonly Unlock[] = [
   { id: 'quest_voyage', planet: VOYAGE_UNLOCK_LEVEL, placement: 'missions' },
   { id: 'star_calendar', planet: 21, placement: 'home', button: true },
   { id: 'star_atlas', planet: 23, placement: 'homeworld', button: true },
+  {
+    id: 'landmark_signpost',
+    planet: 29,
+    placement: 'homeworld',
+    button: true,
+    intro: { title: 'A garden signpost', body: 'Finish this planet to start your Homeworld garden.', icon: '🌱' },
+  },
   { id: 'lifebook', planet: 3, placement: 'home', button: true },
   { id: 'sticker_album', planet: 13, placement: 'collection' },
   {

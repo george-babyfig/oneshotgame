@@ -5,6 +5,7 @@ import { App } from './ui/app';
 import { prepareInitRecovery, profileLoadNotice, startFreshProfile } from './meta/profile';
 import { installAudioResume } from './ui/audio';
 import { t } from './i18n';
+import { loadDiagnostics, recordDiagnostic } from './meta/diagnostics';
 
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 const app = new App(document.getElementById('app')!);
@@ -54,8 +55,16 @@ function recover(e: unknown) {
     /* nothing more we can do */
   }
 }
-window.addEventListener('error', (e) => recover(e.error ?? e.message));
-window.addEventListener('unhandledrejection', (e) => console.warn('unhandled rejection', e.reason));
+window.addEventListener('error', (e) => {
+  void recordDiagnostic(e.error ?? e.message);
+  recover(e.error ?? e.message);
+});
+window.addEventListener('unhandledrejection', (e) => {
+  void recordDiagnostic(e.reason);
+  console.warn('unhandled rejection');
+});
+// Diagnostics load alongside the app; startup never waits on them.
+void loadDiagnostics();
 app
   .init()
   .then(() => {
@@ -72,6 +81,7 @@ app
     }
   })
   .catch(async (e) => {
+    await recordDiagnostic(e);
     console.error(e);
     await prepareInitRecovery();
     showRecovery(t('Your garden could not open. You can try again or start fresh.'));

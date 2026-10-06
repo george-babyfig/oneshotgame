@@ -90,7 +90,7 @@ export function festivalFlow(app: App) {
       : until.key === 'until {day}'
         ? t('until {day}', until.vars)
         : t('until {date}', until.vars);
-  modal(
+  const box = modal(
     [
       h(
         'div',
@@ -106,6 +106,8 @@ export function festivalFlow(app: App) {
       ),
       body,
       h('p', { class: 'muted small' }, t('A new festival starts every month, and each one comes back next year.')),
+      // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
+      btn(t('Back'), 'ghost wide', () => box.close()),
     ],
     { cls: 'tall', onClose: () => app.refresh() },
   );

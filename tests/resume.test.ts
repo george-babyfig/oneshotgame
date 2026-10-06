@@ -48,6 +48,37 @@ function checkpoint(): RoundCheckpoint {
 }
 
 describe('interrupted campaign rounds', () => {
+  it('persists the dedupe key and Landmark step summaries through a save restore', () => {
+    const p = defaultProfile(0);
+    p.level = 30;
+    const c = checkpoint();
+    c.n = 30;
+    c.roundKey = 'same-winning-round';
+    c.landmarkSteps = [
+      {
+        firstArrivals: ['otter'],
+        improvedSectors: { meadow: 2 },
+        fusions: 1,
+        supernovas: 0,
+        settledTroubles: 0,
+        settledVent: 0,
+        settledVine: 0,
+        reactions: { steam: 1 },
+      },
+    ];
+    saveInterruptedRound(p, c);
+    const loaded = migrate(JSON.parse(JSON.stringify(p)));
+    expect(readInterruptedRound(loaded)).toMatchObject({ roundKey: c.roundKey, landmarkSteps: c.landmarkSteps });
+  });
+  it('rejects an old Voyage checkpoint before it can become a campaign win', () => {
+    const p = defaultProfile(0);
+    p.level = 40;
+    const c = checkpoint();
+    c.n = 38;
+    c.seedPrefix = 'VOY-2026-W41-1';
+    saveInterruptedRound(p, c);
+    expect(readInterruptedRound(p)).toBeNull();
+  });
   it('discards a hidden-launcher checkpoint while retaining its saved selection and tune', () => {
     const p = defaultProfile(0);
     p.level = 70;

@@ -209,6 +209,11 @@ export const sfx = {
     [0, 4, 7, 12].forEach((s, i) => tone(semi(392, s), 0.16, 'triangle', 0.09, i * 0.06));
     noise(0.25, 0.08, 5000, 1.5, 0.2);
   },
+  beacon: () => {
+    // The short Homeworld cue uses the sound bus, so the sound setting mutes it.
+    if (!soundOn) return;
+    [0, 4, 7, 12].forEach((step, i) => tone(semi(523, step), 0.38, 'sine', 0.045, i * 0.13));
+  },
   chest: () => {
     noise(0.25, 0.3, 700, 0.8, 0, 'lowpass');
     [0, 7, 12, 16, 19, 24].forEach((s, i) => tone(semi(523, s), 0.35, 'triangle', 0.09, 0.2 + i * 0.07));
@@ -245,6 +250,19 @@ interface Theme {
 }
 
 export const THEMES: Record<string, Theme> = {
+  beacon: {
+    chords: [
+      [60, 64, 67, 72],
+      [57, 60, 65, 69],
+      [62, 65, 69, 74],
+      [55, 60, 64, 67],
+    ],
+    len: 4.2,
+    arp: [0, 2, 3, 2],
+    step: 1.05,
+    wave: 'sine',
+    bells: true,
+  },
   home: {
     chords: [
       [60, 64, 67, 71],

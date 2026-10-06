@@ -124,6 +124,121 @@ describe('privacy: no network code in src/', () => {
   });
 });
 
+describe('privacy: the public site stays self-hosted', () => {
+  const pages = walk('site', ['.html']);
+  const base = 'https://site.invalid/';
+  const trackerSnippet =
+    /\b(?:gtag\s*\(|fbq\s*\(|googletagmanager\b|google-analytics\b|mixpanel\b|posthog\b|plausible\s*\(|segment\.com\b)/i;
+  const attr = (tag: string, name: string): string | null => {
+    const match = new RegExp(`(?<![\\w-])${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i').exec(tag);
+    return match ? (match[1] ?? match[2] ?? match[3]) : null;
+  };
+  const tags = (html: string, name: string): string[] => [...html.matchAll(new RegExp(`<${name}\\b[^>]*>`, 'gi'))].map((m) => m[0]);
+  const localAsset = (value: string): boolean => {
+    if (/^(?:[a-z][\w+.-]*:|\/\/)/i.test(value)) return false;
+    try {
+      const url = new URL(value, base);
+      return url.origin === new URL(base).origin && existsSync(join('site', decodeURIComponent(url.pathname)));
+    } catch {
+      return false;
+    }
+  };
+
+  it('finds every public HTML page', () => {
+    expect(pages.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('detects tracker calls and reads the actual asset attribute', () => {
+    for (const call of ["gtag('js')", "fbq('init')", "plausible('pageview')"]) expect(trackerSnippet.test(call)).toBe(true);
+    expect(attr('<img data-src="safe.png" src="https://tracker.invalid/pixel">', 'src')).toBe('https://tracker.invalid/pixel');
+  });
+
+  it('loads scripts, styles, fonts and other page assets only from site/ with no embeds or tracker snippets', () => {
+    const bad: string[] = [];
+    for (const page of pages) {
+      const html = readFileSync(page, 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+      if (/<iframe\b|<object\b|<embed\b|<form\b|<base\b/gi.test(html)) bad.push(`${rel(page)}: embed, form or base URL`);
+      if (/<script\b/gi.test(html)) bad.push(`${rel(page)}: script (including inline trackers)`);
+      if (trackerSnippet.test(html)) {
+        bad.push(`${rel(page)}: tracker snippet`);
+      }
+      const csp = tags(html, 'meta').find((tag) => attr(tag, 'http-equiv')?.toLowerCase() === 'content-security-policy');
+      const policy = csp && attr(csp, 'content');
+      if (!policy || !/\bdefault-src\s+'self'(?:\s|;|$)/.test(policy) || !/\bscript-src\s+'none'(?:\s|;|$)/.test(policy))
+        bad.push(`${rel(page)}: missing restrictive CSP`);
+      if (tags(html, 'meta').some((tag) => attr(tag, 'http-equiv')?.toLowerCase() === 'refresh')) bad.push(`${rel(page)}: redirect`);
+      if (/<[a-z][^>]*\son[a-z]+\s*=/i.test(html)) bad.push(`${rel(page)}: inline handler`);
+      for (const tag of [...tags(html, 'a'), ...tags(html, 'area')]) if (attr(tag, 'ping')) bad.push(`${rel(page)}: link ping`);
+      for (const tag of [...tags(html, 'link'), ...tags(html, 'img'), ...tags(html, 'source')]) {
+        const value = attr(tag, tag.startsWith('<link') ? 'href' : 'src');
+        if (!value || !localAsset(value)) bad.push(`${rel(page)}: nonlocal asset ${value ?? '(missing)'}`);
+        const srcset = attr(tag, 'srcset');
+        if (srcset && srcset.split(',').some((part) => !localAsset(part.trim().split(/\s+/)[0]))) bad.push(`${rel(page)}: nonlocal srcset`);
+      }
+      for (const tag of [
+        ...tags(html, 'video'),
+        ...tags(html, 'audio'),
+        ...tags(html, 'track'),
+        ...tags(html, 'input'),
+        ...tags(html, 'image'),
+        ...tags(html, 'use'),
+        ...tags(html, 'area'),
+      ]) {
+        if (tag.startsWith('<input') && attr(tag, 'type')?.toLowerCase() !== 'image') continue;
+        for (const name of ['src', 'href', 'poster', 'xlink:href']) {
+          const value = attr(tag, name);
+          if (value && !localAsset(value)) bad.push(`${rel(page)}: nonlocal ${name} ${value}`);
+        }
+      }
+      for (const value of html.matchAll(/\burl\s*\(\s*['"]?([^)'"\s]+)/gi)) {
+        if (!localAsset(value[1])) bad.push(`${rel(page)}: nonlocal CSS URL ${value[1]}`);
+      }
+      if (/@import\b/i.test(html)) bad.push(`${rel(page)}: CSS import`);
+      if (/image-set\s*\(/i.test(html)) bad.push(`${rel(page)}: CSS image-set needs review`);
+    }
+    for (const file of walk('site', ['.css'])) {
+      const css = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+      if (/@import\b/i.test(css)) bad.push(`${rel(file)}: CSS import`);
+      if (/image-set\s*\(/i.test(css)) bad.push(`${rel(file)}: CSS image-set needs review`);
+      for (const value of css.matchAll(/\burl\s*\(\s*['"]?([^)'"\s]+)/gi)) {
+        const path = value[1];
+        if (!localAsset(path)) bad.push(`${rel(file)}: nonlocal CSS URL ${path}`);
+      }
+    }
+    expect(bad, bad.join('\n')).toEqual([]);
+  });
+
+  it('links only to site pages, Apple or email', () => {
+    const bad: string[] = [];
+    for (const page of pages) {
+      const html = readFileSync(page, 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+      for (const tag of tags(html, 'a')) {
+        const href = attr(tag, 'href');
+        if (!href) {
+          bad.push(`${rel(page)}: link without href`);
+          continue;
+        }
+        if (href.startsWith('mailto:') && href.length > 7) continue;
+        try {
+          const url = new URL(href, base);
+          if (url.protocol === 'https:' && (url.hostname === 'apple.com' || url.hostname.endsWith('.apple.com'))) continue;
+          if (
+            !/^(?:[a-z][\w+.-]*:|\/\/)/i.test(href) &&
+            url.origin === new URL(base).origin &&
+            (url.pathname === '/' || url.pathname.endsWith('.html') || (/\bdownload\b/i.test(tag) && localAsset(href))) &&
+            existsSync(join('site', decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname)))
+          )
+            continue;
+        } catch {
+          /* invalid links fail below */
+        }
+        bad.push(`${rel(page)}: outbound link ${href}`);
+      }
+    }
+    expect(bad, bad.join('\n')).toEqual([]);
+  });
+});
+
 describe('privacy: dependency allowlist', () => {
   it('recognizes static, side-effect and dynamic bare imports', () => {
     expect(bareImports("import x from 'vite'; import '@capacitor/core'; await import('vitest'); import './local';")).toEqual([

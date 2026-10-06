@@ -36,6 +36,7 @@ const DUST_DELTAS: Record<string, number> = {
   'f-pre-m10.v3.json': 14260,
   'g-pre-m105.v3.json': 14260,
   'h-pre-m11.v3.json': 22980,
+  'i-pre-m115.v4.json': 0,
 };
 
 type Raw = Record<string, unknown>;
@@ -74,6 +75,7 @@ describe('save goldens', () => {
       'f-pre-m10.v3.json',
       'g-pre-m105.v3.json',
       'h-pre-m11.v3.json',
+      'i-pre-m115.v4.json',
     ]);
   });
 
@@ -142,6 +144,41 @@ describe('save goldens: specific migrations', () => {
     expect(p.pass).toBe(true);
     expect(p.home.level).toBeLessThan(3);
     expect(drones(p)).toBe(3);
+  });
+  it('preserves a pre-M11.5 Pier ledger and paid best-friend letter without paying again', () => {
+    const raw = load('i-pre-m115.v4.json');
+    const p = loadSave('i-pre-m115.v4.json');
+    expect(p.m115Migrated).toBe(true);
+    expect(p.home.gaps).toHaveLength(10);
+    expect(p.home.gaps.every((gap) => gap === null)).toBe(true);
+    expect(p.stats.grown).toEqual({});
+    expect(p.home.landmarks.comet_pier).toMatchObject({
+      stage: 2,
+      rewarded: ['comet_pier:stage:1', 'comet_pier:stage:2'],
+    });
+    expect(p.cometPier.stage).toBe(2);
+    expect(p.home.seen.celebrations).toContain('friend:otter:level:5');
+    expect(p.mail.find((m) => m.id === 'best-otter')?.claimed).toBe(true);
+    expect(p.gems).toBe(raw.gems);
+  });
+  it('keeps a finished legacy Pier and the earned Zip on repeated loads', () => {
+    const raw = load('i-pre-m115.v4.json');
+    (raw.cometPier as Raw).stage = 4;
+    (raw.launcher as Raw).tunes = { zip: 1 };
+    const once = migrate(raw);
+    const twice = migrate(JSON.parse(JSON.stringify(once)) as Raw);
+    expect(once.home.landmarks.comet_pier).toMatchObject({ stage: 4 });
+    expect(once.launcher.tunes.zip).toBe(1);
+    expect([twice.gems, twice.dust]).toEqual([once.gems, once.dust]);
+    expect(twice.home.landmarks.comet_pier).toEqual(once.home.landmarks.comet_pier);
+  });
+  it('pays an old unclaimed best-friend letter during migration, then marks it presentation only', () => {
+    const raw = load('i-pre-m115.v4.json');
+    (raw.mail as Raw[])[0].claimed = false;
+    const p = migrate(raw);
+    expect(p.gems).toBe((raw.gems as number) + 25);
+    expect(p.mail[0].claimed).toBe(true);
+    expect(migrate(JSON.parse(JSON.stringify(p)) as Raw).gems).toBe(p.gems);
   });
   it('keeps a hidden selection and tune even when its old earn channel is absent', () => {
     const raw = load('g-pre-m105.v3.json');

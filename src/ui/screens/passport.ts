@@ -12,6 +12,7 @@ import {
   NAME_A,
   NAME_B,
   badgeEmoji,
+  bestFriends,
   currentBanner,
   currentPortraitFrame,
   currentTitle,
@@ -37,6 +38,8 @@ import { t } from '../../i18n';
 import { celebrate } from '../celebrate';
 import { effectiveReduceMotion } from '../motion';
 import { remixFrame, remixStars, remixTotal } from '../../meta/remix';
+import { LANDMARKS } from '../../meta/tuning';
+import { SPECIES_BY_ID } from '../../core/world';
 
 const festAcc = (p: App['p']) => (festivalActive(p) ? ensureFestival(p).acc : undefined);
 
@@ -166,6 +169,18 @@ export function showPassport(app: App) {
         ),
         h('div', { class: 'sec-title' }, t('Stats')),
         stats,
+        h('div', { class: 'sec-title' }, t('Homeworld keepsakes')),
+        h(
+          'div',
+          { class: 'passport-homeworld-list' },
+          ...LANDMARKS.filter((site) => p.home.landmarks[site.id].stage === 4).map((site) => h('p', null, `✦ ${t(site.name)}`)),
+          ...bestFriends(p).map((friend) =>
+            h('p', null, t('Best friend: {name}', { name: friend.nick ?? t(SPECIES_BY_ID[friend.species].name) })),
+          ),
+          LANDMARKS.every((site) => p.home.landmarks[site.id].stage !== 4) && bestFriends(p).length === 0
+            ? h('p', { class: 'muted' }, t('Your Homeworld memories will appear here.'))
+            : null,
+        ),
         remixFrames.length ? h('div', { class: 'sec-title' }, t('Bonus Remix · {n}★', { n: remixTotal(p) })) : null,
         remixFrames.length ? h('div', { class: 'passport-remix-list' }, ...remixFrames) : null,
         h('div', { class: 'sec-title' }, t('Trophies'), ' ', h('small', { class: 'muted' }, t('tap to pin up to {n}', { n: BADGE_SLOTS }))),

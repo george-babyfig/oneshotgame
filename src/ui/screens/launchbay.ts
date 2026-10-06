@@ -3,7 +3,7 @@ import { LAUNCHERS, LAUNCH_ROSTER, isLaunchRosterId, type LauncherId, type Tune 
 import { availability, select, tune, tuneUp, TUNE_COST } from '../../meta/launchbay';
 import { MAT_EMOJI } from '../../meta/constellations';
 import { bayLevel } from '../../meta/homeworld';
-import { finishCometPier } from '../../meta/landmarks';
+import { landmarkDefinition, landmarkOpen, landmarkState } from '../../meta/landmarks';
 import { t } from '../../i18n';
 import { btn, fmt, h, toast } from '../dom';
 import { haptic } from '../haptics';
@@ -88,40 +88,29 @@ function practice(app: App, id: LauncherId, chosenTune: Tune) {
 
 function pierCard(app: App): HTMLElement {
   const p = app.p;
-  const pier = p.cometPier;
-  const stage = pier.stage;
+  const site = landmarkDefinition('comet_pier');
+  const state = landmarkState(p, 'comet_pier');
+  const stage = state.stage;
   if (stage === 4) return h('p', { class: 'bay-progress' }, t('Comet Pier finished'));
-  const progress =
-    p.home.level < 4
-      ? t('Comet Pier opens at Homeworld Level 4')
-      : stage === 0
-        ? t('Win 3 Hard planets ({hard} of 3) or get 3 stars on 6 planets ({stars} of 6)', {
-            hard: Math.min(3, pier.hardWins),
-            stars: Math.min(6, pier.normalThreeStars),
-          })
-        : stage === 1
-          ? t('Settle Trouble: {have} of 8', { have: Math.min(8, pier.troubles) })
-          : stage === 2
-            ? t('Make Fusions: {have} of 10', { have: Math.min(10, pier.fusions) })
-            : t('Leaf {leaf} of 40 · Dew {dew} of 30', { leaf: fmt(p.mats.leaf ?? 0), dew: fmt(p.mats.dew ?? 0) });
-  const canFinish = p.home.level >= 4 && stage === 3 && (p.mats.leaf ?? 0) >= 40 && (p.mats.dew ?? 0) >= 30;
-  const finish = btn(t('Finish Comet Pier'), canFinish ? 'primary' : 'ghost dim', () => {
-    if (p.home.level < 4) return toast(t('Comet Pier opens at Homeworld Level 4'));
-    if (!finishCometPier(p)) return toast(t('Gather 40 leaf and 30 dew to finish the Comet Pier'));
-    sfx.chest();
-    haptic.success();
-    app.save();
-    showLaunchBay(app, 'zip', 'button');
-    toast(t('Comet Pier finished! Zip is ready.'), 'good');
-  });
-  finish.setAttribute('aria-disabled', String(!canFinish));
-  finish.setAttribute('aria-label', canFinish ? t('Finish Comet Pier') : t('Finish Comet Pier: needs 40 leaf and 30 dew'));
+  if (!landmarkOpen(p, 'comet_pier')) {
+    const previous = (['sprout_garden', 'skyglass', 'sky_bridge'] as const).find((id) => landmarkState(p, id).stage < 4);
+    const reason =
+      p.level < 30
+        ? t('Landmarks open after planet 29')
+        : p.home.level < 4 && previous
+          ? t('Reach Homeworld Level {n} and finish {name}', { n: 4, name: t(landmarkDefinition(previous).name) })
+          : p.home.level < 4
+            ? t('Comet Pier opens at Homeworld Level 4')
+            : t('Finish {name} first', { name: t(landmarkDefinition(previous!).name) });
+    return h('p', { class: 'bay-progress' }, reason);
+  }
+  const progress = stage === 3 ? t('Bring Essences to finish this Landmark') : t(site.stages[stage].ask);
   return h(
     'div',
     { class: 'bay-progress' },
     h('p', null, t('Comet Pier: {n} of 4 steps', { n: stage })),
     h('p', null, progress),
-    stage === 3 ? finish : null,
+    h('p', null, t('Visit your Homeworld to build Comet Pier')),
   );
 }
 

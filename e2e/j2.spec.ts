@@ -23,12 +23,20 @@ import {
   swipeFromLeftEdge,
   tabSel,
   tr,
+  useJourneyViewport,
   waitScreen,
   watchErrors,
   type Guard,
   type LocaleId,
   type TabId,
 } from './helpers';
+
+/** Landmark and Isle controls sit in collapsed <details>; a re-rendered panel closes them again. */
+async function openSummaries(page: Page) {
+  await page
+    .locator('.hw-panel details.hw-landmark-summary')
+    .evaluateAll((items) => items.forEach((item) => ((item as HTMLDetailsElement).open = true)));
+}
 
 /** M4 acceptance limits. */
 const HOME_TARGETS_MAX = 12;
@@ -105,12 +113,161 @@ async function sheet(page: Page, info: TestInfo, guard: Guard, open: () => Promi
     return;
   }
   await snap(page, info, guard, label);
-  await dismissSheets(page);
+  const locale = localesToRun().find((item) => info.titlePath.join(' ').includes(`[${item}]`)) ?? 'en';
+  const modal = page.locator(OPEN_MODAL).last();
+  const close = modal
+    .getByRole('button', { name: tr(locale, 'Back'), exact: true })
+    .or(modal.getByRole('button', { name: tr(locale, 'Close'), exact: true }));
+  expect.soft(await close.count(), `${label}: has an explicit Back or Close control`).toBeGreaterThan(0);
+  if (await close.count()) await close.last().click();
   await expect(page.locator(OPEN_MODAL)).toHaveCount(0);
   expect.soft(await screenName(page), `closing ${label} stays on ${screen}`).toBe(screen);
 }
 
 const entry = (page: Page, cls: string, name: string) => page.locator(`.host ${cls}`).filter({ hasText: name }).first();
+
+for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
+  test.describe(`J2 M11.5 Homeworld sheets [${loc}]`, () => {
+    test.use({ locale: BROWSER_LOCALE[loc] });
+
+    test('Back from every Homeworld Life sheet returns to the Homeworld', async ({ page }, info) => {
+      test.skip(
+        !['chromium-320x568', 'webkit-320x568'].includes(info.project.name),
+        'The Homeworld Life qualification uses the 320 phone projects and nightly viewport override',
+      );
+      await useJourneyViewport(page);
+      const guard = watchErrors(page);
+      await freshInstall(page);
+      await midGame(page, { level: 45 });
+      await openTab(page, 'homeworld');
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.level = 5;
+        a.p.home.firstHour = 2;
+        a.p.home.intro = true;
+        while (a.p.home.plots.length < 14) a.p.home.plots.push(null);
+        while (a.p.home.gaps.length < 14) a.p.home.gaps.push(null);
+        a.p.home.plots[0] = { type: 'lantern', lv: 1, since: Date.now() };
+        a.p.home.landmarks.sky_bridge.stage = 4;
+        a.p.home.residents.push({ species: 'otter', fp: 8, lastReq: -1, rewarded: 3 });
+        a.showHomeworld();
+      });
+      await sheet(page, info, guard, () => page.locator('.hw-level-badge').click(), `life-level-${loc}`);
+      await sheet(page, info, guard, () => page.locator('.hw-pouch-head').click(), `life-essence-${loc}`);
+      await sheet(
+        page,
+        info,
+        guard,
+        async () => {
+          await page
+            .locator('.hw-primary-actions')
+            .getByRole('button', { name: tr(loc, 'Friends') })
+            .click();
+          await expect(page.locator(OPEN_MODAL).last()).toContainText(tr(loc, 'Tide Otter'));
+        },
+        `life-friends-${loc}`,
+      );
+      await sheet(page, info, guard, () => page.getByRole('button', { name: tr(loc, 'Homeworld list') }).click(), `life-list-${loc}`);
+      await sheet(
+        page,
+        info,
+        guard,
+        async () => {
+          await page.getByRole('button', { name: tr(loc, 'Homeworld list') }).click();
+          await page
+            .locator(OPEN_MODAL)
+            .last()
+            .getByRole('button', { name: tr(loc, 'Friend: {name}, friendship level {n}', { name: tr(loc, 'Tide Otter'), n: 3 }) })
+            .click();
+        },
+        `life-friend-row-${loc}`,
+      );
+      await sheet(page, info, guard, () => page.getByRole('button', { name: tr(loc, 'Choose lands') }).click(), `life-land-picker-${loc}`);
+      for (let spot = 0; spot < 3; spot++) {
+        await sheet(
+          page,
+          info,
+          guard,
+          async () => {
+            await openSummaries(page);
+            await page.locator('.hw-panel .hw-landmark-summary').last().getByRole('button').nth(spot).click();
+          },
+          `life-isle-${spot + 1}-${loc}`,
+        );
+      }
+      await openSummaries(page);
+      await page.locator('.hw-panel .hw-landmark-summary').last().getByRole('button').first().click();
+      await expect(page.locator(OPEN_MODAL)).toHaveCount(1);
+      await page
+        .locator(OPEN_MODAL)
+        .getByRole('button', { name: tr(loc, 'Back') })
+        .click();
+      await expect(page.locator(OPEN_MODAL)).toHaveCount(0);
+      await sheet(
+        page,
+        info,
+        guard,
+        () =>
+          page
+            .locator('.hw-panel')
+            .getByRole('button', { name: tr(loc, 'Expedition') })
+            .click(),
+        `life-expedition-${loc}`,
+      );
+      await sheet(
+        page,
+        info,
+        guard,
+        () =>
+          page
+            .locator('.hw-panel')
+            .getByRole('button', { name: tr(loc, '🎨 Paint') })
+            .click(),
+        `life-paint-${loc}`,
+      );
+      // Read the table in the page: tuning.ts imports package.json, which Node's loader can't take without an attribute.
+      const landmarks: { id: string; name: string }[] = await page.evaluate(async () => {
+        const tuning = await (window as any).__e2eImport('/src/meta/tuning.ts');
+        return tuning.LANDMARKS.map((site: { id: string; name: string }) => ({ id: site.id, name: site.name }));
+      });
+      expect(landmarks).toHaveLength(5);
+      for (const site of landmarks) {
+        await sheet(
+          page,
+          info,
+          guard,
+          async () => {
+            await openSummaries(page);
+            await page
+              .locator('.hw-landmark-summary')
+              .getByRole('button')
+              .filter({ hasText: tr(loc, site.name) })
+              .click();
+          },
+          `life-${site.id}-${loc}`,
+        );
+      }
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.seen.celebrations.push('sprout_garden:stage:1');
+        a.showHomeworld();
+      });
+      const celebration = page.locator(`${OPEN_MODAL}.hw-earned`).last();
+      await expect(celebration).toBeVisible();
+      await celebration.getByRole('button', { name: tr(loc, 'Wonderful!') }).click();
+      await expect(celebration).toHaveCount(0);
+      expect((await page.evaluate(() => (window as any).__app.p.home.seen.celebrations)).length).toBe(0);
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.firstHour = 0;
+        a.showHomeworld();
+      });
+      await sheet(page, info, guard, () => page.locator('.hw-panel button.primary.wide').first().click(), `life-first-hour-${loc}`);
+      await expect(backButton(page, loc), 'a Homeworld tab root has no Back button').toHaveCount(0);
+      expectNoErrors(guard);
+    });
+  });
+}
 
 test.describe('J2 every tab and screen [en]', () => {
   test.use({ locale: 'en-US' });

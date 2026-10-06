@@ -8,6 +8,7 @@ import type { App } from '../app';
 import { parentalGate, setParentPin, clearParentPin } from '../flows/gate';
 import { grownupSettings } from '../flows/settings';
 import { shopSection } from './shop';
+import { diagnosticCode } from '../../meta/diagnostics';
 
 const active = new WeakSet<App>();
 // Fill these together once the owner has a hosted policy and monitored mailbox.
@@ -109,6 +110,42 @@ function renderGrownups(app: App) {
     ),
     h('p', { class: 'muted small' }, t('Sky bumps give the throw back, and Troubles and Clashes rest. Stars count as normal.')),
   );
+  const code = diagnosticCode();
+  const diagnosticValue = h('span', { class: 'code' }, code);
+  const diagnosticLine = h('p', null, t('Diagnostic code:'), ' ', diagnosticValue);
+  const copyDiagnostic = btn(t('Copy'), 'ghost', async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      toast(t('Code copied'));
+    } catch {
+      // Older WebViews may lack clipboard.writeText; keep the code selectable if this also fails.
+      const field = h('textarea', { 'aria-hidden': 'true', readonly: true }) as HTMLTextAreaElement;
+      field.value = code;
+      field.style.position = 'fixed';
+      field.style.opacity = '0';
+      field.style.userSelect = 'text';
+      field.style.webkitUserSelect = 'text';
+      document.body.append(field);
+      field.select();
+      field.setSelectionRange(0, code.length);
+      let copied = false;
+      try {
+        copied = document.execCommand('copy');
+      } catch {
+        /* selection below remains available */
+      }
+      field.remove();
+      if (copied) toast(t('Code copied'));
+      else {
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(diagnosticValue);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        toast(t('Write down the code.'));
+      }
+    }
+  });
   const sections = [
     p.chapters.length && Date.now() >= quietUntil
       ? h(
@@ -206,6 +243,9 @@ function renderGrownups(app: App) {
       h('p', null, t('If you email support, we use your message to reply.')),
       h('p', null, t('Support email: {email}', { email: PRIVACY_CONTACT.email })),
       h('p', null, t('Privacy policy: {url}', { url: PRIVACY_CONTACT.policy })),
+      diagnosticLine,
+      copyDiagnostic,
+      h('p', { class: 'muted small' }, t('Nothing is sent. A grown-up may paste this code into a support email.')),
       btn(t('Clear play history'), 'danger wide', async () => {
         if (!(await confirmBox(t('Clear play history on this device?'), t('Clear')))) return;
         await clearLedger();

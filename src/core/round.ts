@@ -101,6 +101,36 @@ export interface StepResult {
   troubleEvents: TroubleEvent[];
 }
 
+/** Immutable evidence for eligible round summaries; no scoring rule depends on it. */
+export function eligibleStepEvidence(step: StepResult): {
+  firstArrivals: string[];
+  improvedSectors: Partial<Record<BiomeId, number>>;
+  fusions: number;
+  supernovas: number;
+  settledTroubles: number;
+  settledVent: number;
+  settledVine: number;
+  reactions: Partial<Record<ReactionId, number>>;
+} {
+  const improvedSectors: Partial<Record<BiomeId, number>> = {};
+  for (const index of step.newRegionBests) {
+    const biome = step.state.planet.sectors[index]?.biome;
+    if (biome) improvedSectors[biome] = (improvedSectors[biome] ?? 0) + 1;
+  }
+  const reactions: Partial<Record<ReactionId, number>> = {};
+  for (const reaction of step.reactions) reactions[reaction.id] = (reactions[reaction.id] ?? 0) + 1;
+  return {
+    firstArrivals: [...step.firstArrivals],
+    improvedSectors,
+    fusions: step.reactions.filter((reaction) => REACTIONS[reaction.id].kind === 'fusion').length,
+    supernovas: Number(step.novaFired),
+    settledTroubles: step.troubleEvents.filter((event) => event.kind === 'settled').length,
+    settledVent: step.troubleEvents.filter((event) => event.kind === 'settled' && event.id === 'vent').length,
+    settledVine: step.troubleEvents.filter((event) => event.kind === 'settled' && event.id === 'vine').length,
+    reactions,
+  };
+}
+
 export function roundState(
   planet: Planet,
   novaEnabled = true,

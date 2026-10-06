@@ -22,6 +22,7 @@ import {
   type RoundRules,
   type RoundState,
 } from '../../src/core/round';
+import { landmarkStepEvidence } from '../../src/meta/roundSettlement';
 import { emptySkyState, findPull, flightWorld, flyPull, isBonk, noise, PHONES, seedHint, seedPulls, type Phone, type Pull } from './flying';
 import { OBSTACLES } from '../../src/core/sky';
 import { bonkRefund, rockAfterBonk } from '../../src/ui/feel';
@@ -36,6 +37,9 @@ import {
 } from '../../src/core/launchers';
 import { PULL_TO_SPEED } from './flying';
 import { forecastTroubles } from '../../src/core/troubles';
+import { MOMENTUM_MAX, MOMENTUM_PERKS } from '../../src/meta/momentum';
+
+export const maxLegalExtraThrows = () => 3 + MOMENTUM_PERKS[MOMENTUM_MAX].throws;
 
 export interface BotContext {
   level: LevelDef;
@@ -217,7 +221,7 @@ export function maxLegalLoadout(level: LevelDef, opts: { masterSeed?: string } =
       boosters: { shower: true, spark: true, scope: true },
       launcher: STAR_SLING_SELECTION,
     },
-    extraThrows: 3 + 2, // Comet Shower and tier-3 Momentum are both legal.
+    extraThrows: maxLegalExtraThrows(), // Shower's three throws are also legal.
     lifeSpark: true,
   };
   const bestLauncher = bestLauncherFor(level, opts.masterSeed ?? 'pick-max', result);
@@ -226,6 +230,7 @@ export function maxLegalLoadout(level: LevelDef, opts: { masterSeed?: string } =
 }
 
 export interface PlayResult {
+  landmarkSteps: ReturnType<typeof landmarkStepEvidence>[];
   planet: Planet;
   regions: BiomeId[];
   arrivals: string[];
@@ -332,6 +337,7 @@ export function playLevel(
   const regions: BiomeId[] = [];
   const arrivals = new Set<string>();
   const labSteps: PlayResult['labSteps'] = [];
+  const landmarkSteps: PlayResult['landmarkSteps'] = [];
   let skyState = emptySkyState();
   const flightStats = { bonks: 0, fizzles: 0, misses: 0, surpriseBonks: 0, noiseBonks: 0, roundTime: 0, waits: 0 };
   let practiceBonkUsed = false;
@@ -474,6 +480,7 @@ export function playLevel(
     const thrownKind = level.queue[turn % level.queue.length];
     const step = stepRound(state, { kind: thrownKind, sector, nova, bounced }, modifiers, rules);
     state = step.state;
+    landmarkSteps.push(landmarkStepEvidence(step));
     labSteps.push({ kind: thrownKind, reactions: step.reactions, troubleEvents: step.troubleEvents });
     for (const index of step.changed) regions.push(state.planet.sectors[index].biome);
     for (const species of step.spawned) arrivals.add(species.id);
@@ -518,6 +525,7 @@ export function playLevel(
     regions,
     arrivals: [...arrivals],
     labSteps,
+    landmarkSteps,
     score,
     frostSectors: state.planet.sectors.filter((sector) => ['tundra', 'icesheet', 'taiga'].includes(sector.biome)).length,
     stars: finalStars,

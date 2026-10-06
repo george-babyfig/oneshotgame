@@ -94,7 +94,7 @@ The Homeworld is a small round planet seen face-on, as today (drag to spin, tap 
 
 ### 2.2 Lands on the Homeworld (the lands you grew)
 
-This is how "homes for creatures" becomes visible. The ground between plots is not generic grass: each land gap shows one of the 17 lands, chosen from lands you have grown.
+This is how "homes for creatures" becomes visible. The ground between plots is not generic grass: each land gap shows one of the 16 growable lands (the 17 lands minus Barren, the empty starting ground), chosen from lands you have grown.
 
 - The game counts, per land, how many sectors you finished a winning round with (campaign, Voyage, Zen), as a new `grown` tally in the profile. A land becomes **available** for the Homeworld once you have grown it on 10 sectors in total.
 - By default each gap shows your most-grown available lands, spread so no land sits next to itself. Tap a gap to pick another available land. It is free, instant and undoable. Barren is never offered.

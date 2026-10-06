@@ -3,6 +3,7 @@ import { stepRound, previewStep, novaForThrow, novaReady, REACTIONS, REACTION_ID
 import { flyWithLauncher, STAR_SLING, type FlightLaunch, type FlightWorld } from '../core/flight';
 import type { RoundModifiers } from '../core/modifiers';
 import { BOSS_HP } from '../core/levels';
+import { landmarkStepEvidence } from '../meta/roundSettlement';
 import { renderPlanet } from './art/planet';
 import { drawCreature, drawStillCreature, drawWanderGhost } from './art/critters';
 import { aimTagSize } from './aimtag';
@@ -47,7 +48,6 @@ function logRoundStep(scene: LevelScene, res: Pick<StepResult, 'troubleEvents' |
   scene.roundLog.reactions.push(...res.reactions.map((event) => event.id));
   scene.roundLog.wandered.push(...res.lost.map((event) => event.species));
   scene.roundLog.lab.push(...res.labEvents);
-  scene.o.onPierStep?.(res);
 }
 
 function drawHintPulse(scene: LevelScene) {
@@ -824,6 +824,8 @@ export function land(scene: LevelScene, sh: Shot, i: number) {
   );
   showTraitBlocks(scene, res.troubleEvents);
   logRoundStep(scene, res);
+  // Exact sector ids let grown-sector routes count each sector once (L5).
+  scene.landmarkSteps.push(landmarkStepEvidence(res));
   scene.labSteps.push({ kind: sh.kind, reactions: res.reactions, troubleEvents: res.troubleEvents });
   scene.o.onLabStep?.({ kind: sh.kind, reactions: res.reactions, troubleEvents: res.troubleEvents });
   if (scene.o.launcher.id !== 'sling') {

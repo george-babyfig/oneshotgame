@@ -2,7 +2,7 @@
 // bodies, big shiny eyes, rosy cheeks — assembled from a small parts kit.
 import { canvasDpr } from '../devcapture';
 type G = CanvasRenderingContext2D;
-export type CreaturePose = 'idle' | 'happy' | 'surprised' | 'wave';
+export type CreaturePose = 'idle' | 'happy' | 'surprised' | 'wave' | 'sleep' | 'signature';
 
 type Shape = 'round' | 'tall' | 'long' | 'fish' | 'bird' | 'tiny';
 type Feature =
@@ -209,7 +209,7 @@ function eyes(g: G, x: number, y: number, u: number, k: number, blink: boolean, 
 }
 
 function face(g: G, x: number, y: number, u: number, s: Spec, blink: boolean, sep = 0.17, pose: CreaturePose = 'idle') {
-  eyes(g, x, y, u, s.eye ?? 1, blink && pose === 'idle', sep);
+  eyes(g, x, y, u, s.eye ?? 1, pose === 'sleep' || (blink && pose === 'idle'), sep);
   // cheeks
   g.globalAlpha = 0.45;
   ell(g, x - (sep + 0.1) * u, y + 0.12 * u, 0.07 * u, 0.045 * u, '#ff7a9a');
@@ -260,8 +260,8 @@ export function drawCreature(
   g.translate(x, y);
   const wiggle =
     has(s, 'fishTail') || has(s, 'whaleTail') || has(s, 'tentacles') ? 0.045 : has(s, 'wings') || has(s, 'butterflyWings') ? 0.035 : 0.018;
-  g.rotate(angle + (reduceMotion ? 0 : Math.sin(clock * (pose === 'happy' ? 8 : 2.5)) * wiggle));
-  if (pose === 'happy' && !reduceMotion) g.translate(0, -Math.abs(Math.sin(clock * 8)) * size * 0.07);
+  g.rotate(angle + (reduceMotion ? 0 : Math.sin(clock * (pose === 'happy' || pose === 'signature' ? 8 : 2.5)) * wiggle));
+  if ((pose === 'happy' || pose === 'signature') && !reduceMotion) g.translate(0, -Math.abs(Math.sin(clock * 8)) * size * 0.07);
   // squash & stretch idle
   g.scale(1 + bob * 0.03, 1 - bob * 0.03);
   if (s.glow) {
@@ -556,6 +556,16 @@ export function drawCreature(
     const lift = reduceMotion ? 0.12 : Math.sin(clock * 10) * 0.12;
     line(g, [bx + b.rx * u * 0.7, by, bx + b.rx * u * 1.1, by - (0.3 + lift) * u], s.body, 0.1 * u);
     ell(g, bx + b.rx * u * 1.1, by - (0.3 + lift) * u, 0.1 * u, 0.1 * u, s.body);
+  }
+  if (pose === 'signature') {
+    // A clear earned pose even when motion is reduced.
+    g.strokeStyle = '#fff3a0';
+    g.lineWidth = Math.max(1, u * 0.035);
+    g.beginPath();
+    g.arc(0, -u * 0.65, u * 0.68, -Math.PI * 0.75, -Math.PI * 0.25);
+    g.stroke();
+    g.fillStyle = '#fff3a0';
+    g.fillRect(-u * 0.04, -u * 1.32, u * 0.08, u * 0.08);
   }
   if (has(s, 'whiskers')) {
     g.strokeStyle = 'rgba(40,30,50,0.5)';

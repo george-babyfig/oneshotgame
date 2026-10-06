@@ -26,6 +26,16 @@ export async function installJourneyClock(page: Page, at = '2026-10-06T12:00:00.
   await page.clock.install({ time: new Date(at) });
 }
 
+/** Nightly qualification reuses the browser projects at all four phone sizes. */
+export async function useJourneyViewport(page: Page) {
+  const size = process.env.M115_VIEWPORT;
+  if (!size) return;
+  const match = /^(320x568|375x667|390x844|430x932)$/.exec(size);
+  if (!match) throw new Error(`Unsupported M115_VIEWPORT: ${size}`);
+  const [width, height] = size.split('x').map(Number);
+  await page.setViewportSize({ width, height });
+}
+
 /** `LOCALE=ja,pseudo npx playwright test` narrows the matrix. */
 export function localesToRun(): LocaleId[] {
   const env = process.env.LOCALE?.trim();

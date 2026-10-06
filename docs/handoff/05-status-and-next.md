@@ -1,11 +1,11 @@
-# 05: Status and next steps (as of 6 October 2026, third session, after M11)
+# 05: Status and next steps (as of 6 October 2026, third session, after M11.5)
 
 ## Where things stand
 
 - **Branch:** `claude/eager-planck-yfnmzf`, pushed up to the M9 commit (Remix) plus this handoff. The working tree should be clean: run `git status`, and if it isn't, find out why before touching `src/`.
 - **PR:** george-babyfig/oneshotgame#2 is a **draft** with rounds 3–7, the product scope, ROADMAP-v2, M0–M9 and launch prep. Merge only when the owner asks.
-- **CI:** jobs `verify` (with a `dist/` grep for `Balance Report`, `__app`, `__i18n`, `__scene` and `__gate`), `sim-quick`, `balance` (new in M8: the pooled 1–60 curve and two-sided lint, including `GOAL-RAMP` and `TEACH`; since M9 also the Remix gate `tests/sim/remix.sim.ts`; 30-minute limit), `e2e` (three parallel jobs, one per browser project) and `ios-build`, plus a nightly sim run. Green on `baddb87`. Check `gh run list` for the latest run before starting.
-- **Tests:** **611** Vitest tests (2 skipped) and **222** Playwright tests (158 run, 64 skipped by design for their screen size) across 12 spec files (J1, J2, J3, J6 Remix, J6 overlap, J7 resume including a Remix round, `palette.spec`, `prices.spec`, `gate.spec`, `showtime.spec`, plus M7.5's `scenebot.spec` and `sky.spec`) in Chromium 320/390 and WebKit 390 pass. Format and typecheck are clean, and the build works. The Showtime frame-time gates only run locally; CI's runners have no GPU.
+- **CI:** jobs `verify` (with a `dist/` grep for `Balance Report`, `__app`, `__i18n`, `__scene` and `__gate`), `sim-quick`, `balance` (new in M8: the pooled 1–60 curve and two-sided lint, including `GOAL-RAMP` and `TEACH`; since M9 also the Remix gate `tests/sim/remix.sim.ts`; 30-minute limit), `e2e` (three parallel jobs, one per browser project) and `ios-build`, plus a nightly sim run. Check `gh run list` for the latest run before starting; M11's commit `f90ca03` was green except the launcher gate fixed in M11.5 (decision 54).
+- **Tests:** **844** Vitest tests (2 skipped) and **480** Playwright tests (263 run, 217 skipped by design for their screen size) across J1-J7 and the palette, prices, gate, showtime, scenebot and sky specs, in Chromium 320/390 and WebKit 320/390. Format and typecheck are clean, and the build works. The Showtime frame-time gates only run locally; CI's runners have no GPU. J2 now requires an explicit Back or Close control on every sheet it opens.
 - **Playing it:** the iOS Simulator (iPhone 17 Pro, steps in [06-workflow.md](06-workflow.md)) or `npm run dev` in a browser. The old web build at https://claude.ai/artifact/K5sPveYA8weiBttagqJjsR is still at Version 12 (rounds 1–6) — nobody has republished it since; a local session has no Artifact tool.
 - **Linear:** the project **"Pocket Planet — Launch Roadmap"** shows M0–M8 as built, the M12 launch-prep progress, and decisions 28–32 with the owner's to-dos in "Owner decisions and to-dos" (updated 30 September 2026): https://linear.app/babyfig/project/pocket-planet-launch-roadmap-76fb6f2c54db (details in [06-workflow.md](06-workflow.md)).
 - **Decisions answered:** 1 ("keep gem packs too") and now also 28–32, all from this session (see below and [01-history.md](01-history.md) §28, §31). Don't ask any of these again.
@@ -38,7 +38,8 @@
 | M10 Labs                                                                    | (this push)          | Six Lab buildings with one instant ladder each (Labs only ever help, decision 44), Guard perks, optional top forms, Essences, the two-step first hour, VoiceOver plot list, J5                                                                                |
 | Launch-hardening sprint (from docs/product/LAUNCH-READINESS.md)             | (this push)          | Share crash, privacy manifest, Game Center registration, in-app privacy text, icon alpha, iOS 15.4, six declared languages, release script, save recovery, achievements-only Game Center, J4, CI archive and smoke jobs                                       |
 | M10.5 Launchers and the Launch Bay + decision-29 generator fix              | (this push)          | Launch roster Sling/Swoop/Zip/Thumper (decision 51; three more wait for M15), the Launch Bay with tunes and free practice, Comet Pier progress; raw-v2 generator for planets 61-120 (lint 62 → 17 flags) with shadow gates restored                           |
-| M11 Homeworld Level and a fair economy                                      | (this push)          | Homeworld Levels 1-5, the win-fuelled Vault, the Greenhouse choice, Upgrades/Mills/Groves/Observatory retired with refunds, stardust looks, a v4 save migration; every economy band green on two seeds (decisions 52-53)                                      |
+| M11 Homeworld Level and a fair economy                                      | `f90ca03`            | Homeworld Levels 1-5, the win-fuelled Vault, the Greenhouse choice, Upgrades/Mills/Groves/Observatory retired with refunds, stardust looks, a v4 save migration; every economy band green on two seeds (decisions 52-53)                                      |
+| M11.5 Homeworld Life + launch extras                                        | (this push)          | Friends' routines, weather and seasons drawn; lands between plots; five Landmarks with 4 drawn stages, the Floating Isle and Beacon music; v5 saves; a device-only diagnostic code, site privacy lint and support kit; decisions 54-55                        |
 
 Each milestone's "✅ built" note in [ROADMAP-v2.md](../product/ROADMAP-v2.md) section 8 lists what shipped and the choices made while building.
 
@@ -46,9 +47,9 @@ Each milestone's "✅ built" note in [ROADMAP-v2.md](../product/ROADMAP-v2.md) s
 
 **Deferred to M12:** the other five looks products (Themes, the Planet Pack, Style Singles) arrive with their art. Starter Crew is currently the Aurora atmosphere, the Explorer suit, a trail and a Passport banner; the hat, launcher and paint are added in M12, free to existing buyers. **Also deferred to M12 (decision 29):** bringing the raw "shadow" level generator into the same difficulty band as the hand-reviewed campaign salts.
 
-## Next: M11.5 Homeworld Life
+## Next: M12 Star Roads, Styles and launch prep
 
-M10, M10.5, the launch-hardening sprint and the decision-29 generator fix are built. M11 is built too. Next is **M11.5** Homeworld Life (routines, weather, lands, five Landmarks), then **M12** Star Roads, Styles and launch prep (decisions 48-50). Build maps for all three were written from ROADMAP-v2 §8 and HOMEWORLD.md; re-create them if the scratchpad is gone. **The launch audit** is `docs/product/LAUNCH-READINESS.md`: it lists the remaining studio work, everything only the owner can do (Apple account, agreements, hosting, trademark, devices, playtests), and the owner checklist (also in Linear). **Decisions 33-47** are open with defaults applied (ROADMAP-v2 §10).
+M10, M10.5, the launch-hardening sprint, the decision-29 generator fix, M11 and M11.5 are built. Next is **M12** Star Roads, Styles and launch prep (decisions 48-50), the last launch-candidate milestone; its five Codex briefs (S, A-D, plus E launch extras already shipped with M11.5) are in the session scratchpad and are re-creatable from the build map. Build maps for all three were written from ROADMAP-v2 §8 and HOMEWORLD.md; re-create them if the scratchpad is gone. **The launch audit** is `docs/product/LAUNCH-READINESS.md`: it lists the remaining studio work, everything only the owner can do (Apple account, agreements, hosting, trademark, devices, playtests), and the owner checklist (also in Linear). **Decisions 33-55** are open with defaults applied (ROADMAP-v2 §10); 54 and 55 (M11.5) restate how two sim gates measure the max loadout and "money never buys growth".
 
 ## Next: the rest of ROADMAP-v2
 
@@ -71,12 +72,12 @@ The plan is **[docs/product/ROADMAP-v2.md](../product/ROADMAP-v2.md)**, with [HO
 | M10       | Labs: your shots learn tricks                                                                  | L    | ✅ built |
 | M10.5     | Launchers and the Launch Bay                                                                   | L    | ✅ built |
 | M11       | Homeworld Level and a fair economy                                                             | M    | ✅ built |
-| M11.5     | Homeworld Life: friends' days, lands and Landmarks (needs decision 25)                         | L    | **Next** |
-| M12       | Star Roads, the Styles catalogue and launch prep (store package, site and rename partly done)  | L    |          |
+| M11.5     | Homeworld Life: friends' days, lands and Landmarks (decision 25 default applied)               | L    | ✅ built |
+| M12       | Star Roads, the Styles catalogue and launch prep (store package, site and rename partly done)  | L    | **Next** |
 | M13–M17   | After launch: friends and trips, Road 1, content drop, Collector's Edition, Homeworld Horizons | —    |          |
 
 - **Difficulty, the headline principle:** in the owner's words, "we dont want it too hard at the beginning but also not too easy, as both will cause a user to lose interest". The difficulty program (FLIGHT.md, M8) now has a floor and a ceiling per chapter, with decision 28's "Kid-first" bands: M3's ladder moves were the first step.
-- **Owner decisions** 1–47 are in ROADMAP-v2 section 10. Decisions 1 and 28–32 are answered; 33 (Remix difficulty) and 34–53 (M10, M10.5, M11, M12 and launch defaults) are open with defaults applied; the stated defaults apply to the rest unless the owner says otherwise. M11.5 still needs decision 25.
+- **Owner decisions** 1–55 are in ROADMAP-v2 section 10. Decisions 1 and 28–32 are answered; 33 (Remix difficulty) and 34–55 (M10, M10.5, M11, M11.5, M12 and launch defaults) are open with defaults applied; the stated defaults apply to the rest unless the owner says otherwise. M11.5 still needs decision 25.
 
 ## Baseline data (from M1)
 
@@ -100,7 +101,7 @@ Targets for later milestones:
 - **The shadow-layout generator must be brought into band before launch** (decision 29, M12). The hand-reviewed campaign salts (planets 1–60) pass every difficulty band and lint gate; the raw generator that produces unreviewed "shadow" layouts still runs about 10 points harder for casual play on planets 21–60 and is only a CI Watch, not a gate.
 - **Casual bonks on obstacle teaching planets ran a bit above target after M7.5** (about 1.1–1.6 per round against a ≤1.0 target). M8's phase E report lists the bonk bands as now passing, since the obstacle Watch was explicitly handed to M8's difficulty program to own — but this hasn't been independently spot-checked since, so verify it before relying on it.
 - **Gate v2 needs a T0 check:** English and hiragana number words may be readable by children aged 9–11. Test it with real children before launch.
-- **Glossary `BUILT` is current.** `tests/glossary.test.ts` lists M0 through M11 in `BUILT`; update it again the moment M11.5 ships.
+- **Glossary `BUILT` is current.** `tests/glossary.test.ts` lists M0 through M11.5 in `BUILT`; update it again the moment M12 ships.
 - **Glossary watch list:** `tests/glossary.test.ts` prints known translation inconsistencies still to fix. M3 fixed the Japanese galaxy/festival words and some Spanish/Portuguese wording; the rename pass (`db1872f`) fixed more (the Grown-ups area reading like an adult-content label in es/pt/ja, broken Japanese "Your Keeper", German Keeper/Supernova gender, Portuguese "lançamento"); check the printed list for what's left.
 - **Rate button:** "Rate Comet Garden" in Settings can't fall back to the App Store page until the app has a store ID.
 - **Voyage map previews all look alike.** They show each stop's starting planet, which is mostly bare rock.

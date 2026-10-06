@@ -134,7 +134,7 @@ it('pins totals of every central balance table', () => {
       "CHALLENGE_REWARD": 60,
       "CHAPTER_RANK_REWARD": 5565,
       "CHAPTER_REWARD": 230,
-      "CONSTELLATIONS": 855.75,
+      "CONSTELLATIONS": 939.13,
       "CONTINUE_COST": 50,
       "COSMETICS": 1567,
       "COST_K": 53.5,

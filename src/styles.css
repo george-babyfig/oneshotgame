@@ -2989,7 +2989,7 @@ button.lb {
   display: block;
   width: 100%;
   flex: 1 1 52%;
-  min-height: 240px;
+  min-height: 250px;
   touch-action: none;
   border-radius: 22px;
   background: radial-gradient(ellipse at 50% 60%, rgba(60, 50, 150, 0.5), transparent 70%);
@@ -4425,7 +4425,8 @@ button.lb {
 }
 @media (max-height: 700px) {
   .homeworld .hw-canvas {
-    min-height: 140px;
+    min-height: 250px;
+    flex: 0 0 250px;
   }
   .homeworld .hw-panel {
     min-height: 0;
@@ -5570,6 +5571,122 @@ button.lb {
 .starmap-homeworld-level {
   margin: 0 16px 8px;
   width: fit-content;
+}
+.starmap-homeworld-level.glowing {
+  color: #fffbdc;
+  background: #594694;
+  box-shadow:
+    0 0 0 2px #f8e7a1,
+    0 0 18px #f8e7a180;
+}
+.hw-landmark-summary {
+  display: grid;
+  gap: 6px;
+}
+.hw-landmark-summary summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.hw-landmark-summary summary:focus-visible {
+  outline: 2px solid #fff;
+}
+.hw-landmark-summary .btn,
+.hw-land-summary .btn {
+  min-height: 44px;
+  text-align: left;
+}
+.hw-sheet-back {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #383072;
+}
+.hw-landmark-rewards {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(185, 217, 244, 0.09);
+  text-align: left;
+}
+.hw-landmark-rewards p {
+  font-size: max(12px, calc(13px * var(--text-scale)));
+}
+.hw-reward-earned {
+  color: #c7efbb;
+}
+.hw-landmark-picture {
+  display: flex;
+  justify-content: center;
+  min-height: 100px;
+}
+.hw-landmark-route {
+  border-radius: 8px;
+  padding: 7px 9px;
+  background: rgba(185, 217, 244, 0.11);
+}
+.hw-keepsake {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #ffeeb0;
+}
+.hw-earned-card {
+  text-align: center;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 450ms ease,
+    transform 450ms ease;
+}
+.hw-earned-card.shown,
+.celebrate-still .hw-earned-card {
+  opacity: 1;
+  transform: none;
+}
+.hw-beacon-parade {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  margin: 12px 0;
+  overflow: hidden;
+}
+.hw-earned-card.shown .hw-beacon-parade canvas {
+  animation: hw-parade 3.6s ease-in-out both;
+}
+@keyframes hw-parade {
+  from {
+    transform: translateX(-36px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.passport-homeworld-list {
+  display: grid;
+  gap: 6px;
+}
+.passport-homeworld-list p {
+  margin: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hw-earned-card {
+    transition: none;
+  }
+  .hw-earned-card.shown .hw-beacon-parade canvas {
+    animation: none;
+  }
+}
+.celebrate-still .hw-beacon-parade canvas {
+  animation: none !important;
 }
 .hw-level-checklist {
   display: grid;

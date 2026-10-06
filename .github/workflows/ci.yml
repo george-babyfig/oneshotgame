@@ -9,6 +9,7 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    # Includes the Homeworld Life content, clock, migration and payment invariants.
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -88,7 +89,8 @@ jobs:
   economy:
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    # Three paired 90-day careers; the four diagnostic personas run nightly.
+    # Three paired 90-day careers and the Regular Landmark feat-stage gate;
+    # four diagnostic personas run nightly. Keep the timeout until CI time is measured.
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -139,7 +141,7 @@ jobs:
       - run: npm ci
       - run: npm run ${{ matrix.script }}
 
-  # Playwright journeys (J1-J7, prices, gate, overlap, showtime) — one job per browser
+  # Playwright journeys (including the compact M11.5 J5/J2 phone slice) — one job per browser
   # project so the three run in parallel and each stays well inside its time limit.
   e2e:
     runs-on: ubuntu-latest

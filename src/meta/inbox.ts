@@ -10,6 +10,9 @@ import { chaptersDone, friendLevel, FRIEND_LEVELS } from './homeworld';
 import { UNLOCKS, unlocked } from './unlocks';
 import { remixUnlocked } from './remix';
 import { LAB_TEXT } from './labcopy';
+import { LANDMARKS } from './tuning';
+import { landmarkOpen, landmarkState } from './landmarks';
+import type { LandmarkId } from './homeworldLife';
 
 export interface Mail {
   id: string;
@@ -40,8 +43,42 @@ interface Rule {
 }
 
 const MC = 'Mission Control';
+const LANDMARK_LETTERS: Record<LandmarkId, { open: string; finish: string }> = {
+  sprout_garden: {
+    open: 'The garden signpost has room for your first flowers. Every new patch brings the picnic closer.',
+    finish: 'Sprout Flowers brighten the Dens you build. Your friends can share a noon flower picnic, and your Green Thumb title is ready.',
+  },
+  skyglass: {
+    open: 'There is a place for a telescope on the hill. Help it find a new picture in the sky.',
+    finish: "The Skyglass found The Keeper's Kite. Its stars are waiting in your Star Atlas.",
+  },
+  sky_bridge: {
+    open: 'A little island is waiting beyond the rim. Each bridge piece brings it closer.',
+    finish: 'The Floating Isle is here, with three places for decorations.',
+  },
+  comet_pier: {
+    open: 'The Pier is ready for its first pieces. Build it to welcome Zip to your Launch Bay.',
+    finish: 'The Comet Pier is complete. Zip is ready in your Launch Bay.',
+  },
+  keepers_beacon: {
+    open: 'The Beacon is ready for its first pieces. Your light will guide the whole Homeworld.',
+    finish: 'The Beacon shines and its music plays in your Homeworld. Your Golden photo frame and Keeper of Light title are ready.',
+  },
+};
 
 const RULES: Rule[] = [
+  ...LANDMARKS.flatMap((site): Rule[] => [
+    {
+      kind: `landmark-open-${site.id}`,
+      key: (p) => (landmarkOpen(p, site.id) && landmarkState(p, site.id).stage < 4 ? `landmark-open-${site.id}` : null),
+      letter: () => ({ from: MC, title: `${site.name} is ready to build`, body: LANDMARK_LETTERS[site.id].open }),
+    },
+    {
+      kind: `landmark-finish-${site.id}`,
+      key: (p) => (landmarkOpen(p, site.id) && landmarkState(p, site.id).stage === 4 ? `landmark-finish-${site.id}` : null),
+      letter: () => ({ from: MC, title: `${site.name} is complete!`, body: LANDMARK_LETTERS[site.id].finish }),
+    },
+  ]),
   {
     kind: 'welcome',
     key: (p) => (p.tutorial ? 'welcome' : null),

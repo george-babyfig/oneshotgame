@@ -804,6 +804,29 @@ export function drawTrail(g: G, id: string, pts: { x: number; y: number }[], t: 
   pts.forEach((p, k) => {
     const a = (k + 1) / n;
     switch (id) {
+      case 'tr_kite': {
+        // A quiet earned kite ribbon, with a diamond every third point.
+        if (k === 0) break;
+        const q = pts[k - 1];
+        g.globalAlpha = a * 0.8;
+        g.strokeStyle = col(id, 1, '#9ac8d6');
+        g.lineWidth = 1.6;
+        g.beginPath();
+        g.moveTo(q.x, q.y);
+        g.lineTo(p.x, p.y);
+        g.stroke();
+        if (k % 3 === 0) {
+          g.fillStyle = col(id, 0, '#ffe5ad');
+          g.beginPath();
+          g.moveTo(p.x, p.y - 4 * a);
+          g.lineTo(p.x + 3 * a, p.y);
+          g.lineTo(p.x, p.y + 4 * a);
+          g.lineTo(p.x - 3 * a, p.y);
+          g.closePath();
+          g.fill();
+        }
+        break;
+      }
       case 'tr_sparkle':
         if (k % 2) break;
         g.globalAlpha = a * 0.9;

@@ -1,9 +1,12 @@
 // J5 — M10 Homeworld Labs at 320×568 in every shipped language.
 import { expect, test, type Page } from '@playwright/test';
 import { LAUNCHER_IDS, LAUNCHERS, LAUNCH_ROSTER } from '../src/core/launchers';
+import { weatherOn } from '../src/meta/weather';
+import { seasonOf } from '../src/meta/seasons';
 import {
   BROWSER_LOCALE,
   OPEN_MODAL,
+  dismissSheets,
   expectKidSafe,
   expectNoErrors,
   freshInstall,
@@ -14,6 +17,7 @@ import {
   planetFiveHomeworld,
   snap,
   tr,
+  useJourneyViewport,
   watchErrors,
 } from './helpers';
 
@@ -28,7 +32,90 @@ async function selectPlot(page: Page, index: number) {
 
 for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
   test.describe(`J5 ${loc}`, () => {
-    test.use({ locale: BROWSER_LOCALE[loc] });
+    test.use({ locale: BROWSER_LOCALE[loc], timezoneId: 'UTC' });
+
+    test('M11.5 morning, night, winter and drizzle at an injected date', async ({ page }, info) => {
+      test.skip(
+        !['chromium-320x568', 'webkit-320x568'].includes(info.project.name),
+        'The Homeworld Life qualification uses the 320 phone projects and nightly viewport override',
+      );
+      await useJourneyViewport(page);
+      await installJourneyClock(page, '2026-04-06T08:00:00.000Z');
+      const guard = watchErrors(page);
+      await freshInstall(page);
+      await midGame(page, { level: 45 });
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.firstHour = 2;
+        a.p.home.intro = true;
+        a.p.settings.hemi = 'north';
+        a.p.stats.grown.meadow = 10;
+        a.p.home.residents.push({ species: 'owl', fp: 8, lastReq: -1, rewarded: 3 });
+        a.p.home.residents.push({ species: 'otter', fp: 2, lastReq: -1, rewarded: 1 });
+        a.selectTab('homeworld');
+      });
+      for (const [name, date] of [
+        ['morning', '2026-04-06T08:00:00.000Z'],
+        ['night', '2026-04-06T23:00:00.000Z'],
+        ['winter', '2026-01-06T12:00:00.000Z'],
+      ] as const) {
+        await page.clock.setFixedTime(new Date(date));
+        await page.evaluate(() => (window as any).__app.showHomeworld());
+        expect(await page.evaluate(() => new Date().getHours())).toBe(new Date(date).getUTCHours());
+        await expect(page.locator('.hw-canvas')).toBeVisible();
+        await expect(page.locator('.hw-canvas')).toHaveAttribute('data-season', seasonOf(new Date(date), 'north'));
+        await expect(page.locator('.hw-canvas')).toHaveAttribute('data-weather', weatherOn(new Date(date), 'north'));
+        expect(await page.locator('.hw-canvas').evaluate((canvas) => canvas.getBoundingClientRect().height)).toBeGreaterThanOrEqual(250);
+        await snap(page, info, guard, `j5-life-${name}`);
+        await expectKidSafe(page, loc);
+      }
+      // Found in Node: WebKit refuses in-page module imports once the page clock is frozen.
+      const drizzle = (() => {
+        for (let day = 1; day <= 366; day++) {
+          const date = new Date(Date.UTC(2026, 3, day, 12));
+          const result: unknown = weatherOn(date, 'north');
+          if ((typeof result === 'string' ? result : (result as { kind: string }).kind) === 'drizzle') return date.toISOString();
+        }
+        throw new Error('No deterministic drizzle date in a full year');
+      })();
+      await page.clock.setFixedTime(new Date(drizzle));
+      await page.evaluate(() => (window as any).__app.showHomeworld());
+      await expect(page.locator('.hw-canvas')).toHaveAttribute('data-weather', 'drizzle');
+      await snap(page, info, guard, 'j5-life-drizzle');
+      await expectKidSafe(page, loc);
+      await page.getByRole('button', { name: tr(loc, 'Homeworld list') }).click();
+      const list = page.locator(OPEN_MODAL).last();
+      const plots = (await state(page)).home.plots.length;
+      expect(await list.getByRole('button').count()).toBeGreaterThanOrEqual(2 * plots + 6);
+      await expect(list).toContainText(tr(loc, 'Landmarks'));
+      await expect(list).toContainText(tr(loc, 'Pine Owl'));
+      await expect(list).toContainText(tr(loc, 'Tide Otter'));
+      await snap(page, info, guard, 'j5-life-voiceover-list');
+      // Open land 1 by its label: the list starts with a sticky Back button, so positions shift.
+      await list
+        .getByRole('button')
+        .filter({ hasText: tr(loc, 'Land {n}: {name}', { n: 1, name: '' }).trim() })
+        .first()
+        .click();
+      const picker = page.locator(OPEN_MODAL).last();
+      await expect(picker).toContainText(tr(loc, 'Choose a land for this space between plots. You can change it any time.'));
+      await snap(page, info, guard, 'j5-life-land-picker');
+      await picker
+        .getByRole('button')
+        .filter({ hasText: tr(loc, 'Meadow') })
+        .first()
+        .click();
+      expect((await state(page)).home.gaps[0]).toBe('meadow');
+      await page.getByRole('button', { name: tr(loc, 'Choose lands') }).click();
+      await page
+        .locator(OPEN_MODAL)
+        .last()
+        .getByRole('button', { name: tr(loc, 'Automatic') })
+        .click();
+      expect((await state(page)).home.gaps[0]).toBeNull();
+      await dismissSheets(page);
+      expectNoErrors(guard);
+    });
 
     for (const reduceMotion of [false, true]) {
       test(`Level 1 to 2, Vault and Greenhouse choice; Reduce Motion ${reduceMotion}`, async ({ page }, info) => {
@@ -333,6 +420,8 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
         a.p.home.level = 4;
         a.p.home.plots[0] = { type: 'launch_bay', lv: 3, since: Date.now(), done: Date.now() + 300000 };
         a.p.cometPier.stage = 3;
+        a.p.level = 45;
+        for (const id of ['sprout_garden', 'skyglass', 'sky_bridge']) a.p.home.landmarks[id].stage = 4;
         a.p.launcher.tunes.swoop = 1;
         a.p.mats.leaf = 45;
         a.p.mats.dew = 60;
@@ -350,8 +439,14 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
       await swoop.getByRole('button', { name: tr(loc, 'Tune {name} to {n}', { name: tr(loc, 'Swoop'), n: 2 }) }).click();
       expect((await state(page)).launcher.tunes.swoop).toBe(2);
       const zip = page.locator('.bay-card[data-launcher="zip"]');
-      await expect(zip).toContainText(tr(loc, 'Leaf {leaf} of 40 · Dew {dew} of 30', { leaf: '45', dew: '45' }));
-      await zip.getByRole('button', { name: tr(loc, 'Finish Comet Pier') }).click();
+      await expect(zip).toContainText(tr(loc, 'Visit your Homeworld to build Comet Pier'));
+      await expect(zip.getByRole('button', { name: tr(loc, 'Finish Comet Pier') })).toHaveCount(0);
+      await page.evaluate(async () => {
+        const a = (window as any).__app;
+        const landmarks = await (window as any).__e2eImport('/src/meta/landmarks.ts');
+        landmarks.finishLandmark(a.p, 'comet_pier');
+        a.renderScreen('launchbay');
+      });
       expect((await state(page)).cometPier.stage).toBe(4);
       await expect(zip).not.toHaveClass(/locked/);
       await snap(page, info, guard, 'j5-launch-bay-zip-earned');

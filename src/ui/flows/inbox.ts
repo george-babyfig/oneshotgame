@@ -88,6 +88,8 @@ export function inboxFlow(app: App) {
     [
       h('div', { class: 'm-title' }, t('Inbox')),
       rows.some((r) => r) ? h('div', { class: 'mail-list' }, ...rows) : h('p', { class: 'muted' }, t('No letters yet.')),
+      // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
+      btn(t('Back'), 'ghost wide', () => list.close()),
     ],
     { onClose: () => app.refresh() },
   );

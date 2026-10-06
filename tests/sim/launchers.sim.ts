@@ -1,18 +1,42 @@
 import { expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { makeLevel, rngFrom } from '../../src/core/levels';
 import { NO_MODIFIERS } from '../../src/core/modifiers';
 import { fly, flightParamsForLauncher } from '../../src/core/flight';
 import { LAUNCHERS, LAUNCH_ROSTER, launcherAtTune, type LauncherId, type LauncherSelection } from '../../src/core/launchers';
 import { PHONES, PULL_TO_SPEED, findPull, flightWorld, flyPull, seedPulls, seedHint, emptySkyState } from './flying';
-import { PICK_RUNS, POLICIES, aimNoiseForSteps, bestLauncherFor, goodHere, maxLegalLoadout, playLevel } from './harness';
+import {
+  PICK_RUNS,
+  POLICIES,
+  aimNoiseForSteps,
+  bestLauncherFor,
+  goodHere,
+  maxLegalExtraThrows,
+  maxLegalLoadout,
+  playLevel,
+} from './harness';
+import { MOMENTUM_MAX, MOMENTUM_PERKS } from '../../src/meta/momentum';
 
 const rate = (part: number, total: number) => (100 * part) / Math.max(1, total);
+const cappedLift = (row: { total: number; campaignBase: number; campaignMax: number; max: number; maxSling: number; maxNoScope: number }) =>
+  rate(row.campaignMax - row.campaignBase, row.total) +
+  Math.max(0, rate(row.max - row.maxSling, row.total)) +
+  Math.max(0, rate(row.max - row.maxNoScope, row.total));
 const median = (values: number[]) => {
   const sorted = [...values].sort((a, b) => a - b);
   return (sorted[(sorted.length - 1) >> 1] + sorted[sorted.length >> 1]) / 2;
 };
 
 if (process.env.SIM === '1') {
+  it('includes Scope and never lets a worse launcher cancel other uplift', () => {
+    expect(cappedLift({ total: 100, campaignBase: 20, campaignMax: 27, max: 30, maxSling: 32, maxNoScope: 28 })).toBe(9);
+  });
+
+  it('keeps the max-loadout throws tied to the game and Momentum values', () => {
+    const shower = readFileSync('src/ui/game.ts', 'utf8').match(/opts\.boosters\.shower\s*\?\s*(\d+)\s*:\s*0/);
+    expect(shower, 'read the live Comet Shower bonus').not.toBeNull();
+    expect(maxLegalExtraThrows()).toBe(Number(shower?.[1]) + MOMENTUM_PERKS[MOMENTUM_MAX].throws);
+  });
   it('bounds the unvalidated visible-line precision hypothesis', () => {
     expect(aimNoiseForSteps(28)).toBe(1);
     expect(aimNoiseForSteps(90)).toBeGreaterThanOrEqual(0.8);
@@ -86,8 +110,19 @@ if (process.env.SIM === '1') {
     const runs = Number(process.env.LAUNCHER_RUNS ?? 32);
     if (runs < 32 || runs % 2)
       throw Error('Relative launcher uplift gate needs at least 16 paired runs per planet on each of two master seeds');
-    const counts = { total: 0, sling: 0, best: 0, max: 0 };
-    const seedCounts = [0, 1].map(() => ({ total: 0, sling: 0, best: 0, max: 0 }));
+    // maxSling: the same max loadout flown with the Star Sling (isolates the max-tuned launcher);
+    // campaignBase/campaignMax: the same seeds on the campaign aim model, where §7.5's bands live (decision 28).
+    const counts = { total: 0, sling: 0, best: 0, max: 0, maxSling: 0, maxNoScope: 0, campaignBase: 0, campaignMax: 0 };
+    const seedCounts = [0, 1].map(() => ({
+      total: 0,
+      sling: 0,
+      best: 0,
+      max: 0,
+      maxSling: 0,
+      maxNoScope: 0,
+      campaignBase: 0,
+      campaignMax: 0,
+    }));
     const maxChoices = Object.fromEntries(LAUNCH_ROSTER.map((id) => [id, 0])) as Record<LauncherId, number>;
     const hard = { total: 0, slingFail: 0, maxFail: 0 };
     const seedHard = [0, 1].map(() => ({ total: 0, slingFail: 0, maxFail: 0 }));
@@ -97,8 +132,9 @@ if (process.env.SIM === '1') {
       const level = makeLevel(n);
       const maxBySeed = [maxLegalLoadout(level, { masterSeed: 'pick-max-a' }), maxLegalLoadout(level, { masterSeed: 'pick-max-b' })];
       for (const max of maxBySeed) {
-        expect(max.extraThrows, 'decision 35 gated loadout excludes retiring Extra Throws').toBe(0);
-        expect(max.mods.extraThrows).toBe(0);
+        // Decision 35 gates boosters and Momentum (Comet Shower +3, Momentum ×3 +2); the Extra Throws upgrade retired in M11.
+        expect(max.extraThrows, 'decision 35 gated loadout: Comet Shower and Momentum throws only').toBe(maxLegalExtraThrows());
+        expect(max.mods.extraThrows, 'retired Extra Throws upgrade').toBe(0);
       }
       for (const max of maxBySeed) maxChoices[max.mods.launcher.id]++;
       for (let run = 0; run < runs; run++) {
@@ -112,14 +148,26 @@ if (process.env.SIM === '1') {
             id: bestLauncherFor(level, run % 2 ? 'pick-b' : 'pick-a'),
             tune: 1,
           });
-          counts.total++;
-          counts.sling += Number(sling.stars === 3);
-          counts.best += Number(best.stars === 3);
-          counts.max += Number(boosted.stars === 3);
-          seedCounts[run % 2].total++;
-          seedCounts[run % 2].sling += Number(sling.stars === 3);
-          seedCounts[run % 2].best += Number(best.stars === 3);
-          seedCounts[run % 2].max += Number(boosted.stars === 3);
+          const maxSling = playLevel(level, POLICIES['decent-aware'], rngFrom(seed), undefined, flight, 0, {
+            ...max,
+            mods: { ...max.mods, launcher: NO_MODIFIERS.launcher },
+          });
+          const maxNoScope = playLevel(level, POLICIES['decent-aware'], rngFrom(seed), undefined, flight, 0, {
+            ...max,
+            mods: { ...max.mods, scopeLevel: 0, boosters: { ...max.mods.boosters, scope: false } },
+          });
+          const campaignBase = playLevel(level, POLICIES['decent-aware'], rngFrom(seed));
+          const campaignMax = playLevel(level, POLICIES['decent-aware'], rngFrom(seed), undefined, undefined, 0, max);
+          for (const row of [counts, seedCounts[run % 2]]) {
+            row.total++;
+            row.sling += Number(sling.stars === 3);
+            row.best += Number(best.stars === 3);
+            row.max += Number(boosted.stars === 3);
+            row.maxSling += Number(maxSling.stars === 3);
+            row.maxNoScope += Number(maxNoScope.stars === 3);
+            row.campaignBase += Number(campaignBase.stars === 3);
+            row.campaignMax += Number(campaignMax.stars === 3);
+          }
         } else if (level.difficulty === 'hard' && n >= 25) {
           hard.total++;
           hard.slingFail += Number(sling.stars === 0);
@@ -139,11 +187,18 @@ if (process.env.SIM === '1') {
     }
     const lift = rate(counts.best - counts.sling, counts.total);
     const maxLift = rate(counts.max - counts.sling, counts.total);
+    const launcherInMax = Math.max(0, rate(counts.max - counts.maxSling, counts.total));
+    const scopeInMax = Math.max(0, rate(counts.max - counts.maxNoScope, counts.total));
+    const campaignLift = rate(counts.campaignMax - counts.campaignBase, counts.total);
+    const capped = cappedLift(counts);
     console.log(
       `Relative to paired Sling, normal 21-60: Sling ${rate(counts.sling, counts.total).toFixed(2)}%, best ${rate(counts.best, counts.total).toFixed(2)}%, uplift ${lift.toFixed(2)}pt, max ${rate(counts.max, counts.total).toFixed(2)}%, max uplift ${maxLift.toFixed(2)}pt; ${counts.total} paired rounds; ${((performance.now() - started) / 1000).toFixed(1)}s`,
     );
     console.log(
       `Relative to paired Sling, Hard 25+ fail: Sling ${rate(hard.slingFail, hard.total).toFixed(2)}%, max ${rate(hard.maxFail, hard.total).toFixed(2)}% (${hard.total} paired rounds); Super Hard Sling ${rate(superHard.slingFail, superHard.total).toFixed(2)}%, max ${rate(superHard.maxFail, superHard.total).toFixed(2)}% (${superHard.total} paired rounds)`,
+    );
+    console.log(
+      `Decision 54 max-loadout cap: campaign-model loadout uplift ${campaignLift.toFixed(2)}pt (${rate(counts.campaignBase, counts.total).toFixed(2)}% → ${rate(counts.campaignMax, counts.total).toFixed(2)}%) + real-flight max-tuned launcher inside the max loadout ${launcherInMax.toFixed(2)}pt + Scope ${scopeInMax.toFixed(2)}pt = ${capped.toFixed(2)}pt (cap 15); Watch real-flight total ${maxLift.toFixed(2)}pt on a ${rate(counts.sling, counts.total).toFixed(2)}% Sling base`,
     );
     console.log(`Max-loadout chosen launcher by planet: ${JSON.stringify(maxChoices)}`);
     console.log('Physical-flight absolute rates above are context; chapter bands use the campaign aim model.');
@@ -151,6 +206,7 @@ if (process.env.SIM === '1') {
       label: string;
       bestLift: number;
       maxLift: number;
+      capped: number;
       hardFail: number;
       slingHardFail: number;
       superFail: number;
@@ -163,15 +219,17 @@ if (process.env.SIM === '1') {
       const label = arm ? 'b' : 'a';
       const bestLift = rate(row.best - row.sling, row.total);
       const maxLift = rate(row.max - row.sling, row.total);
+      const seedCapped = cappedLift(row);
       const hardFail = rate(h.maxFail, h.total);
       const superFail = rate(sh.maxFail, sh.total);
       console.log(
-        `Paired master ${label}: best +${bestLift.toFixed(2)}pt, max +${maxLift.toFixed(2)}pt (${row.total} normal pairs); Hard fail ${hardFail.toFixed(2)}% vs Sling ${rate(h.slingFail, h.total).toFixed(2)}% (${h.total}); Super Hard fail ${superFail.toFixed(2)}% vs Sling ${rate(sh.slingFail, sh.total).toFixed(2)}% (${sh.total})`,
+        `Paired master ${label}: best +${bestLift.toFixed(2)}pt, decision 54 capped max +${seedCapped.toFixed(2)}pt, real-flight max Watch +${maxLift.toFixed(2)}pt (${row.total} normal pairs); Hard fail ${hardFail.toFixed(2)}% vs Sling ${rate(h.slingFail, h.total).toFixed(2)}% (${h.total}); Super Hard fail ${superFail.toFixed(2)}% vs Sling ${rate(sh.slingFail, sh.total).toFixed(2)}% (${sh.total})`,
       );
       seedMetrics.push({
         label,
         bestLift,
         maxLift,
+        capped: seedCapped,
         hardFail,
         slingHardFail: rate(h.slingFail, h.total),
         superFail,
@@ -180,7 +238,9 @@ if (process.env.SIM === '1') {
     }
     for (const row of seedMetrics) {
       console.log(`Watch master ${row.label} best-launcher uplift: +${row.bestLift.toFixed(2)}pt`);
-      expect(row.maxLift, `master ${row.label} max legal loadout uplift ≤15pt`).toBeLessThanOrEqual(15);
+      // Decision 54: the +15 cap is gated on the pooled 896 pairs below. One seed's 448 pairs swing several points
+      // (the launcher share alone ran +2.68 vs −0.22), so each seed's composite is a Watch.
+      console.log(`Watch master ${row.label} decision 54 composite: +${row.capped.toFixed(2)}pt (cap 15 is gated pooled)`);
       expect(row.hardFail, `master ${row.label} Hard fail ≥6%`).toBeGreaterThanOrEqual(6);
       expect(row.hardFail, `master ${row.label} Hard fail ≥half Sling`).toBeGreaterThanOrEqual(row.slingHardFail / 2);
       expect(row.superFail, `master ${row.label} Super Hard fail ≥15%`).toBeGreaterThanOrEqual(15);
@@ -188,7 +248,7 @@ if (process.env.SIM === '1') {
     }
     expect(lift, 'best launcher 3★ uplift vs paired Sling +0.5 to +6 points').toBeGreaterThanOrEqual(0.5);
     expect(lift, 'best launcher 3★ uplift vs paired Sling +2 to +6 points').toBeLessThanOrEqual(6);
-    expect(maxLift, 'max legal loadout 3★ uplift vs paired Sling ≤15 points').toBeLessThanOrEqual(15);
+    expect(capped, 'decision 54 max legal loadout 3★ uplift ≤15 points').toBeLessThanOrEqual(15);
     expect(hard.slingFail, 'Hard paired Sling failures needed for relative gate').toBeGreaterThan(0);
     expect(superHard.slingFail, 'Super Hard paired Sling failures needed for relative gate').toBeGreaterThan(0);
     expect(rate(hard.maxFail, hard.total), 'Hard max fail ≥half paired Sling fail').toBeGreaterThanOrEqual(

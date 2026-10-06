@@ -18,7 +18,8 @@ import { earn, spend } from './wallet';
 // - Expedition destinations are free and deterministic from the clock.
 import type { Profile } from './profile';
 import type { BoosterId } from './config';
-import { SPECIES, SPECIES_BY_ID, type Kind } from '../core/world';
+import { BIOMES, SPECIES, SPECIES_BY_ID, type BiomeId, type Kind, type Planet } from '../core/world';
+import type { LandmarkId, LandmarkState } from './homeworldLife';
 import { rngFrom } from '../core/levels';
 import { LEVELS_PER_CHAPTER } from './progression';
 import { unlocked } from './unlocks';
@@ -181,6 +182,14 @@ export interface HomeState {
   firstHour: 0 | 1 | 2;
   labFreeUsed: boolean;
   plots: (Building | null)[];
+  /** One purely visual land choice between each pair of plots. */
+  gaps: (BiomeId | null)[];
+  /** Three purely visual choices on the Floating Isle. */
+  isleDecor: (string | null)[];
+  landmarks: Record<LandmarkId, LandmarkState>;
+  seen: { celebrations: string[] };
+  /** Stable win keys already included in stats.grown. */
+  grownRoundKeys: string[];
   residents: Resident[];
   expedition: Expedition | null;
   /** Plots with meteor debris waiting to be cleared. */
@@ -253,6 +262,17 @@ export function defaultHome(now = Date.now()): HomeState {
     firstHour: 0,
     labFreeUsed: false,
     plots: Array(RING_PLOTS[1]).fill(null),
+    gaps: Array(RING_PLOTS[1]).fill(null),
+    isleDecor: [null, null, null],
+    landmarks: {
+      sprout_garden: { stage: 0, progress: [], rewarded: [], rounds: [], arrivals: [], planets: [] },
+      skyglass: { stage: 0, progress: [], rewarded: [], rounds: [], arrivals: [], planets: [] },
+      sky_bridge: { stage: 0, progress: [], rewarded: [], rounds: [], arrivals: [], planets: [] },
+      comet_pier: { stage: 0, progress: [], rewarded: [], rounds: [], arrivals: [], planets: [] },
+      keepers_beacon: { stage: 0, progress: [], rewarded: [], rounds: [], arrivals: [], planets: [] },
+    },
+    seen: { celebrations: [] },
+    grownRoundKeys: [],
     residents: [],
     expedition: null,
     debris: [],
@@ -440,7 +460,96 @@ export function expand(p: Profile): RingCheck {
   p.home.level = next;
   p.home.ring = next;
   while (p.home.plots.length < RING_PLOTS[next]) p.home.plots.push(null);
+  while (p.home.gaps.length < RING_PLOTS[next]) p.home.gaps.push(null);
   return 'ok';
+}
+
+/** Barren is the empty starting ground, never a selectable grown land. */
+export const GROWABLE_LANDS = (Object.keys(BIOMES) as BiomeId[]).filter((id) => id !== 'barren');
+
+/** Built decorations and earned gifts can be shown on the Isle without another purchase. */
+export function ownedIsleDecorations(p: Profile): string[] {
+  const owned: string[] = p.home.plots.filter((b) => b && BUILDINGS[b.type].decor).map((b) => b!.type);
+  if (p.home.landmarks.sprout_garden.stage === 4) owned.push('flowers');
+  for (const species of p.mementos) if (SPECIES_BY_ID[species]) owned.push(`keepsake:${species}`);
+  for (const friend of p.home.residents) if (friend.fp >= 25) owned.push(`keepsake:${friend.species}`);
+  return [...new Set(owned)];
+}
+
+export function setIsleDecoration(p: Profile, spot: number, id: string | null): boolean {
+  if (p.home.landmarks.sky_bridge.stage !== 4 || !Number.isInteger(spot) || spot < 0 || spot >= 3) return false;
+  if (id !== null && !ownedIsleDecorations(p).includes(id)) return false;
+  if (id !== null) p.home.isleDecor = p.home.isleDecor.map((current, i) => (i !== spot && current === id ? null : current));
+  p.home.isleDecor[spot] = id;
+  return true;
+}
+
+export function availableLands(p: Profile): BiomeId[] {
+  return GROWABLE_LANDS.filter((id) => (p.stats.grown[id] ?? 0) >= 10).sort(
+    (a, b) => (p.stats.grown[b] ?? 0) - (p.stats.grown[a] ?? 0) || a.localeCompare(b),
+  );
+}
+
+/** Automatic gaps favour grown lands while avoiding identical neighbours where possible. */
+export function resolvedGaps(p: Profile): (BiomeId | null)[] {
+  const available = availableLands(p);
+  const resolved: (BiomeId | null)[] = [];
+  p.home.gaps.forEach((choice) => {
+    if (choice && available.includes(choice)) {
+      resolved.push(choice);
+      return;
+    }
+    if (!available.length) {
+      resolved.push(null);
+      return;
+    }
+    const previous = resolved.at(-1);
+    resolved.push(available.find((id) => id !== previous) ?? available[0]);
+  });
+  return resolved;
+}
+
+/** A null choice restores automatic placement; every choice is free and reversible. */
+export function setGapLand(p: Profile, index: number, choice: BiomeId | null): boolean {
+  if (!Number.isInteger(index) || index < 0 || index >= p.home.gaps.length) return false;
+  if (choice !== null && !availableLands(p).includes(choice)) return false;
+  p.home.gaps[index] = choice;
+  return true;
+}
+
+/** Presentation only: the grant happens before this ID is queued. */
+export function queueHomeCelebration(p: Profile, id: string): void {
+  if (!p.home.seen.celebrations.includes(id)) p.home.seen.celebrations.push(id);
+}
+
+export function takeHomeCelebrations(p: Profile): string[] {
+  return p.home.seen.celebrations.splice(0);
+}
+
+/** Summarize the final planet only; the caller supplies it after a win. */
+export function grownSectorsOf(planet: Pick<Planet, 'sectors'>): Partial<Record<BiomeId, number>> {
+  const counts: Partial<Record<BiomeId, number>> = {};
+  for (const sector of planet.sectors) {
+    if (sector.biome !== 'barren') counts[sector.biome] = (counts[sector.biome] ?? 0) + 1;
+  }
+  return counts;
+}
+
+/** Count only evidence from a winning campaign, Voyage, or Zen round. */
+export function recordGrownSectors(
+  p: Profile,
+  event: Pick<WonRoundEvent, 'mode' | 'planetKey' | 'at'> & { grownSectors?: Partial<Record<BiomeId, number>>; roundKey?: string },
+): boolean {
+  if (!['campaign', 'voyage', 'zen'].includes(event.mode) || !event.grownSectors) return false;
+  const key = event.roundKey ?? `${event.mode}|${event.planetKey}|${event.at}`;
+  if (p.home.grownRoundKeys.includes(key)) return false;
+  for (const id of GROWABLE_LANDS) {
+    const n = event.grownSectors[id];
+    if (typeof n === 'number' && Number.isFinite(n) && n > 0) p.stats.grown[id] = (p.stats.grown[id] ?? 0) + Math.floor(n);
+  }
+  p.home.grownRoundKeys.push(key);
+  if (p.home.grownRoundKeys.length > 64) p.home.grownRoundKeys.splice(0, p.home.grownRoundKeys.length - 64);
+  return true;
 }
 
 // ------------------------------------------------------------------ production
@@ -543,10 +652,14 @@ export function recordGreenhouseWin(p: Profile, event: WonRoundEvent): number {
 }
 
 /** Called once after a completed win, with the Buddy used in that round. */
-export function recordHomeworldWin(p: Profile, event: WonRoundEvent): void {
-  const key = `${event.mode}|${event.planetKey}|${event.at}`;
-  if (p.home.lastWonRound === key) return;
+export function recordHomeworldWin(
+  p: Profile,
+  event: WonRoundEvent & { grownSectors?: Partial<Record<BiomeId, number>>; roundKey?: string },
+): void {
+  const key = event.roundKey ?? `${event.mode}|${event.planetKey}|${event.at}`;
+  if (p.home.lastWonRound === key || p.home.grownRoundKeys.includes(key)) return;
   p.home.lastWonRound = key;
+  recordGrownSectors(p, event);
   recordGreenhouseWin(p, event);
   if (event.mode === 'campaign') speedUpBuilds(p.home, WIN_SPEEDUP, event.at);
   if (!['campaign', 'voyage', 'zen'].includes(event.mode) || !event.buddySpecies) return;
@@ -665,14 +778,30 @@ export function sendHome(p: Profile, species: string): boolean {
 
 /** Add friendship points, paying each newly reached level exactly once. */
 export function addFriendship(p: Profile, r: Resident, pts: number): { levelUp?: number; gems?: number } {
-  r.fp += pts;
+  if (!Number.isFinite(pts) || pts < 0) return {};
+  r.fp += Math.floor(pts);
   const lv = friendLevel(r.fp);
   if (lv <= r.rewarded) return {};
+  const paidThrough = r.rewarded;
   let gems = 0;
-  for (let l = r.rewarded + 1; l <= lv; l++) gems += FRIENDSHIP_REWARD_GEMS_PER_LEVEL * l;
+  for (let l = paidThrough + 1; l <= lv; l++) gems += FRIENDSHIP_REWARD_GEMS_PER_LEVEL * l;
   earn(p, 'gems', gems, 'buddy');
   r.rewarded = lv;
+  for (let l = paidThrough + 1; l <= lv; l++) {
+    const id = `friend:${r.species}:level:${l}`;
+    queueHomeCelebration(p, id);
+  }
   if (lv >= FRIEND_LEVELS.length && !p.mementos.includes(r.species)) p.mementos.push(r.species);
+  if (lv >= FRIEND_LEVELS.length) {
+    const id = `best-${r.species}`;
+    if (!p.mailSeen.includes(id) && !p.mail.some((m) => m.id === id)) {
+      // The letter is presentation only: its 25 gems are paid at the point gain.
+      earn(p, 'gems', 25, 'buddy');
+      gems += 25;
+      p.mailSeen.push(id);
+      p.mail.unshift({ id, kind: 'best', at: Date.now(), read: false, claimed: true, vars: { c: r.species } });
+    }
+  }
   return { levelUp: lv, gems };
 }
 
@@ -779,6 +908,7 @@ export function homeBadge(p: Profile, now = Date.now()) {
   if (anyReady(h, now)) n++;
   if (now >= (h.lastTick ?? 0) && h.plots.some((b) => b?.done && b.done <= now)) n++;
   if (expeditionBack(h, now)) n++;
+  if (h.seen.celebrations.length) n++;
   return n;
 }
 

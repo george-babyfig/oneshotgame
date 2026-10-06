@@ -9,6 +9,7 @@ import type { BiomeId, Planet } from '../core/world';
 import type { Profile } from './profile';
 import { applyReward, type Reward } from './progression';
 import { unlocked } from './unlocks';
+import { landmarkState } from './landmarks';
 
 export type Mat = 'stone' | 'dew' | 'leaf' | 'ember' | 'frost';
 export type Essence = Mat;
@@ -90,8 +91,9 @@ export const CONSTELLATION_BY_ID: Record<string, Constellation> = Object.fromEnt
 
 /** The Atlas keeps two neighbouring unfinished constellations open. */
 export function unlockedConstellation(p: Profile, i: number) {
-  const first = CONSTELLATIONS.findIndex((c) => !p.constellations.includes(c.id));
   if (i < 0 || i >= CONSTELLATIONS.length) return false;
+  if (CONSTELLATIONS[i].id === 'kite') return landmarkState(p, 'skyglass').stage === 4;
+  const first = CONSTELLATIONS.findIndex((c) => c.id !== 'kite' && !p.constellations.includes(c.id));
   if (p.constellations.includes(CONSTELLATIONS[i].id)) return true;
   if (first < 0) return false;
   return i >= first && i < first + (unlocked(p, 'star_atlas') ? 2 : 1);

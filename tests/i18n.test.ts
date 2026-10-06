@@ -11,7 +11,7 @@ import { TROUBLES } from '../src/core/troubles';
 import { TWISTS } from '../src/core/levels';
 import { OBSTACLES } from '../src/core/sky';
 import { BOOSTERS, SKINS, UPGRADES } from '../src/meta/config';
-import { PRODUCT_TEXT_KEYS } from '../src/meta/tuning';
+import { LANDMARKS, PRODUCT_TEXT_KEYS } from '../src/meta/tuning';
 import { HABITATS } from '../src/meta/habitats';
 import { EVENTS } from '../src/meta/events';
 import { RANK_TITLES, RANK_UNLOCKS } from '../src/meta/rank';
@@ -114,6 +114,13 @@ export function allKeys(): string[] {
   FRAMES.forEach((x) => add(x.name));
   letterStrings().forEach(add);
   CONSTELLATIONS.forEach((c) => add(c.name));
+  LANDMARKS.forEach(
+    (site) => (
+      add(site.name),
+      add(site.finish),
+      site.stages.forEach((stage) => (add(stage.ask), stage.routes.forEach((route) => add(route.label))))
+    ),
+  );
   Object.values(MAT_NAMES).forEach(add);
   DYES.forEach((d) => add(d.name));
   Object.values(LORE).forEach(add);

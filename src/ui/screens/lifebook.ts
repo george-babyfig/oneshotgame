@@ -30,7 +30,7 @@ function card(p: Profile, s: SpeciesDef, got: boolean) {
     pose = 'wave';
     window.setTimeout(() => (pose = 'idle'), 750);
   };
-  modal(
+  const box = modal(
     [
       h('div', { class: `lb-big r-${s.rarity}${got ? '' : ' locked'}${studied(p, s.id) ? ' studied' : ''}`, onclick: wave }, portrait),
       h('div', { class: 'm-sub' }, rarityName(s.rarity)),
@@ -60,6 +60,8 @@ function card(p: Profile, s: SpeciesDef, got: boolean) {
                 : null,
           )
         : null,
+      // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
+      btn(t('Back'), 'ghost wide', () => box.close()),
     ],
     { onClose: () => stop() },
   );

@@ -209,6 +209,15 @@ export const COSMETICS: Cosmetic[] = [
   ...BASE_COSMETICS.map((item) => ({ ...item, name: LOOK_NAMES[item.id] ?? item.name })),
   ...SHOWTIME_COSMETICS,
   ...STARDUST_COSMETICS,
+  {
+    id: 'tr_kite',
+    slot: 'trail',
+    name: "The Keeper's Kite",
+    source: 'constellation',
+    unlock: 'kite',
+    tier: 'epic',
+    colors: ['#ffe5ad', '#9ac8d6'],
+  },
 ];
 
 export const COSMETIC_BY_ID: Record<string, Cosmetic> = Object.fromEntries(COSMETICS.map((x) => [x.id, x]));

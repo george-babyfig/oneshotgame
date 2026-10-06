@@ -195,6 +195,8 @@ function stopSheet(app: App, i: number) {
       m.close();
       play(app, i);
     }),
+    // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
+    btn(t('Back'), 'ghost wide', () => m.close()),
   ]);
 }
 

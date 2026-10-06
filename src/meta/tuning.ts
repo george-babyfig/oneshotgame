@@ -532,6 +532,257 @@ export const CONSTELLATIONS: Constellation[] = [
     ],
     reward: { gems: 150, item: 'hat_star' },
   },
+  {
+    id: 'kite',
+    name: "The Keeper's Kite",
+    stars: [
+      [0.5, 0.1],
+      [0.18, 0.42],
+      [0.5, 0.65],
+      [0.82, 0.42],
+      [0.65, 0.82],
+      [0.42, 0.9],
+    ],
+    lines: [
+      [0, 1],
+      [1, 2],
+      [2, 3],
+      [3, 0],
+      [2, 4],
+      [4, 5],
+    ],
+    bundles: [
+      { id: 'kite-1', need: { leaf: 8, dew: 5 } },
+      { id: 'kite-2', need: { stone: 8, dew: 5 } },
+      { id: 'kite-3', need: { leaf: 8, stone: 8, dew: 8 } },
+    ],
+    reward: { item: 'tr_kite' },
+  },
+];
+
+import type { LandmarkId } from './homeworldLife';
+import type { BiomeId } from '../core/world';
+import type { UnlockId } from './unlocks';
+
+export type LandmarkMetric =
+  | 'grown'
+  | 'arrivals'
+  | 'reaction'
+  | 'fusions'
+  | 'newStars'
+  | 'supernovas'
+  | 'settled'
+  | 'settledVent'
+  | 'settledVine'
+  | 'hardWins'
+  | 'normalThreeStars'
+  | 'threeStars'
+  | 'newKinds'
+  | 'bestFriends'
+  | 'friendLevelThree'
+  | 'constellations'
+  | 'bundles';
+export interface LandmarkRoute {
+  label: string;
+  metric: LandmarkMetric;
+  target: number;
+  biomes?: BiomeId[];
+  reaction?: 'steam' | 'rainGarden' | 'wildflowers' | 'glacier';
+  taught: UnlockId;
+}
+export interface LandmarkStageDef {
+  ask: string;
+  routes: readonly LandmarkRoute[];
+  reward: { dust?: number; gems?: number };
+}
+export interface LandmarkDef {
+  id: LandmarkId;
+  name: string;
+  level: 1 | 2 | 3 | 4 | 5;
+  stages: readonly [LandmarkStageDef, LandmarkStageDef, LandmarkStageDef];
+  delivery: Partial<Record<'leaf' | 'dew' | 'stone', number>>;
+  finish: string;
+}
+
+/** Fixed, never-expiring asks. Alternative routes use the same event count where possible. */
+export const LANDMARKS: readonly LandmarkDef[] = [
+  {
+    id: 'sprout_garden',
+    name: 'Sprout Garden',
+    level: 1,
+    stages: [
+      {
+        ask: 'Grow 12 Meadow or Forest sectors, or 12 Marsh, Jungle, or Savanna sectors',
+        routes: [
+          { label: 'Meadow or Forest sectors', metric: 'grown', target: 12, biomes: ['meadow', 'forest'], taught: 'homeworld' },
+          {
+            label: 'Marsh, Jungle, or Savanna sectors',
+            metric: 'grown',
+            target: 12,
+            biomes: ['marsh', 'jungle', 'savanna'],
+            taught: 'homeworld',
+          },
+        ],
+        reward: { dust: 100 },
+      },
+      {
+        ask: 'Welcome 8 different creatures or earn 8 new stars',
+        routes: [
+          { label: 'different creatures', metric: 'arrivals', target: 8, taught: 'homeworld' },
+          { label: 'new stars', metric: 'newStars', target: 8, taught: 'homeworld' },
+        ],
+        reward: { gems: 10 },
+      },
+      {
+        ask: 'Make 3 Wildflowers or 3 Rain Gardens',
+        routes: [
+          { label: 'Wildflowers', metric: 'reaction', reaction: 'wildflowers', target: 3, taught: 'wildflowers' },
+          { label: 'Rain Gardens', metric: 'reaction', reaction: 'rainGarden', target: 3, taught: 'rainGarden' },
+        ],
+        reward: { dust: 150 },
+      },
+    ],
+    delivery: { leaf: 15 },
+    finish: 'Sprout Flowers by your Dens and the Green Thumb title',
+  },
+  {
+    id: 'skyglass',
+    name: 'Skyglass',
+    level: 2,
+    stages: [
+      {
+        ask: 'Earn 12 new stars or welcome 12 different creatures',
+        routes: [
+          { label: 'new stars', metric: 'newStars', target: 12, taught: 'homeworld' },
+          { label: 'different creatures', metric: 'arrivals', target: 12, taught: 'homeworld' },
+        ],
+        reward: { dust: 100 },
+      },
+      {
+        ask: 'Fire 6 Supernovas or make 6 Fusions',
+        routes: [
+          { label: 'Supernovas', metric: 'supernovas', target: 6, taught: 'supernova' },
+          { label: 'Fusions', metric: 'fusions', target: 6, taught: 'steam' },
+        ],
+        reward: { gems: 10 },
+      },
+      {
+        ask: 'Make 4 Steam or any 4 Fusions',
+        routes: [
+          { label: 'Steam', metric: 'reaction', reaction: 'steam', target: 4, taught: 'steam' },
+          { label: 'Fusions', metric: 'fusions', target: 4, taught: 'steam' },
+        ],
+        reward: { dust: 150 },
+      },
+    ],
+    delivery: { stone: 20, dew: 15 },
+    finish: "The Keeper's Kite and the Sky Finder title",
+  },
+  {
+    id: 'sky_bridge',
+    name: 'Sky Bridge',
+    level: 3,
+    stages: [
+      {
+        ask: 'Grow 15 Mountain or Highland sectors, or 15 Tundra, Taiga, or Ice Sheet sectors',
+        routes: [
+          { label: 'Mountain or Highland sectors', metric: 'grown', target: 15, biomes: ['mountain', 'highland'], taught: 'homeworld' },
+          {
+            label: 'Tundra, Taiga, or Ice Sheet sectors',
+            metric: 'grown',
+            target: 15,
+            biomes: ['tundra', 'taiga', 'icesheet'],
+            taught: 'homeworld',
+          },
+        ],
+        reward: { dust: 150 },
+      },
+      {
+        ask: 'Make 3 Glaciers or grow 10 cold sectors',
+        routes: [
+          { label: 'Glaciers', metric: 'reaction', reaction: 'glacier', target: 3, taught: 'glacier' },
+          { label: 'Cold sectors', metric: 'grown', target: 10, biomes: ['tundra', 'taiga', 'icesheet'], taught: 'homeworld' },
+        ],
+        reward: { gems: 15 },
+      },
+      {
+        ask: 'Cool 4 Ember Vents or clear 4 Tanglevines',
+        routes: [
+          { label: 'Ember Vents', metric: 'settledVent', target: 4, taught: 'vent' },
+          { label: 'Tanglevines', metric: 'settledVine', target: 4, taught: 'vine' },
+        ],
+        reward: { dust: 200 },
+      },
+    ],
+    delivery: { stone: 40, dew: 20 },
+    finish: 'The Floating Isle and the Bridge Builder title',
+  },
+  {
+    id: 'comet_pier',
+    name: 'Comet Pier',
+    level: 4,
+    stages: [
+      {
+        ask: 'Win 3 Hard planets or get 3 stars on 6 Normal planets',
+        routes: [
+          { label: 'Hard planets', metric: 'hardWins', target: 3, taught: 'hard' },
+          { label: 'Normal planets', metric: 'normalThreeStars', target: 6, taught: 'homeworld' },
+        ],
+        reward: { dust: 200 },
+      },
+      {
+        ask: 'Settle 8 Troubles or make 8 Fusions',
+        routes: [
+          { label: 'Troubles', metric: 'settled', target: 8, taught: 'vent' },
+          { label: 'Fusions', metric: 'fusions', target: 8, taught: 'steam' },
+        ],
+        reward: { gems: 15 },
+      },
+      {
+        ask: 'Make 10 Fusions or earn 10 new stars',
+        routes: [
+          { label: 'Fusions', metric: 'fusions', target: 10, taught: 'steam' },
+          { label: 'new stars', metric: 'newStars', target: 10, taught: 'homeworld' },
+        ],
+        reward: { dust: 250 },
+      },
+    ],
+    delivery: { leaf: 40, dew: 30 },
+    finish: 'Zip in the Launch Bay and the Harbour Keeper title',
+  },
+  {
+    id: 'keepers_beacon',
+    name: "Keeper's Beacon",
+    level: 5,
+    stages: [
+      {
+        ask: 'Make 5 Rain Gardens or reach 3 stars on 5 planets',
+        routes: [
+          { label: 'Rain Gardens', metric: 'reaction', reaction: 'rainGarden', target: 5, taught: 'rainGarden' },
+          { label: '3 stars on 5 planets', metric: 'threeStars', target: 5, taught: 'homeworld' },
+        ],
+        reward: { dust: 250 },
+      },
+      {
+        ask: 'Become best friends with a friend or reach Friendship Level 3 with 4 friends',
+        routes: [
+          { label: 'best friends', metric: 'bestFriends', target: 1, taught: 'homeworld' },
+          { label: 'Friendship Level 3', metric: 'friendLevelThree', target: 4, taught: 'homeworld' },
+        ],
+        reward: { gems: 20 },
+      },
+      {
+        ask: 'Light 2 constellations or fill 5 Star Atlas bundles',
+        routes: [
+          { label: 'constellations', metric: 'constellations', target: 2, taught: 'star_atlas' },
+          { label: 'Star Atlas bundles', metric: 'bundles', target: 5, taught: 'star_atlas' },
+        ],
+        reward: { dust: 300 },
+      },
+    ],
+    delivery: { leaf: 50, stone: 50, dew: 50 },
+    finish: 'Beacon music, the Golden photo frame and the Keeper of Light title',
+  },
 ];
 
 import type { Cosmetic } from './cosmetics';

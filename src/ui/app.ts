@@ -82,10 +82,11 @@ import { showVoyage } from './screens/voyage';
 import { showAlbum } from './screens/album';
 import { festivalFlow } from './flows/festival';
 import { ensureFestival, festivalActive, festivalLive, spotFestival } from '../meta/festivals';
-import { recordHomeworldWin, tickHome } from '../meta/homeworld';
+import { tickHome } from '../meta/homeworld';
 import { needsSlingGhost, pendingLauncherIntroAfterWin, resolveLauncher, SLING_SELECTION } from '../meta/launcherPick';
 import { launcherBay, recordLauncherFling, recordLauncherRound } from '../meta/launchbay';
-import { recordCometPierStep, recordCometPierWin } from '../meta/landmarks';
+import { settleHomeworldRound } from '../meta/roundSettlement';
+import { refreshLandmarkSnapshots } from '../meta/landmarks';
 import { activeForms, labLevels, recordLabEvents } from '../meta/labs';
 import { showFormReveal } from './flows/labmoments';
 import { addFling } from '../meta/records';
@@ -292,11 +293,14 @@ export class App {
   }
 
   save() {
+    // Friend, bundle and constellation actions all save through App.
+    refreshLandmarkSnapshots(this.p);
     clearTimeout(this.saveTimer);
     this.saveTimer = window.setTimeout(() => saveProfile(this.p), 150);
   }
 
   saveNow() {
+    refreshLandmarkSnapshots(this.p);
     clearTimeout(this.saveTimer);
     return saveProfile(this.p);
   }
@@ -305,6 +309,7 @@ export class App {
     const scene = this.screen === 'level' ? this.scene : null;
     if (
       !scene ||
+      !/^(PP|RX)-/.test(scene.L.seed) ||
       scene.ended ||
       scene.finishing ||
       scene.o.roundMode === 'practice' ||
@@ -341,6 +346,9 @@ export class App {
       reactionEvents: scene.reactionEvents,
       roundLog: scene.roundLog,
       labSteps: scene.labSteps,
+      roundKey: scene.o.roundKey,
+      knownKindsBefore: scene.o.knownKindsBefore,
+      landmarkSteps: scene.landmarkSteps,
       reactionsSeen: [...scene.reactionsSeen],
       comboEvents: scene.comboEvents,
       warmup: !!scene.o.practice,
@@ -352,6 +360,7 @@ export class App {
       mistTipShown: scene.mistTipShown,
       gustTipShown: scene.gustTipShown,
     } as RoundCheckpoint & {
+      knownKindsBefore?: string[];
       roundLog: typeof scene.roundLog;
       skyState: SkyState;
       practiceBonkUsed: boolean;
@@ -687,6 +696,7 @@ export class App {
     }
     ledger.discover('homeworld', this.p.level);
     if (this.screen !== 'homeworld') ledger.homeworldOpen();
+    refreshLandmarkSnapshots(this.p);
     showHomeworld(this);
   }
   settings() {
@@ -827,7 +837,8 @@ export class App {
     tutorial = false,
   ): SceneOpts {
     const earnedForms: Kind[] = [];
-    let homeworldWinRecorded = false;
+    const roundKey = extra.roundKey ?? globalThis.crypto?.randomUUID?.() ?? `${Date.now()}:${Math.random()}`;
+    const knownKindsAtStart = extra.knownKindsBefore ?? [...this.p.seen];
     this.roundBuildsSpedUp = false;
     const skin = SKINS.find((s) => s.id === this.p.skin && (!this.p.settings.hidePaidLooks || (!s.starter && !s.pass))) ?? SKINS[0];
     const look = currentLook(this.p);
@@ -915,10 +926,6 @@ export class App {
         earnedForms.push(...recordLabEvents(this.p, step, mode === 'tutorial' ? 'campaign' : mode));
         this.saveNow();
       },
-      onPierStep: (step) => {
-        recordCometPierStep(this.p, step, mode === 'tutorial' ? 'campaign' : mode);
-        this.saveNow();
-      },
       onCombo: (links, reaction, superFusion) => {
         recordCombo(this.p, links, reaction, superFusion, mode === 'tutorial' ? 'campaign' : mode);
         this.saveNow();
@@ -949,39 +956,24 @@ export class App {
       festAcc: festivalActive(this.p) ? ensureFestival(this.p).acc : undefined,
       buddy: currentBuddy(this.p, festivalActive(this.p) ? ensureFestival(this.p).acc : undefined),
       ...extra,
+      roundKey,
+      knownKindsBefore: knownKindsAtStart,
       onEnd: (result) => {
-        result.labEvents = this.scene?.roundLog.lab ?? [];
-        if (
+        const scene = this.scene;
+        result.labEvents = scene?.roundLog.lab ?? [];
+        const at = Date.now();
+        const eligible =
           result.won &&
           result.throwsUsed >= 0 &&
-          (mode === 'campaign' || mode === 'tutorial' || mode === 'voyage' || mode === 'zen') &&
           !extra.practice &&
           (extra.homeworldWinEligible?.() ?? true) &&
-          this.scene?.o.roundMode !== 'practice' &&
-          !homeworldWinRecorded
-        ) {
-          homeworldWinRecorded = true;
-          const at = Date.now();
+          scene?.o.roundMode !== 'practice';
+        const beforeStars = this.p.stars[result.level.n] ?? 0;
+        const voyageStop = (result.level.n - this.p.voyage.base) / 2;
+        const beforeVoyageStars = Number.isInteger(voyageStop) && voyageStop >= 0 ? (this.p.voyage.stars[voyageStop] ?? 0) : 0;
+        if (eligible && (mode === 'campaign' || mode === 'tutorial'))
           this.roundBuildsSpedUp =
-            (mode === 'campaign' || mode === 'tutorial') &&
-            at >= (this.p.home.lastTick ?? 0) &&
-            this.p.home.plots.some((building) => !!building?.done && building.done > at);
-          // One completed round owns Homeworld growth, Buddy friendship and campaign build speed.
-          recordHomeworldWin(this.p, {
-            mode: mode === 'tutorial' ? 'campaign' : mode,
-            planetKey: this.scene?.L.seed ?? result.level.seed,
-            buddySpecies: this.scene?.o.buddy?.species ?? null,
-            at,
-          });
-        }
-        if (result.won && result.throwsUsed >= 0)
-          recordCometPierWin(
-            this.p,
-            mode === 'tutorial' ? 'campaign' : mode,
-            this.scene?.L.seed ?? result.level.n,
-            result.level.difficulty !== 'normal',
-            result.stars,
-          );
+            at >= (this.p.home.lastTick ?? 0) && this.p.home.plots.some((building) => !!building?.done && building.done > at);
         if (result.throwsUsed >= 0 && (mode === 'campaign' || mode === 'tutorial' || mode === 'voyage' || mode === 'zen'))
           recordLauncherRound(this.p, this.scene?.o.launcher.id ?? 'sling');
         if (result.throwsUsed !== -1 && !extra.endless) {
@@ -990,6 +982,35 @@ export class App {
           if (breakAfter && this.roundsThisSession % breakAfter === 0) this.breakDue = true;
         }
         extra.onEnd(result);
+        if (eligible && ['campaign', 'tutorial', 'voyage', 'zen', 'daily'].includes(mode)) {
+          const settledMode = mode === 'tutorial' ? 'campaign' : mode;
+          settleHomeworldRound(this.p, {
+            mode: settledMode,
+            roundKey: mode === 'daily' ? `${mode}:${result.level.seed}` : roundKey,
+            planetKey: `${settledMode}:${result.level.seed}`,
+            planet: result.planet,
+            startPlanet: result.level.start,
+            won: result.won,
+            writesProgress: true,
+            stars: result.stars,
+            difficulty: result.level.difficulty,
+            newStars:
+              settledMode === 'campaign'
+                ? Math.max(0, (this.p.stars[result.level.n] ?? 0) - beforeStars)
+                : settledMode === 'voyage'
+                  ? Math.max(0, result.stars - beforeVoyageStars)
+                  : settledMode === 'zen'
+                    ? 0
+                    : result.stars,
+            firstPlanetWin:
+              settledMode === 'campaign' ? beforeStars === 0 : settledMode === 'voyage' ? beforeVoyageStars === 0 : settledMode === 'daily',
+            knownKindsBefore: scene?.o.knownKindsBefore ?? knownKindsAtStart,
+            buddySpecies: scene?.o.buddy?.species ?? null,
+            at,
+            steps: scene?.landmarkSteps ?? [],
+          });
+          this.saveNow();
+        }
         for (const lab of earnedForms) showFormReveal(this, lab);
       },
       scopeLevel: aimLevel,
@@ -1028,6 +1049,7 @@ export class App {
       o.tutorial || n === 1 ? 'tutorial' : 'campaign',
       {
         onEnd: (r) => this.levelEnded(r),
+        roundKey: o.resume?.roundKey,
         continueOk: (won) =>
           this.p.meta.sessions > 1 &&
           continueAllowed({
@@ -1089,6 +1111,7 @@ export class App {
   }
 
   private applyCheckpointModifiers(opts: SceneOpts, resume: RoundCheckpoint) {
+    opts.knownKindsBefore = (resume as RoundCheckpoint & { knownKindsBefore?: string[] }).knownKindsBefore ?? opts.knownKindsBefore;
     const m = resume.modifiers;
     opts.launcher = m.launcher ?? SLING_SELECTION;
     opts.showSlingGhost = needsSlingGhost(opts.launcher.id, this.p.launcher.completedRounds[opts.launcher.id] ?? 0);
@@ -1127,6 +1150,7 @@ export class App {
     scene.continuesUsed = s.state.continuesUsed ?? 0;
     scene.gemBoosterUsed = !!s.gemBoosterUsed;
     scene.labSteps = s.labSteps ?? [];
+    scene.landmarkSteps = s.landmarkSteps ?? [];
     scene.labMarks = s.state.labMarks ?? { rock: [], seed: [] };
     restoreSceneTroubles(scene, s.state);
     scene.nova = s.state.nova;
