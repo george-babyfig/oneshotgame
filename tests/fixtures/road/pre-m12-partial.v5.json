@@ -1,0 +1,15 @@
+{
+  "v": 5,
+  "gems": 187,
+  "dust": 2450,
+  "roadPoints": 55,
+  "roadDay": { "day": "2026-10-05", "earned": 4 },
+  "road": [0, 1, 5],
+  "roadPass": [0, 3],
+  "pass": true,
+  "starter": true,
+  "skins": ["classic", "cosmic", "rose"],
+  "processedTx": ["old-starter-purchase", "old-cosmic-pass-purchase"],
+  "piggy": 92,
+  "wardrobe": ["suit_sky"]
+}

@@ -11,6 +11,31 @@
           "description": "80 gems",
           "displayName": "Handful of Gems",
           "locale": "en_US"
+        },
+        {
+          "description": "80 gemas",
+          "displayName": "Puñado de Gemas",
+          "locale": "es_MX"
+        },
+        {
+          "description": "80 gemmes",
+          "displayName": "Poignée de gemmes",
+          "locale": "fr_FR"
+        },
+        {
+          "description": "80 Edelsteine",
+          "displayName": "Handvoll Edelsteine",
+          "locale": "de_DE"
+        },
+        {
+          "description": "80 gemas",
+          "displayName": "Punhado de Gemas",
+          "locale": "pt_BR"
+        },
+        {
+          "description": "80ジェム",
+          "displayName": "ひとつかみのジェム",
+          "locale": "ja_JP"
         }
       ],
       "productID": "com.pocketplanet.game.gems80",
@@ -26,6 +51,31 @@
           "description": "500 gems",
           "displayName": "Pouch of Gems",
           "locale": "en_US"
+        },
+        {
+          "description": "500 gemas",
+          "displayName": "Bolsita de Gemas",
+          "locale": "es_MX"
+        },
+        {
+          "description": "500 gemmes",
+          "displayName": "Bourse de gemmes",
+          "locale": "fr_FR"
+        },
+        {
+          "description": "500 Edelsteine",
+          "displayName": "Beutel voller Edelsteine",
+          "locale": "de_DE"
+        },
+        {
+          "description": "500 gemas",
+          "displayName": "Bolsinha de Gemas",
+          "locale": "pt_BR"
+        },
+        {
+          "description": "500ジェム",
+          "displayName": "ジェムのふくろ",
+          "locale": "ja_JP"
         }
       ],
       "productID": "com.pocketplanet.game.gems500",
@@ -38,9 +88,34 @@
       "internalID": "6600000003",
       "localizations": [
         {
-          "description": "1200 gems",
+          "description": "1,200 gems",
           "displayName": "Chest of Gems",
           "locale": "en_US"
+        },
+        {
+          "description": "1200 gemas",
+          "displayName": "Cofre de Gemas",
+          "locale": "es_MX"
+        },
+        {
+          "description": "1 200 gemmes",
+          "displayName": "Coffre de gemmes",
+          "locale": "fr_FR"
+        },
+        {
+          "description": "1.200 Edelsteine",
+          "displayName": "Truhe voller Edelsteine",
+          "locale": "de_DE"
+        },
+        {
+          "description": "1200 gemas",
+          "displayName": "Baú de Gemas",
+          "locale": "pt_BR"
+        },
+        {
+          "description": "1,200ジェム",
+          "displayName": "ジェムの宝箱",
+          "locale": "ja_JP"
         }
       ],
       "productID": "com.pocketplanet.game.gems1200",
@@ -53,9 +128,34 @@
       "internalID": "6600000004",
       "localizations": [
         {
-          "description": "2800 gems",
+          "description": "2,800 gems",
           "displayName": "Galaxy of Gems",
           "locale": "en_US"
+        },
+        {
+          "description": "2800 gemas",
+          "displayName": "Galaxia de Gemas",
+          "locale": "es_MX"
+        },
+        {
+          "description": "2 800 gemmes",
+          "displayName": "Galaxie de gemmes",
+          "locale": "fr_FR"
+        },
+        {
+          "description": "2.800 Edelsteine",
+          "displayName": "Edelstein-Galaxie",
+          "locale": "de_DE"
+        },
+        {
+          "description": "2800 gemas",
+          "displayName": "Galáxia de Gemas",
+          "locale": "pt_BR"
+        },
+        {
+          "description": "2,800ジェム",
+          "displayName": "ジェムの銀河",
+          "locale": "ja_JP"
         }
       ],
       "productID": "com.pocketplanet.game.gems2800",
@@ -68,9 +168,34 @@
       "internalID": "6600000005",
       "localizations": [
         {
-          "description": "All the gems saved in your piggy bank",
+          "description": "The gems saved so far, up to 250",
           "displayName": "Gem Piggy Bank",
           "locale": "en_US"
+        },
+        {
+          "description": "Las gemas ahorradas hasta ahora, hasta 250",
+          "displayName": "Alcancía de Gemas",
+          "locale": "es_MX"
+        },
+        {
+          "description": "Gemmes gardées, jusqu’à 250",
+          "displayName": "Tirelire à gemmes",
+          "locale": "fr_FR"
+        },
+        {
+          "description": "Die bisher gesparten Edelsteine, bis zu 250",
+          "displayName": "Edelstein-Sparschwein",
+          "locale": "de_DE"
+        },
+        {
+          "description": "As gemas economizadas até agora, até 250",
+          "displayName": "Cofrinho de Gemas",
+          "locale": "pt_BR"
+        },
+        {
+          "description": "今までに保存したジェム、最大250",
+          "displayName": "ジェムちょきんばこ",
+          "locale": "ja_JP"
         }
       ],
       "productID": "com.pocketplanet.game.piggy",
@@ -79,32 +204,282 @@
     },
     {
       "displayPrice": "2.99",
-      "familyShareable": false,
+      "familyShareable": true,
       "internalID": "6600000006",
       "localizations": [
         {
-          "description": "300 gems, 5 of every booster and the Aurora atmosphere",
-          "displayName": "Starter Pack",
+          "description": "Seven Aurora looks for Keeper and Homeworld",
+          "displayName": "Starter Crew",
           "locale": "en_US"
+        },
+        {
+          "description": "7 looks Aurora: Guardián y Planeta Hogar",
+          "displayName": "Tripulación Iniciadora",
+          "locale": "es_MX"
+        },
+        {
+          "description": "7 looks Aurore: Gardien et Planète Mère",
+          "displayName": "Équipe de démarrage",
+          "locale": "fr_FR"
+        },
+        {
+          "description": "Sieben Aurora-Looks für Hüter und Heimatwelt",
+          "displayName": "Startmannschaft",
+          "locale": "de_DE"
+        },
+        {
+          "description": "Sete visuais Aurora para Guardião e Mundo-Lar",
+          "displayName": "Tripulação Iniciante",
+          "locale": "pt_BR"
+        },
+        {
+          "description": "キーパーとホームワールド用のオーロラのコーデ7点",
+          "displayName": "スターターコース",
+          "locale": "ja_JP"
         }
       ],
-      "productID": "com.pocketplanet.game.starter",
-      "referenceName": "Starter Pack",
+      "productID": "com.pocketplanet.game.startercrew",
+      "referenceName": "Starter Crew",
       "type": "NonConsumable"
     },
     {
-      "displayPrice": "4.99",
-      "familyShareable": false,
+      "displayPrice": "3.99",
+      "familyShareable": true,
       "internalID": "6600000007",
       "localizations": [
         {
-          "description": "Unlock the premium Star Road lane forever",
-          "displayName": "Cosmic Pass",
+          "description": "12 looks along the Cosmic Road paid lane",
+          "displayName": "Cosmic Pass: Cosmic Road",
           "locale": "en_US"
+        },
+        {
+          "description": "12 looks de pago del Camino Cósmico",
+          "displayName": "Pase Cósmico: Camino Cósmico",
+          "locale": "es_MX"
+        },
+        {
+          "description": "12 looks de la voie payante, Route Cosmique",
+          "displayName": "Pass Cosmique : Route Cosmique",
+          "locale": "fr_FR"
+        },
+        {
+          "description": "12 Pass-Looks entlang der Kosmischen Straße",
+          "displayName": "Kosmos-Pass: Kosmische Straße",
+          "locale": "de_DE"
+        },
+        {
+          "description": "12 visuais na pista paga da Estrada Cósmica",
+          "displayName": "Passe Cósmico: Estrada Cósmica",
+          "locale": "pt_BR"
+        },
+        {
+          "description": "コズミックロードの有料レーンで手に入るコーデ12点",
+          "displayName": "コズミックパス：コズミックロード",
+          "locale": "ja_JP"
         }
       ],
-      "productID": "com.pocketplanet.game.cosmicpass",
-      "referenceName": "Cosmic Pass",
+      "productID": "com.pocketplanet.game.road00",
+      "referenceName": "Cosmic Pass: Cosmic Road",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "2.99",
+      "familyShareable": true,
+      "internalID": "6600000008",
+      "localizations": [
+        {
+          "description": "Homeworld paints, building skins and outfits",
+          "displayName": "Homeworld Theme: Tidepool",
+          "locale": "en_US"
+        },
+        {
+          "description": "Pinturas, edificios y trajes: Planeta Hogar",
+          "displayName": "Tema de Hogar: Poza Marina",
+          "locale": "es_MX"
+        },
+        {
+          "description": "Peintures, bâtiments, tenues: Planète Mère",
+          "displayName": "Thème : Marée",
+          "locale": "fr_FR"
+        },
+        {
+          "description": "Heimatwelt-Farben, Gebäude-Looks und Outfits",
+          "displayName": "Heimatwelt: Gezeitenbecken",
+          "locale": "de_DE"
+        },
+        {
+          "description": "Tintas, visuais de construções e roupas",
+          "displayName": "Tema do Mundo-Lar: Maré",
+          "locale": "pt_BR"
+        },
+        {
+          "description": "ホームワールドのペイント、建物スキン、友だちコーデ",
+          "displayName": "ホームワールドテーマ：タイドプール",
+          "locale": "ja_JP"
+        }
+      ],
+      "productID": "com.pocketplanet.game.theme.tidepool",
+      "referenceName": "Homeworld Theme: Tidepool",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "2.99",
+      "familyShareable": true,
+      "internalID": "6600000009",
+      "localizations": [
+        {
+          "description": "Homeworld paints, building skins and outfits",
+          "displayName": "Homeworld Theme: Comet Candy",
+          "locale": "en_US"
+        },
+        {
+          "description": "Pinturas, edificios y trajes: Planeta Hogar",
+          "displayName": "Tema de Hogar: Dulce Cometa",
+          "locale": "es_MX"
+        },
+        {
+          "description": "Peintures, bâtiments, tenues: Planète Mère",
+          "displayName": "Thème : Bonbon Comète",
+          "locale": "fr_FR"
+        },
+        {
+          "description": "Heimatwelt-Farben, Gebäude-Looks und Outfits",
+          "displayName": "Heimatwelt: Kometenbonbon",
+          "locale": "de_DE"
+        },
+        {
+          "description": "Tintas, visuais de construções e roupas",
+          "displayName": "Tema do Mundo-Lar: Doce Cometa",
+          "locale": "pt_BR"
+        },
+        {
+          "description": "ホームワールドのペイント、建物スキン、友だちコーデ",
+          "displayName": "ホームワールドテーマ：すいせいキャンディ",
+          "locale": "ja_JP"
+        }
+      ],
+      "productID": "com.pocketplanet.game.theme.cometcandy",
+      "referenceName": "Homeworld Theme: Comet Candy",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "2.99",
+      "familyShareable": true,
+      "internalID": "6600000010",
+      "localizations": [
+        {
+          "description": "Keeper set, six trails and bursts, Fusion",
+          "displayName": "Planet Pack: Crystal Frost",
+          "locale": "en_US"
+        },
+        {
+          "description": "Guardián, 6 estelas, 6 destellos y Fusión",
+          "displayName": "Pack Planeta: Cristal Helado",
+          "locale": "es_MX"
+        },
+        {
+          "description": "Gardien, 6 traînées, éclats et Fusion",
+          "displayName": "Pack planète : Cristal givré",
+          "locale": "fr_FR"
+        },
+        {
+          "description": "Hüter-Set, sechs Spuren und Funken, Fusion",
+          "displayName": "Planetenpaket: Kristallfrost",
+          "locale": "de_DE"
+        },
+        {
+          "description": "Traje, chapéu, 6 rastros, 6 explosões e Fusão",
+          "displayName": "Pacote: Geada Cristalina",
+          "locale": "pt_BR"
+        },
+        {
+          "description": "キーパーのセット、トレイルとバースト各6種、フュージョン",
+          "displayName": "惑星パック：クリスタルフロスト",
+          "locale": "ja_JP"
+        }
+      ],
+      "productID": "com.pocketplanet.game.pack.crystalfrost",
+      "referenceName": "Planet Pack: Crystal Frost",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "1.99",
+      "familyShareable": true,
+      "internalID": "6600000011",
+      "localizations": [
+        {
+          "description": "Nebula Supernova style and matching trail",
+          "displayName": "Style Single: Nebula Swirl",
+          "locale": "en_US"
+        },
+        {
+          "description": "Supernova Espiral Nebular y estela",
+          "displayName": "Estilo: Espiral Nebular",
+          "locale": "es_MX"
+        },
+        {
+          "description": "Supernova nébuleuse et traînée",
+          "displayName": "Style : Tourbillon nébuleux",
+          "locale": "fr_FR"
+        },
+        {
+          "description": "Nebelwirbel-Supernova-Stil und passende Spur",
+          "displayName": "Einzelstil: Nebelwirbel",
+          "locale": "de_DE"
+        },
+        {
+          "description": "Supernova e rastro Redemoinho Nebular",
+          "displayName": "Estilo: Redemoinho Nebular",
+          "locale": "pt_BR"
+        },
+        {
+          "description": "星雲のうずのスーパーノヴァスタイルとおそろいのトレイル",
+          "displayName": "スタイル単品：星雲のうず",
+          "locale": "ja_JP"
+        }
+      ],
+      "productID": "com.pocketplanet.game.style.nebula",
+      "referenceName": "Style Single: Nebula Swirl",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "1.99",
+      "familyShareable": true,
+      "internalID": "6600000012",
+      "localizations": [
+        {
+          "description": "Firefly Sparks Supernova and matching trail",
+          "displayName": "Style Single: Firefly Sparks",
+          "locale": "en_US"
+        },
+        {
+          "description": "Supernova Chispas de Luciérnaga y estela",
+          "displayName": "Estilo: Chispas de Luciérnaga",
+          "locale": "es_MX"
+        },
+        {
+          "description": "Supernova Étincelles de lucioles et traînée",
+          "displayName": "Style : Étincelles de lucioles",
+          "locale": "fr_FR"
+        },
+        {
+          "description": "Glühwürmchenfunken-Supernova & passende Spur",
+          "displayName": "Einzelstil: Glühwürmchenfunken",
+          "locale": "de_DE"
+        },
+        {
+          "description": "Supernova e rastro Faíscas de Vaga-Lume",
+          "displayName": "Estilo: Faíscas de Vaga-Lume",
+          "locale": "pt_BR"
+        },
+        {
+          "description": "ホタルのきらめきのスーパーノヴァスタイルとおそろいのトレイル",
+          "displayName": "スタイル単品：ホタルのきらめき",
+          "locale": "ja_JP"
+        }
+      ],
+      "productID": "com.pocketplanet.game.style.firefly",
+      "referenceName": "Style Single: Firefly Sparks",
       "type": "NonConsumable"
     }
   ],

@@ -70,15 +70,26 @@ npm run ios:open
 
 CI runs formatting, the typecheck, the tests and the build on every push.
 
+## Play it in the iOS Simulator (no build needed)
+
+Every CI run on `main` compiles a Simulator build. On a Mac with Xcode installed:
+
+1. Open the repo's **Actions** tab, pick the latest **CI** run on `main` (or press _Run workflow_), and download **PocketPlanet-Simulator** from _Artifacts_.
+2. Unzip it, then run:
+
+```bash
+open -a Simulator                         # boots the default iPhone
+xcrun simctl install booted App.app       # from the unzipped folder
+xcrun simctl launch booted com.pocketplanet.game
+```
+
+Purchases need a StoreKit configuration, which only applies when you run from Xcode (step 4 below). To build it yourself instead: `npm install && npm run ios:sync && npx cap run ios`.
+
 ## Shipping to the App Store
 
-1. **You need** a Mac with Xcode 16+ and an [Apple Developer Program](https://developer.apple.com/programs/) membership ($99/year).
-2. **Make it yours:** change `appId` in `capacitor.config.ts` and the bundle ID in Xcode to one you own. If you change the product IDs, update them in `src/meta/config.ts`.
-3. **Build:** run `npm install`, `npm run ios:sync` and `npm run ios:open`. In Xcode, pick your Team under _Signing & Capabilities_ and add the **In-App Purchase** capability. **Game Center** is already enabled through `App.entitlements`.
-4. **Test purchases in the Simulator:** go to _Product → Scheme → Edit Scheme → Run → Options → StoreKit Configuration_ and choose `PocketPlanet.storekit`. It includes all 7 products.
-5. **App Store Connect:** sign the Paid Apps agreement, create the app, then create the 7 in-app purchases listed above. Copy for the listing and the IAP review notes is in [`store/listing.md`](store/listing.md).
-6. **Privacy:** answer "Data Not Collected". `PrivacyInfo.xcprivacy` is included. For the privacy policy URL, enable GitHub Pages on `/docs` and use `…/privacy.html`.
-7. **Screenshots and localization:** upload `store/screenshots/*.png` (1290 × 2796), plus `store/screenshots/<lang>/` and `store/listing.<lang>.md` for each localization. Set up Game Center from `store/gamecenter.md`.
-8. **Upload:** _Product → Archive → Distribute → App Store Connect_, test through TestFlight with a Sandbox account, then submit with the in-app purchases attached.
+Use the [iOS release checklist](docs/qa/release.md) for the candidate, native QA, TestFlight soak, and App Store submission. The bundle ID is `com.pocketplanet.game`, the app is iPhone-only, and the minimum iOS version is 15.4.
 
-The app is iPhone-only and portrait-only.
+1. The owner enrols in the Apple Developer Program, selects the signing Team in Xcode, registers the bundle ID with Game Center, and completes the Paid Applications Agreement, tax, banking, and App Store Connect app record. Create IAPs from the frozen product sheet; their identifiers and Family Sharing settings are permanent.
+2. From a clean working tree, run `npm run ios:release`. It installs from the lockfile, builds the web app, syncs Capacitor, checks the native web bundle for tester and development hooks, bumps the iOS build number, and prints the Release archive command. Review and commit that build-number change.
+3. The shared Xcode `App` scheme uses `ios/App/PocketPlanet.storekit` for Simulator purchase tests. Use sandbox accounts for TestFlight. Check Game Center sign-in, the six native localizations, Photos Save Image, and the StoreKit matrix in the release checklist.
+4. Archive with the signing Team, inspect Xcode Organizer's Privacy Report, upload IAP screenshots and current localized store assets, then distribute through TestFlight. After the 48-hour adult-tester soak, submit with manual release and phased release enabled.

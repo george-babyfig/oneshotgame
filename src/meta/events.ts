@@ -1,19 +1,20 @@
-// Weekly events: a rotating theme picked from the ISO week number, so every player
-// sees the same event with no server (Two Dots / Royal Match style live-ops).
-import type { BiomeId } from '../core/world';
+import { EVENT_TIERS } from './tuning';
+// Weekly Voyage themes are selected from the ISO week and local hemisphere.
+import { BIOMES, type BiomeId, type ImpactResult, type Planet } from '../core/world';
 import type { Profile } from './profile';
 import { applyReward, type Reward } from './progression';
+import { seasonOf, type Hemisphere } from './seasons';
 
 export interface EventDef {
   id: string;
   name: string;
   emoji: string;
   desc: string;
-  /** Tokens per changed region of these biomes. */
+  /** Lands preferred by themed Voyage goals. */
   biomes?: BiomeId[];
-  /** Tokens per creature appearing. */
+  /** A creature goal fits this theme. */
   creatures?: boolean;
-  /** Tokens per star earned. */
+  /** This theme celebrates any earned star. */
   stars?: boolean;
   color: string;
   skin: string;
@@ -40,7 +41,7 @@ export const EVENTS: EventDef[] = [
   },
   {
     id: 'bloom',
-    name: 'Bloom Week',
+    name: 'Blossom Week',
     emoji: '🌸',
     desc: 'Grow meadows, forests and jungles',
     biomes: ['meadow', 'forest', 'jungle', 'highland', 'marsh'],
@@ -73,14 +74,30 @@ export interface EventTier {
   reward: Reward;
 }
 
-export const EVENT_TIERS: EventTier[] = [
-  { tokens: 10, reward: { gems: 10 } },
-  { tokens: 25, reward: { dust: 300 } },
-  { tokens: 45, reward: { boosters: { shower: 1, spark: 1 } } },
-  { tokens: 70, reward: { gems: 25 } },
-  { tokens: 100, reward: { dust: 900, boosters: { scope: 2 } } },
-  { tokens: 140, reward: { gems: 50 } },
-];
+/** A weekly Voyage theme has no earnable token currency. */
+export type WeeklyTheme = EventDef;
+
+const SEASON_THEMES: Record<ReturnType<typeof seasonOf>, readonly string[]> = {
+  spring: ['bloom', 'ocean', 'critter'],
+  summer: ['ocean', 'volcano', 'star'],
+  autumn: ['critter', 'star', 'volcano'],
+  winter: ['frost', 'star', 'critter'],
+};
+
+/** Monday of an ISO week, independent of the device's current week. */
+export function weekStart(week: string): Date {
+  const match = /^(\d{4})-W(\d{2})$/.exec(week);
+  if (!match) throw new Error(`Invalid ISO week: ${week}`);
+  const year = Number(match[1]);
+  const number = Number(match[2]);
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const monday = new Date(Date.UTC(year, 0, 4 - ((jan4.getUTCDay() + 6) % 7) + (number - 1) * 7));
+  if (isoWeek(new Date(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate(), 12)) !== week)
+    throw new Error(`Invalid ISO week: ${week}`);
+  return monday;
+}
+
+export { EVENT_TIERS } from './tuning';
 
 /** ISO-8601 week key like "2026-W39". */
 export function isoWeek(d = new Date()): string {
@@ -92,9 +109,32 @@ export function isoWeek(d = new Date()): string {
   return `${y}-W${String(w).padStart(2, '0')}`;
 }
 
-export function eventFor(week: string): EventDef {
-  const [y, w] = week.split('-W').map(Number);
-  return EVENTS[(y * 53 + w) % EVENTS.length];
+const themeCache = new Map<string, string>();
+
+function themeId(monday: Date, hemisphere: Hemisphere): string {
+  const ordinal = Math.floor(monday.getTime() / (7 * 86400000));
+  const key = `${hemisphere}:${ordinal}`;
+  const cached = themeCache.get(key);
+  if (cached) return cached;
+  const localNoon = new Date(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate(), 12);
+  const choices = SEASON_THEMES[seasonOf(localNoon, hemisphere)];
+  let index = ((ordinal % choices.length) + choices.length) % choices.length;
+  // Cache the chain so a season's phase never repeats a theme at its boundary.
+  if (monday.getUTCFullYear() >= 2020 && choices[index] === themeId(new Date(monday.getTime() - 7 * 86400000), hemisphere))
+    index = (index + 1) % choices.length;
+  const id = choices[index];
+  themeCache.set(key, id);
+  return id;
+}
+
+export function eventFor(week: string, hemisphere: Hemisphere = 'north'): WeeklyTheme {
+  // Open pre-M12 weeks keep the theme and atmosphere children were already shown.
+  if (week >= '2026-W41' && week <= '2026-W44') {
+    const [year, number] = week.split('-W').map(Number);
+    return EVENTS[(year * 53 + number) % EVENTS.length];
+  }
+  const id = themeId(weekStart(week), hemisphere);
+  return EVENTS.find((theme) => theme.id === id)!;
 }
 
 /** Milliseconds until the event ends (next Monday 00:00 local). */
@@ -106,40 +146,70 @@ export function eventEndsIn(now = new Date()): number {
   return d.getTime() - now.getTime();
 }
 
-export const EVENT_UNLOCK_LEVEL = 8;
-
-export function ensureEvent(p: Profile, week = isoWeek()) {
-  if (p.event.week !== week) p.event = { week, tokens: 0, claimed: [] };
-  return eventFor(week);
+/** One saved week ahead can happen when local time zones change. */
+export function weekAtMostOneAhead(saved: string, current: string): boolean {
+  const start = (key: string) => {
+    const match = /^(\d{4})-W(\d{2})$/.exec(key);
+    if (!match) return NaN;
+    const year = Number(match[1]);
+    const week = Number(match[2]);
+    if (week < 1 || week > 53) return NaN;
+    const jan4 = new Date(Date.UTC(year, 0, 4));
+    return Date.UTC(year, 0, 4 - ((jan4.getUTCDay() + 6) % 7) + (week - 1) * 7);
+  };
+  return start(saved) - start(current) === 7 * 86400000;
 }
 
-export function eventActive(p: Profile) {
-  return p.level >= EVENT_UNLOCK_LEVEL;
+/** Count first arrivals and improved regions before the Lab updates their history. */
+export function earnedLandingProgress(result: ImpactResult, planet: Planet, regionBests: number[], arrived: Set<string>) {
+  const firstArrivals = new Set(result.spawned.filter((s) => !arrived.has(s.id)).map((s) => s.id));
+  if (result.after < result.before) return { regions: [] as BiomeId[], arrivals: 0, firstArrivals };
+  const regions = result.changed.filter((i) => BIOMES[planet.sectors[i].biome].value > regionBests[i]).map((i) => planet.sectors[i].biome);
+  return { regions, arrivals: firstArrivals.size, firstArrivals };
 }
 
-/** Tokens earned by one landed throw. */
-export function tokensForLand(ev: EventDef, changed: BiomeId[], spawned: number): number {
-  let n = 0;
-  if (ev.biomes) n += changed.filter((b) => ev.biomes!.includes(b)).length;
-  if (ev.creatures) n += spawned * 2;
-  return n;
+type RetiredEvent = Profile['event'] & { retired?: boolean; legacyGems?: number };
+
+/** Convert every saved Event on its first M12 launch, even after its week has passed. */
+export function retireEventProgress(p: Profile, _savedWeek?: string): number {
+  const saved = p.event as RetiredEvent;
+  if (!saved.week) return 0;
+  if (saved.retired) return saved.legacyGems ?? 0;
+  let gems = 0;
+  const claimed = new Set(saved.claimed);
+  for (let i = 0; i < EVENT_TIERS.length; i++) {
+    const tier = EVENT_TIERS[i];
+    if (claimed.has(i)) gems += tier.reward.gems ?? 0;
+    else if (saved.tokens >= tier.tokens) {
+      const reward = { ...tier.reward };
+      if (i === EVENT_TIERS.length - 1) reward.skin = eventFor(saved.week, p.voyage.hemisphere ?? p.settings.hemi).skin;
+      applyReward(p, reward, 'event');
+      gems += reward.gems ?? 0;
+      claimed.add(i);
+    }
+  }
+  // Unspent progress between tiers becomes gems instead of disappearing.
+  const previous = Math.max(0, ...EVENT_TIERS.filter((tier) => tier.tokens <= saved.tokens).map((tier) => tier.tokens));
+  const next = EVENT_TIERS.find((tier) => tier.tokens > saved.tokens)?.tokens;
+  if (next) {
+    const extra = Math.floor(((saved.tokens - previous) / (next - previous)) * 5);
+    if (extra) {
+      applyReward(p, { gems: extra }, 'event');
+      gems += extra;
+    }
+  }
+  saved.claimed = [...claimed].sort((a, b) => a - b);
+  saved.tokens = 0;
+  saved.retired = true;
+  saved.legacyGems = gems;
+  return gems;
 }
 
-export function addTokens(p: Profile, n: number) {
-  if (n > 0 && eventActive(p)) p.event.tokens += n;
+export function legacyEventGems(p: Profile, week: string): number {
+  const saved = p.event as RetiredEvent;
+  return saved.week === week && saved.retired ? (saved.legacyGems ?? 0) : 0;
 }
 
-export function eventReady(p: Profile): number[] {
-  return EVENT_TIERS.map((t, i) => (p.event.tokens >= t.tokens && !p.event.claimed.includes(i) ? i : -1)).filter((i) => i >= 0);
-}
-
-/** Claim a tier; the last tier also grants the event's atmosphere. */
-export function claimEventTier(p: Profile, i: number): Reward | null {
-  const t = EVENT_TIERS[i];
-  if (!t || p.event.tokens < t.tokens || p.event.claimed.includes(i)) return null;
-  p.event.claimed.push(i);
-  const r: Reward = { ...t.reward };
-  if (i === EVENT_TIERS.length - 1) r.skin = eventFor(p.event.week).skin;
-  applyReward(p, r);
-  return r;
+export function legacyEventAtmospherePaid(p: Profile, week: string): boolean {
+  return p.event.week === week && p.event.claimed.includes(EVENT_TIERS.length - 1);
 }

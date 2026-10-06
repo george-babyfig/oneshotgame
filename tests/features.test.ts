@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { defaultProfile } from '../src/meta/profile';
 import { momentumLoss, momentumWin, MOMENTUM_UNLOCK } from '../src/meta/momentum';
 import { addVisitors, openVisitor, rollVisitors } from '../src/meta/visitors';
-import { rankGoals, rankProgress, rankReady } from '../src/meta/rank';
+import { rankReady } from '../src/meta/rank';
+import { chapterReward } from '../src/meta/progression';
+import { ACHIEVEMENTS } from '../src/meta/achievements';
 import { HABITATS, habitatsReady } from '../src/meta/habitats';
 import {
   challengeLevel,
   dailyLevel,
+  dailyWeatherReport,
   decodeChallenge,
   encodeChallenge,
   planetStrip,
@@ -18,17 +21,17 @@ import { difficultyOf, makeLevel } from '../src/core/levels';
 import { SPECIES } from '../src/core/world';
 
 describe('momentum', () => {
-  it('builds to 3, is saved once a day by the shield, then breaks', () => {
+  it('builds to 3 and pauses through losses', () => {
     const p = defaultProfile(0);
     momentumWin(p);
-    expect(p.momentum.streak).toBe(0); // locked before level 6
+    expect(p.momentum.streak).toBe(0); // locked before level 17
     p.level = MOMENTUM_UNLOCK;
     for (let i = 0; i < 5; i++) momentumWin(p);
     expect(p.momentum.streak).toBe(3);
-    expect(momentumLoss(p, '2026-02-02')).toBe('shield');
+    expect(momentumLoss(p, '2026-02-02')).toBeNull();
     expect(p.momentum.streak).toBe(3);
-    expect(momentumLoss(p, '2026-02-02')).toBe('lost');
-    expect(p.momentum.streak).toBe(0);
+    expect(momentumLoss(p, '2026-02-02')).toBeNull();
+    expect(p.momentum.streak).toBe(3);
     expect(momentumLoss(p, '2026-02-02')).toBeNull();
   });
 });
@@ -43,7 +46,8 @@ describe('visitors', () => {
     expect(rollVisitors(p, 10 * 60e3)).toEqual([]);
     const n = addVisitors(p, 8 * 3600e3);
     expect(n).toBeGreaterThan(1);
-    expect(rollVisitors(p, 8 * 3600e3)).toEqual(p.visitors); // deterministic
+    expect(p.visitors).toHaveLength(n);
+    expect(p.visitors.every((v) => v.gems === 0)).toBe(true);
     const dust = p.dust;
     while (openVisitor(p));
     expect(p.dust).toBeGreaterThan(dust);
@@ -52,15 +56,20 @@ describe('visitors', () => {
 });
 
 describe('rank & habitats', () => {
-  it('rank goals are tracked from stats', () => {
+  it('retired ranks never pay more rewards', () => {
     const p = defaultProfile(0);
+    p.stats.wins = 100;
     expect(rankReady(p)).toBe(false);
-    p.stats.wins = 2;
-    p.seen = ['bunny', 'deer'];
-    p.stats.throws = 20;
-    expect(rankReady(p)).toBe(true);
-    expect(rankProgress(p).every((x) => x.done)).toBe(true);
-    for (let r = 1; r < 30; r++) expect(rankGoals(r)).toHaveLength(3);
+    expect(chapterReward(1).gems).toBe(60);
+    expect(chapterReward(7).gems).toBe(120);
+    const rankFive = ACHIEVEMENTS.find((a) => a.id.endsWith('rank_5'))!;
+    const rankEight = ACHIEVEMENTS.find((a) => a.id.endsWith('rank_8'))!;
+    p.rank = 20;
+    expect(rankFive.done(p)).toBe(true);
+    expect(rankEight.done(p)).toBe(true);
+    p.chapters = [4, 7];
+    expect(rankFive.done(p)).toBe(true);
+    expect(rankEight.done(p)).toBe(true);
   });
 
   it('habitat sets cover every creature exactly once', () => {
@@ -75,6 +84,8 @@ describe('rank & habitats', () => {
 describe('modes', () => {
   it('challenge codes round-trip and reject typos', () => {
     const code = encodeChallenge('K7Q2M', 215);
+    expect(code).toMatch(/^1-/);
+    expect(decodeChallenge(code.replace(/^1-/, '2-'))).toBeNull();
     expect(decodeChallenge(code)).toEqual({ seed: 'K7Q2M', score: 215 });
     expect(decodeChallenge(code.toLowerCase())).toEqual({ seed: 'K7Q2M', score: 215 });
     expect(decodeChallenge(code.slice(0, -1) + (code.endsWith('Z') ? 'Y' : 'Z'))).toBeNull();
@@ -84,10 +95,21 @@ describe('modes', () => {
   it('seeded levels are identical for everyone', () => {
     expect(JSON.stringify(dailyLevel('2026-05-05'))).toBe(JSON.stringify(dailyLevel('2026-05-05')));
     expect(dailyLevel('2026-05-05').seed).not.toBe(dailyLevel('2026-05-06').seed);
+    const weather = { vent: 'Ember Vent', vine: 'Tanglevine', frost: 'Frost Creep' } as const;
+    expect(dailyWeatherReport('2026-09-29', 60)).toBe(weather[dailyLevel('2026-09-29', 60).troubles[0].id]);
+    expect(dailyWeatherReport('2026-09-29', 13)).toBeNull();
     expect(challengeLevel('ABCDE').stars).toEqual(challengeLevel('ABCDE').stars);
     const r = rushLevel('X');
     expect(r.stars[0]).toBeLessThan(r.stars[2]);
     expect(planetStrip(r.start)).toMatch(/.+/);
+  });
+
+  it('seeds Daily weather across every taught Trouble without teaching one early', () => {
+    const days = Array.from({ length: 60 }, (_, i) => new Date(Date.UTC(2026, 9, i + 1)).toISOString().slice(0, 10));
+    const byCap = (cap: number) => new Set(days.map((day) => dailyLevel(day, cap).troubles[0]?.id));
+    expect(byCap(16)).toEqual(new Set(['vent']));
+    expect(byCap(28)).toEqual(new Set(['vent', 'vine']));
+    expect(byCap(36)).toEqual(new Set(['vent', 'vine', 'frost']));
   });
 
   it('daily rewards once per day; challenges pay for a win', () => {
@@ -102,33 +124,34 @@ describe('modes', () => {
   });
 
   it('hard planets follow the rhythm and have tougher targets', () => {
-    expect(difficultyOf(5)).toBe('hard');
-    expect(difficultyOf(9)).toBe('super');
+    expect(difficultyOf(5)).toBe('normal');
+    expect(difficultyOf(10)).toBe('normal');
+    expect(difficultyOf(15)).toBe('hard');
+    expect(difficultyOf(9)).toBe('normal'); // no Super Hard in chapter one
     expect(difficultyOf(19)).toBe('super');
     expect(difficultyOf(7)).toBe('normal');
     expect(difficultyOf(5, 'DAY-x')).toBe('normal');
-    expect(makeLevel(10).difficulty).toBe('hard');
+    expect(makeLevel(10).difficulty).toBe('normal');
   });
 });
 
-describe('weekly events', async () => {
+describe('weekly Voyage themes and legacy Event value', async () => {
   const E = await import('../src/meta/events');
-  it('rotates by ISO week and pays tiers once', () => {
+  it('selects seasonal themes and maps an open legacy Event once', () => {
     expect(E.isoWeek(new Date(2026, 0, 1))).toBe('2026-W01');
     expect(E.isoWeek(new Date(2026, 8, 27))).toBe('2026-W39');
     const ids = new Set(Array.from({ length: 6 }, (_, i) => E.eventFor(`2026-W${10 + i}`).id));
-    expect(ids.size).toBe(6);
+    expect(ids.size).toBe(3);
     const p = defaultProfile(0);
-    p.level = E.EVENT_UNLOCK_LEVEL;
-    E.ensureEvent(p, '2026-W10');
-    E.addTokens(p, 150);
-    expect(E.eventReady(p)).toHaveLength(6);
-    for (let i = 0; i < 6; i++) expect(E.claimEventTier(p, i)).not.toBeNull();
-    expect(E.claimEventTier(p, 0)).toBeNull();
+    p.level = 20;
+    p.event = { week: '2026-W10', tokens: 150, claimed: [] };
+    const before = p.gems;
+    expect(E.retireEventProgress(p, '2026-W10')).toBe(85);
+    expect(p.gems - before).toBe(85);
+    expect(E.retireEventProgress(p, '2026-W10')).toBe(85);
+    expect(p.gems - before).toBe(85);
     expect(p.skins).toContain(E.eventFor('2026-W10').skin);
-    E.ensureEvent(p, '2026-W11');
     expect(p.event.tokens).toBe(0);
-    expect(E.tokensForLand(E.EVENTS[0], ['volcano', 'ocean', 'springs'], 0)).toBe(2);
   });
 });
 
@@ -155,17 +178,19 @@ describe('review fixes', async () => {
   const E = await import('../src/meta/economy');
   const Hb = await import('../src/meta/habitats');
   const P = await import('../src/meta/profile');
-  it('daily gift ignores a clock that moved backwards', () => {
+  it('star calendar ignores a clock that moved backwards', async () => {
+    const C = await import('../src/meta/calendar');
     const p = defaultProfile(0);
-    E.claimDailyGift(p, '2026-09-28');
-    expect(E.dailyGift(p, '2026-09-27')).toBeNull();
-    expect(E.dailyGift(p, '2026-09-29')?.streak).toBe(2);
+    C.stamp(p, '2026-09-28');
+    expect(C.canStamp(p, '2026-09-27')).toBe(false);
+    expect(C.canStamp(p, '2026-09-29')).toBe(true);
   });
-  it('vault recovers when lastCollect is in the future', () => {
+  it('vault cannot gain dust when the clock moves back', () => {
     const p = defaultProfile(0);
     p.lastCollect = 10_000_000;
     E.fixClock(p, 5_000);
-    expect(p.lastCollect).toBe(5_000);
+    expect(p.lastCollect).toBe(10_000_000);
+    expect(E.pendingDust(p, 5_000)).toBe(0);
   });
   it('habitat rewards can only be claimed once, and only when complete', () => {
     const p = defaultProfile(0);
@@ -181,5 +206,26 @@ describe('review fixes', async () => {
     const p = P.migrate({ level: 4, stars: { 1: 3, 2: 3, 3: 1 } });
     expect(p.stats.threeStars).toBe(2);
     expect(p.stats.wins).toBe(3);
+  });
+});
+
+describe('inbox fixes', async () => {
+  const I = await import('../src/meta/inbox');
+  it('never re-delivers a letter after the inbox is trimmed', () => {
+    const p = defaultProfile(0);
+    p.tutorial = true;
+    I.checkMail(p, new Date(2026, 0, 10));
+    expect(p.mail.some((m) => m.id === 'welcome')).toBe(true);
+    p.mail = [];
+    I.checkMail(p, new Date(2026, 0, 11));
+    expect(p.mail.some((m) => m.id === 'welcome')).toBe(false);
+  });
+  it('one winter letter per winter, across the new year', () => {
+    const p = defaultProfile(0);
+    p.tutorial = true;
+    I.checkMail(p, new Date(2025, 11, 20));
+    const n = p.mail.length;
+    I.checkMail(p, new Date(2026, 0, 5));
+    expect(p.mail.length).toBe(n);
   });
 });

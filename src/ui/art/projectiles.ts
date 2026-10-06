@@ -1,7 +1,47 @@
 // Vector sprites for the six flingable objects.
 import type { Kind } from '../../core/world';
+import { OBJECT_FEEL } from '../feel';
+import { canvasDpr } from '../devcapture';
 
 type G = CanvasRenderingContext2D;
+
+/** Stable shape cues. Styles draw only outside these sprites in styleRender.ts. */
+export const PROJECTILE_SILHOUETTES: Record<Kind, string> = {
+  rock: 'faceted',
+  ice: 'hexagon',
+  magma: 'round-craters',
+  seed: 'seed-leaves',
+  storm: 'cloud',
+  sun: 'rays',
+};
+
+export function drawObjectFeelTrail(g: G, kind: Kind, points: { x: number; y: number }[], nova: boolean, still: boolean) {
+  if (still) return;
+  const style = OBJECT_FEEL[kind];
+  g.save();
+  points.forEach((point, index) => {
+    if (index % (style.trail === 'drop' ? 2 : 3) !== 0) return;
+    const radius = (index / Math.max(1, points.length)) * (nova ? 5 : 3) + 1;
+    g.globalAlpha = 0.3 + (index / Math.max(1, points.length)) * 0.5;
+    g.fillStyle = style.burst;
+    if (style.trail === 'leaf') {
+      g.beginPath();
+      g.ellipse(point.x, point.y, radius * 1.6, radius * 0.7, -0.5, 0, Math.PI * 2);
+    } else if (style.trail === 'crystal' || style.trail === 'star') {
+      g.beginPath();
+      g.moveTo(point.x, point.y - radius * 1.5);
+      g.lineTo(point.x + radius, point.y);
+      g.lineTo(point.x, point.y + radius * 1.5);
+      g.lineTo(point.x - radius, point.y);
+      g.closePath();
+    } else {
+      g.beginPath();
+      g.arc(point.x, point.y, radius, 0, Math.PI * 2);
+    }
+    g.fill();
+  });
+  g.restore();
+}
 
 function eyesOn(g: G, x: number, y: number, r: number) {
   // tiny determined face so every object feels like a little character
@@ -192,7 +232,7 @@ export function drawProjectile(g: G, kind: Kind, x: number, y: number, size: num
 /** Standalone canvas icon for DOM (queue bubbles, pre-level chips). */
 export function projectileCanvas(kind: Kind, px: number): HTMLCanvasElement {
   const c = document.createElement('canvas');
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = canvasDpr();
   c.width = c.height = Math.round(px * dpr);
   c.style.width = c.style.height = `${px}px`;
   const g = c.getContext('2d')!;

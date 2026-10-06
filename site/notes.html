@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Only this site's own files may load: no CDNs, trackers or embeds (the game promises Data Not Collected). -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'"
+    />
+    <title>Hello, Comet Garden — Dev notes</title>
+    <meta
+      name="description"
+      content="Dev notes and release notes for Comet Garden. Version 1.0: what the game is, what we care about, what's in the first release and what's next."
+    />
+    <meta name="robots" content="index,follow" />
+    <meta name="theme-color" content="#0b0a24" />
+    <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png" />
+    <link rel="apple-touch-icon" href="img/icon-180.png" />
+    <link rel="stylesheet" href="style.css" />
+    <!-- TODO: after choosing a domain, add <link rel="canonical" href="https://YOUR-DOMAIN/notes.html">, og:url,
+         and make og:image absolute (https://YOUR-DOMAIN/img/og.png). -->
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Comet Garden" />
+    <meta property="og:title" content="Hello, Comet Garden" />
+    <meta
+      property="og:description"
+      content="Launch notes for Comet Garden 1.0: what the game is, what we care about, and what's in the first release."
+    />
+    <meta property="og:image" content="img/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Comet Garden: a bunny on a tiny green planet, with the words Fling comets, grow tiny worlds" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="wrap">
+        <a class="brand" href="index.html">
+          <img src="img/icon-180.png" width="36" height="36" alt="" />
+          Comet Garden
+        </a>
+        <nav class="nav" aria-label="Main">
+          <ul>
+            <li><a href="support.html">Support</a></li>
+            <li><a href="privacy.html">Privacy</a></li>
+            <li><a href="press.html">Press kit</a></li>
+            <li><a href="notes.html" aria-current="page">Dev notes</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" class="wrap">
+      <div class="page-head">
+        <h1>Dev notes</h1>
+        <p class="lede">News and release notes from the Comet Garden team.</p>
+      </div>
+
+      <!-- RELEASE NOTES SOURCE
+           Add each new version as a new <article> ABOVE the previous one (newest first), with an id like "v1-0-1".
+           From 1.0.1 on, the "What's new" list of each post is the text for App Store Connect's What's New field
+           (version 1.0 has no What's New field). Keep items specific; no dates for future plans. -->
+      <div class="prose">
+        <article class="post" id="v1-0" aria-labelledby="v1-0-title">
+          <!-- TODO: set the launch date, e.g. <time datetime="2026-11-12">12 November 2026</time> -->
+          <p class="post-meta">Version 1.0 · <time datetime="2026">2026</time></p>
+          <h2 id="v1-0-title">Hello, Comet Garden</h2>
+
+          <p>Hi! Comet Garden 1.0 is our very first release, and we're so happy to share it.</p>
+          <p>
+            Comet Garden is a small game about big throws. You pull back, aim and let go, and gravity bends your comet around a tiny planet.
+            Rocks raise mountains, ice comets fill oceans, and seed pods grow meadows and forests. Then the creatures arrive: otters where
+            forest meets the sea, newts on warm volcanoes, owls in snowy pines. Each one brings a trait that protects its home, and the
+            friends you meet can come and live on your Homeworld.
+          </p>
+
+          <h3>What we care about</h3>
+          <p>
+            <strong>No ads.</strong> Nothing interrupts a planet. There are no lives or energy timers either, so nobody waits for a meter to
+            refill.
+          </p>
+          <p>
+            <strong>Fair purchases, only for grown-ups.</strong> Optional purchases live in the Grown-ups area, behind a parent check. Each
+            one shows exactly what you get, and there are no random paid rewards.
+          </p>
+          <p>
+            <strong>Gentle at the start, never a wall.</strong> Our rule for difficulty was simple: “not too hard at the beginning but also
+            not too easy.” The first planets ramp up gently, and 1 to 3 stars on each give you something to aim for. When a planet is
+            tricky, the help ladder steps in: what happened, a tip, and then a little extra help. Grown-ups can also turn on Gentle planets.
+            Nobody should get stuck behind a wall, whatever their age.
+          </p>
+          <p>
+            <strong>Your data stays with you.</strong> No accounts, no analytics and no tracking. Progress stays on your device, and the App
+            Store privacy label reads Data Not Collected. The <a href="privacy.html">privacy policy</a> has the details.
+          </p>
+
+          <h3>What's in 1.0</h3>
+          <ul>
+            <li>More than 100 planets, with 1 to 3 stars on each</li>
+            <li>Rocks, ice comets, seed pods, magma, rain clouds and sunbursts to throw</li>
+            <li>36 creatures to find and keep in your Lifebook, from common friends to rare legends</li>
+            <li>Fusions, Combos and the Supernova throw</li>
+            <li>A sky to read: drifting rocks, a bubble moon and a turning ring of pebbles</li>
+            <li>Your own Homeworld, a Buddy who helps when a Trouble appears, and a Keeper to make your own</li>
+            <li>Daily Planet, Weekly Voyage, Meteor Rush, Zen Garden, friend challenges and Bonus Remix</li>
+            <li>Essences from planets and Labs on your Homeworld</li>
+            <li>English, Español, Français, Deutsch, Português (Brasil) and 日本語</li>
+            <li>A Grown-ups area with Gentle planets, a play-time summary and an optional break reminder</li>
+          </ul>
+
+          <h3>What's next</h3>
+          <p>
+            We'd love to keep the garden growing: more planets and more friends to meet. We don't have dates to share, and we'd rather take
+            our time and get things right.
+          </p>
+          <p>Have an idea or found a bug? Tell us through the <a href="support.html">support page</a>. We'd love to hear from you.</p>
+
+          <p class="signoff">Happy flinging!</p>
+          <p class="signoff">— the Comet Garden team</p>
+        </article>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <nav class="nav" aria-label="Footer">
+          <ul>
+            <li><a href="support.html">Support</a></li>
+            <li><a href="privacy.html">Privacy</a></li>
+            <li><a href="press.html">Press kit</a></li>
+            <li><a href="notes.html" aria-current="page">Dev notes</a></li>
+          </ul>
+        </nav>
+        <!-- TODO: replace OWNER NAME with the legal name used in App Store Connect's Copyright field. -->
+        <p class="fineprint">© 2026 <span class="placeholder">OWNER NAME</span></p>
+        <p class="fineprint">
+          Apple, iPhone and App Store are trademarks of Apple Inc., registered in the U.S. and other countries and regions.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

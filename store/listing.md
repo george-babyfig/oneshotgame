@@ -1,72 +1,71 @@
-# App Store listing — Pocket Planet
+# Comet Garden — App Store listing (English, en-US)
 
-**Name:** Pocket Planet
-**Subtitle (30):** Fling, grow & discover critters
-**Category:** Games → Casual (secondary: Simulation)
-**Age rating:** 4+ (no ads, no chat, no user-generated content, no gambling, no random paid rewards)
-**Price:** Free with in-app purchases
+**App name (30):** Comet Garden
+**Subtitle (30):** Fling comets, grow tiny worlds
+**Primary category:** Games → Casual · **Secondary:** Games → Simulation
+**Age rating:** 4+ (see age-rating answers)
+**Price:** Free, with optional in-app purchases (in the gated Grown-ups area)
 
 ## Promotional text (170)
 
-New: Daily Planet, Meteor Rush, Zen Garden and friend challenges — plus visitors who leave gifts while you're away!
+Fling comets, grow tiny worlds and build Landmarks on a Homeworld where your friends live their day. No ads. Optional purchases need a parent check.
 
-## Description
+## Description (4,000)
 
-Fling rocks, ice comets, magma and seeds at a tiny spinning planet and watch it come alive.
+Fling a comet, watch a tiny world bloom, and welcome the creatures who move in.
 
-Gravity bends every throw, so aiming is half the fun. Rock raises mountains, ice fills oceans, magma builds volcanoes and seeds grow forests. Put the right lands side by side and adorable critters move in: otters where forest meets ocean, obsidian turtles where volcanoes meet the sea, and legendary wonders for the boldest planets.
+FLING AND GROW
+• Pull back, aim and let go: gravity bends every throw around the planet
+• Rocks raise mountains, ice comets fill oceans, seed pods grow meadows and forests, magma builds volcanoes, rain clouds and sunbursts help it all thrive
+• The planet shows what your throw will do before you let go: new land, who moves in, and anyone who might wander off
+• Pick a launcher for each planet: the Star Sling, Swoop, Zip or Thumper, each with one strength and one trade-off
 
-PERFECT FOR A QUICK BREAK
-• One-minute levels you can finish in a waiting room
-• Earn up to 3 stars per planet, then replay for a perfect score
-• Hard and Super Hard planets for a real challenge
+MEET THE CREATURES
+• 36 creatures to find, each with a favourite home: otters where forest meets the sea, newts on warm volcanoes, owls in snowy pines
+• Every creature brings a trait that protects its home
+• Keep them all in your Lifebook, from common friends to rare legends
 
-A GALAXY THAT GROWS WITH YOU
-• Every finished planet joins your galaxy and earns stardust while you're away
-• Critters visit your galaxy and leave gifts and keepsakes
-• Spend stardust on permanent upgrades
+MIX, CHAIN AND PLAN
+• Fusions: two throws that work together, like ice and magma making Steam
+• Combos: clever throws back to back grow a chain of bonus power
+• Supernova: charge it up and send a super-sized throw
+• Read the sky: drifting rocks, a bubble moon and a turning ring of pebbles to time your throws around
 
-SO MUCH TO DISCOVER
-• 36 critters to collect in your Lifebook, from common to legendary
-• Habitat sets, chapters with treasure chests, and the Star Road
-• Daily quests, a daily gift, and Explorer Ranks
+A HOMEWORLD OF YOUR OWN
+• Invite the friends you meet to live on your Homeworld, where they have their own day: they sleep in the Den at night, gather in the evening and enjoy the weather and the seasons
+• Grow the lands you discover between your buildings
+• Build five Landmarks by playing, from the Sprout Garden to the Keeper's Beacon
+• Choose a Buddy who helps when a Trouble appears on a planet
+• Make your Keeper: faces, skin tones, hair and outfits
 
 PLAY YOUR WAY
-• Daily Planet — everyone gets the same world each day; share your result
-• Meteor Rush — 60 seconds, unlimited throws
-• Zen Garden — no targets, no clock, a world of your own
-• Challenge a Friend — send a code and see who grows more life
+• More than 100 planets that ramp up gently, with 1 to 3 stars on each
+• A help ladder when a planet is tricky: what happened, a tip, and a little extra help
+• Daily Planet, Weekly Voyage, Meteor Rush, Zen Garden and friend challenges
+• Bonus Remix adds playful twists and gold stars to finished chapters
+• Earn Essences from planets and build Labs on your Homeworld
+• Follow the Cosmic Road: new stars and Wishes earn rewards along the way
+• Play in English, Español, Français, Deutsch, Português (Brasil) or 日本語
 
-Fair and friendly: no ads, no lives or energy timers, no loot boxes, no tracking. Optional purchases always show exactly what you get.
+CALM, FAIR AND PRIVATE
+• No ads. No lives or energy timers. No random paid rewards.
+• Optional purchases are sold only in the Grown-ups area, behind a parent check, and always show exactly what you get
+• Gentle planets setting, play-time summary and an optional break reminder
+• Data Not Collected: the game keeps progress on this device
 
-## Keywords (100)
+Questions or ideas? Visit the support page linked below. Happy flinging!
 
-planet,casual,relaxing,idle,cute,animals,collect,terraform,gravity,sling,space,zen,offline,cozy,puzzle
+## Keywords (100 bytes, en-US)
+
+space,planet,asteroid,meteor,terraform,cozy,cute,creature,animal,physics,galaxy,volcano,ocean,toss
+
+## Support / marketing / privacy
+
+- Support URL: https://YOUR-DOMAIN/support.html (site files in `site/`; see site/README.md)
+- Marketing URL: https://YOUR-DOMAIN/
+- Privacy policy URL: https://YOUR-DOMAIN/privacy.html
+- Copyright: 2026 OWNER NAME
 
 ## What's New
 
-The first release. Thanks for playing!
-
-## In-app purchases
-
-| Reference name  | Product ID                       | Type           | Price  | Review description                                         |
-| --------------- | -------------------------------- | -------------- | ------ | ---------------------------------------------------------- |
-| Handful of Gems | com.pocketplanet.game.gems80     | Consumable     | $0.99  | 80 gems                                                    |
-| Pouch of Gems   | com.pocketplanet.game.gems500    | Consumable     | $4.99  | 500 gems                                                   |
-| Chest of Gems   | com.pocketplanet.game.gems1200   | Consumable     | $9.99  | 1,200 gems                                                 |
-| Galaxy of Gems  | com.pocketplanet.game.gems2800   | Consumable     | $19.99 | 2,800 gems                                                 |
-| Gem Piggy Bank  | com.pocketplanet.game.piggy      | Consumable     | $1.99  | All gems saved in the piggy bank (4 per planet, up to 250) |
-| Starter Pack    | com.pocketplanet.game.starter    | Non-consumable | $2.99  | 300 gems, 5 of each booster, Aurora atmosphere             |
-| Cosmic Pass     | com.pocketplanet.game.cosmicpass | Non-consumable | $4.99  | Unlocks the premium Star Road reward lane permanently      |
-
-## Review notes
-
-No account or login. Purchases can be tested with the included StoreKit configuration. Modes unlock with Explorer Rank (Daily Planet at rank 2, reached after about 5 planets).
-
-## Localized listings
-
-Spanish, French, German, Brazilian Portuguese and Japanese copy is in `listing.es.md`, `listing.fr.md`, `listing.de.md`, `listing.pt.md` and `listing.ja.md`. Localized screenshots are in `screenshots/<lang>/`. English is in `screenshots/`.
-
-## Screenshots
-
-`store/screenshots/*.png` — 1290 × 2796 (6.7"/6.9" display). Regenerate with the Playwright script described in the README.
+Not shown for version 1.0 (Apple has no "What's New" on a first release). Launch notes live in the promotional text and on the site's Dev Notes page. Template for 1.0.1 and later is in `store/whats-new-template.md`.

@@ -1,0 +1,1257 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Homeworld screen structure > keeps overview and VoiceOver plot list stable at Levels 1 and 3 > level-1 1`] = `
+{
+  "badge": {
+    "attrs": {
+      "aria-label": "Homeworld Level 1. See the next level",
+      "class": "btn ",
+      "type": "button",
+    },
+    "children": [
+      "Level 1",
+    ],
+    "tag": "button",
+  },
+  "panel": {
+    "attrs": {},
+    "children": [
+      {
+        "attrs": {
+          "class": "btn ghost wide hw-next-up",
+          "type": "button",
+        },
+        "children": [
+          {
+            "attrs": {
+              "class": "stack",
+            },
+            "children": [
+              {
+                "attrs": {},
+                "children": [
+                  "Next Up",
+                ],
+                "tag": "b",
+              },
+              {
+                "attrs": {},
+                "children": [
+                  "Build your first Lab",
+                ],
+                "tag": "small",
+              },
+              {
+                "attrs": {},
+                "children": [
+                  "Finish both steps for ✨100",
+                ],
+                "tag": "small",
+              },
+            ],
+            "tag": "span",
+          },
+        ],
+        "tag": "button",
+      },
+      {
+        "attrs": {
+          "class": "btn primary wide",
+          "type": "button",
+        },
+        "children": [
+          "Build your first Lab",
+        ],
+        "tag": "button",
+      },
+      {
+        "attrs": {
+          "class": "row hw-primary-actions",
+        },
+        "children": [
+          {
+            "attrs": {
+              "class": "btn primary dim",
+              "type": "button",
+            },
+            "children": [
+              "Collect all",
+            ],
+            "tag": "button",
+          },
+          {
+            "attrs": {
+              "class": "btn ghost",
+              "type": "button",
+            },
+            "children": [
+              "Friends",
+            ],
+            "tag": "button",
+          },
+        ],
+        "tag": "div",
+      },
+      {
+        "attrs": {
+          "class": "hw-stats",
+        },
+        "children": [
+          {
+            "attrs": {},
+            "children": [
+              "🛸 2/2",
+              {
+                "attrs": {},
+                "children": [
+                  "drones free",
+                ],
+                "tag": "small",
+              },
+            ],
+            "tag": "span",
+          },
+          {
+            "attrs": {},
+            "children": [
+              "🏡 0/0",
+              {
+                "attrs": {},
+                "children": [
+                  "friends",
+                ],
+                "tag": "small",
+              },
+            ],
+            "tag": "span",
+          },
+        ],
+        "tag": "div",
+      },
+      {
+        "attrs": {
+          "class": "muted hw-hint",
+        },
+        "children": [
+          "Drag to spin your planet. Tap a plot to build.",
+        ],
+        "tag": "p",
+      },
+      {
+        "attrs": {
+          "class": "btn ghost wide",
+          "type": "button",
+        },
+        "children": [
+          "Homeworld list",
+        ],
+        "tag": "button",
+      },
+      {
+        "attrs": {
+          "class": "hw-land-summary",
+        },
+        "children": [
+          {
+            "attrs": {},
+            "children": [
+              "Lands",
+            ],
+            "tag": "b",
+          },
+          {
+            "attrs": {
+              "class": "btn ghost",
+              "type": "button",
+            },
+            "children": [
+              "Choose lands",
+            ],
+            "tag": "button",
+          },
+        ],
+        "tag": "div",
+      },
+      {
+        "attrs": {
+          "class": "hw-overview",
+        },
+        "children": [
+          {
+            "attrs": {
+              "class": "sec-title",
+            },
+            "children": [
+              "Overview",
+            ],
+            "tag": "div",
+          },
+          {
+            "attrs": {},
+            "children": [
+              {
+                "attrs": {
+                  "class": "muted",
+                },
+                "children": [
+                  "Next Level checklist",
+                ],
+                "tag": "p",
+              },
+              {
+                "attrs": {
+                  "class": "hw-level-checklist",
+                },
+                "children": [
+                  {
+                    "attrs": {
+                      "class": "hw-check",
+                    },
+                    "children": [
+                      "○ ",
+                      "Finish chapter 1",
+                    ],
+                    "tag": "div",
+                  },
+                  {
+                    "attrs": {
+                      "class": "hw-check",
+                    },
+                    "children": [
+                      "○ ",
+                      "✨ 0/1,500 stardust",
+                    ],
+                    "tag": "div",
+                  },
+                  {
+                    "attrs": {
+                      "class": "hw-check",
+                    },
+                    "children": [
+                      "○ ",
+                      "leaf: 0/20",
+                    ],
+                    "tag": "div",
+                  },
+                  {
+                    "attrs": {
+                      "class": "hw-check",
+                    },
+                    "children": [
+                      "○ ",
+                      "dew: 0/20",
+                    ],
+                    "tag": "div",
+                  },
+                ],
+                "tag": "div",
+              },
+            ],
+            "tag": "div",
+          },
+          {
+            "attrs": {
+              "class": "muted",
+            },
+            "children": [
+              "For your next throw",
+            ],
+            "tag": "p",
+          },
+          {
+            "attrs": {
+              "class": "hw-lab-summary",
+            },
+            "children": [
+              {
+                "attrs": {},
+                "children": [
+                  "Rock Lab",
+                  "",
+                ],
+                "tag": "b",
+              },
+              {
+                "attrs": {},
+                "children": [
+                  "Build this Lab to help your shots",
+                ],
+                "tag": "small",
+              },
+            ],
+            "tag": "div",
+          },
+          {
+            "attrs": {
+              "class": "hw-lab-summary",
+            },
+            "children": [
+              {
+                "attrs": {},
+                "children": [
+                  "Ice Lab",
+                  "",
+                ],
+                "tag": "b",
+              },
+              {
+                "attrs": {},
+                "children": [
+                  "Build this Lab to help your shots",
+                ],
+                "tag": "small",
+              },
+            ],
+            "tag": "div",
+          },
+          {
+            "attrs": {
+              "class": "hw-lab-summary",
+            },
+            "children": [
+              {
+                "attrs": {},
+                "children": [
+                  "Seed Lab",
+                  "",
+                ],
+                "tag": "b",
+              },
+              {
+                "attrs": {},
+                "children": [
+                  "Build this Lab to help your shots",
+                ],
+                "tag": "small",
+              },
+            ],
+            "tag": "div",
+          },
+          {
+            "attrs": {
+              "class": "hw-lab-summary",
+            },
+            "children": [
+              {
+                "attrs": {},
+                "children": [
+                  "Magma Lab",
+                  "",
+                ],
+                "tag": "b",
+              },
+              {
+                "attrs": {},
+                "children": [
+                  "Build this Lab to help your shots",
+                ],
+                "tag": "small",
+              },
+            ],
+            "tag": "div",
+          },
+          {
+            "attrs": {
+              "class": "hw-lab-summary",
+            },
+            "children": [
+              {
+                "attrs": {},
+                "children": [
+                  "Rain Lab",
+                  "",
+                ],
+                "tag": "b",
+              },
+              {
+                "attrs": {},
+                "children": [
+                  "Unlocks at planet 7",
+                ],
+                "tag": "small",
+              },
+            ],
+            "tag": "div",
+          },
+          {
+            "attrs": {
+              "class": "hw-lab-summary",
+            },
+            "children": [
+              {
+                "attrs": {},
+                "children": [
+                  "Sun Lab",
+                  "",
+                ],
+                "tag": "b",
+              },
+              {
+                "attrs": {},
+                "children": [
+                  "Unlocks at planet 11",
+                ],
+                "tag": "small",
+              },
+            ],
+            "tag": "div",
+          },
+        ],
+        "tag": "div",
+      },
+      {
+        "attrs": {
+          "class": "row",
+        },
+        "children": [
+          {
+            "attrs": {
+              "class": "btn ghost",
+              "type": "button",
+            },
+            "children": [
+              "Expedition",
+            ],
+            "tag": "button",
+          },
+          {
+            "attrs": {
+              "class": "btn ghost",
+              "type": "button",
+            },
+            "children": [
+              "Next Level",
+            ],
+            "tag": "button",
+          },
+        ],
+        "tag": "div",
+      },
+      {
+        "attrs": {
+          "class": "row",
+        },
+        "children": [
+          {
+            "attrs": {
+              "class": "btn ghost",
+              "type": "button",
+            },
+            "children": [
+              "🎨 Paint",
+            ],
+            "tag": "button",
+          },
+          {
+            "attrs": {
+              "class": "btn ghost",
+              "type": "button",
+            },
+            "children": [
+              "📷 Photo",
+            ],
+            "tag": "button",
+          },
+        ],
+        "tag": "div",
+      },
+      {
+        "attrs": {
+          "class": "btn ghost wide",
+          "type": "button",
+        },
+        "children": [
+          "✨ Star Atlas",
+        ],
+        "tag": "button",
+      },
+    ],
+    "tag": "div",
+  },
+  "plotLabels": [
+    "Plot 1: Empty plot",
+    "Plot 2: Empty plot",
+    "Plot 3: Empty plot",
+    "Plot 4: Empty plot",
+    "Plot 5: Empty plot",
+    "Plot 6: Empty plot",
+  ],
+}
+`;
+
+exports[`Homeworld screen structure > keeps overview and VoiceOver plot list stable at Levels 1 and 3 > level-3 1`] = `
+{
+  "badge": {
+    "attrs": {
+      "aria-label": "Homeworld Level 3. See the next level",
+      "class": "btn ",
+      "type": "button",
+    },
+    "children": [
+      "Level 3",
+    ],
+    "tag": "button",
+  },
+  "panel": {
+    "attrs": {},
+    "children": [
+      {
+        "attrs": {
+          "class": "btn ghost wide hw-next-up",
+          "type": "button",
+        },
+        "children": [
+          {
+            "attrs": {
+              "class": "stack",
+            },
+            "children": [
+              {
+                "attrs": {},
+                "children": [
+                  "Next Up",
+                ],
+                "tag": "b",
+              },
+              {
+                "attrs": {},
+                "children": [
+                  "Build your first Lab",
+                ],
+                "tag": "small",
+              },
+              {
+                "attrs": {},
+                "children": [
+                  "Finish both steps for ✨100",
+                ],
+                "tag": "small",
+              },
+            ],
+            "tag": "span",
+          },
+        ],
+        "tag": "button",
+      },
+      {
+        "attrs": {
+          "class": "btn primary wide",
+          "type": "button",
+        },
+        "children": [
+          "Build your first Lab",
+        ],
+        "tag": "button",
+      },
+      {
+        "attrs": {
+          "class": "row hw-primary-actions",
+        },
+        "children": [
+          {
+            "attrs": {
+              "class": "btn primary dim",
+              "type": "button",
+            },
+            "children": [
+              "Collect all",
+            ],
+            "tag": "button",
+          },
+          {
+            "attrs": {
+              "class": "btn ghost",
+              "type": "button",
+            },
+            "children": [
+              "Friends",
+            ],
+            "tag": "button",
+          },
+        ],
+        "tag": "div",
+      },
+      {
+        "attrs": {
+          "class": "hw-stats",
+        },
+        "children": [
+          {
+            "attrs": {},
+            "children": [
+              "🛸 3/3",
+              {
+                "attrs": {},
+                "children": [
+                  "drones free",
+                ],
+                "tag": "small",
+              },
+            ],
+            "tag": "span",
+          },
+          {
+            "attrs": {},
+            "children": [
+              "🏡 0/0",
+              {
+                "attrs": {},
+                "children": [
+                  "friends",
+                ],
+                "tag": "small",
+              },
+            ],
+            "tag": "span",
+          },
+        ],
+        "tag": "div",
+      },
+      {
+        "attrs": {
+          "class": "muted hw-hint",
+        },
+        "children": [
+          "Drag to spin your planet. Tap a plot to build.",
+        ],
+        "tag": "p",
+      },
+      {
+        "attrs": {
+          "class": "btn ghost wide",
+          "type": "button",
+        },
+        "children": [
+          "Homeworld list",
+        ],
+        "tag": "button",
+      },
+      {
+        "attrs": {
+          "class": "hw-land-summary",
+        },
+        "children": [
+          {
+            "attrs": {},
+            "children": [
+              "Lands",
+            ],
+            "tag": "b",
+          },
+          {
+            "attrs": {
+              "class": "btn ghost",
+              "type": "button",
+            },
+            "children": [
+              "Choose lands",
+            ],
+            "tag": "button",
+          },
+        ],
+        "tag": "div",
+      },
+      {
+        "attrs": {
+          "class": "hw-landmark-summary",
+        },
+        "children": [
+          {
+            "attrs": {},
+            "children": [
+              "Landmarks",
+            ],
+            "tag": "summary",
+          },
+          {
+            "attrs": {
+              "class": "btn ghost wide",
+              "type": "button",
+            },
+            "children": [
+              "Sprout Garden · Stage 1 of 4",
+            ],
+            "tag": "button",
+          },
+          {
+            "attrs": {
+              "class": "btn ghost wide dim",
+              "type": "button",
+            },
+            "children": [
+              "Skyglass · Stage 1 of 4",
+            ],
+            "tag": "button",
+          },
+          {
+            "attrs": {
+              "class": "btn ghost wide dim",
+              "type": "button",
+            },
+            "children": [
+              "Sky Bridge · Stage 1 of 4",
+            ],
+            "tag": "button",
+          },
+        ],
+        "tag": "details",
+      },
+      {
+        "attrs": {
+          "class": "hw-overview",
+        },
+        "children": [
+          {
+            "attrs": {
+              "class": "sec-title",
+            },
+            "children": [
+              "Overview",
+            ],
+            "tag": "div",
+          },
+          {
+            "attrs": {},
+            "children": [
+              {
+                "attrs": {
+                  "class": "muted",
+                },
+                "children": [
+                  "Next Level checklist",
+                ],
+                "tag": "p",
+              },
+              {
+                "attrs": {
+                  "class": "hw-level-checklist",
+                },
+                "children": [
+                  {
+                    "attrs": {
+                      "class": "hw-check",
+                    },
+                    "children": [
+                      "○ ",
+                      "Finish chapter 5",
+                    ],
+                    "tag": "div",
+                  },
+                  {
+                    "attrs": {
+                      "class": "hw-check",
+                    },
+                    "children": [
+                      "○ ",
+                      "✨ 2,500/12,000 stardust",
+                    ],
+                    "tag": "div",
+                  },
+                  {
+                    "attrs": {
+                      "class": "hw-check",
+                    },
+                    "children": [
+                      "○ ",
+                      "frost: 0/40",
+                    ],
+                    "tag": "div",
+                  },
+                  {
+                    "attrs": {
+                      "class": "hw-check",
+                    },
+                    "children": [
+                      "○ ",
+                      "dew: 0/40",
+                    ],
+                    "tag": "div",
+                  },
+                  {
+                    "attrs": {
+                      "class": "hw-check",
+                    },
+                    "children": [
+                      "○ ",
+                      "leaf: 25/40",
+                    ],
+                    "tag": "div",
+                  },
+                ],
+                "tag": "div",
+              },
+            ],
+            "tag": "div",
+          },
+          {
+            "attrs": {
+              "class": "muted",
+            },
+            "children": [
+              "For your next throw",
+            ],
+            "tag": "p",
+          },
+          {
+            "attrs": {
+              "class": "hw-lab-summary",
+            },
+            "children": [
+              {
+                "attrs": {},
+                "children": [
+                  "Rock Lab",
+                  "",
+                ],
+                "tag": "b",
+              },
+              {
+                "attrs": {},
+                "children": [
+                  "Build this Lab to help your shots",
+                ],
+                "tag": "small",
+              },
+            ],
+            "tag": "div",
+          },
+          {
+            "attrs": {
+              "class": "hw-lab-summary",
+            },
+            "children": [
+              {
+                "attrs": {},
+                "children": [
+                  "Ice Lab",
+                  "",
+                ],
+                "tag": "b",
+              },
+              {
+                "attrs": {},
+                "children": [
+                  "Build this Lab to help your shots",
+                ],
+                "tag": "small",
+              },
+            ],
+            "tag": "div",
+          },
+          {
+            "attrs": {
+              "class": "hw-lab-summary",
+            },
+            "children": [
+              {
+                "attrs": {},
+                "children": [
+                  "Seed Lab",
+                  "",
+                ],
+                "tag": "b",
+              },
+              {
+                "attrs": {},
+                "children": [
+                  "Build this Lab to help your shots",
+                ],
+                "tag": "small",
+              },
+            ],
+            "tag": "div",
+          },
+          {
+            "attrs": {
+              "class": "hw-lab-summary",
+            },
+            "children": [
+              {
+                "attrs": {},
+                "children": [
+                  "Magma Lab",
+                  "",
+                ],
+                "tag": "b",
+              },
+              {
+                "attrs": {},
+                "children": [
+                  "Build this Lab to help your shots",
+                ],
+                "tag": "small",
+              },
+            ],
+            "tag": "div",
+          },
+          {
+            "attrs": {
+              "class": "hw-lab-summary",
+            },
+            "children": [
+              {
+                "attrs": {},
+                "children": [
+                  "Rain Lab",
+                  "",
+                ],
+                "tag": "b",
+              },
+              {
+                "attrs": {},
+                "children": [
+                  "Build this Lab to help your shots",
+                ],
+                "tag": "small",
+              },
+            ],
+            "tag": "div",
+          },
+          {
+            "attrs": {
+              "class": "hw-lab-summary",
+            },
+            "children": [
+              {
+                "attrs": {},
+                "children": [
+                  "Sun Lab",
+                  "",
+                ],
+                "tag": "b",
+              },
+              {
+                "attrs": {},
+                "children": [
+                  "Build this Lab to help your shots",
+                ],
+                "tag": "small",
+              },
+            ],
+            "tag": "div",
+          },
+        ],
+        "tag": "div",
+      },
+      {
+        "attrs": {
+          "class": "row",
+        },
+        "children": [
+          {
+            "attrs": {
+              "class": "btn ghost",
+              "type": "button",
+            },
+            "children": [
+              "Expedition",
+            ],
+            "tag": "button",
+          },
+          {
+            "attrs": {
+              "class": "btn ghost",
+              "type": "button",
+            },
+            "children": [
+              "Next Level",
+            ],
+            "tag": "button",
+          },
+        ],
+        "tag": "div",
+      },
+      {
+        "attrs": {
+          "class": "row",
+        },
+        "children": [
+          {
+            "attrs": {
+              "class": "btn ghost",
+              "type": "button",
+            },
+            "children": [
+              "🎨 Paint",
+            ],
+            "tag": "button",
+          },
+          {
+            "attrs": {
+              "class": "btn ghost",
+              "type": "button",
+            },
+            "children": [
+              "📷 Photo",
+            ],
+            "tag": "button",
+          },
+        ],
+        "tag": "div",
+      },
+      {
+        "attrs": {
+          "class": "btn ghost wide",
+          "type": "button",
+        },
+        "children": [
+          "✨ Star Atlas •",
+        ],
+        "tag": "button",
+      },
+    ],
+    "tag": "div",
+  },
+  "plotLabels": [
+    "Plot 1: Empty plot",
+    "Plot 2: Empty plot",
+    "Plot 3: Empty plot",
+    "Plot 4: Empty plot",
+    "Plot 5: Empty plot",
+    "Plot 6: Empty plot",
+    "Plot 7: Empty plot",
+    "Plot 8: Empty plot",
+    "Plot 9: Empty plot",
+    "Plot 10: Empty plot",
+  ],
+}
+`;
+
+exports[`Homeworld screen structure > keeps pouch, friends, and level checklist sheet structure stable > friends 1`] = `
+{
+  "attrs": {
+    "class": "modal",
+  },
+  "children": [
+    {
+      "attrs": {
+        "class": "m-title",
+      },
+      "children": [
+        "Friends",
+        {
+          "attrs": {
+            "class": "muted",
+          },
+          "children": [
+            " 0/0",
+          ],
+          "tag": "small",
+        },
+      ],
+      "tag": "div",
+    },
+    {
+      "attrs": {
+        "class": "muted",
+      },
+      "children": [
+        "Build a Critter Den so creatures can move in.",
+      ],
+      "tag": "p",
+    },
+    {
+      "attrs": {
+        "class": "btn ghost wide",
+        "type": "button",
+      },
+      "children": [
+        "Back",
+      ],
+      "tag": "button",
+    },
+  ],
+  "tag": "div",
+}
+`;
+
+exports[`Homeworld screen structure > keeps pouch, friends, and level checklist sheet structure stable > level-checklist 1`] = `
+{
+  "attrs": {
+    "class": "hw-level-checklist",
+  },
+  "children": [
+    {
+      "attrs": {
+        "class": "hw-check",
+      },
+      "children": [
+        "○ ",
+        "Finish chapter 1",
+      ],
+      "tag": "div",
+    },
+    {
+      "attrs": {
+        "class": "hw-check",
+      },
+      "children": [
+        "○ ",
+        "✨ 0/1,500 stardust",
+      ],
+      "tag": "div",
+    },
+    {
+      "attrs": {
+        "class": "hw-check",
+      },
+      "children": [
+        "○ ",
+        "leaf: 0/20",
+      ],
+      "tag": "div",
+    },
+    {
+      "attrs": {
+        "class": "hw-check",
+      },
+      "children": [
+        "○ ",
+        "dew: 0/20",
+      ],
+      "tag": "div",
+    },
+  ],
+  "tag": "div",
+}
+`;
+
+exports[`Homeworld screen structure > keeps pouch, friends, and level checklist sheet structure stable > pouch 1`] = `
+{
+  "attrs": {
+    "class": "modal",
+  },
+  "children": [
+    {
+      "attrs": {
+        "class": "m-title",
+      },
+      "children": [
+        "Essence pouch",
+      ],
+      "tag": "div",
+    },
+    {
+      "attrs": {
+        "class": "essence-row",
+      },
+      "children": [
+        {
+          "attrs": {},
+          "children": [
+            "🪨 stone · 0",
+          ],
+          "tag": "b",
+        },
+        {
+          "attrs": {},
+          "children": [
+            "What uses it: Rock Lab, Star Atlas, and Dyes",
+          ],
+          "tag": "small",
+        },
+      ],
+      "tag": "div",
+    },
+    {
+      "attrs": {
+        "class": "essence-row",
+      },
+      "children": [
+        {
+          "attrs": {},
+          "children": [
+            "💧 dew · 0",
+          ],
+          "tag": "b",
+        },
+        {
+          "attrs": {},
+          "children": [
+            "What uses it: Rain Lab, Star Atlas, and Dyes",
+          ],
+          "tag": "small",
+        },
+      ],
+      "tag": "div",
+    },
+    {
+      "attrs": {
+        "class": "essence-row",
+      },
+      "children": [
+        {
+          "attrs": {},
+          "children": [
+            "🌿 leaf · 0",
+          ],
+          "tag": "b",
+        },
+        {
+          "attrs": {},
+          "children": [
+            "What uses it: Seed Lab, Sun Lab, Star Atlas, and Dyes",
+          ],
+          "tag": "small",
+        },
+      ],
+      "tag": "div",
+    },
+    {
+      "attrs": {
+        "class": "essence-row",
+      },
+      "children": [
+        {
+          "attrs": {},
+          "children": [
+            "🔥 ember · 0",
+          ],
+          "tag": "b",
+        },
+        {
+          "attrs": {},
+          "children": [
+            "What uses it: Magma Lab, Star Atlas, and Dyes",
+          ],
+          "tag": "small",
+        },
+      ],
+      "tag": "div",
+    },
+    {
+      "attrs": {
+        "class": "essence-row",
+      },
+      "children": [
+        {
+          "attrs": {},
+          "children": [
+            "❄️ frost · 0",
+          ],
+          "tag": "b",
+        },
+        {
+          "attrs": {},
+          "children": [
+            "What uses it: Ice Lab, Star Atlas, and Dyes",
+          ],
+          "tag": "small",
+        },
+      ],
+      "tag": "div",
+    },
+    {
+      "attrs": {
+        "class": "btn ghost wide",
+        "type": "button",
+      },
+      "children": [
+        "Close",
+      ],
+      "tag": "button",
+    },
+  ],
+  "tag": "div",
+}
+`;

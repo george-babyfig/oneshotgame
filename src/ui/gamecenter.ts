@@ -1,26 +1,34 @@
 // Game Center (iOS only). Uses the app's own native plugin (ios/App/App/GameCenterPlugin.swift);
 // on the web every call is a silent no-op.
 import { Capacitor, registerPlugin } from '@capacitor/core';
-import { LEADERBOARDS, pendingAchievements } from '../meta/achievements';
-import { totalStars, type Profile } from '../meta/profile';
+import { pendingAchievements } from '../meta/achievements';
+import type { Profile } from '../meta/profile';
 
 interface GameCenterPlugin {
-  authenticate(): Promise<{ authenticated: boolean }>;
-  submitScore(o: { leaderboardId: string; score: number }): Promise<{ submitted: boolean }>;
+  authenticate(o: { interactive: boolean }): Promise<{ authenticated: boolean }>;
   reportAchievements(o: { achievements: { id: string; percent: number }[] }): Promise<{ reported: boolean }>;
   showDashboard(): Promise<{ shown: boolean }>;
 }
 
 const GC = registerPlugin<GameCenterPlugin>('GameCenter');
-const available = () => Capacitor.getPlatform() === 'ios';
+const available = () => Capacitor.getPlatform() === 'ios' && Capacitor.isPluginAvailable('GameCenter');
 let signedIn = false;
 
-export async function gcSignIn() {
+export async function gcSignIn(interactive = false) {
   if (!available()) return false;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
-    signedIn = (await GC.authenticate()).authenticated;
+    const result = await Promise.race([
+      GC.authenticate({ interactive }),
+      new Promise<{ authenticated: boolean }>((resolve) => {
+        timeout = setTimeout(() => resolve({ authenticated: false }), 20000);
+      }),
+    ]);
+    signedIn = result.authenticated;
   } catch {
     signedIn = false;
+  } finally {
+    clearTimeout(timeout);
   }
   return signedIn;
 }
@@ -29,18 +37,13 @@ export function gcAvailable() {
   return available();
 }
 
-export async function gcScore(board: keyof typeof LEADERBOARDS, score: number) {
-  if (!signedIn || score <= 0) return;
-  try {
-    await GC.submitScore({ leaderboardId: LEADERBOARDS[board], score: Math.floor(score) });
-  } catch {
-    /* best effort */
-  }
+export function gcIsSignedIn() {
+  return signedIn;
 }
 
-/** Report newly earned achievements and refresh the headline leaderboards. */
+/** Report newly earned achievements only. */
 export async function gcSync(p: Profile, save: () => void) {
-  if (!signedIn) return;
+  if (!signedIn || !p.settings.gameCenter) return;
   const pending = pendingAchievements(p);
   if (pending.length) {
     try {
@@ -53,14 +56,10 @@ export async function gcSync(p: Profile, save: () => void) {
       /* try again next time */
     }
   }
-  gcScore('stars', totalStars(p));
-  gcScore('life', p.stats.bestLife);
-  gcScore('rush', p.stats.rushBest);
 }
 
-export async function gcDashboard() {
-  if (!available()) return false;
-  if (!signedIn) await gcSignIn();
+export async function gcDashboard(p: Profile) {
+  if (!available() || !p.settings.gameCenter || !signedIn) return false;
   try {
     return (await GC.showDashboard()).shown;
   } catch {

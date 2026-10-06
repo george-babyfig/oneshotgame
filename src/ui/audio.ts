@@ -1,4 +1,7 @@
 // All sounds are synthesised with WebAudio — no audio files to ship.
+import type { Kind } from '../core/world';
+import type { LauncherId } from '../core/launchers';
+import { OBJECT_FEEL } from './feel';
 let ctx: AudioContext | null = null;
 let sfxBus: GainNode | null = null;
 let musicBus: GainNode | null = null;
@@ -37,8 +40,20 @@ function ensure(): AudioContext | null {
 
 export function unlockAudio() {
   const c = ensure();
-  if (c?.state === 'suspended') c.resume().catch(() => {});
+  if (c && c.state !== 'running') c.resume().catch(() => {});
   if (musicOn && musicTimer === null) startMusic();
+}
+
+let resumeInstalled = false;
+/** iOS can interrupt audio after the first gesture (calls, Siri, route changes). */
+export function installAudioResume() {
+  if (resumeInstalled || typeof window === 'undefined') return;
+  resumeInstalled = true;
+  const resume = () => {
+    if (ctx && ctx.state !== 'running') void ctx.resume().catch(() => {});
+  };
+  window.addEventListener('pointerup', resume, { passive: true });
+  window.addEventListener('touchend', resume, { passive: true });
 }
 
 export function setAudio(sound: boolean, music: boolean) {
@@ -92,7 +107,49 @@ const semi = (base: number, n: number) => base * Math.pow(2, n / 12);
 const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
 
 export const sfx = {
+  launcherRelease: (id: LauncherId) => {
+    if (id === 'swoop') tone(410, 0.34, 'sine', 0.045, 0, 850);
+    if (id === 'sparkler') {
+      noise(0.15, 0.045, 3500);
+      tone(1030, 0.15, 'triangle', 0.035, 0.04, 1500);
+    }
+    if (id === 'zip') noise(0.1, 0.06, 4100, 1.2);
+    if (id === 'thumper') tone(145, 0.28, 'sine', 0.11, 0, 65);
+    if (id === 'pinpoint') tone(1250, 0.2, 'sine', 0.055, 0, 1600);
+    if (id === 'skipper') tone(360, 0.22, 'sine', 0.05, 0, 620);
+  },
+  launcherLanding: (id: LauncherId, bounced: boolean, fusion: boolean) => {
+    if (id === 'swoop') tone(670, 0.18, 'sine', 0.035, 0, 400);
+    if (id === 'sparkler' && fusion) [0, 5, 9].forEach((step, i) => tone(semi(790, step), 0.17, 'triangle', 0.04, i * 0.04));
+    if (id === 'zip') noise(0.13, 0.04, 1500);
+    if (id === 'thumper') noise(0.26, 0.09, 420, 0.7, 0, 'lowpass');
+    if (id === 'pinpoint') tone(1050, 0.12, 'sine', 0.035);
+    if (id === 'skipper' && bounced) tone(330, 0.16, 'sine', 0.03, 0, 500);
+  },
+  trouble: (kind: 'act' | 'blocked' | 'settled' | 'spread') => {
+    if (kind === 'settled') [0, 4, 7].forEach((step, i) => tone(semi(659, step), 0.2, 'sine', 0.04, i * 0.06));
+    else if (kind === 'blocked') tone(580, 0.16, 'sine', 0.04, 0, 760);
+    else tone(320, 0.17, 'sine', 0.035, 0, 260);
+  },
+  sky: (kind: 'bonk' | 'boing' | 'fizz' | 'gust' | 'mist') => {
+    if (kind === 'bonk') tone(260, 0.16, 'sine', 0.055, 0, 175);
+    else if (kind === 'boing') tone(420, 0.23, 'sine', 0.047, 0, 660);
+    else if (kind === 'fizz') {
+      noise(0.2, 0.025, 2200);
+      tone(770, 0.19, 'sine', 0.035, 0, 500);
+    } else if (kind === 'mist') tone(560, 0.24, 'sine', 0.025, 0, 610);
+    else noise(0.23, 0.018, 1300);
+  },
   click: () => tone(880, 0.05, 'triangle', 0.1),
+  sheet: () => tone(520, 0.1, 'sine', 0.045, 0, 740),
+  toast: () => tone(740, 0.08, 'sine', 0.035, 0, 880),
+  page: () => tone(460, 0.09, 'triangle', 0.035, 0, 620),
+  zoom: () => tone(340, 0.16, 'sine', 0.07, 0, 700),
+  countTick: () => tone(920, 0.035, 'sine', 0.025),
+  rewardFlight: () => tone(660, 0.25, 'sine', 0.06, 0, 1100),
+  rewardArrive: () => tone(1180, 0.1, 'triangle', 0.06),
+  burst: () => tone(990, 0.12, 'sine', 0.05, 0, 1450),
+  shake: () => tone(130, 0.11, 'sine', 0.065),
   stretch: (k: number) => tone(200 + k * 300, 0.04, 'sine', 0.04),
   launch: () => {
     noise(0.35, 0.25, 1200, 0.6, 0, 'highpass');
@@ -106,6 +163,28 @@ export const sfx = {
     if (kind === 'seed') [0, 4, 7].forEach((s, i) => tone(semi(660, s), 0.18, 'triangle', 0.08, i * 0.05));
     if (kind === 'storm') noise(0.8, 0.25, 3000, 0.3);
     if (kind === 'sun') [0, 4, 7, 12].forEach((s, i) => tone(semi(523, s), 0.4, 'triangle', 0.08, i * 0.04));
+  },
+  objectLaunch: (kind: Kind) => {
+    const sound = OBJECT_FEEL[kind].launch;
+    if (sound === 'thud') tone(160, 0.18, 'sine', 0.12, 0, 85);
+    else if (sound === 'chime') tone(880, 0.24, 'sine', 0.07, 0, 1320);
+    else if (sound === 'pop') tone(520, 0.12, 'triangle', 0.1, 0, 740);
+    else if (sound === 'rumble') noise(0.3, 0.18, 300, 0.5, 0, 'lowpass');
+    else if (sound === 'patter') noise(0.24, 0.12, 2600, 0.4);
+    else [0, 7, 12].forEach((step, i) => tone(semi(660, step), 0.15, 'sine', 0.05, i * 0.04));
+  },
+  objectImpact: (kind: Kind) => {
+    const sound = OBJECT_FEEL[kind].impact;
+    if (sound === 'thud') {
+      tone(95, 0.35, 'sine', 0.35, 0, 42);
+      noise(0.3, 0.35, 400, 0.8, 0, 'lowpass');
+    } else if (sound === 'chime') [0, 7, 12].forEach((step, i) => tone(semi(1046, step), 0.4, 'sine', 0.09, i * 0.05));
+    else if (sound === 'pop') tone(420, 0.2, 'triangle', 0.12, 0, 660);
+    else if (sound === 'rumble') {
+      tone(70, 0.45, 'sawtooth', 0.17, 0, 42);
+      noise(0.4, 0.2, 360, 0.5, 0, 'lowpass');
+    } else if (sound === 'patter') [0, 0.07, 0.14].forEach((when) => noise(0.2, 0.13, 2500, 0.6, when));
+    else [0, 4, 7, 12].forEach((step, i) => tone(semi(784, step), 0.22, 'triangle', 0.08, i * 0.04));
   },
   miss: () => tone(400, 0.4, 'sine', 0.08, 0, 120),
   bloom: (step: number) => tone(semi(523, PENTA[Math.min(step, PENTA.length - 1)]), 0.25, 'triangle', 0.1),
@@ -130,12 +209,32 @@ export const sfx = {
     [0, 4, 7, 12].forEach((s, i) => tone(semi(392, s), 0.16, 'triangle', 0.09, i * 0.06));
     noise(0.25, 0.08, 5000, 1.5, 0.2);
   },
+  beacon: () => {
+    // The short Homeworld cue uses the sound bus, so the sound setting mutes it.
+    if (!soundOn) return;
+    [0, 4, 7, 12].forEach((step, i) => tone(semi(523, step), 0.38, 'sine', 0.045, i * 0.13));
+  },
   chest: () => {
     noise(0.25, 0.3, 700, 0.8, 0, 'lowpass');
     [0, 7, 12, 16, 19, 24].forEach((s, i) => tone(semi(523, s), 0.35, 'triangle', 0.09, 0.2 + i * 0.07));
   },
   whoosh: () => noise(0.3, 0.15, 1800, 0.7, 0, 'bandpass'),
   combo: (n: number) => [0, 4, 7].forEach((s, i) => tone(semi(523, s + Math.min(n, 8) * 2), 0.18, 'square', 0.05, i * 0.05)),
+  reaction: (kind: 'fusion' | 'clash') => {
+    if (kind === 'fusion') {
+      noise(0.28, 0.1, 2400, 0.5);
+      [0, 4, 7].forEach((step, i) => tone(semi(659, step), 0.28, 'sine', 0.07, i * 0.055));
+    } else {
+      tone(440, 0.22, 'sine', 0.07, 0, 370);
+      tone(330, 0.26, 'triangle', 0.035, 0.09);
+    }
+  },
+  comboStep: (step: number) => {
+    const notes = [0, 2, 4, 7, 12];
+    const note = notes[Math.min(Math.max(step, 2), 4)];
+    tone(semi(659, note), 0.36, 'sine', 0.085);
+    if (step >= 4) tone(semi(659, 16), 0.48, 'sine', 0.055, 0.09);
+  },
 };
 
 // Generative ambient music. Each theme is a chord loop plus a gentle arpeggio;
@@ -151,6 +250,19 @@ interface Theme {
 }
 
 export const THEMES: Record<string, Theme> = {
+  beacon: {
+    chords: [
+      [60, 64, 67, 72],
+      [57, 60, 65, 69],
+      [62, 65, 69, 74],
+      [55, 60, 64, 67],
+    ],
+    len: 4.2,
+    arp: [0, 2, 3, 2],
+    step: 1.05,
+    wave: 'sine',
+    bells: true,
+  },
   home: {
     chords: [
       [60, 64, 67, 71],
@@ -263,13 +375,45 @@ export const THEMES: Record<string, Theme> = {
     wave: 'sine',
     bells: true,
   },
+  // bouncy major loop with bells for the home screen while a festival runs
+  festival: {
+    chords: [
+      [60, 64, 67, 72],
+      [65, 69, 72, 77],
+      [67, 71, 74, 79],
+      [65, 69, 72, 77],
+    ],
+    len: 2.4,
+    arp: [0, 2, 1, 3, 2, 1],
+    step: 0.3,
+    wave: 'triangle',
+    bells: true,
+  },
+  // rolling sea-shanty feel for the Weekly Voyage
+  voyage: {
+    chords: [
+      [57, 60, 64, 69],
+      [62, 65, 69, 74],
+      [55, 59, 62, 67],
+      [57, 60, 64, 69],
+    ],
+    len: 2.7,
+    arp: [0, 1, 2, 1, 2, 3],
+    step: 0.45,
+    wave: 'triangle',
+    bells: true,
+  },
 };
 const CHAPTER_THEMES = ['dawn', 'cinder', 'tide', 'frost', 'verdant', 'storm'];
 let theme: Theme = THEMES.home;
 
 /** Switch music theme; takes effect at the next chord. */
 export function setMusicTheme(name: string) {
-  theme = THEMES[name] ?? THEMES.home;
+  if (name.startsWith('remix:')) {
+    const base = THEMES[name.slice(6)] ?? THEMES.voyage;
+    // The chapter's own harmony returns with a quicker, lighter arpeggio.
+    theme = { ...base, len: base.len * 0.82, step: base.step * 0.5, bells: true };
+  } else theme = THEMES[name] ?? THEMES.home;
 }
 export function chapterTheme(chapter: number) {
   return CHAPTER_THEMES[(chapter - 1) % CHAPTER_THEMES.length];

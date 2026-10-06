@@ -1,6 +1,38 @@
-import { loadKey, saveKey } from './storage';
+import { loadKey, saveKey, saveKeyChecked, removeKey } from './storage';
 import type { BoosterId, UpgradeId } from './config';
-import type { Planet } from '../core/world';
+import { BIOMES, type BiomeId, type Kind, type Planet } from '../core/world';
+import type { ObstacleId, SkyState } from '../core/sky';
+import {
+  defaultHome,
+  effLevel,
+  migrateGreenhouses,
+  ownedIsleDecorations,
+  retiredBuildingRefund,
+  RING_PLOTS,
+  type HomeState,
+} from './homeworld';
+import type { Mail } from './inbox';
+import { UNLOCKS } from './unlocks';
+import { restoreRound, serializeRound, type RoundState } from '../core/round';
+import type { FeatId } from '../core/labperks';
+import { LEVEL_SALT, makeLevel, type GenerationProfile } from '../core/levels';
+import type { RoundModifiers } from '../core/modifiers';
+import { DEFAULT_AVATAR, type AvatarParts } from './cosmetics';
+import type { ReactionId } from '../core/round';
+import { RULES_VERSION } from '../core/rules-version';
+import { STAR_SLING } from '../core/flight';
+import { rulesForLevel } from '../core/round';
+import { remixLevel, remixUnlocked, type RemixChapter } from './remix';
+import type { LauncherId, Tune } from '../core/launchers';
+import { isLauncherId, launcherBay } from './launchbay';
+import { isLaunchRosterId } from '../core/launchers';
+import { defaultCometPier, type CometPierProgress } from './landmarks';
+import type { VaultState } from './homeworldTypes';
+import type { LandmarkId, LandmarkStage, LandmarkState } from './homeworldLife';
+import { earn } from './wallet';
+import { COSMIC_ROAD_ID, newRoadState, roadCloseOn, STAR_ROAD, type RoadState } from './starroad';
+import type { Hemisphere } from './seasons';
+import { retireEventProgress } from './events';
 
 export interface GalaxyPlanet {
   n: number;
@@ -23,12 +55,185 @@ export interface Settings {
   music: boolean;
   haptics: boolean;
   reduceMotion: boolean;
+  /** Accessibility assist; old saves default to the normal aim line. */
+  fullAimLine: boolean;
+  planetColours: 'classic' | 'clear';
+  /** Reminders; off until a grown-up turns them on behind the parental gate. */
   notifications: boolean;
+  /** Game Center; off until a grown-up signs in behind the parental gate. */
+  gameCenter: boolean;
   /** '' = follow the device language. */
   lang: string;
+  /** For real-calendar seasons. */
+  hemi: 'north' | 'south';
+  textSize: 'standard' | 'large' | 'extra-large';
+  hidePaidLooks: boolean;
+  spendingReminder: { cents: number; currency: string } | null;
+  breakAfterRounds: number | null;
+  /** A digest, never the entered PIN. */
+  parentPin: string | null;
+  gatePausedUntil: number;
+  gentle: boolean;
+}
+
+export interface RoundCheckpoint {
+  n: number;
+  mode?: 'campaign' | 'remix';
+  seedPrefix?: string;
+  salt?: number;
+  generationProfile?: GenerationProfile;
+  state: RoundState;
+  modifiers: RoundModifiers;
+  labSteps?: (Pick<import('../core/round').StepResult, 'reactions' | 'troubleEvents'> & { kind: Kind })[];
+  roundKey?: string;
+  landmarkSteps?: import('./roundSettlement').RoundStepEvidence[];
+  throwsLeft: number;
+  throwsUsed: number;
+  throwsTotal: number;
+  qi: number;
+  cur: Kind;
+  next: Kind;
+  score: number;
+  shownScore: number;
+  starsGot: number;
+  rot: number;
+  time: number;
+  timeLeft: number;
+  bossHp: number;
+  shot: {
+    kind: Kind;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    t: number;
+    carry: number;
+    t0: number;
+    rot0: number;
+    trail: { x: number; y: number }[];
+    nova?: boolean;
+  } | null;
+  landedKinds?: (Kind | null)[];
+  comboIconsCurrent?: ReactionId[];
+  comboIconsBest?: ReactionId[];
+  reactionEvents?: ReactionId[];
+  reactionsSeen?: ReactionId[];
+  comboEvents?: { links: number; reaction?: ReactionId; superFusion: boolean }[];
+  warmup?: boolean;
+  practiceFirstClear?: boolean;
+  practiceGifts?: number;
+  gemBoosterUsed?: boolean;
+  skyState?: SkyState;
+  practiceBonkUsed?: boolean;
+}
+
+function roundFingerprint(
+  n: number,
+  prefix = 'PP',
+  salt?: number,
+  p?: Profile,
+  mode: 'campaign' | 'remix' = 'campaign',
+  profile?: GenerationProfile,
+): string {
+  const level = mode === 'remix' && p ? remixLevel(n, p) : makeLevel(n, prefix, { salt, profile });
+  const source = JSON.stringify([
+    level.queue,
+    level.start,
+    level.sky,
+    level.spin,
+    level.size,
+    level.stars,
+    level.goals,
+    level.troubles,
+    rulesForLevel(n),
+    STAR_SLING,
+  ]);
+  let hash = 2166136261;
+  for (let i = 0; i < source.length; i++) hash = Math.imul(hash ^ source.charCodeAt(i), 16777619);
+  return JSON.stringify([n, prefix, salt ?? (prefix === 'PP' ? (LEVEL_SALT[n] ?? null) : null), RULES_VERSION, hash >>> 0]);
+}
+
+/** The core serializer owns rules compatibility; this wrapper keeps scene position. */
+export function saveInterruptedRound(p: Profile, checkpoint: RoundCheckpoint): void {
+  const { state, ...scene } = checkpoint;
+  p.savedRound = JSON.stringify({
+    format: 1,
+    fingerprint: roundFingerprint(checkpoint.n, checkpoint.seedPrefix, checkpoint.salt, p, checkpoint.mode, checkpoint.generationProfile),
+    round: serializeRound(state),
+    scene,
+  });
+}
+
+export function readInterruptedRound(p: Profile): RoundCheckpoint | null {
+  if (!p.savedRound) return null;
+  try {
+    const saved = JSON.parse(p.savedRound) as { format: number; fingerprint: string; round: string; scene: Omit<RoundCheckpoint, 'state'> };
+    const state = saved.format === 1 && typeof saved.round === 'string' ? restoreRound(saved.round) : null;
+    const s = saved.scene;
+    if (
+      !state ||
+      !s ||
+      !Number.isInteger(s.n) ||
+      s.n < 1 ||
+      s.n > p.level ||
+      (s.mode !== undefined && s.mode !== 'campaign' && s.mode !== 'remix') ||
+      (s.mode === 'remix' && (s.seedPrefix !== 'RX' || !remixUnlocked(p, Math.ceil(s.n / 10)))) ||
+      (s.mode !== 'remix' && s.seedPrefix !== undefined && s.seedPrefix !== 'PP') ||
+      (s.seedPrefix === 'RX' && s.mode !== 'remix') ||
+      !Number.isInteger(s.qi) ||
+      s.qi < 0 ||
+      !Number.isFinite(s.throwsLeft) ||
+      !Number.isFinite(s.throwsUsed) ||
+      !Number.isFinite(s.throwsTotal) ||
+      !Number.isFinite(s.score) ||
+      !Number.isFinite(s.rot) ||
+      !Number.isFinite(s.time) ||
+      typeof s.cur !== 'string' ||
+      typeof s.next !== 'string' ||
+      !s.modifiers ||
+      (s.seedPrefix !== undefined && (!/^[a-z0-9_-]{1,40}$/i.test(s.seedPrefix) || s.seedPrefix.includes('..'))) ||
+      (s.salt !== undefined && !Number.isInteger(s.salt)) ||
+      (s.generationProfile !== undefined && s.generationProfile !== 'reviewed-v1' && s.generationProfile !== 'raw-v2')
+    )
+      throw new Error('Invalid round checkpoint');
+    // Older checkpoints predate gameplay launchers and always used the Sling.
+    if (!s.modifiers.launcher) s.modifiers.launcher = { id: 'sling', tune: 1 };
+    const selection = s.modifiers.launcher;
+    if (
+      !isLauncherId(selection.id) ||
+      !isLaunchRosterId(selection.id) ||
+      ![1, 2, 3, 4].includes(selection.tune) ||
+      (selection.id !== 'sling' &&
+        (launcherBay.availability(p, selection.id).kind !== 'owned' || launcherBay.tune(p, selection.id) < selection.tune))
+    )
+      throw new Error('Invalid launcher checkpoint');
+    if (saved.fingerprint !== roundFingerprint(s.n, s.seedPrefix, s.salt, p, s.mode, s.generationProfile)) {
+      // Only an unsalted PP61-120 checkpoint can predate the raw-v2 cutover.
+      const legacyCampaign =
+        s.generationProfile === undefined &&
+        s.mode !== 'remix' &&
+        (s.seedPrefix ?? 'PP') === 'PP' &&
+        s.salt === undefined &&
+        s.n >= 61 &&
+        s.n <= 120;
+      if (!legacyCampaign || saved.fingerprint !== roundFingerprint(s.n, s.seedPrefix, s.salt, p, s.mode, 'reviewed-v1'))
+        throw new Error('Level changed');
+      s.generationProfile = 'reviewed-v1';
+    }
+    return { ...s, state };
+  } catch {
+    p.savedRound = undefined;
+    return null;
+  }
+}
+
+export function clearInterruptedRound(p: Profile): void {
+  p.savedRound = undefined;
 }
 
 export interface Stats {
+  /** Winning campaign, Voyage and Zen final sectors, by land. */
+  grown: Partial<Record<BiomeId, number>>;
   throws: number;
   plays: number;
   wins: number;
@@ -52,6 +257,14 @@ export interface VisitorGift {
   memento: string | null;
 }
 
+export interface LauncherProgress {
+  selected: LauncherId;
+  tunes: Partial<Record<LauncherId, Tune>>;
+  flings: Partial<Record<LauncherId, number>>;
+  completedRounds: Partial<Record<LauncherId, number>>;
+  comboThreePlanets: string[];
+}
+
 export interface Profile {
   v: number;
   gems: number;
@@ -59,21 +272,53 @@ export interface Profile {
   /** Highest unlocked level (the next one to beat). */
   level: number;
   stars: Record<number, number>;
+  /** Best stars in each finished chapter's separate Remix planets. */
+  remix: Record<number, RemixChapter>;
+  /** Star Road progress, separate from campaign stars. */
+  roadPoints: number;
+  roadDay: { day: string; earned: number };
+  /** Stable per-Road progress. Legacy road fields remain for older callers. */
+  roadRecords: Record<string, RoadState>;
+  roadCreditedEarningKeys: string[];
+  roadPassEntitlements: string[];
+  roadLegacySerial: number;
+  roadStickers: string[];
+  m12RoadMigrated: boolean;
+  /** Old Pass paints and claimed photo frame were preserved once. */
+  m12LegacyLooksMigrated: boolean;
   /** Lifebook: every creature ever discovered. */
   seen: string[];
+  skySeen: ObstacleId[];
+  gustSeen: boolean;
+  fusionsFound: ReactionId[];
+  reactionPairsTried: string[];
+  /** Best links and the thirteen Field Guide stamp bits. */
+  combo: { best: number; stamps: number };
   galaxy: GalaxyPlanet[];
   lastCollect: number;
+  vault: VaultState;
   upgrades: Record<UpgradeId, number>;
+  /** One-time preserving M11 conversion and paid-value refunds. */
+  m11Migrated: boolean;
+  /** M11.5 Homeworld Life state has been validated once. */
+  m115Migrated: boolean;
   boosters: Record<BoosterId, number>;
+  /** Subset of inventory bought with gems, kept separate from earned stock. */
+  gemBoosters: Record<BoosterId, number>;
   piggy: number;
   starter: boolean;
   /** Cosmic Pass owned: unlocks the premium Star Road lane. */
   pass: boolean;
+  /** M3 migration is complete; older gates already earned are kept. */
+  m3Migrated: boolean;
+  legacyUnlocks: string[];
   /** Premium Star Road tiers already claimed. */
   roadPass: number[];
   skin: string;
   skins: string[];
   processedTx: string[];
+  pendingPiggy: { amount: number; startedAt: number } | null;
+  pendingPurchaseRecords: { tx: string; key: string; at: number }[];
   daily: { last: string; streak: number };
   quests: { day: string; list: QuestState[]; bonusClaimed: boolean };
   /** Star Road tiers already claimed (indices). */
@@ -82,30 +327,111 @@ export interface Profile {
   chapters: number[];
   dailyPlanet: { day: string; best: number; stars: number; rewarded: boolean };
   settings: Settings;
+  /** An interrupted campaign round, including its rules version. */
+  savedRound?: string;
   tutorial: boolean;
-  meta: { installed: number; lastSeen: number; sessions: number; rated: boolean; starterOffered: boolean; notifAsked: boolean };
+  meta: {
+    installed: number;
+    lastSeen: number;
+    sessions: number;
+    rated: boolean;
+    starterOffered: boolean;
+    notifAsked: boolean;
+    lastWelcomeAt: number;
+  };
   stats: Stats;
   /** Momentum win streak (0..3) and the day the free shield was last used. */
-  momentum: { streak: number; shieldDay: string };
+  momentum: { streak: number; shieldDay: string; paused: boolean; scopeReady: boolean; scopeWins: number };
   /** Gifts left by visiting creatures, waiting to be opened. */
   visitors: VisitorGift[];
   mementos: string[];
   /** Explorer Rank (1-based) and habitat sets already rewarded. */
   rank: number;
+  /** Highest retired rank payout already accounted for by chapter chests. */
+  m4RankPaidThrough: number;
   habitats: string[];
   /** Personal best per mode and challenge history. */
   challengeLog: { code: string; score: number; stars: number; vs: number }[];
   /** The persistent Zen Garden world. */
   zen: Planet | null;
   /** This week's event progress. */
-  event: { week: string; tokens: number; claimed: number[] };
+  event: { week: string; tokens: number; claimed: number[]; retired?: boolean; legacyGems?: number };
   /** Game Center achievement ids already reported. */
   gcReported: string[];
+  /** Keeper outfit (see meta/cosmetics.ts) and items bought with gems. */
+  look: Record<'suit' | 'hat' | 'launcher' | 'trail' | 'emote', string>;
+  avatar: AvatarParts;
+  wardrobe: string[];
+  favourites: string[];
+  stylesNewSeen: string;
+  /** Legacy flings per cosmetic look; gameplay mastery lives in launcher.flings. */
+  mastery: Record<string, number>;
+  /** Gameplay launchers are independent of cosmetic look mastery. */
+  launcher: LauncherProgress;
+  /** The Pier feat persists before its M11.5 site is built. */
+  cometPier: CometPierProgress;
+  m105Migrated: boolean;
+  /** Planet Passport: name parts, title, banner and pinned badges. */
+  passport: {
+    first: number;
+    second: number;
+    set: boolean;
+    title: string;
+    banner: number;
+    frame: number;
+    badges: string[];
+    badgesSet: boolean;
+  };
+  /** Homeworld: the planet you build on between levels. */
+  home: HomeState;
+  /** Object Lab levels per flingable (missing = 1). */
+  lab: Partial<Record<Kind, number>>;
+  feats: Partial<Record<FeatId, number>>;
+  forms: Partial<Record<Kind, boolean>>;
+  formsSeen: Kind[];
+  /** Flings per object (object records). */
+  flings: Partial<Record<Kind, number>>;
+  /** Times each creature was seen appearing (Lifebook field notes). */
+  sightings: Record<string, number>;
+  /** Inbox letters, and every letter id ever delivered (so trimming never re-sends one). */
+  mail: Mail[];
+  mailSeen: string[];
+  /** Planets whose Comet Guardian has been defeated (first-time reward paid). */
+  bosses: number[];
+  /** Saved Keeper outfits (Workshop presets). */
+  presets: (Record<string, string> | null)[];
+  /** Constellations: materials from level drops, filled bundles, lit constellations. */
+  mats: Partial<Record<'stone' | 'dew' | 'leaf' | 'ember' | 'frost', number>>;
+  bundles: string[];
+  constellations: string[];
+  /** Suit dyes: unlocked ids and the ones applied. */
+  dyes: string[];
+  dye: { main: string | null; trim: string | null };
+  /** This month's festival: costumed critters spotted and tiers claimed. */
+  festival: { key: string; spotted: number; claimed: number[] };
+  /** This week's Voyage: difficulty base, stops cleared, best stars per stop; and voyages ever finished. */
+  voyage: { week: string; base: number; cleared: number; stars: number[]; hemisphere?: Hemisphere; legacyCatchUpPaid?: boolean };
+  voyageDone: number;
+  /** Campaign fails in a row per planet (cleared on a win); drives the continue rule. */
+  fails: Record<number, number>;
+  /** Continues bought on each campaign planet, across attempts. */
+  continuesUsed: Record<number, number>;
+  /** Visits per species; a memento arrives on a species' 3rd visit. */
+  visits: Record<string, number>;
+  /** Sticker Album: festival stickers kept, milestones and pages claimed, and the scrapbook pages. */
+  album: {
+    fest: string[];
+    milestones: number;
+    pagesClaimed: string[];
+    pages: { bg: number; items: { id: string; x: number; y: number; r: number; s: number }[] }[];
+  };
+  /** Buddy creature beside the Keeper, and the accessory it wears (null = festival costume). */
+  buddy: { species: string | null; acc: string | null };
 }
 
 const KEY = 'pp.profile';
 const BACKUP_KEY = 'pp.profile.bak';
-export const PROFILE_VERSION = 2;
+export const PROFILE_VERSION = 6;
 
 export function defaultProfile(now = Date.now()): Profile {
   return {
@@ -114,27 +440,70 @@ export function defaultProfile(now = Date.now()): Profile {
     dust: 0,
     level: 1,
     stars: {},
+    remix: {},
+    roadPoints: 0,
+    roadDay: { day: '', earned: 0 },
+    roadRecords: { [COSMIC_ROAD_ID]: newRoadState() },
+    roadCreditedEarningKeys: [],
+    roadPassEntitlements: [],
+    roadLegacySerial: 0,
+    roadStickers: [],
+    m12RoadMigrated: true,
+    m12LegacyLooksMigrated: true,
     seen: [],
+    skySeen: [],
+    gustSeen: false,
+    fusionsFound: [],
+    reactionPairsTried: [],
+    combo: { best: 0, stamps: 0 },
     galaxy: [],
     lastCollect: now,
+    vault: { tier: 1, bankedProductionMs: 0, storedDust: 0, lastTick: now },
     upgrades: { scope: 0, throws: 0, splash: 0, vault: 0 },
+    m11Migrated: true,
+    m115Migrated: true,
     boosters: { shower: 1, spark: 1, scope: 1 },
+    gemBoosters: { shower: 0, spark: 0, scope: 0 },
     piggy: 0,
     starter: false,
     pass: false,
+    m3Migrated: true,
+    legacyUnlocks: [],
     roadPass: [],
     skin: 'classic',
     skins: ['classic'],
     processedTx: [],
+    pendingPiggy: null,
+    pendingPurchaseRecords: [],
     daily: { last: '', streak: 0 },
     quests: { day: '', list: [], bonusClaimed: false },
     road: [],
     chapters: [],
     dailyPlanet: { day: '', best: 0, stars: 0, rewarded: false },
-    settings: { sound: true, music: true, haptics: true, reduceMotion: false, notifications: true, lang: '' },
+    settings: {
+      sound: true,
+      music: true,
+      haptics: true,
+      reduceMotion: false,
+      fullAimLine: false,
+      planetColours: 'classic',
+      notifications: false,
+      gameCenter: false,
+      lang: '',
+      hemi: 'north',
+      textSize: 'standard',
+      hidePaidLooks: false,
+      spendingReminder: null,
+      breakAfterRounds: null,
+      parentPin: null,
+      gatePausedUntil: 0,
+      gentle: false,
+    },
     tutorial: false,
-    meta: { installed: now, lastSeen: now, sessions: 0, rated: false, starterOffered: false, notifAsked: false },
+    savedRound: undefined,
+    meta: { installed: now, lastSeen: now, sessions: 0, rated: false, starterOffered: false, notifAsked: false, lastWelcomeAt: 0 },
     stats: {
+      grown: {},
       throws: 0,
       plays: 0,
       wins: 0,
@@ -149,23 +518,70 @@ export function defaultProfile(now = Date.now()): Profile {
       hardWins: 0,
       bestStreak: 0,
     },
-    momentum: { streak: 0, shieldDay: '' },
+    momentum: { streak: 0, shieldDay: '', paused: false, scopeReady: false, scopeWins: 0 },
     visitors: [],
     mementos: [],
     rank: 1,
+    m4RankPaidThrough: 0,
     habitats: [],
     challengeLog: [],
     zen: null,
-    event: { week: '', tokens: 0, claimed: [] },
+    event: { week: '', tokens: 0, claimed: [], retired: false, legacyGems: 0 },
     gcReported: [],
+    look: { suit: 'suit_sky', hat: 'hat_antenna', launcher: 'l_pad', trail: 'tr_dots', emote: 'em_cheer' },
+    avatar: { ...DEFAULT_AVATAR },
+    wardrobe: [],
+    favourites: [],
+    stylesNewSeen: '',
+    mastery: {},
+    launcher: { selected: 'sling', tunes: {}, flings: {}, completedRounds: {}, comboThreePlanets: [] },
+    cometPier: defaultCometPier(),
+    m105Migrated: true,
+    passport: { first: -1, second: -1, set: false, title: '', banner: 0, frame: 0, badges: [], badgesSet: false },
+    home: defaultHome(now),
+    lab: {},
+    feats: {},
+    forms: {},
+    formsSeen: [],
+    flings: {},
+    sightings: {},
+    mail: [],
+    mailSeen: [],
+    bosses: [],
+    presets: [null, null, null],
+    mats: {},
+    bundles: [],
+    constellations: [],
+    dyes: [],
+    dye: { main: null, trim: null },
+    festival: { key: '', spotted: 0, claimed: [] },
+    voyage: { week: '', base: 8, cleared: 0, stars: [], hemisphere: 'north' },
+    voyageDone: 0,
+    fails: {},
+    continuesUsed: {},
+    visits: {},
+    album: {
+      fest: [],
+      milestones: 0,
+      pagesClaimed: [],
+      pages: [
+        { bg: 0, items: [] },
+        { bg: 1, items: [] },
+        { bg: 0, items: [] },
+      ],
+    },
+    buddy: { species: null, acc: null },
   };
 }
 
 /** Deep-merge saved data over defaults so fields added in updates get sane values. */
 function merge<T>(base: T, saved: unknown): T {
-  if (saved === undefined || saved === null) return base;
-  if (typeof saved !== 'object' || Array.isArray(saved) || typeof base !== 'object' || base === null || Array.isArray(base))
-    return saved as T;
+  if (saved === undefined) return base;
+  if (base === undefined || base === null) return saved as T;
+  if (saved === null) return base;
+  if (Array.isArray(base)) return Array.isArray(saved) ? (saved as T) : base;
+  if (typeof base !== 'object') return typeof saved === typeof base ? (saved as T) : base;
+  if (typeof saved !== 'object' || Array.isArray(saved)) return base;
   const out: Record<string, unknown> = { ...(base as Record<string, unknown>) };
   for (const [k, v] of Object.entries(saved as Record<string, unknown>)) {
     out[k] = merge((base as Record<string, unknown>)[k], v);
@@ -175,13 +591,419 @@ function merge<T>(base: T, saved: unknown): T {
 
 /** Upgrade older save formats in place. */
 export function migrate(raw: Record<string, unknown>): Profile {
+  if (typeof raw.v === 'number' && raw.v > PROFILE_VERSION) throw new NewerProfileError();
   const p = merge(defaultProfile(), raw);
+  // Saved art choices are advisory; malformed IDs and counts never unlock lands or sites.
+  const savedHome = raw.home && typeof raw.home === 'object' && !Array.isArray(raw.home) ? (raw.home as Record<string, unknown>) : {};
+  const savedStats = raw.stats && typeof raw.stats === 'object' && !Array.isArray(raw.stats) ? (raw.stats as Record<string, unknown>) : {};
+  const savedGrown =
+    savedStats.grown && typeof savedStats.grown === 'object' && !Array.isArray(savedStats.grown)
+      ? (savedStats.grown as Record<string, unknown>)
+      : {};
+  p.stats.grown = {};
+  for (const id of Object.keys(BIOMES) as BiomeId[]) {
+    if (id === 'barren') continue;
+    const n = savedGrown[id];
+    if (typeof n === 'number' && Number.isFinite(n) && n >= 0) p.stats.grown[id] = Math.min(Number.MAX_SAFE_INTEGER, Math.floor(n));
+  }
+  const savedGaps = Array.isArray(savedHome.gaps) ? savedHome.gaps : [];
+  p.home.gaps = Array.from({ length: p.home.plots.length }, (_, i) => {
+    const id = savedGaps[i];
+    return typeof id === 'string' && id !== 'barren' && Object.hasOwn(BIOMES, id) && (p.stats.grown[id as BiomeId] ?? 0) >= 10
+      ? (id as BiomeId)
+      : null;
+  });
+  const savedLandmarks =
+    savedHome.landmarks && typeof savedHome.landmarks === 'object' && !Array.isArray(savedHome.landmarks)
+      ? (savedHome.landmarks as Record<string, unknown>)
+      : {};
+  for (const id of Object.keys(p.home.landmarks) as LandmarkId[]) {
+    const value = savedLandmarks[id];
+    const row = value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+    const stage = row.stage;
+    const state: LandmarkState = {
+      stage: (typeof stage === 'number' && Number.isFinite(stage) ? Math.max(0, Math.min(4, Math.floor(stage))) : 0) as LandmarkStage,
+      progress: Array.isArray(row.progress)
+        ? row.progress.slice(0, 16).map((n) => (typeof n === 'number' && Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0))
+        : [],
+      rewarded: Array.isArray(row.rewarded)
+        ? [...new Set(row.rewarded.filter((key): key is string => typeof key === 'string' && /^[a-z0-9:_-]{1,80}$/i.test(key)))].slice(
+            0,
+            32,
+          )
+        : [],
+      rounds: Array.isArray(row.rounds)
+        ? [...new Set(row.rounds.filter((key): key is string => typeof key === 'string' && key.length <= 150))].slice(-64)
+        : [],
+      arrivals: Array.isArray(row.arrivals)
+        ? [...new Set(row.arrivals.filter((key): key is string => typeof key === 'string' && key.length <= 80))]
+        : [],
+      planets: Array.isArray(row.planets)
+        ? [...new Set(row.planets.filter((key): key is string => typeof key === 'string' && key.length <= 150))]
+        : [],
+    };
+    if (typeof row.done === 'number' && Number.isFinite(row.done) && row.done >= 0 && state.stage === 4) state.done = row.done;
+    p.home.landmarks[id] = state;
+  }
+  const homeSeen =
+    savedHome.seen && typeof savedHome.seen === 'object' && !Array.isArray(savedHome.seen)
+      ? (savedHome.seen as Record<string, unknown>)
+      : {};
+  p.home.seen = {
+    celebrations: Array.isArray(homeSeen.celebrations)
+      ? [...new Set(homeSeen.celebrations.filter((id): id is string => typeof id === 'string' && /^[a-z0-9:_-]{1,100}$/i.test(id)))]
+      : [],
+  };
+  p.home.grownRoundKeys = Array.isArray(savedHome.grownRoundKeys)
+    ? [...new Set(savedHome.grownRoundKeys.filter((key): key is string => typeof key === 'string' && key.length <= 150))].slice(-64)
+    : [];
+  p.m115Migrated = true;
+  p.settings.fullAimLine = p.settings.fullAimLine === true;
+  p.momentum.scopeReady = p.momentum.scopeReady === true;
+  p.momentum.scopeWins = Number.isFinite(p.momentum.scopeWins) ? Math.max(0, Math.min(8, Math.floor(p.momentum.scopeWins))) : 0;
+  for (const id of ['shower', 'spark', 'scope'] as const) {
+    const count = p.gemBoosters[id];
+    p.gemBoosters[id] = Number.isFinite(count) ? Math.min(p.boosters[id], Math.max(0, Math.floor(count))) : 0;
+  }
+  if (raw.m11Migrated !== true) {
+    const migrationNow = Date.now();
+    const oldHome = raw.home as Record<string, unknown> | undefined;
+    const oldRing = oldHome?.ring;
+    if (typeof oldRing === 'number' && Number.isFinite(oldRing))
+      p.home.level = Math.max(1, Math.min(5, Math.floor(oldRing))) as HomeState['level'];
+    const historicalCosts = { scope: [250, 700, 1600], throws: [400, 1200, 3000], splash: [5000] } as const;
+    const paid = raw.upgrades && typeof raw.upgrades === 'object' ? (raw.upgrades as Record<string, unknown>) : {};
+    let refund = 0;
+    for (const id of ['scope', 'throws', 'splash'] as const) {
+      const n = typeof paid[id] === 'number' && Number.isFinite(paid[id]) ? Math.max(0, Math.floor(paid[id])) : 0;
+      refund += historicalCosts[id].slice(0, n).reduce((sum, cost) => sum + cost, 0);
+      p.upgrades[id] = 0;
+    }
+    // HEAD's capped producer accrual belongs to the player even when the building retires.
+    const observedNow = Math.max(migrationNow, p.home.lastTick ?? migrationNow);
+    const observatory = p.home.plots.find((b) => b?.type === 'observatory');
+    const capHours = 6 + (observatory ? Math.max(0, effLevel(observatory, observedNow)) * 2 : 0);
+    let producerDust = 0;
+    let producerGems = 0;
+    for (const building of p.home.plots) {
+      if (!building || (building.type !== 'mill' && building.type !== 'grove')) continue;
+      const start = building.done ? (building.done <= observedNow ? building.done : undefined) : building.since;
+      if (start === undefined) continue;
+      const hours = Math.min(capHours, Math.max(0, (observedNow - start) / 3_600_000));
+      const level = Math.max(0, Math.min(5, effLevel(building, observedNow)));
+      const rate = building.type === 'mill' ? [0, 40, 70, 110, 160, 230][level] : [0, 1 / 6, 1 / 5, 1 / 4, 1 / 3, 1 / 2.5][level];
+      if (building.type === 'mill') producerDust += Math.floor(hours * rate + 1e-9);
+      else producerGems += Math.floor(hours * rate + 1e-9);
+    }
+    earn(p, 'dust', producerDust, 'homeworld_producer');
+    earn(p, 'gems', producerGems, 'homeworld_producer');
+    // Historical build prices include a paid tier already in progress.
+    // The Observatory extended the old Greenhouse accrual cap, so migrate stock before its refund removes the plot.
+    migrateGreenhouses(p, migrationNow);
+    p.home.plots = p.home.plots.map((building) => {
+      if (!building || !['mill', 'grove', 'observatory'].includes(building.type)) return building;
+      refund += retiredBuildingRefund(building.type, building.lv);
+      return null;
+    });
+    p.home.debris = [];
+    const vaultCount = typeof paid.vault === 'number' && Number.isFinite(paid.vault) ? Math.max(0, Math.min(3, Math.floor(paid.vault))) : 0;
+    p.upgrades.vault = vaultCount;
+    const legacyHours = [4, 8, 12, 24][vaultCount];
+    const oldRate = p.galaxy.reduce((sum, g) => sum + 6 + g.stars * 3 + g.species.length * 2, 0);
+    const last = Number.isFinite(p.lastCollect) ? p.lastCollect : migrationNow;
+    const accrued = Math.floor(oldRate * Math.min(legacyHours, Math.max(0, migrationNow - last) / 3_600_000));
+    p.vault = {
+      tier: (vaultCount + 1) as VaultState['tier'],
+      bankedProductionMs: 0,
+      storedDust: accrued,
+      lastTick: Math.max(migrationNow, last),
+    };
+    p.lastCollect = p.vault.lastTick;
+    earn(p, 'dust', refund, 'migration_refund');
+    p.m11Migrated = true;
+  }
+  p.upgrades.vault = Number.isFinite(p.upgrades.vault) ? Math.max(0, Math.min(4, Math.floor(p.upgrades.vault))) : 0;
+  p.vault.tier = (p.upgrades.vault + 1) as VaultState['tier'];
+  p.vault.bankedProductionMs = Number.isFinite(p.vault.bankedProductionMs)
+    ? Math.max(0, Math.min(12 * 3_600_000, p.vault.bankedProductionMs))
+    : 0;
+  p.vault.storedDust = Number.isFinite(p.vault.storedDust) ? Math.max(0, p.vault.storedDust) : 0;
+  p.vault.lastTick = Number.isFinite(p.vault.lastTick) ? Math.max(0, p.vault.lastTick) : Date.now();
+  // Preserve the occupied plot, build timer and independent expedition record.
+  if (raw.m105Migrated !== true) {
+    for (const building of p.home.plots) {
+      if (building && (building.type as string) === 'tower') building.type = 'launch_bay';
+    }
+    p.m105Migrated = true;
+  }
+  const source = (raw.launcher && typeof raw.launcher === 'object' && !Array.isArray(raw.launcher) ? raw.launcher : {}) as Record<
+    string,
+    unknown
+  >;
+  const cleanCounts = (value: unknown, limit: number) => {
+    const out: Partial<Record<LauncherId, number>> = {};
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return out;
+    for (const [id, n] of Object.entries(value))
+      if (isLauncherId(id) && typeof n === 'number' && Number.isFinite(n)) out[id] = Math.min(limit, Math.max(0, Math.floor(n)));
+    return out;
+  };
+  const savedTunes =
+    source.tunes && typeof source.tunes === 'object' && !Array.isArray(source.tunes) ? (source.tunes as Record<string, unknown>) : {};
+  p.launcher = {
+    selected: isLauncherId(source.selected) ? source.selected : 'sling',
+    tunes: {},
+    flings: cleanCounts(source.flings, Number.MAX_SAFE_INTEGER),
+    completedRounds: cleanCounts(source.completedRounds, 3),
+    comboThreePlanets: Array.isArray(source.comboThreePlanets)
+      ? [
+          ...new Set(
+            source.comboThreePlanets.filter((key): key is string => typeof key === 'string' && /^[a-z]+:[a-z0-9_~-]{1,60}$/i.test(key)),
+          ),
+        ].slice(0, 1000)
+      : [],
+  };
+  for (const [id, value] of Object.entries(savedTunes)) {
+    if (isLauncherId(id) && id !== 'sling' && typeof value === 'number' && Number.isFinite(value))
+      p.launcher.tunes[id] = Math.max(1, Math.min(4, Math.floor(value))) as Tune;
+  }
+  // Preserve a valid hidden selection in the save; round setup resolves it to Sling.
+  if (isLaunchRosterId(p.launcher.selected) && launcherBay.availability(p, p.launcher.selected).kind !== 'owned')
+    p.launcher.selected = 'sling';
+  const pier = p.cometPier;
+  for (const key of ['hardWins', 'normalThreeStars', 'troubles', 'fusions'] as const)
+    pier[key] = Number.isFinite(pier[key]) ? Math.max(0, Math.floor(pier[key])) : 0;
+  for (const key of ['hardPlanets', 'normalPlanets'] as const)
+    pier[key] = Array.isArray(pier[key])
+      ? [...new Set(pier[key].filter((value): value is string => typeof value === 'string' && value.length <= 80))]
+      : [];
+  pier.stage = Number.isFinite(pier.stage) ? (Math.max(0, Math.min(4, Math.floor(pier.stage))) as CometPierProgress['stage']) : 0;
+  if (raw.m115Migrated !== true) {
+    // The Pier's M10.5 ledger already paid its completed feat stages.
+    const site = p.home.landmarks.comet_pier;
+    site.stage = Math.max(site.stage, pier.stage) as LandmarkStage;
+    for (let stage = 0; stage < Math.min(3, pier.stage); stage++) {
+      const key = `comet_pier:stage:${stage + 1}`;
+      if (!site.rewarded.includes(key)) site.rewarded.push(key);
+    }
+    if (pier.stage === 4 && site.done === undefined) site.done = Date.now();
+    const bestFriends = new Map([
+      ...Object.entries(p.home.friends ?? {}).map(([species, friend]) => [species, friend] as const),
+      ...p.home.residents.map((friend) => [friend.species, friend] as const),
+    ]);
+    for (const [species, friend] of bestFriends) {
+      if (friend.rewarded < 5) continue;
+      const letterId = `best-${species}`;
+      let letter = p.mail.find((m) => m.id === letterId);
+      if (letter?.claimed !== true && (letter || !p.mailSeen.includes(letterId))) {
+        // A pre-M11.5 unclaimed letter owed 25 gems; pay now and keep the letter readable.
+        earn(p, 'gems', 25, 'buddy');
+        if (letter) letter.claimed = true;
+        else {
+          letter = { id: letterId, kind: 'best', at: Date.now(), read: false, claimed: true, vars: { c: species } };
+          p.mail.unshift(letter);
+          p.mailSeen.push(letterId);
+        }
+      }
+      if (letter?.claimed) {
+        const id = `friend:${species}:level:5`;
+        if (!p.home.seen.celebrations.includes(id)) p.home.seen.celebrations.push(id);
+      }
+    }
+  }
+  // Legacy Pier may be complete out of order; other saved sites must follow the path.
+  for (const [id, previous] of [
+    ['skyglass', 'sprout_garden'],
+    ['sky_bridge', 'skyglass'],
+    ['keepers_beacon', 'sky_bridge'],
+  ] as const) {
+    const site = p.home.landmarks[id];
+    if (p.home.landmarks[previous].stage !== 4 && site.stage > 0) {
+      site.stage = 0;
+      site.progress = [0, 0, 0, 0, 0, 0];
+      site.rewarded = [];
+      site.done = undefined;
+    }
+  }
+  const oldHome = raw.home as Partial<HomeState> | undefined;
+  if (oldHome && !Object.hasOwn(oldHome, 'firstHour') && (p.home.intro || p.home.plots.some(Boolean))) p.home.firstHour = 2;
+  if (!p.remix || typeof p.remix !== 'object' || Array.isArray(p.remix)) p.remix = {};
+  if (!Object.hasOwn(raw, 'm4RankPaidThrough')) p.m4RankPaidThrough = Math.min(7, Math.max(0, p.rank - 1));
+  if (!Object.hasOwn(raw, 'roadPoints'))
+    p.roadPoints = Object.entries(p.stars).reduce((sum, [n, stars]) => sum + (+n > 0 ? stars : 0), 0) + (p.stars[0] ?? 0);
+  delete p.stars[0];
+  const nonnegativeInt = (value: unknown, limit = Number.MAX_SAFE_INTEGER) =>
+    typeof value === 'number' && Number.isFinite(value) ? Math.min(limit, Math.max(0, Math.floor(value))) : 0;
+  const savedEvent = raw.event && typeof raw.event === 'object' && !Array.isArray(raw.event) ? (raw.event as Record<string, unknown>) : {};
+  p.event = {
+    week: typeof savedEvent.week === 'string' && /^\d{4}-W\d{2}$/.test(savedEvent.week) ? savedEvent.week : '',
+    tokens: nonnegativeInt(savedEvent.tokens),
+    claimed: Array.isArray(savedEvent.claimed)
+      ? [...new Set(savedEvent.claimed.filter((index): index is number => Number.isInteger(index) && index >= 0 && index < 10))]
+      : [],
+    retired: savedEvent.retired === true,
+    legacyGems: nonnegativeInt(savedEvent.legacyGems),
+  };
+  const savedVoyage =
+    raw.voyage && typeof raw.voyage === 'object' && !Array.isArray(raw.voyage) ? (raw.voyage as Record<string, unknown>) : {};
+  p.voyage.hemisphere = savedVoyage.hemisphere === 'north' || savedVoyage.hemisphere === 'south' ? savedVoyage.hemisphere : p.settings.hemi;
+  if (p.voyage.cleared > 0)
+    p.voyage.legacyCatchUpPaid =
+      savedVoyage.legacyCatchUpPaid === true ||
+      (savedVoyage.legacyCatchUpPaid === undefined && savedEvent.retired === true && savedEvent.week === p.voyage.week);
+  else delete p.voyage.legacyCatchUpPaid;
+  const roadIds = (value: unknown, id: string) =>
+    Array.isArray(value)
+      ? [...new Set(value.filter((key): key is string => typeof key === 'string' && new RegExp(`^${id}:tier\\d{2}$`).test(key)))].slice(
+          0,
+          100,
+        )
+      : [];
+  const savedRoads =
+    raw.roadRecords && typeof raw.roadRecords === 'object' && !Array.isArray(raw.roadRecords)
+      ? (raw.roadRecords as Record<string, unknown>)
+      : {};
+  p.roadRecords = {};
+  for (const [id, value] of Object.entries(savedRoads)) {
+    if (!/^road\d{2}$/.test(id) || !value || typeof value !== 'object' || Array.isArray(value)) continue;
+    const row = value as Record<string, unknown>;
+    p.roadRecords[id] = {
+      points: nonnegativeInt(row.points),
+      claimedFreeTierIds: roadIds(row.claimedFreeTierIds, id),
+      claimedPaidTierIds: roadIds(row.claimedPaidTierIds, id),
+      lastCreditedDay:
+        typeof row.lastCreditedDay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(row.lastCreditedDay) ? row.lastCreditedDay : '',
+      earnedOnLastCreditedDay: nonnegativeInt(row.earnedOnLastCreditedDay, 8),
+      creditedEarningKeys: Array.isArray(row.creditedEarningKeys)
+        ? [...new Set(row.creditedEarningKeys.filter((key): key is string => typeof key === 'string' && key.length <= 160))]
+        : [],
+      ...(typeof row.openedOn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(row.openedOn) ? { openedOn: row.openedOn } : {}),
+      ...(typeof row.plannedEndOn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(row.plannedEndOn) ? { plannedEndOn: row.plannedEndOn } : {}),
+      legacyGrantIds: Array.isArray(row.legacyGrantIds)
+        ? [...new Set(row.legacyGrantIds.filter((key): key is string => typeof key === 'string' && /^legacy:(free|paid):\d{2}$/.test(key)))]
+        : [],
+    };
+  }
+  p.roadCreditedEarningKeys = Array.isArray(raw.roadCreditedEarningKeys)
+    ? [...new Set(raw.roadCreditedEarningKeys.filter((key): key is string => typeof key === 'string' && key.length <= 160))]
+    : [];
+  p.roadPassEntitlements = Array.isArray(raw.roadPassEntitlements)
+    ? [...new Set(raw.roadPassEntitlements.filter((id): id is string => typeof id === 'string' && /^road\d{2}$/.test(id)))]
+    : [];
+  p.roadLegacySerial = nonnegativeInt(raw.roadLegacySerial);
+  p.roadStickers = Array.isArray(raw.roadStickers)
+    ? [...new Set(raw.roadStickers.filter((id): id is string => typeof id === 'string' && /^[a-z0-9_]{1,40}$/.test(id)))]
+    : [];
+  if (raw.m12RoadMigrated !== true) {
+    const state = newRoadState();
+    state.points = nonnegativeInt(p.roadPoints);
+    state.lastCreditedDay = typeof p.roadDay.day === 'string' ? p.roadDay.day : '';
+    state.earnedOnLastCreditedDay = nonnegativeInt(p.roadDay.earned, 8);
+    const oldClaims = (value: unknown) =>
+      Array.isArray(value)
+        ? [...new Set(value.filter((index): index is number => Number.isInteger(index) && index >= 0 && index < 15))]
+        : [];
+    const free = oldClaims(raw.road);
+    const paid = oldClaims(raw.roadPass);
+    state.claimedFreeTierIds = free.map((index) => STAR_ROAD[index].id);
+    state.claimedPaidTierIds = paid.map((index) => STAR_ROAD[index].id);
+    state.legacyGrantIds = [
+      ...free.map((index) => `legacy:free:${String(index).padStart(2, '0')}`),
+      ...paid.map((index) => `legacy:paid:${String(index).padStart(2, '0')}`),
+    ];
+    p.roadRecords[COSMIC_ROAD_ID] = state;
+  }
+  p.roadRecords[COSMIC_ROAD_ID] ??= newRoadState();
+  // Replace old personal end dates with the installed Road's shared close date.
+  const roadZeroClose = roadCloseOn(COSMIC_ROAD_ID);
+  if (roadZeroClose) p.roadRecords[COSMIC_ROAD_ID].plannedEndOn = roadZeroClose;
+  else delete p.roadRecords[COSMIC_ROAD_ID].plannedEndOn;
+  if (!Object.hasOwn(raw, 'roadPoints') && p.roadRecords[COSMIC_ROAD_ID].points === 0) p.roadRecords[COSMIC_ROAD_ID].points = p.roadPoints;
+  p.m12RoadMigrated = true;
+  p.roadPoints = p.roadRecords[COSMIC_ROAD_ID].points;
+  p.road = STAR_ROAD.flatMap((tier, index) => (p.roadRecords[COSMIC_ROAD_ID].claimedFreeTierIds.includes(tier.id) ? [index] : []));
+  p.roadPass = STAR_ROAD.flatMap((tier, index) => (p.roadRecords[COSMIC_ROAD_ID].claimedPaidTierIds.includes(tier.id) ? [index] : []));
+  if (raw.m12LegacyLooksMigrated !== true) {
+    if (p.pass) {
+      // The retired paint IDs were owned immediately with the old Pass.
+      for (const id of ['paint_gilded_ground', 'paint_liquid_gold_sea']) if (!p.wardrobe.includes(id)) p.wardrobe.push(id);
+    }
+    if (p.roadPass.includes(4) && !p.wardrobe.includes('frame_gold')) p.wardrobe.push('frame_gold');
+    if (p.pass && p.home.paint.ground === 'gilded') (p.look as Record<string, string>).ground = 'paint_gilded_ground';
+    if (p.pass && p.home.paint.sea === 'goldsea') (p.look as Record<string, string>).sea = 'paint_liquid_gold_sea';
+    if (p.home.paint.ground === 'gilded') p.home.paint.ground = 'meadow';
+    if (p.home.paint.sea === 'goldsea') p.home.paint.sea = 'blue';
+  }
+  p.m12LegacyLooksMigrated = true;
+  if (raw.m3Migrated !== true) {
+    const oldLevels: Record<string, number> = {
+      swap: 1,
+      supernova: 3,
+      hard: 5,
+      weekly_event: 8,
+      festival: 8,
+      quest_spot: 8,
+      voyage: 12,
+      quest_voyage: 12,
+      momentum: 6,
+      star_road: 1,
+      quests: 1,
+      star_atlas: 5,
+      sticker_album: 1,
+      passport: 1,
+      workshop: 1,
+      object_lab: 1,
+      upgrades: 1,
+    };
+    p.legacyUnlocks = Object.entries(oldLevels)
+      .filter(([, level]) => p.tutorial && p.level >= level)
+      .map(([id]) => id);
+    if (p.tutorial) p.legacyUnlocks.push('star_calendar');
+    if (Object.values(p.sightings).some((count) => count >= 5)) p.legacyUnlocks.push('buddy');
+    for (const row of UNLOCKS) {
+      if (row.intro && !row.id.startsWith('launcher_') && (p.legacyUnlocks.includes(row.id) || (row.planet > 0 && p.level > row.planet))) {
+        const key = `coach-${row.id}`;
+        if (!p.mailSeen.includes(key)) p.mailSeen.push(key);
+      }
+    }
+    p.m3Migrated = true;
+  }
+  if (!Object.hasOwn(raw, 'skySeen')) {
+    for (const row of UNLOCKS) {
+      if (['rocks', 'bubble', 'mist', 'ring', 'tug'].includes(row.id) && p.level > row.planet) {
+        p.skySeen.push(row.id as ObstacleId);
+        const key = `coach-${row.id}`;
+        if (!p.mailSeen.includes(key)) p.mailSeen.push(key);
+      }
+    }
+  }
+  const savedSettings = raw.settings as Record<string, unknown> | undefined;
+  if (typeof p.settings.spendingReminder === 'number')
+    p.settings.spendingReminder = { cents: p.settings.spendingReminder * 100, currency: 'USD' };
+  if (!savedSettings || !Object.hasOwn(savedSettings, 'gameCenter')) {
+    p.settings.notifications = false;
+    p.settings.gameCenter = false;
+  }
   if ((raw.v as number | undefined) === undefined || (raw.v as number) < 2) {
     // v1 → v2: galaxy entries gained colours; stats gained counters.
     p.galaxy = p.galaxy.map((g) => ({ ...g, colors: g.colors ?? [] }));
     p.stats.threeStars = Math.max(p.stats.threeStars, Object.values(p.stars).filter((s) => s === 3).length);
     p.stats.wins = Math.max(p.stats.wins, Object.keys(p.stars).length);
   }
+  if ((raw.v as number | undefined) !== undefined && (raw.v as number) < 3) {
+    // v2 → v3: the daily streak became Star Calendar stamps; start the calendar fresh
+    p.daily.streak = 0;
+  }
+  p.home.level = Math.max(1, Math.min(5, Math.floor(p.home.level || 1))) as HomeState['level'];
+  p.home.gaps = Array.from({ length: RING_PLOTS[p.home.level] }, (_, i) => p.home.gaps[i] ?? null);
+  const isle = Array.isArray(savedHome.isleDecor) ? savedHome.isleDecor : [];
+  const ownedIsle = ownedIsleDecorations(p);
+  p.home.isleDecor = Array.from({ length: 3 }, (_, i) => {
+    const id = isle[i];
+    return p.home.landmarks.sky_bridge.stage === 4 && typeof id === 'string' && ownedIsle.includes(id) && !isle.slice(0, i).includes(id)
+      ? id
+      : null;
+  });
+  retireEventProgress(p);
   p.v = PROFILE_VERSION;
   return p;
 }
@@ -189,10 +1011,56 @@ export function migrate(raw: Record<string, unknown>): Profile {
 /** Set when storage could not be read: we then never overwrite what's on disk this session. */
 let readOnly = false;
 export const storageReadOnly = () => readOnly;
+export type ProfileLoadNotice = 'none' | 'recovered' | 'read-only' | 'newer';
+let loadNotice: ProfileLoadNotice = 'none';
+export const profileLoadNotice = () => loadNotice;
+export class NewerProfileError extends Error {}
+
+/** Clear only profile copies after an explicit adult recovery choice. */
+export async function startFreshProfile(): Promise<void> {
+  await removeKey(KEY);
+  await removeKey(BACKUP_KEY);
+  try {
+    sessionStorage.removeItem('pp.profile.tryBackup');
+  } catch {
+    /* storage can be unavailable */
+  }
+  readOnly = false;
+  loadNotice = 'none';
+}
+
+async function quarantine(raw: string): Promise<void> {
+  await saveKey('pp.profile.broken', raw);
+}
+
+/** Preserve the failed launch's raw bytes and stage a backup-only retry. */
+export async function prepareInitRecovery(): Promise<void> {
+  try {
+    const raw = await loadKey(KEY);
+    if (raw) await quarantine(raw);
+    const backup = await loadKey(BACKUP_KEY);
+    if (backup) {
+      const parsed = JSON.parse(backup) as Record<string, unknown>;
+      migrate(parsed);
+      sessionStorage.setItem('pp.profile.tryBackup', '1');
+    }
+  } catch {
+    // The recovery screen still offers a fresh start when storage cannot be read.
+  }
+}
 
 export async function loadProfile(): Promise<Profile> {
+  readOnly = false;
+  loadNotice = 'none';
   let failedReads = 0;
-  for (const key of [KEY, BACKUP_KEY]) {
+  let damaged = false;
+  let preferBackup = false;
+  try {
+    preferBackup = sessionStorage.getItem('pp.profile.tryBackup') === '1';
+  } catch {
+    /* unavailable */
+  }
+  for (const key of preferBackup ? [BACKUP_KEY, KEY] : [KEY, BACKUP_KEY]) {
     let raw: string | null;
     try {
       raw = await loadKey(key);
@@ -202,23 +1070,77 @@ export async function loadProfile(): Promise<Profile> {
     }
     if (!raw) continue;
     try {
-      return migrate(JSON.parse(raw));
+      const parsed = JSON.parse(raw) as unknown;
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Invalid profile');
+      const version = (parsed as Record<string, unknown>).v;
+      if (typeof version === 'number' && version > PROFILE_VERSION) {
+        readOnly = true;
+        loadNotice = 'newer';
+        return defaultProfile();
+      }
+      if (
+        version !== PROFILE_VERSION ||
+        (parsed as Record<string, unknown>).m11Migrated !== true ||
+        (parsed as Record<string, unknown>).m115Migrated !== true
+      ) {
+        // Keep first bytes per target migration; an older rescue must not hide the pre-M11 save.
+        try {
+          if (!(await loadKey('pp.profile.pre-migration'))) await saveKeyChecked('pp.profile.pre-migration', raw);
+          if (!(await loadKey(`pp.profile.pre-v${PROFILE_VERSION}`))) await saveKeyChecked(`pp.profile.pre-v${PROFILE_VERSION}`, raw);
+        } catch {
+          readOnly = true;
+          loadNotice = 'read-only';
+          return defaultProfile();
+        }
+      }
+      const profile = migrate(parsed as Record<string, unknown>);
+      if (failedReads) {
+        readOnly = true;
+        loadNotice = 'read-only';
+      }
+      if (preferBackup) {
+        try {
+          sessionStorage.removeItem('pp.profile.tryBackup');
+        } catch {
+          /* unavailable */
+        }
+        if (!failedReads) loadNotice = 'recovered';
+      }
+      if (damaged && !failedReads) loadNotice = 'recovered';
+      return profile;
     } catch {
-      /* corrupted: try the backup */
+      damaged = true;
+      if (key === KEY) await quarantine(raw);
     }
   }
-  // Storage errored (not merely empty): play on, but don't clobber a save we couldn't read.
-  if (failedReads) readOnly = true;
+  // A failed or corrupt read must never let defaults replace the only copy.
+  if (failedReads || damaged) {
+    readOnly = true;
+    loadNotice = 'read-only';
+  }
   return defaultProfile();
 }
 
 let saves = 0;
+let saveQueue: Promise<void> = Promise.resolve();
 /** Save the profile; every few saves also refresh a backup copy. */
 export async function saveProfile(p: Profile) {
   if (readOnly) return;
   const json = JSON.stringify(p);
-  await saveKey(KEY, json);
-  if (saves++ % 5 === 0) await saveKey(BACKUP_KEY, json);
+  const write = async () => {
+    await saveKey(KEY, json);
+    if (saves++ % 5 === 0) await saveKey(BACKUP_KEY, json);
+  };
+  const job = saveQueue.then(write, write);
+  saveQueue = job.catch(() => {});
+  await job;
+}
+
+/** Check that a paid grant reached durable storage before StoreKit is finished. */
+export async function saveProfileChecked(p: Profile) {
+  if (readOnly) throw new Error('Profile storage is read-only');
+  await saveProfile(p);
+  if ((await loadKey(KEY)) !== JSON.stringify(p)) throw new Error('Profile was not saved');
 }
 
 export function today(d = new Date()) {
@@ -230,5 +1152,5 @@ export function dayGap(a: string, b: string) {
 }
 
 export function totalStars(p: Profile) {
-  return Object.values(p.stars).reduce((a, b) => a + b, 0);
+  return Object.entries(p.stars).reduce((a, [n, b]) => a + (+n > 0 ? b : 0), 0);
 }

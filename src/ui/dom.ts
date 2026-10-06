@@ -1,6 +1,7 @@
 import { sfx } from './audio';
 import { haptic } from './haptics';
-import { t } from '../i18n';
+import { getLang, t } from '../i18n';
+import { MOTION, popIn, popOut, prefersReducedMotion } from './motion';
 
 type Child = Node | string | number | null | undefined | false | Child[];
 
@@ -32,20 +33,20 @@ export function btn(label: Child, cls: string, onClick: () => void): HTMLButtonE
   b.addEventListener('click', () => {
     if (b.disabled) return;
     sfx.click();
-    haptic.light();
+    if (b.classList.contains('primary')) haptic.light();
     onClick();
   });
   return b;
 }
 
-export const fmt = (n: number) => Math.floor(n).toLocaleString('en-US');
+export const fmt = (n: number) => Math.floor(n).toLocaleString(getLang());
 export const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 let overlay: HTMLElement;
 let toasts: HTMLElement;
 export function mountOverlays(root: HTMLElement) {
   overlay = h('div', { class: 'overlay' });
-  toasts = h('div', { class: 'toasts' });
+  toasts = h('div', { class: 'toasts', 'aria-live': 'polite', 'aria-atomic': 'false' });
   root.append(overlay, toasts);
 }
 
@@ -54,24 +55,55 @@ export interface Modal {
   close: () => void;
 }
 
-export function modal(content: Child[], opts: { cls?: string; dismiss?: boolean; onClose?: () => void } = {}): Modal {
+/** Abort hooks of open modals, run when navigation wipes them (see closeModals). */
+const aborts = new Set<() => void>();
+
+/**
+ * `onAbort` runs only if the modal is wiped by navigation rather than closed
+ * (use it to settle promises, e.g. the parental gate), so nothing is left hanging.
+ */
+export function modal(content: Child[], opts: { cls?: string; dismiss?: boolean; onClose?: () => void; onAbort?: () => void } = {}): Modal {
   const box = h('div', { class: `modal ${opts.cls ?? ''}` }, ...content);
+  const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
+  const title = box.querySelector<HTMLElement>('.m-title, .end-title, .confirm, h1, h2');
+  if (title) {
+    title.id ||= `modal-title-${Math.random().toString(36).slice(2)}`;
+    box.setAttribute('aria-labelledby', title.id);
+  } else box.setAttribute('aria-label', t('Dialog'));
+  box.tabIndex = -1;
   const scrim = h('div', { class: 'scrim' }, box);
   let done = false;
+  const abort = () => {
+    if (done) return;
+    done = true;
+    opts.onAbort?.();
+    opener?.focus();
+  };
+  if (opts.onAbort) aborts.add(abort);
   const close = () => {
     if (done) return;
     done = true;
+    aborts.delete(abort);
+    void popOut(box);
     scrim.classList.add('out');
     scrim.style.pointerEvents = 'none';
-    setTimeout(() => scrim.remove(), 200);
+    setTimeout(() => scrim.remove(), prefersReducedMotion() ? MOTION.calm : MOTION.popOut);
     opts.onClose?.();
+    opener?.focus();
   };
   if (opts.dismiss !== false) scrim.addEventListener('click', (e) => e.target === scrim && close());
   overlay.append(scrim);
+  popIn(box);
+  (box.querySelector<HTMLElement>('button:not([disabled]), input, select, [tabindex="0"]') ?? box).focus();
   return { el: box, close };
 }
 
 export function closeModals() {
+  const pending = [...aborts];
+  aborts.clear();
+  pending.forEach((f) => f());
   overlay.replaceChildren();
 }
 
@@ -96,7 +128,7 @@ export function confirmBox(text: string, yes: string, no = t('Cancel')): Promise
           }),
         ),
       ],
-      { onClose: () => !answered && res(false) },
+      { onClose: () => !answered && res(false), onAbort: () => !answered && res(false) },
     );
   });
 }
@@ -104,9 +136,11 @@ export function confirmBox(text: string, yes: string, no = t('Cancel')): Promise
 export function toast(text: string, kind = '') {
   const el = h('div', { class: `toast ${kind}` }, text);
   toasts.append(el);
+  sfx.toast();
+  haptic.tick();
   while (toasts.children.length > 3) toasts.firstElementChild?.remove();
   setTimeout(() => {
     el.classList.add('out');
-    setTimeout(() => el.remove(), 300);
+    setTimeout(() => el.remove(), prefersReducedMotion() ? MOTION.calm : MOTION.toast);
   }, 2400);
 }

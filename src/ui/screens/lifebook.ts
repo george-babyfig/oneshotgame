@@ -1,31 +1,76 @@
 // Lifebook: every creature (discovered or not) plus the recipe for every land.
 import { h, modal } from '../dom';
 import { sfx } from '../audio';
-import { SPECIES, BIOMES, type Rarity, type SpeciesDef } from '../../core/world';
+import { SPECIES, BIOMES, TRAITS, traitOf, type Rarity, type SpeciesDef } from '../../core/world';
 import { GEMS_PER_NEW_SPECIES } from '../../meta/config';
 import type { App } from '../app';
 import { btn, toast } from '../dom';
 import { HABITATS, habitatProgress } from '../../meta/habitats';
 import { rewardText } from '../../meta/progression';
-import { critterCanvas } from '../art/critters';
+import { animateCreatureGallery, critterCanvas, type CreatureCanvas, type CreaturePose } from '../art/critters';
 import { mementoName } from '../../meta/visitors';
-import { t } from '../../i18n';
+import { t, tp } from '../../i18n';
 import { rarityName, speciesHint } from '../text';
 import { claimHabitat } from '../../meta/habitats';
+import { LORE, LORE_AT, STUDIED_AT, loreUnlocked, sightings, studied } from '../../meta/lore';
+import type { Profile } from '../../meta/profile';
+import { STICKERS, albumReady, ownedStickers } from '../../meta/stickers';
+import { icon } from '../icons';
+import { effectiveReduceMotion } from '../motion';
+import { traitBadge } from '../art/traits';
 
 const ORDER: Rarity[] = ['common', 'uncommon', 'rare', 'legendary'];
 
-function card(s: SpeciesDef, got: boolean) {
-  modal([
-    h('div', { class: `lb-big r-${s.rarity}${got ? '' : ' locked'}` }, critterCanvas(s.id, 120)),
-    h('div', { class: 'm-sub' }, rarityName(s.rarity)),
-    h('div', { class: 'm-title' }, got ? t(s.name) : t('Undiscovered')),
-    h('p', { class: 'muted' }, t('Lives: {hint}', { hint: speciesHint(s) })),
-  ]);
+function card(p: Profile, s: SpeciesDef, got: boolean) {
+  const n = sightings(p, s.id);
+  const portrait = critterCanvas(s.id, 120);
+  let pose: CreaturePose = 'idle';
+  let stop = () => {};
+  const wave = () => {
+    pose = 'wave';
+    window.setTimeout(() => (pose = 'idle'), 750);
+  };
+  const box = modal(
+    [
+      h('div', { class: `lb-big r-${s.rarity}${got ? '' : ' locked'}${studied(p, s.id) ? ' studied' : ''}`, onclick: wave }, portrait),
+      h('div', { class: 'm-sub' }, rarityName(s.rarity)),
+      h('div', { class: 'm-title' }, got ? t(s.name) : t('Undiscovered')),
+      h('p', { class: 'muted' }, t('Lives: {hint}', { hint: speciesHint(s) })),
+      got && traitOf(s.id) ? h('div', { class: 'lore' }, traitBadge(traitOf(s.id)!), h('p', null, t(TRAITS[traitOf(s.id)!].rule))) : null,
+      got
+        ? h(
+            'div',
+            { class: 'lore' },
+            h('small', null, tp(n, '📓 Field notes · seen {n} time', '📓 Field notes · seen {n} times')),
+            loreUnlocked(p, s.id)
+              ? h('p', null, t(LORE[s.id] ?? ''))
+              : h(
+                  'p',
+                  { class: 'muted' },
+                  tp(LORE_AT - n, 'See it {n} more time to unlock its story.', 'See it {n} more times to unlock its story.'),
+                ),
+            studied(p, s.id)
+              ? h('b', { class: 'studied-tag' }, t('✦ Studied'))
+              : n >= LORE_AT
+                ? h(
+                    'small',
+                    { class: 'muted' },
+                    tp(STUDIED_AT - n, '{n} more sighting for a gold frame', '{n} more sightings for a gold frame'),
+                  )
+                : null,
+          )
+        : null,
+      // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
+      btn(t('Back'), 'ghost wide', () => box.close()),
+    ],
+    { onClose: () => stop() },
+  );
+  stop = animateCreatureGallery([{ canvas: portrait, id: s.id, pose: () => pose }], effectiveReduceMotion(p));
 }
 
 export function showLifebook(app: App) {
   const seen = new Set(app.p.seen);
+  const portraits: CreatureCanvas[] = [];
   const sections = ORDER.map((r) => {
     const list = SPECIES.filter((s) => s.rarity === r);
     const have = list.filter((s) => seen.has(s.id)).length;
@@ -38,11 +83,17 @@ export function showLifebook(app: App) {
         { class: 'lb-grid' },
         ...list.map((s) => {
           const got = seen.has(s.id);
+          const portrait = critterCanvas(s.id, 56);
+          portraits.push({ canvas: portrait, id: s.id });
           return h(
             'button',
-            { class: `lb r-${r}${got ? '' : ' locked'}`, onclick: () => (sfx.click(), card(s, got)) },
-            h('div', { class: 'lbe' }, critterCanvas(s.id, 56)),
+            {
+              class: `lb r-${r}${got ? '' : ' locked'}${studied(app.p, s.id) ? ' studied' : ''}`,
+              onclick: () => (sfx.click(), card(app.p, s, got)),
+            },
+            h('div', { class: 'lbe' }, portrait),
             h('div', { class: 'lbn' }, got ? t(s.name) : '???'),
+            got && traitOf(s.id) ? traitBadge(traitOf(s.id)!, true) : null,
             h('div', { class: 'lbh' }, speciesHint(s)),
           );
         }),
@@ -59,6 +110,7 @@ export function showLifebook(app: App) {
       ),
   );
   const pct = Math.round((seen.size / SPECIES.length) * 100);
+  let stop = () => {};
   app.mount(
     h(
       'div',
@@ -74,6 +126,22 @@ export function showLifebook(app: App) {
       h(
         'div',
         { class: 'scroll' },
+        h(
+          'button',
+          { class: 'album-link', onclick: () => (sfx.click(), app.showAlbum()) },
+          icon('album', 40),
+          h(
+            'span',
+            { class: 'stack' },
+            h('b', null, t('Sticker Album')),
+            h(
+              'small',
+              null,
+              t('{have}/{total} stickers · decorate your scrapbook', { have: ownedStickers(app.p).length, total: STICKERS.length }),
+            ),
+          ),
+          albumReady(app.p) ? h('span', { class: 'nb dot' }, String(albumReady(app.p))) : null,
+        ),
         h('p', { class: 'muted' }, t('Each new creature gives 💎{n}. Tap a card for its hint.', { n: GEMS_PER_NEW_SPECIES })),
         ...sections,
         h('div', { class: 'sec-title' }, t('Habitat sets')),
@@ -118,5 +186,7 @@ export function showLifebook(app: App) {
       ),
     ),
     'lifebook',
+    () => stop(),
   );
+  stop = animateCreatureGallery(portraits, effectiveReduceMotion(app.p));
 }
