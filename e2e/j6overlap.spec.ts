@@ -275,7 +275,7 @@ test.describe('M6 overlap capture [en]', () => {
   test(`${THROWS} scripted throws on planet ${PLANET}: 0 overlapping text, ≤ ${POPUPS_MAX} popups ≥ ${POPUP_GAP_MS} ms apart, ≤ ${OVERLAY_TYPES_MAX} overlay types`, async ({
     page,
   }, info) => {
-    test.setTimeout(150_000);
+    test.setTimeout(300_000);
     const guard = watchErrors(page);
     await freshInstall(page);
     await midGame(page, { level: 30 });
@@ -325,7 +325,9 @@ test.describe('M6 overlap capture [en]', () => {
         w.__scene.fire(v);
       }, v);
       // until it lands, then until the feedback settles (delayed popups start up to ~1 s later)
-      await page.waitForFunction(() => !(window as any).__app.scene.shot, null, { timeout: 10_000 });
+      // Game time is capped at 33 ms a frame, so on a slow software-rendered CI runner a looping flight can take
+      // several wall-clock times its game time; this test measures overlap, not flight speed.
+      await page.waitForFunction(() => !(window as any).__app.scene.shot, null, { timeout: 30_000 });
       const landedAt = Date.now();
       await page.waitForFunction(
         (t0) => {

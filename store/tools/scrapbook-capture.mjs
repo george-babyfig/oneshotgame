@@ -22,7 +22,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { openGame, ensureServer, stopServer, setBrowser, fmtPath, plan as planScene, run as runScene } from './shots.mjs';
+import { openGame, prepareHomeworld, ensureServer, stopServer, setBrowser, fmtPath, plan as planScene, run as runScene } from './shots.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const args = Object.fromEntries(
@@ -44,7 +44,7 @@ const rawDir = (lang) => RAW.replace('{lang}', lang);
 const MK_CSS = `
 .hud-top > button.icon, .pill.dust, .pill.gems, .goals, .trouble-forecast, .hud-diff, .obj-desc,
 .progress, .album-link, .scroll > p.muted:has(+ .lb-sec), .sec-title small,
-.homeworld .topbar, .homeworld .hw-panel, nav.main-tabs, .nb,
+.homeworld .topbar, .homeworld .hw-panel, .homeworld .hw-landmark-summary, nav.main-tabs, .nb,
 .grownups-section:has(.btn.danger) { visibility: hidden !important; }
 .hint-hand { animation: none !important; opacity: 1 !important; }`;
 
@@ -59,7 +59,7 @@ const NO_HINT = ['ja'];
 const MUST_HIDE = {
   level: ['.hud-top > button.icon', '.goals', '.trouble-forecast', '.obj-desc'],
   lifebook: ['.progress', '.album-link', '.scroll > p.muted:has(+ .lb-sec)', '.sec-title small', '.pill.dust', '.pill.gems'],
-  homeworld: ['.homeworld .topbar', '.homeworld .hw-panel', 'nav.main-tabs'],
+  homeworld: ['.homeworld .topbar', '.homeworld .hw-panel', '.homeworld .hw-landmark-summary', 'nav.main-tabs'],
   grownups: ['.grownups-section:has(.btn.danger)', '.pill.dust', '.pill.gems'],
 };
 async function assertHidden(page, screen) {
@@ -935,11 +935,10 @@ async function captureCare(page, dir, logOut) {
 
 // ------------------------------------------------------------------ NEW-6, 7, 8a, 8b (screens)
 async function captureHomeworld(page, dir, logOut) {
-  // A real just-collected state, through the game's own Collect all (homeworld.ts collectAll, then save), so no
-  // plot draws its "ready" bubble (the ✨ / 💎 / 🌠 pickup prompt is a reward cue the store set never shows).
-  // The page clock runs in real time from CLOCK, and Collect all keeps each plot's partial unit, so a plot can tick
-  // over to a new unit in the seconds between the collect and the frame (it depends on how long the run took). Then
-  // the frame shows a ready bubble: collect again (the same real game action) and take a fresh frame.
+  // Build the M11.5 save and fixed clear spring afternoon shared with the App Preview.
+  const state = await prepareHomeworld(page);
+  // Keep the existing pickup/timer gate: collect through the game immediately before the frame,
+  // then verify the finished plots still have no bubbles after the screenshot.
   const collectNow = () =>
     page.evaluate(async () => {
       const hw = await import('/src/meta/homeworld.ts');
@@ -977,7 +976,7 @@ async function captureHomeworld(page, dir, logOut) {
   }
   if (bubbles.anyReady || bubbles.ready || bubbles.building)
     throw new Error(`NEW-6: a Homeworld bubble was drawn (${JSON.stringify(bubbles)}): the ready / timer bubbles must be off`);
-  logOut.m6 = { canvas, collected: collected.length === 1 ? collected[0] : collected, bubbles };
+  logOut.m6 = { canvas, state, collected: collected.length === 1 ? collected[0] : collected, bubbles };
   log('  NEW-6', JSON.stringify(logOut.m6));
 }
 

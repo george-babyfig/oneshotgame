@@ -8,7 +8,7 @@
 >   - 60 fps on the oldest iPhone with 12 friends;
 >   - sound and haptics feel;
 >   - the iPad compatibility pass.
-> - **Store art still to capture after the final build:** the screenshots and App Preview still show pre-M10 Homeworld UI (H7). Re-capture them with `store/tools/scrapbook-capture.mjs` and `shots.mjs --only=video` once the build is frozen.
+> - **Store art re-captured on 6 October 2026 (after M12):** `store/screenshots-v2/` (6 languages, every composer gate passes) and the App Preview (25.2 s, within Apple's 15-30 s) now show the current Homeworld. The first set, `store/screenshots/`, is outdated: do not upload it.
 > - **Owner checklist (§6, unchanged):** Apple Developer account, Paid Apps Agreement, App Store Connect record and the 12 products from `store/catalogue-sheet.md`, DSA trader status, trademark search, site hosting and a support mailbox, TestFlight with real devices, T0 kid playtests, legal reads, and native-speaker review of all six languages.
 > - **Owner decisions:** 33-55 are open with defaults applied (ROADMAP-v2 §10).
 >

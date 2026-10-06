@@ -56,6 +56,8 @@ if (args['no-video']) ONLY.splice(ONLY.indexOf('video'), 1);
 const MARKETING = !!args.marketing;
 /** Every run sees the same calendar day: a spring Thursday late morning (no festival costume, no meteor shower). */
 const CLOCK = new Date('2026-05-14T10:30:00');
+/** A clear spring afternoon (weatherOn is seeded per day; 20 May is clear, the 14th is drizzle), same month as CLOCK. */
+const HOMEWORLD_CLOCK = new Date('2026-05-20T16:20:00');
 const BROWSER_LOCALE = { en: 'en-US', es: 'es-MX', fr: 'fr-FR', de: 'de-DE', pt: 'pt-BR', ja: 'ja-JP' };
 
 const captionsFile = existsSync(join(STORE, 'captions.final.json')) ? join(STORE, 'captions.final.json') : join(STORE, 'captions.json');
@@ -506,6 +508,149 @@ async function openGame(lang, { width = 440, height = 956, dpr = 3, reduceMotion
   return { ctx, page, errors, seeded };
 }
 
+/** Use the same M11.5 save and calendar for the scrapbook still, the older screenshot set and the preview. */
+async function prepareHomeworld(page) {
+  await page.clock.setFixedTime(HOMEWORLD_CLOCK);
+  return page.evaluate(async () => {
+    const a = window.__app;
+    const p = a.p;
+    const hw = await import('/src/meta/homeworld.ts');
+    const labs = await import('/src/meta/labs.ts');
+    const landmarks = await import('/src/meta/landmarks.ts');
+    const friends = await import('/src/meta/friends.ts');
+    const weather = await import('/src/meta/weather.ts');
+    const seasons = await import('/src/meta/seasons.ts');
+    const now = Date.now();
+    const builtAt = now - 20 * 60e3;
+    const check = (result, label) => {
+      if (result !== 'ok' && result !== true) throw new Error(`Homeworld ${label}: ${result}`);
+    };
+
+    // The profile seed plays to planet 33. These are ordinary persisted progress and inventory fields,
+    // filled as in the Homeworld tests so the real expansion/build paths can pay their requirements.
+    p.level = 51;
+    p.chapters = [1, 2, 3, 4, 5];
+    p.dust = 100_000;
+    p.mats = { ...p.mats, stone: 200, dew: 200, leaf: 200, ember: 200, frost: 200 };
+    p.settings.hemi = 'north';
+    p.home = hw.defaultHome(builtAt);
+    p.home.intro = true;
+    p.home.firstHour = 2;
+    for (const level of [2, 3, 4]) check(hw.expand(p), `expand to Level ${level}`);
+
+    // A finished building has no done timestamp. Tick each construction through its real completion path.
+    const plots = [
+      ['lab', 'rock'],
+      ['den'],
+      ['fountain'],
+      ['greenhouse'],
+      ['lab', 'ice'],
+      ['flowers'],
+      ['launch_bay'],
+      ['den'],
+      ['lab', 'seed'],
+      ['lab', 'magma'],
+      ['lab', 'storm'],
+      ['lab', 'sun'],
+    ];
+    plots.forEach(([type, kind], index) => {
+      check(type === 'lab' ? labs.buildLab(p, index, kind, builtAt) : hw.build(p, index, type, builtAt), `build plot ${index}`);
+      hw.tickBuilds(p.home, builtAt + hw.BUILD_TIME[1]);
+    });
+    for (const [index, started] of [
+      [1, builtAt + 60e3],
+      [7, builtAt + 7 * 60e3],
+    ]) {
+      check(hw.upgrade(p, index, started), `upgrade Den ${index}`);
+      hw.tickBuilds(p.home, started + hw.BUILD_TIME[2]);
+    }
+
+    // Grown-sector totals are saved play history. The migration accepts these values and only
+    // offers lands with at least ten grown sectors; placement itself goes through setGapLand.
+    const lands = [
+      'meadow',
+      'forest',
+      'savanna',
+      'tundra',
+      'jungle',
+      'icesheet',
+      'marsh',
+      'ocean',
+      'highland',
+      'reef',
+      'mountain',
+      'springs',
+    ];
+    for (const [index, land] of lands.entries()) {
+      p.stats.grown[land] = 24 - index;
+      check(hw.setGapLand(p, index, land), `place ${land} land`);
+    }
+    for (const [species, nick, points] of [
+      ['bunny', 'Mochi', 25],
+      ['otter', 'Pip', 16],
+      ['giraffe', 'Sunny', 12],
+      ['penguin', 'Pebbles', 12],
+      ['parrot', 'Kiwi', 8],
+      ['seal', 'Luna', 8],
+    ]) {
+      check(hw.invite(p, species), `invite ${species}`);
+      check(hw.setNick(p, species, nick), `name ${species}`);
+      hw.addFriendship(p, p.home.residents.at(-1), points);
+    }
+
+    // Stage-three progress and paid-stage IDs are valid saved feat history (also used by the
+    // landmark tests). Finish each delivery with the real function, in prerequisite order.
+    for (const id of ['sprout_garden', 'skyglass', 'sky_bridge']) {
+      const site = landmarks.landmarkDefinition(id);
+      const state = landmarks.landmarkState(p, id);
+      state.stage = 3;
+      state.progress = site.stages.flatMap((stage) => [stage.routes[0].target, 0]);
+      state.rewarded = [1, 2, 3].map((stage) => `${id}:stage:${stage}`);
+      check(landmarks.finishLandmark(p, id, now), `finish ${id}`);
+    }
+    check(hw.setIsleDecoration(p, 0, 'flowers'), 'place Isle flowers');
+    check(hw.setIsleDecoration(p, 1, 'fountain'), 'place Isle fountain');
+    check(hw.setIsleDecoration(p, 2, 'keepsake:bunny'), 'place Isle keepsake');
+    hw.takeHomeCelebrations(p); // the completed rewards have already been paid
+    hw.collectAll(p, now);
+    p.home.lastTick = now;
+    a.save();
+    await a.saveNow();
+
+    const date = new Date();
+    const gaps = hw.resolvedGaps(p);
+    const season = seasons.seasonOf(date, p.settings.hemi);
+    const sky = weather.weatherOn(date, p.settings.hemi);
+    const bubbles = {
+      anyReady: hw.anyReady(p.home, now),
+      ready: p.home.plots.filter((_, index) => hw.ready(p.home, index, now) > 0).length,
+      building: p.home.plots.filter((building) => building?.done).length,
+    };
+    if (p.home.level !== 4 || p.home.plots.some((building) => !building) || bubbles.anyReady || bubbles.ready || bubbles.building)
+      throw new Error(`Homeworld frame is incomplete: ${JSON.stringify(bubbles)}`);
+    if (
+      gaps.some((land) => !land) ||
+      p.home.residents.length !== 6 ||
+      p.home.residents.some(
+        (resident) => !friends.routineFor(resident, date, sky, season).awake || friends.homeSpotFor(resident, p.home, gaps).kind !== 'gap',
+      )
+    )
+      throw new Error('Homeworld lands or awake friends are incomplete');
+    if (season !== 'spring' || sky !== 'clear') throw new Error('Homeworld calendar is not a clear spring afternoon');
+    return {
+      level: p.home.level,
+      plots: p.home.plots.map((building) => building.type),
+      friends: p.home.residents.map((resident) => resident.species),
+      gaps,
+      landmarks: ['sprout_garden', 'skyglass', 'sky_bridge'].map((id) => [id, landmarks.landmarkState(p, id).stage]),
+      isle: p.home.isleDecor,
+      season,
+      weather: sky,
+      bubbles,
+    };
+  });
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmtPath = (path) =>
   path
@@ -520,10 +665,13 @@ async function plan(page, o) {
   if (!plans.length) throw new Error('no plan');
   return plans[0];
 }
-async function run(page, path) {
+async function run(page, path, { tolerant = false } = {}) {
   const res = await page.evaluate((p) => window.__play.runPlan(p), path);
   const bad = res.filter((r) => !r.ok);
-  if (bad.length) throw new Error(`throws went astray: ${JSON.stringify(bad)}`);
+  if (!bad.length) return;
+  // Off-camera setup before a shot that picks its own target may drift from the plan; stills stay strict.
+  if (tolerant) log(`  setup drifted from the plan (off camera): ${JSON.stringify(bad)}`);
+  else throw new Error(`throws went astray: ${JSON.stringify(bad)}`);
 }
 
 // ------------------------------------------------------------------ scenes
@@ -680,6 +828,7 @@ const SCENES_DEF = {
   6: {
     id: '6-homeworld',
     async play(page) {
+      log('  Homeworld', JSON.stringify(await prepareHomeworld(page)));
       await page.evaluate(() => window.__app.selectTab('homeworld'));
       await page.waitForFunction(() => window.__app.screen === 'homeworld');
       await sleep(1600);
@@ -1140,7 +1289,8 @@ async function recordPreview() {
       await page.screenshot({ path: join(frames, `f${String(frameNo++).padStart(5, '0')}.png`) });
     }
   };
-  const pause = async () => page.clock.pauseAt(new Date((await page.evaluate(() => Date.now())) + 40));
+  // The clock runs in real time until paused; leave enough margin for the round trip so the target is never in the past.
+  const pause = async () => page.clock.pauseAt(new Date((await page.evaluate(() => Date.now())) + 500));
   const resume = () => page.clock.resume();
   const mark = (name) => segments.push({ name, at: frameNo });
   /** A finger pulls back from the launcher to the pull for v over n frames (ease-out). */
@@ -1175,7 +1325,7 @@ async function recordPreview() {
    * kind 'land' → onto sector sec with a sweeping line; 'mist' → a line that curls through the Magnet Mist.
    */
   const pullAhead = (o) =>
-    page.evaluate(async ({ sec, dt, kind, horizon }) => {
+    page.evaluate(async ({ sec, dt, kind, horizon, exact }) => {
       const P = window.__play;
       const s = P.scene();
       const sky = await import('/src/core/sky.ts');
@@ -1215,7 +1365,8 @@ async function recordPreview() {
             s.roundModifiers(),
             s.rules,
           );
-          if (res.lost.length || res.after <= res.before) continue;
+          // A planned step (exact) is played as planned; free throws must grow the land without losing anyone.
+          if (!exact && (res.lost.length || res.after <= res.before)) continue;
           // a landing that earns the first star would put the "Finish" button over the Keeper
           let score = res.after - res.before + res.spawned.length * 10 - (P.stars(res.state) > 0 ? 1000 : 0);
           if (mist) {
@@ -1232,11 +1383,14 @@ async function recordPreview() {
       return best;
     }, o);
   /** One throw on camera: wait `lead` frames, pull for `pull` frames, hold `hold`, release, watch `after`. */
-  const fling = async ({ sec, kind = 'land', pull = 16, hold = 4, after = 80, lead = 0, horizon = 0 }) => {
+  const fling = async ({ sec, kind = 'land', pull = 16, hold = 4, after = 80, lead = 0, horizon = 0, exact = false }) => {
     await untilReady();
     // aim for the moment of release (the planet keeps turning while the finger holds)
     const dt = (lead + pull + hold) / FPS;
-    const v = await pullAhead({ sec, dt, kind, horizon: kind === 'land' ? 1.5 : horizon });
+    // A sector the planner chose may only come into reach later in the spin: wait longer (a short pause on camera).
+    const v =
+      (await pullAhead({ sec, dt, kind, exact, horizon: kind === 'land' ? 1.5 : horizon })) ??
+      (kind === 'land' ? await pullAhead({ sec, dt, kind, exact, horizon: 6 }) : null);
     if (!v) throw new Error(`no pull for ${kind} ${sec ?? ''}`);
     await shoot(lead + Math.round(v.extra * FPS));
     await drag(v, pull);
@@ -1258,12 +1412,25 @@ async function recordPreview() {
   let pick = await bestOption((o) => !o.lost && o.spawned.length && o.delta > 0 && !o.reaction);
   await pause();
   mark('fling');
-  const posterAt = await fling({ sec: pick.sec, lead: 16, pull: 20, hold: 8, after: 84 });
+  const posterAt = await fling({ sec: pick.sec, lead: 16, pull: 20, hold: 8, after: 72 });
 
-  // --- B: the next throw, more friends move in
-  pick = await bestOption((o) => !o.lost && o.stars === 0);
+  // --- B: the next throw, more friends move in. pullAhead also needs a clear, quick path that grows the land, so try
+  // the ranked options until one has a pull (a failed search draws no frames).
+  const optsB = (await page.evaluate(() => window.__play.options()))
+    .filter((o) => !o.lost && o.stars === 0 && o.delta > 0)
+    .sort((a, b) => b.delta + 12 * b.spawned.length - (a.delta + 12 * a.spawned.length));
   mark('friends');
-  await fling({ sec: pick.sec, lead: 4, pull: 14, hold: 4, after: 86 });
+  let flungB = false;
+  for (const o of optsB) {
+    try {
+      await fling({ sec: o.sec, lead: 4, pull: 14, hold: 4, after: 70 });
+      flungB = true;
+      break;
+    } catch (e) {
+      if (!String(e.message).startsWith('no pull')) throw e;
+    }
+  }
+  if (!flungB) throw new Error('video B: no option has a clear pull');
 
   // --- C: a Fusion, then a Fusion that chains a Combo (planet 34)
   await resume();
@@ -1284,19 +1451,20 @@ async function recordPreview() {
   await pause();
   mark('fusion');
   for (const step of pl.path.slice(from, at + 1))
-    await fling({ sec: step.sec, lead: 4, pull: 12, hold: 3, after: step === pl.path[at] ? 72 : 46 });
+    await fling({ sec: step.sec, exact: true, lead: 4, pull: 12, hold: 3, after: step === pl.path[at] ? 62 : 36 });
 
   // --- D: the sky: a throw that curls through the Magnet Mist (planet 46)
   await resume();
   await page.evaluate((n) => window.__play.start(n), 46);
   pl = await plan(page, { depth: 2, beam: 30, score: GROW_UNDER_STAR, final: NO_FINISH });
-  await run(page, pl.path);
+  await run(page, pl.path, { tolerant: true });
   await pause();
   mark('sky');
-  await fling({ kind: 'mist', lead: 6, pull: 16, hold: 8, after: 72, horizon: 5 });
+  await fling({ kind: 'mist', lead: 6, pull: 16, hold: 8, after: 60, horizon: 5 });
 
   // --- E: the Homeworld, a finger gives it a slow spin
   await resume();
+  log('  video Homeworld', JSON.stringify(await prepareHomeworld(page)));
   await page.evaluate(() => window.__app.selectTab('homeworld'));
   await page.waitForFunction(() => window.__app.screen === 'homeworld');
   await sleep(800);
@@ -1310,7 +1478,7 @@ async function recordPreview() {
     const r = c.getBoundingClientRect();
     return { x: r.left + r.width / 2, y: r.top + r.height * 0.5 };
   });
-  await shoot(24);
+  await shoot(16);
   await page.mouse.move(cv.x + 110, cv.y + 10);
   await page.mouse.down();
   for (let i = 0; i < 44; i++) {
@@ -1318,7 +1486,7 @@ async function recordPreview() {
     await shoot(1);
   }
   await page.mouse.up();
-  await shoot(66);
+  await shoot(52);
   mark('end');
   await ctx.close();
   if (errors.length) log('video page errors:', errors.slice(0, 5));
@@ -1415,11 +1583,29 @@ function encodePreview({ frames, total, segments, posterAt }) {
     poster,
   };
   log('preview', JSON.stringify(summary));
+  // App Store App Previews must run 15-30 seconds.
+  const seconds = Number(probe.format.duration);
+  if (seconds < 15 || seconds > 30) throw new Error(`App Preview is ${seconds.toFixed(2)} s; it must be 15-30 s`);
   return summary;
 }
 
 // ------------------------------------------------------------------ main
-export { SEED_LIB, PLAY_LIB, PROFILE, CLOCK, BROWSER_LOCALE, openGame, plan, run, fmtPath, ensureServer, flatten, holdOn, fireOn };
+export {
+  SEED_LIB,
+  PLAY_LIB,
+  PROFILE,
+  CLOCK,
+  BROWSER_LOCALE,
+  openGame,
+  prepareHomeworld,
+  plan,
+  run,
+  fmtPath,
+  ensureServer,
+  flatten,
+  holdOn,
+  fireOn,
+};
 export const setBrowser = (b) => (browser = b);
 export const stopServer = () => server?.kill();
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
