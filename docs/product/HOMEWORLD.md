@@ -530,7 +530,7 @@ Finished: a one-time lantern parade of every friend around the rim (the biggest 
 ### 6.3 After launch
 
 - **Landmarks 6-10** open with Homeworld Levels 6-10 in M17. Working titles: Moon Garden, Coral Steps, Cloud Swing, Crystal Grotto, Star Harbour. Same rules.
-- **One new Landmark per Star Road** (from Road 1, M14): a free, play-gated Landmark whose feats use the Road's weekly Voyage themes, with a decoration and a title as its gift. It stays open after the Road ends (Past Roads rule: nothing expires). It is the long-tail "do stuff for it" content for day 60 and after, and it costs only code-drawn art and about 10 strings per Road.
+- **One new Landmark per Star Road** (from Road 1, M14): a free, play-gated Landmark whose feats use the Road's weekly Voyage themes, with a decoration and a title as its gift. It stays open after the Road ends (Past Roads rule: nothing expires). It is the long-tail "do stuff for it" content for day 60 and after, and it costs only code-drawn art and about 10 strings per Road. Road Landmarks have a separate `home.roadLandmarks` ledger and queue one at a time in Road order after the Keeper's Beacon is finished and their Road is playable. Each has 3-4 stages with two equal-effort routes, delivery of leaf, dew or stone only, and no Road points. Feats count in campaign, Voyage, Zen and Daily; they are hemisphere-neutral and taught by planet 29. The site is on the Floating Isle; the child places the earned decoration. Passport counts Road Landmarks separately from Landmarks 0-5.
 
 ---
 

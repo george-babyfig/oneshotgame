@@ -5,6 +5,7 @@ import fr from './locales/fr.json';
 import de from './locales/de.json';
 import pt from './locales/pt.json';
 import ja from './locales/ja.json';
+import road01 from './locales/content/road01.json';
 import { localPlanetName } from './i18n/planetNames';
 
 type PlayerLang = 'en' | 'es' | 'fr' | 'de' | 'pt' | 'ja';
@@ -18,7 +19,15 @@ export const LANGS: { id: PlayerLang; name: string }[] = [
   { id: 'ja', name: '日本語' },
 ];
 
-const DICTS: Record<PlayerLang, Record<string, string>> = { en: {}, es, fr, de, pt, ja };
+export type ContentStrings = Record<PlayerLang, Record<string, string>>;
+/** Static imports keep every installed Road available offline. */
+export const CONTENT_FRAGMENTS: readonly ContentStrings[] = [road01];
+export function mergeContentStrings(main: ContentStrings, fragments: readonly ContentStrings[]): ContentStrings {
+  return Object.fromEntries(
+    LANGS.map(({ id }) => [id, Object.assign({}, main[id], ...fragments.map((fragment) => fragment[id]))]),
+  ) as ContentStrings;
+}
+const DICTS = mergeContentStrings({ en: {}, es, fr, de, pt, ja }, CONTENT_FRAGMENTS);
 const pseudoEnabled = import.meta.env.DEV || import.meta.env.VITE_TESTER === '1';
 let lang: Lang = 'en';
 

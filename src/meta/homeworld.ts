@@ -1,3 +1,4 @@
+import type { RoadLandmarkId } from './m14types';
 import { tripVisible } from './reveals';
 import { tripOptions, tripPlanets, startTrip, settleTrips, speedUpTrip } from './trips';
 import { legacyExpeditionLoot } from './tripsLegacy';
@@ -180,6 +181,7 @@ export interface HomeState {
   /** Three purely visual choices on the Floating Isle. */
   isleDecor: (string | null)[];
   landmarks: Record<LandmarkId, LandmarkState>;
+  roadLandmarks: Partial<Record<RoadLandmarkId, LandmarkState>>;
   seen: { celebrations: string[] };
   /** Stable win keys already included in stats.grown. */
   grownRoundKeys: string[];
@@ -260,6 +262,7 @@ export function defaultHome(now = Date.now()): HomeState {
       comet_pier: { stage: 0, progress: [], rewarded: [], rounds: [], arrivals: [], planets: [] },
       keepers_beacon: { stage: 0, progress: [], rewarded: [], rounds: [], arrivals: [], planets: [] },
     },
+    roadLandmarks: {},
     seen: { celebrations: [] },
     grownRoundKeys: [],
     residents: [],

@@ -17,6 +17,7 @@
 //   h-pre-m11.v3.json      Ring 3, paid retired structures/perks and a running trip
 //   j-pre-noun-budget.v5.json  Old planet-20 Voyage gate, before its moved debut
 //   k-pre-stats.v1.json    Pre-counter save: wins must backfill before noun migration
+//   k-release-1.1.v7.json Untouched M13, rich Road progress, modern trips and saved Voyage theme
 //   l-voyage-seen.v5.json  Old planet-23 player who already saw the Voyage intro
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -46,6 +47,7 @@ const DUST_DELTAS: Record<string, number> = {
   'j-pre-noun-budget.v5.json': 0,
   'j-release-1.0.v6.json': 0,
   'k-pre-stats.v1.json': 1600,
+  'k-release-1.1.v7.json': 0,
   'l-voyage-seen.v5.json': 0,
 };
 
@@ -98,6 +100,7 @@ describe('save goldens', () => {
       'j-pre-noun-budget.v5.json',
       'j-release-1.0.v6.json',
       'k-pre-stats.v1.json',
+      'k-release-1.1.v7.json',
       'l-voyage-seen.v5.json',
     ]);
   });
@@ -384,6 +387,7 @@ describe('save goldens: specific migrations', () => {
     expected.meta.sessions = 1;
     expected.lastCollect = p.lastCollect;
     expected.vault.lastTick = p.vault.lastTick;
+    expected.roadSeenDay = p.roadSeenDay;
     expect(p).toEqual(expected);
   });
 

@@ -1,3 +1,4 @@
+import { allStrings } from './helpers/locales';
 // Glossary lint (ROADMAP-v2 section 4h "Glossary: every player-facing noun", M2 item 2.7).
 // "Every new term retires an old one or earns its place." This file fails the build on a duplicate
 // name, a retired word coming back, a never-introduced word, or a hit game's term, in any of the six
@@ -825,9 +826,7 @@ function walk(dir: string, ext: string): string[] {
 
 const rel = (p: string) => relative(process.cwd(), p).split(sep).join('/');
 
-const DICTS = Object.fromEntries(
-  LANGS.map((l) => [l, JSON.parse(readFileSync(`src/locales/${l}.json`, 'utf8')) as Record<string, string>]),
-) as Record<Lang, Record<string, string>>;
+const DICTS = Object.fromEntries(LANGS.map((l) => [l, allStrings(l)])) as Record<Lang, Record<string, string>>;
 
 /** First-argument string literals of t('...') and both strings of tp(n, '...', '...') in src/ (as in terms.test.ts). */
 function sourceStrings(): { where: string; s: string }[] {
@@ -864,7 +863,7 @@ function englishStrings(): { where: string; s: string }[] {
   const add = (where: string, s: string) => {
     if (s && !seen.has(s)) (seen.add(s), out.push({ where, s }));
   };
-  (JSON.parse(readFileSync('src/locales/_keys.json', 'utf8')) as string[]).forEach((s) => add('_keys.json', s));
+  Object.keys(allStrings('en')).forEach((s) => add('English key or content fragment', s));
   for (const l of LANGS) Object.keys(DICTS[l]).forEach((s) => add(`${l}.json key`, s));
   sourceStrings().forEach(({ where, s }) => add(where, s));
   return out;

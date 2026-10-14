@@ -1,4 +1,4 @@
-# 05: Status and next steps (as of 14 October 2026: the launch candidate is built and polished; M13 is next)
+# 05: Status and next steps (as of 14 October 2026: 1.0 candidate polished, M13 (1.1) built; M14 in progress)
 
 ## Where things stand
 
@@ -57,26 +57,27 @@ Every launch-candidate milestone (M0-M12) is built. What remains is in `docs/pro
 
 The plan is **[docs/product/ROADMAP-v2.md](../product/ROADMAP-v2.md)**, with [HOMEWORLD.md](../product/HOMEWORLD.md) and [FLIGHT.md](../product/FLIGHT.md) for the Homeworld, launchers, sky obstacles, Combos and difficulty. **The launch candidate is 17 milestones** (about 44 team-weeks at first estimate). M13–M17 come after launch.
 
-| Milestone | Goal                                                                                           | Size | Status                                                                   |
-| --------- | ---------------------------------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------ |
-| M0        | Kid-safe trust update                                                                          | S    | ✅ built                                                                 |
-| M1        | Measure and guard (no visible change)                                                          | M    | ✅ built                                                                 |
-| M2        | The round engine and the unlock ladder (no visible change)                                     | L    | ✅ built                                                                 |
-| M3        | The first ten minutes                                                                          | M    | ✅ built                                                                 |
-| M4        | One clear Home, Missions and Wishes                                                            | M    | ✅ built                                                                 |
-| M5        | Grown-ups and a fair checkout (decision 1: gem packs stay)                                     | L    | ✅ built                                                                 |
-| M6        | Read every throw: HUD, landing card, Supernova 2.0, stats, feel, colour, resume                | L    | ✅ built                                                                 |
-| M6.5      | Showtime: animations, celebrations, living characters, avatars (owner's request)               | L    | ✅ built                                                                 |
-| M7        | Fusions, the first Clash and Combos                                                            | L    | ✅ built                                                                 |
-| M7.5      | Sky obstacles and real flight in the sims                                                      | L    | ✅ built                                                                 |
-| M8        | Troubles, traits, the Buddy, the help ladder and the difficulty program; rules freeze          | L    | ✅ built                                                                 |
-| M9        | Remix (REMIX.md)                                                                               | M    | ✅ built                                                                 |
-| M10       | Labs: your shots learn tricks                                                                  | L    | ✅ built                                                                 |
-| M10.5     | Launchers and the Launch Bay                                                                   | L    | ✅ built                                                                 |
-| M11       | Homeworld Level and a fair economy                                                             | M    | ✅ built                                                                 |
-| M11.5     | Homeworld Life: friends' days, lands and Landmarks (decision 25 default applied)               | L    | ✅ built                                                                 |
-| M12       | Star Roads, the Styles catalogue and launch prep                                               | L    | ✅ built                                                                 |
-| M13–M17   | After launch: friends and trips, Road 1, content drop, Collector's Edition, Homeworld Horizons | —    | M13 next: build map ready (decisions shift +5: M13 = 61-79, M14 = 80-96) |
+| Milestone | Goal                                                                                  | Size | Status                                                                 |
+| --------- | ------------------------------------------------------------------------------------- | ---- | ---------------------------------------------------------------------- |
+| M0        | Kid-safe trust update                                                                 | S    | ✅ built                                                               |
+| M1        | Measure and guard (no visible change)                                                 | M    | ✅ built                                                               |
+| M2        | The round engine and the unlock ladder (no visible change)                            | L    | ✅ built                                                               |
+| M3        | The first ten minutes                                                                 | M    | ✅ built                                                               |
+| M4        | One clear Home, Missions and Wishes                                                   | M    | ✅ built                                                               |
+| M5        | Grown-ups and a fair checkout (decision 1: gem packs stay)                            | L    | ✅ built                                                               |
+| M6        | Read every throw: HUD, landing card, Supernova 2.0, stats, feel, colour, resume       | L    | ✅ built                                                               |
+| M6.5      | Showtime: animations, celebrations, living characters, avatars (owner's request)      | L    | ✅ built                                                               |
+| M7        | Fusions, the first Clash and Combos                                                   | L    | ✅ built                                                               |
+| M7.5      | Sky obstacles and real flight in the sims                                             | L    | ✅ built                                                               |
+| M8        | Troubles, traits, the Buddy, the help ladder and the difficulty program; rules freeze | L    | ✅ built                                                               |
+| M9        | Remix (REMIX.md)                                                                      | M    | ✅ built                                                               |
+| M10       | Labs: your shots learn tricks                                                         | L    | ✅ built                                                               |
+| M10.5     | Launchers and the Launch Bay                                                          | L    | ✅ built                                                               |
+| M11       | Homeworld Level and a fair economy                                                    | M    | ✅ built                                                               |
+| M11.5     | Homeworld Life: friends' days, lands and Landmarks (decision 25 default applied)      | L    | ✅ built                                                               |
+| M12       | Star Roads, the Styles catalogue and launch prep                                      | L    | ✅ built                                                               |
+| M13       | Friends and trips (update 1.1)                                                        | M    | ✅ built (`d40c967`; logs in `docs/handoff/m13-step0.md`, `m13-fx.md`) |
+| M14–M17   | Road 1 and live ops, content drop, Collector's Edition, Homeworld Horizons            | —    | M14 in progress (decisions 80-96)                                      |
 
 - **Difficulty, the headline principle:** in the owner's words, "we dont want it too hard at the beginning but also not too easy, as both will cause a user to lose interest". The difficulty program (FLIGHT.md, M8) now has a floor and a ceiling per chapter, with decision 28's "Kid-first" bands: M3's ladder moves were the first step.
 - **Owner decisions** 1–55 are in ROADMAP-v2 section 10. Decisions 1 and 28–32 are answered; 33 (Remix difficulty) and 34–55 (M10, M10.5, M11, M11.5, M12 and launch defaults) are open with defaults applied; the stated defaults apply to the rest unless the owner says otherwise. M11.5 still needs decision 25.

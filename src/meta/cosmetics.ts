@@ -1,3 +1,4 @@
+import type { ThemeSpec } from './m14types';
 import { BASE_LOOKS } from './tuning';
 import { spend } from './wallet';
 // The Keeper (your little astronaut), its launcher and its throw trail.
@@ -311,8 +312,9 @@ const KIND_NAMES: Record<Kind, string> = {
   sun: 'Sunburst',
 };
 const product = (suffix: string) => `com.pocketplanet.game.${suffix}`;
-const themed = (theme: 'tidepool' | 'cometcandy', name: string, colors: string[], motif: Cosmetic['motif']): Cosmetic[] => {
-  const prefix = theme === 'tidepool' ? 'Tidepool' : 'Comet Candy';
+export const themed = (spec: ThemeSpec): Cosmetic[] => {
+  const { id: theme, name: prefix, motif } = spec;
+  const colors = [...spec.colors];
   const id = product(`theme.${theme}`);
   const item = (part: string, slot: StyleSlot, label: string): Cosmetic => ({
     id: `${theme}_${part}`,
@@ -376,8 +378,8 @@ export const M12_COSMETICS: Cosmetic[] = [
     tier: 'fancy',
     colors: ['#a4c5b5', '#617d82', '#334f68'],
   },
-  ...themed('tidepool', 'Tidepool', ['#86b6aa', '#5c8199', '#33566e'], 'wave'),
-  ...themed('cometcandy', 'Comet Candy', ['#cf9eaf', '#a4779b', '#694f87'], 'candy'),
+  ...themed({ id: 'tidepool', name: 'Tidepool', colors: ['#86b6aa', '#5c8199', '#33566e'], motif: 'wave' }),
+  ...themed({ id: 'cometcandy', name: 'Comet Candy', colors: ['#cf9eaf', '#a4779b', '#694f87'], motif: 'candy' }),
   {
     id: 'sampler_tidepool',
     slot: 'decoration:flowers',
@@ -515,6 +517,11 @@ export const COSMETICS: Cosmetic[] = [
 
 export const COSMETIC_BY_ID: Record<string, Cosmetic> = Object.fromEntries(COSMETICS.map((x) => [x.id, x]));
 export const STYLES_RELEASE = 'm12';
+
+/** Step-0 preserves the existing dot; Package A adds Road availability gating. */
+export function stylesNewDot(p: Profile, _day: string): boolean {
+  return p.stylesNewSeen !== STYLES_RELEASE;
+}
 
 export function isPaidLook(x: Cosmetic): boolean {
   return x.source === 'starter' || x.source === 'pass' || x.source === 'product';

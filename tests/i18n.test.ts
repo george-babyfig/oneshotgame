@@ -1,3 +1,5 @@
+import { CONTENT_FRAGMENTS, LANGS, mergeContentStrings, type ContentStrings } from '../src/i18n';
+import { allStrings } from './helpers/locales';
 // Every translatable string must exist in every locale, with the same {placeholders}.
 // Run with DUMP_KEYS=1 to write the key list to src/locales/_keys.json.
 import { FESTIVALS } from '../src/meta/festivals';
@@ -158,6 +160,9 @@ export function allKeys(): string[] {
   ].forEach(add);
   ['Common', 'Uncommon', 'Rare', 'Legendary'].forEach(add); // src/ui/text.ts rarityName()
   ['short', 'medium', 'long', 'full', 'Someone', 'Paradise!', 'Thriving!', 'Blooming!', 'Nice!'].forEach(add);
+  Object.keys(allStrings('en'))
+    .filter((key) => CONTENT_FRAGMENTS.some((fragment) => key in fragment.en))
+    .forEach(add);
   keys.delete('');
   return [...keys].sort();
 }
@@ -171,13 +176,39 @@ describe('i18n', () => {
   const keys = allKeys();
   if (process.env.DUMP_KEYS) writeFileSync(process.env.DUMP_KEYS_PATH ?? 'src/locales/_keys.json', JSON.stringify(keys, null, 2) + '\n');
 
+  it('merges installed Road copy in every language and keeps main keys and placeholders', () => {
+    const main = Object.fromEntries(LANGS.map(({ id }) => [id, { Main: `${id}: main` } as Record<string, string>])) as ContentStrings;
+    const fragment = Object.fromEntries(
+      LANGS.map(({ id }) => [id, { 'Road {n}': `${id}: road {n}` } as Record<string, string>]),
+    ) as ContentStrings;
+    const dicts = mergeContentStrings(main, [fragment]);
+    for (const { id } of LANGS) {
+      expect(dicts[id]).toEqual({ Main: `${id}: main`, 'Road {n}': `${id}: road {n}` });
+      expect(main[id]).toEqual({ Main: `${id}: main` });
+    }
+  });
+
+  it('registers every on-disk fragment in the offline static import list', () => {
+    const source = readFileSync('src/i18n.ts', 'utf8');
+    const registered = [...source.matchAll(/from ['"]\.\/locales\/content\/([^'"]+\.json)['"]/g)].map((match) => match[1]).sort();
+    expect(registered).toEqual(
+      readdirSync('src/locales/content')
+        .filter((file) => file.endsWith('.json'))
+        .sort(),
+    );
+    for (const { id } of LANGS) {
+      const all = allStrings(id);
+      for (const fragment of CONTENT_FRAGMENTS) expect(all).toMatchObject(fragment[id]);
+    }
+  });
+
   it('collects a sensible number of keys', () => {
     expect(keys.length).toBeGreaterThan(150);
   });
 
   for (const lang of LANGS_DONE) {
     it(`${lang} translates every key with matching placeholders`, () => {
-      const dict = JSON.parse(readFileSync(`src/locales/${lang}.json`, 'utf8')) as Record<string, string>;
+      const dict = allStrings(lang);
       const missing = keys.filter((k) => !(k in dict));
       expect(missing, `missing in ${lang}`).toEqual([]);
       const bad = keys.filter((k) => placeholders(k).join() !== placeholders(dict[k]).join());

@@ -1,3 +1,4 @@
+import { ROAD_EARNING_KEY_LIMIT } from './m14types';
 import type { Profile } from './profile';
 import { today } from './profile';
 import { applyReward, type Reward } from './progression';
@@ -33,6 +34,8 @@ export interface RoadTier {
 }
 export interface RoadDefinition {
   id: RoadId;
+  /** Major.minor release that first installed this Road (legacy callers may omit it). */
+  addedIn?: string;
   name: string;
   tiers: readonly RoadTier[];
   /** Road availability comes from installed content, never a remote timer. */
@@ -63,7 +66,7 @@ export const STAR_ROAD: RoadTier[] = [
   { id: 'road00:tier18', stars: 190, reward: { boosters: { spark: 1 } }, pass: {} },
   { id: 'road00:tier19', stars: 200, reward: { dust: 1000, sticker: 'cosmic_road' }, pass: {} },
 ];
-export const ROAD_CATALOG: readonly RoadDefinition[] = [{ id: COSMIC_ROAD_ID, name: 'Cosmic Road', tiers: STAR_ROAD }];
+export const ROAD_CATALOG: readonly RoadDefinition[] = [{ id: COSMIC_ROAD_ID, name: 'Cosmic Road', addedIn: '1.0', tiers: STAR_ROAD }];
 export const ROAD_DAILY_CAP = 4;
 export const ROAD_CATCH_UP_CAP = 8;
 export const ROAD_LENGTH_DAYS = 56;
@@ -116,7 +119,7 @@ export function grantRoadPoints(state: RoadState, event: RoadPointEvent): number
   );
   state.earnedOnLastCreditedDay += granted;
   state.points += granted;
-  if (granted) state.creditedEarningKeys.push(key);
+  if (granted) state.creditedEarningKeys = [...state.creditedEarningKeys, key].slice(-ROAD_EARNING_KEY_LIMIT);
   return granted;
 }
 
@@ -164,6 +167,7 @@ export function grantProfileRoadPoints(p: Profile, event: RoadPointEvent, catalo
   if (p.roadCreditedEarningKeys.includes(key)) return 0;
   const day = p.roadDay.day && event.date < p.roadDay.day ? p.roadDay.day : event.date;
   if (day > p.roadDay.day) p.roadDay = { day, earned: 0 };
+  if (day > p.roadSeenDay) p.roadSeenDay = day;
   const roads = playableRoads(p, day, catalog);
   let left = Math.min(Math.floor(event.delta), event.source === 'wish' ? 1 : 3);
   let granted = 0;
@@ -182,12 +186,11 @@ export function grantProfileRoadPoints(p: Profile, event: RoadPointEvent, catalo
     state.points += amount;
     state.lastCreditedDay = day;
     state.earnedOnLastCreditedDay = p.roadDay.earned + amount;
-    state.creditedEarningKeys.push(key);
     p.roadDay.earned += amount;
     granted += amount;
     left -= amount;
   }
-  if (granted) p.roadCreditedEarningKeys.push(key);
+  if (granted) p.roadCreditedEarningKeys = [...p.roadCreditedEarningKeys, key].slice(-ROAD_EARNING_KEY_LIMIT);
   syncLegacy(p);
   return granted;
 }
@@ -257,3 +260,12 @@ export function claimReachedPaidRoad(p: Profile, id: RoadId = COSMIC_ROAD_ID, ca
 }
 export const PASS_GEMS = STAR_ROAD.reduce((sum, tier) => sum + (tier.pass.gems ?? 0), 0);
 export const FREE_ROAD_GEMS = STAR_ROAD.reduce((sum, tier) => sum + (tier.reward.gems ?? 0), 0);
+
+/** Step-0 compatibility: Package A extends this mapping with per-product metadata. */
+export function roadForProduct(id: string): RoadId | undefined {
+  return id === 'com.pocketplanet.game.road00' ? COSMIC_ROAD_ID : undefined;
+}
+/** Only installed, playable Roads can have a claim waiting. */
+export function anyRoadReady(p: Profile): boolean {
+  return playableRoads(p).some((road) => roadReady(p, road.id).length > 0);
+}

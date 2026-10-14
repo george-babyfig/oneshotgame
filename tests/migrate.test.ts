@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { defaultProfile, migrate } from '../src/meta/profile';
+import { grantProfileRoadPoints, anyRoadReady, roadForProduct, ROAD_CATALOG } from '../src/meta/starroad';
+import { ALMANAC, CALENDAR_OVERRIDES, almanacTheme, calendarSalt } from '../src/meta/almanac';
+import { ROAD01 } from '../src/meta/content/road01';
+import { ROAD_LANDMARKS, roadLandmarkMail } from '../src/meta/roadLandmarks';
+import { COSMETICS, STYLES_RELEASE, stylesNewDot, themed } from '../src/meta/cosmetics';
+import { describe, expect, it, vi } from 'vitest';
+import { defaultProfile, migrate, PROFILE_VERSION, today } from '../src/meta/profile';
 import { readFileSync } from 'node:fs';
 import { openChest, chapterReward } from '../src/meta/progression';
 
@@ -150,11 +155,13 @@ describe('M13 preserving save migration', () => {
   it('preserves Wishes, Road, Voyage and chosen privacy settings, and migrates once', () => {
     const raw = rawGolden();
     const p = migrate(raw);
-    expect(p.v).toBe(7);
+    expect(p.v).toBe(PROFILE_VERSION);
     expect(p.m13Migrated).toBe(true);
     expect(p.quests).toEqual(raw.quests);
     expect(p.voyage).toEqual(raw.voyage);
-    expect(p.roadRecords).toEqual(raw.roadRecords);
+    expect(p.roadRecords).toEqual(
+      Object.fromEntries(Object.entries(raw.roadRecords).map(([id, state]) => [id, { ...(state as object), creditedEarningKeys: [] }])),
+    );
     expect(p.settings).toEqual(raw.settings);
     expect(p.home.tripFuel).toBe(true);
     expect(p.home.tripReturn).toBeNull();
@@ -211,4 +218,169 @@ describe('step-0 career options', () => {
     expect(c.bayLevelDays[3]).toBeGreaterThan(0);
     expect(c.profile.galaxy.every((g) => g.sec?.length === 120)).toBe(true);
   }, 120000);
+});
+
+describe('M14 step-0 save v8 contract', () => {
+  const golden = (path = 'tests/fixtures/saves/k-release-1.1.v7.json') => JSON.parse(readFileSync(path, 'utf8'));
+
+  it('preserves the rich 1.1 promises and wallet while consolidating dedupe evidence', () => {
+    const raw = golden();
+    expect(raw.v).toBe(7);
+    expect(raw.roadPoints).toBe(120);
+    expect(raw.roadCreditedEarningKeys).toHaveLength(40);
+    expect(raw.roadRecords.road00.claimedFreeTierIds).toHaveLength(12);
+    expect(raw.roadRecords.road00.claimedPaidTierIds).toHaveLength(12);
+    expect(raw.home.expedition.yield).toBeTruthy();
+    expect(raw.home.tripReturn.yield).toBeTruthy();
+    expect(raw.quests.list.some((card: { from?: string }) => card.from === 'friend')).toBe(true);
+    expect(raw.voyage.theme).toBeTruthy();
+    const p = migrate(raw);
+    expect(p.v).toBe(8);
+    expect(p.m14Migrated).toBe(true);
+    for (const key of ['gems', 'dust', 'mats', 'boosters', 'quests', 'road', 'roadPass', 'pass', 'skins', 'roadPassEntitlements'] as const)
+      expect(p[key], key).toEqual(raw[key]);
+    // Untouched 1.1 also drops this obsolete catch-up flag for an unplayed week.
+    const { legacyCatchUpPaid: _retired, ...voyage } = raw.voyage;
+    expect(p.voyage).toEqual(voyage);
+    expect(p.home.expedition).toEqual(raw.home.expedition);
+    expect(p.home.tripReturn).toEqual(raw.home.tripReturn);
+    expect(p.roadRecords.road00).toEqual({ ...raw.roadRecords.road00, creditedEarningKeys: [] });
+    expect(p.roadCreditedEarningKeys).toEqual(raw.roadCreditedEarningKeys);
+    expect(p.home.roadLandmarks).toEqual({});
+    expect(migrate(JSON.parse(JSON.stringify(p)))).toEqual(p);
+  });
+
+  it('preserves the unfinished Road golden at 150 points without creating a Road 1 record', () => {
+    const raw = golden('tests/fixtures/road/road0-unfinished-at-road1.v7.json');
+    expect(raw.v).toBe(7);
+    const p = migrate(raw);
+    expect(p.roadRecords.road00).toEqual({ ...raw.roadRecords.road00, creditedEarningKeys: [] });
+    expect(p.roadPoints).toBe(150);
+    expect(p.roadRecords).not.toHaveProperty('road01');
+    expect(migrate(JSON.parse(JSON.stringify(p)))).toEqual(p);
+  });
+
+  it('unions all per-Road keys, retains the newest 600 once, and rejects malformed keys', () => {
+    const raw = golden();
+    raw.roadRecords.road00.creditedEarningKeys = ['old-only', 'shared', null, 'x'.repeat(161)];
+    raw.roadRecords.road01 = { ...raw.roadRecords.road00, creditedEarningKeys: ['road1-only', 'shared'] };
+    raw.roadCreditedEarningKeys = ['shared', ...Array.from({ length: 597 }, (_, i) => `campaign:planet:${i}`), false];
+    const p = migrate(raw);
+    expect(p.roadCreditedEarningKeys).toEqual([
+      'old-only',
+      'road1-only',
+      'shared',
+      ...Array.from({ length: 597 }, (_, i) => `campaign:planet:${i}`),
+    ]);
+    expect(Object.values(p.roadRecords).every((road) => road.creditedEarningKeys.length === 0)).toBe(true);
+    raw.roadCreditedEarningKeys.push('newest');
+    expect(migrate(raw).roadCreditedEarningKeys).toEqual([...p.roadCreditedEarningKeys.slice(1), 'newest']);
+  });
+
+  it('keeps the live writer capped and observes point dates without changing the daily cap', () => {
+    const p = migrate(golden());
+    p.roadCreditedEarningKeys = Array.from({ length: 600 }, (_, i) => `campaign:old:${i}`);
+    p.roadSeenDay = '2026-11-10';
+    expect(grantProfileRoadPoints(p, { source: 'wish', date: '2026-11-11', earningKey: 'new', delta: 1 })).toBe(1);
+    expect(p.roadCreditedEarningKeys).toHaveLength(600);
+    expect(p.roadCreditedEarningKeys[0]).toBe('campaign:old:1');
+    expect(p.roadCreditedEarningKeys.at(-1)).toBe('wish:new');
+    expect(p.roadRecords.road00.creditedEarningKeys).toEqual([]);
+    expect(p.roadSeenDay).toBe('2026-11-11');
+    expect(grantProfileRoadPoints(p, { source: 'wish', date: '2026-11-09', earningKey: 'rollback', delta: 1 })).toBe(1);
+    expect(p.roadSeenDay).toBe('2026-11-11');
+    expect(p.roadDay).toEqual({ day: '2026-11-11', earned: 2 });
+    expect(grantProfileRoadPoints(p, { source: 'wish', date: '2026-11-11', earningKey: 'new', delta: 1 })).toBe(0);
+  });
+
+  it('seeds availability from today or the later saved day, then never moves it back', () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-10-14T12:00:00'));
+      const raw = golden();
+      raw.roadDay.day = '2026-10-01';
+      const p = migrate(raw);
+      expect(p.roadSeenDay).toBe(today());
+      raw.roadDay.day = '2027-02-01';
+      expect(migrate(raw).roadSeenDay).toBe('2027-02-01');
+      p.roadSeenDay = '2027-03-01';
+      vi.setSystemTime(new Date('2026-09-01T12:00:00'));
+      expect(migrate(JSON.parse(JSON.stringify(p))).roadSeenDay).toBe('2027-03-01');
+      expect(defaultProfile().roadSeenDay).toBe('');
+      p.roadSeenDay = 'invalid';
+      expect(migrate(JSON.parse(JSON.stringify(p))).roadSeenDay).toBe(p.roadDay.day);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps Road Landmark progress separate and sanitizes it without granting rewards', () => {
+    const raw = golden();
+    raw.home.roadLandmarks = {
+      rl_road01: { stage: 4, progress: [2, -1, 'bad'], rewarded: ['rl_road01:stage:1'], done: 123, rounds: ['daily:1', 'daily:1'] },
+      keepers_beacon: { stage: 4 },
+    };
+    const p = migrate(raw);
+    expect(p.home.roadLandmarks).toEqual({
+      rl_road01: {
+        stage: 4,
+        progress: [2, 0, 0],
+        rewarded: ['rl_road01:stage:1'],
+        done: 123,
+        rounds: ['daily:1'],
+        arrivals: [],
+        planets: [],
+      },
+    });
+    expect(p.home.landmarks).toEqual(raw.home.landmarks);
+    expect(p.gems).toBe(raw.gems);
+    expect(migrate(JSON.parse(JSON.stringify(p)))).toEqual(p);
+  });
+});
+
+describe('M14 step-0 dormant contracts', () => {
+  it('adds no playable Road, Landmark, override or Road 1 look', () => {
+    expect(ROAD_CATALOG.map((road) => road.id)).toEqual(['road00']);
+    expect(ROAD_CATALOG[0].addedIn).toBe('1.0');
+    for (const list of [
+      ROAD01.road.tiers,
+      ROAD01.looks,
+      ROAD01.products,
+      ROAD01.singles,
+      ROAD01.stardust,
+      ROAD01.samplers,
+      ROAD_LANDMARKS,
+      ALMANAC,
+      CALENDAR_OVERRIDES,
+    ])
+      expect(list).toEqual([]);
+    expect(COSMETICS.some((look) => look.productId === 'com.pocketplanet.game.road01')).toBe(false);
+    expect(readFileSync('src/meta/content/road01.ts', 'utf8')).not.toMatch(/from ['"].*cosmetics/);
+  });
+  it('retains the current Road mapping, calendar seeds and Styles dot without sending mail', () => {
+    expect(roadForProduct('com.pocketplanet.game.road00')).toBe('road00');
+    expect(roadForProduct('com.pocketplanet.game.theme.tidepool')).toBeUndefined();
+    expect(roadForProduct('unknown')).toBeUndefined();
+    const p = defaultProfile(0);
+    const before = structuredClone(p);
+    expect(anyRoadReady(p)).toBe(false);
+    expect(roadLandmarkMail(p)).toBe(0);
+    expect(almanacTheme('2026-W53', 'south', 'ocean')).toBe('ocean');
+    expect(calendarSalt('2026-12-31')).toBe(0);
+    expect(calendarSalt('2026-W53', 0)).toBe(0);
+    expect(stylesNewDot(p, '2026-10-14')).toBe(true);
+    expect(p).toEqual(before);
+    p.stylesNewSeen = STYLES_RELEASE;
+    expect(stylesNewDot(p, '2026-10-14')).toBe(false);
+  });
+  it('accepts Theme data without changing either installed Theme factory output', () => {
+    for (const spec of [
+      { id: 'tidepool', name: 'Tidepool', colors: ['#86b6aa', '#5c8199', '#33566e'] as const, motif: 'wave' as const },
+      { id: 'cometcandy', name: 'Comet Candy', colors: ['#cf9eaf', '#a4779b', '#694f87'] as const, motif: 'candy' as const },
+    ]) {
+      const items = themed(spec);
+      expect(items).toHaveLength(16);
+      expect(items).toEqual(COSMETICS.filter((look) => look.productId === `com.pocketplanet.game.theme.${spec.id}`));
+    }
+  });
 });

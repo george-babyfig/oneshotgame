@@ -1,8 +1,14 @@
+import type { RoadId } from './starroad';
+
 /** Stable App Store product metadata shared by the M12 packages. */
 export type ProductKind = 'gem_pack' | 'piggy_bank' | 'cosmetic_bundle' | 'road_pass' | 'theme' | 'planet_pack' | 'style_single';
 
 export interface ProductDef {
   key: string;
+  /** The Pass lane this product unlocks. */
+  roadId?: RoadId;
+  /** Local calendar date for kid-side availability. */
+  opensOn?: string;
   /** Permanent Apple product identifier. */
   id: string;
   kind: ProductKind;

@@ -1,3 +1,4 @@
+import { allStrings } from './helpers/locales';
 // Kid-safe policy gates (ROADMAP-v2 M0, sections 4c, 6.5, 6.6, 7.5).
 // Static source scans plus a few rule checks. Each rule fails with the offending file or string.
 import { describe, expect, it } from 'vitest';
@@ -342,8 +343,8 @@ describe('policy: no urgency, energy or countdown words (0.3, 0.6, 6.6)', () => 
   });
   it('no locale key or translation contains an urgency word', () => {
     const bad: string[] = [];
-    for (const lang of LOCALES) {
-      const dict = JSON.parse(readFileSync(`src/locales/${lang}.json`, 'utf8')) as Record<string, string>;
+    for (const lang of ['en', ...LOCALES]) {
+      const dict = allStrings(lang);
       for (const [key, value] of Object.entries(dict)) {
         const hk = urgencyHits(key);
         if (hk.length) bad.push(`${lang}.json key ${JSON.stringify(key)} → ${hk.join(', ')}`);

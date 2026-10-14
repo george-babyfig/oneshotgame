@@ -1,4 +1,5 @@
 import { HOMEWORLD_MAX_LEVEL } from './tuning';
+import { ROAD_EARNING_KEY_LIMIT, type RoadLandmarkId } from './m14types';
 import { loadKey, saveKey, saveKeyChecked, removeKey } from './storage';
 import type { BoosterId } from './config';
 import { BIOMES, type BiomeId, type Kind, type Planet } from '../core/world';
@@ -285,6 +286,8 @@ export interface Profile {
   /** Star Road progress, separate from campaign stars. */
   roadPoints: number;
   roadDay: { day: string; earned: number };
+  /** Availability high-water mark, independent of the daily point cap. */
+  roadSeenDay: string;
   /** Stable per-Road progress. Legacy road fields remain for older callers. */
   roadRecords: Record<string, RoadState>;
   roadCreditedEarningKeys: string[];
@@ -311,6 +314,7 @@ export interface Profile {
   /** M11.5 Homeworld Life state has been validated once. */
   m115Migrated: boolean;
   m13Migrated: boolean;
+  m14Migrated: boolean;
   boosters: Record<BoosterId, number>;
   /** Subset of inventory bought with gems, kept separate from earned stock. */
   gemBoosters: Record<BoosterId, number>;
@@ -453,7 +457,7 @@ export interface Profile {
 
 const KEY = 'pp.profile';
 const BACKUP_KEY = 'pp.profile.bak';
-export const PROFILE_VERSION = 7;
+export const PROFILE_VERSION = 8;
 
 export function defaultProfile(now = Date.now()): Profile {
   return {
@@ -465,6 +469,7 @@ export function defaultProfile(now = Date.now()): Profile {
     remix: {},
     roadPoints: 0,
     roadDay: { day: '', earned: 0 },
+    roadSeenDay: '',
     roadRecords: { [COSMIC_ROAD_ID]: newRoadState() },
     roadCreditedEarningKeys: [],
     roadPassEntitlements: [],
@@ -485,6 +490,7 @@ export function defaultProfile(now = Date.now()): Profile {
     m11Migrated: true,
     m115Migrated: true,
     m13Migrated: true,
+    m14Migrated: true,
     boosters: { shower: 1, spark: 1, scope: 1 },
     gemBoosters: { shower: 0, spark: 0, scope: 0 },
     piggy: 0,
@@ -731,8 +737,18 @@ export function migrate(raw: Record<string, unknown>): Profile {
     savedHome.landmarks && typeof savedHome.landmarks === 'object' && !Array.isArray(savedHome.landmarks)
       ? (savedHome.landmarks as Record<string, unknown>)
       : {};
-  for (const id of Object.keys(p.home.landmarks) as LandmarkId[]) {
-    const value = savedLandmarks[id];
+  const savedRoadLandmarks =
+    savedHome.roadLandmarks && typeof savedHome.roadLandmarks === 'object' && !Array.isArray(savedHome.roadLandmarks)
+      ? (savedHome.roadLandmarks as Record<string, unknown>)
+      : {};
+  p.home.roadLandmarks = {};
+  const landmarkRows: [LandmarkId | RoadLandmarkId, unknown][] = [
+    ...Object.keys(p.home.landmarks).map((id): [LandmarkId, unknown] => [id as LandmarkId, savedLandmarks[id]]),
+    ...Object.entries(savedRoadLandmarks)
+      .filter(([id]) => /^rl_road\d{2}$/.test(id))
+      .map(([id, value]): [RoadLandmarkId, unknown] => [id as RoadLandmarkId, value]),
+  ];
+  for (const [id, value] of landmarkRows) {
     const row = value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
     const stage = row.stage;
     const state: LandmarkState = {
@@ -757,7 +773,8 @@ export function migrate(raw: Record<string, unknown>): Profile {
         : [],
     };
     if (typeof row.done === 'number' && Number.isFinite(row.done) && row.done >= 0 && state.stage === 4) state.done = row.done;
-    p.home.landmarks[id] = state;
+    if (id.startsWith('rl_')) p.home.roadLandmarks[id as RoadLandmarkId] = state;
+    else p.home.landmarks[id as LandmarkId] = state;
   }
   const homeSeen =
     savedHome.seen && typeof savedHome.seen === 'object' && !Array.isArray(savedHome.seen)
@@ -999,6 +1016,15 @@ export function migrate(raw: Record<string, unknown>): Profile {
   p.roadCreditedEarningKeys = Array.isArray(raw.roadCreditedEarningKeys)
     ? [...new Set(raw.roadCreditedEarningKeys.filter((key): key is string => typeof key === 'string' && key.length <= 160))]
     : [];
+  // Decision 95: per-Road keys were only dedupe evidence; store that evidence once.
+  const mergedKeys = [...Object.values(p.roadRecords).flatMap((state) => state.creditedEarningKeys), ...p.roadCreditedEarningKeys];
+  p.roadCreditedEarningKeys = [...new Set(mergedKeys.slice().reverse())].reverse().slice(-ROAD_EARNING_KEY_LIMIT);
+  for (const state of Object.values(p.roadRecords)) state.creditedEarningKeys = [];
+  const validRoadDay = (value: unknown): string =>
+    typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T12:00:00Z`)) ? value : '';
+  const m14 = raw.m14Migrated !== true || typeof raw.v !== 'number' || raw.v < 8;
+  p.roadSeenDay = [validRoadDay(raw.roadSeenDay), validRoadDay(p.roadDay.day), m14 ? today() : ''].sort().at(-1)!;
+  p.m14Migrated = true;
   p.roadPassEntitlements = Array.isArray(raw.roadPassEntitlements)
     ? [...new Set(raw.roadPassEntitlements.filter((id): id is string => typeof id === 'string' && /^road\d{2}$/.test(id)))]
     : [];
@@ -1246,7 +1272,8 @@ export async function loadProfile(): Promise<Profile> {
         (parsed as Record<string, unknown>).m11Migrated !== true ||
         (parsed as Record<string, unknown>).m115Migrated !== true ||
         (parsed as Record<string, unknown>).nounBudgetMigrated !== true ||
-        (parsed as Record<string, unknown>).m13Migrated !== true
+        (parsed as Record<string, unknown>).m13Migrated !== true ||
+        (parsed as Record<string, unknown>).m14Migrated !== true
       ) {
         // Keep first bytes per target migration; an older rescue must not hide the pre-M11 save.
         try {

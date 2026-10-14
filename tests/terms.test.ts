@@ -1,3 +1,4 @@
+import { allStrings } from './helpers/locales';
 // Originality lint (ROADMAP-v2 section 3 "Guardrail: our own design", M1 item 1.4).
 // No hit game names or hit-specific terms in any player-facing string or store listing, in all six languages.
 import { describe, expect, it } from 'vitest';
@@ -131,9 +132,9 @@ describe('terms: the matcher', () => {
 });
 
 describe('terms: no hit names in player-facing strings', () => {
-  for (const lang of LOCALES) {
+  for (const lang of ['en', ...LOCALES]) {
     it(`${lang}.json keys and translations`, () => {
-      const dict = JSON.parse(readFileSync(`src/locales/${lang}.json`, 'utf8')) as Record<string, string>;
+      const dict = allStrings(lang);
       expect(Object.keys(dict).length).toBeGreaterThan(150);
       const bad: string[] = [];
       for (const [key, value] of Object.entries(dict)) {
