@@ -1,59 +1,77 @@
-# App Store listing — Pocket Planet (Deutsch)
+# Comet Garden — App Store listing (Deutsch, de-DE)
 
-**Name:** Pocket Planet
-**Subtitle (30):** Werfen, wachsen, Tiere finden
+**App name (30):** Comet Garden
+**Subtitle (30):** Wirf Kometen, Welten erblühen
+**Primary category:** Games → Casual · **Secondary:** Games → Simulation (set once; same for every language)
+**Age rating:** 4+ (same as en-US)
+**Price:** same as en-US (not part of the localized text)
 
 ## Promotional text (170)
 
-Neu: Planet des Tages, Meteorsturm, Zen-Garten und Duelle mit Freunden – dazu Besucher, die dir Geschenke dalassen, während du weg bist!
+Wirf Kometen, lass Mini-Welten wachsen, bau Wahrzeichen auf deiner Heimatwelt, wo deine Freunde ihren Tag erleben. Ohne Werbung. Optionale Käufe nur mit Elternabfrage.
 
-## Description
+## Description (4,000)
 
-Wirf Felsen, Eiskometen, Magma und Samen auf einen winzigen, sich drehenden Planeten – und sieh zu, wie er zum Leben erwacht!
+Wirf einen Kometen, sieh zu, wie eine kleine Welt erblüht, und begrüße die Wesen, die bei dir einziehen.
 
-Die Schwerkraft lenkt jeden Wurf ab, also ist das Zielen schon der halbe Spaß. Fels türmt Berge auf, Eis füllt Ozeane, Magma baut Vulkane und Samen lassen Wälder wachsen. Bring die richtigen Landschaften zusammen, und niedliche Tierchen ziehen ein: Otter, wo Wald auf Ozean trifft, Obsidianschildkröten, wo Vulkane ans Meer grenzen, und legendäre Wunder für die mutigsten Planeten.
+WERFEN UND WACHSEN LASSEN
+• Zurückziehen, zielen, loslassen: Die Schwerkraft lenkt jeden Wurf um den Planeten
+• Felsen türmen Berge auf, Eiskometen füllen Ozeane, Samenkapseln lassen Wiesen und Wälder wachsen, Magma baut Vulkane, und Regenwolken und Sonnenstrahlen lassen alles gedeihen
+• Noch bevor du loslässt, zeigt dir der Planet, was dein Wurf bewirkt: neues Land, wer einzieht und wer vielleicht spazieren geht
+• Wähle für jeden Planeten deinen Werfer: Sternschleuder, Schlenker, Flitzer oder Stampfer – jeder mit einer besonderen Stärke und einem kleinen Haken
 
-PERFEKT FÜR ZWISCHENDURCH
-• Ein-Minuten-Level, die du sogar im Wartezimmer schaffst
-• Bis zu 3 Sterne pro Planet – und dann nochmal für die perfekte Punktzahl
-• Schwere und superschwere Planeten für echte Profis
+LERNE DIE WESEN KENNEN
+• 36 Wesen zum Entdecken, jedes mit seinem Lieblingszuhause: Otter, wo Wald und Meer sich treffen, Molche auf warmen Vulkanen, Käuze in verschneiten Kiefern
+• Jedes Wesen bringt eine Eigenschaft mit, die sein Zuhause schützt
+• Sammle sie alle in deinem Lebensbuch, vom häufigen Freund bis zur seltenen Legende
 
-EINE GALAXIE, DIE MIT DIR WÄCHST
-• Jeder fertige Planet wird Teil deiner Galaxie und sammelt Sternenstaub, während du weg bist
-• Tierchen besuchen deine Galaxie und lassen Geschenke und Andenken da
-• Gib Sternenstaub für dauerhafte Upgrades aus
+MISCHEN, VERKETTEN, PLANEN
+• Fusionen: zwei Würfe, die zusammenwirken, wie Eis und Magma, aus denen Dampf wird
+• Combos: Clevere Würfe direkt nacheinander lassen eine Bonuskette wachsen
+• Supernova: Lade sie auf und schick einen riesengroßen Wurf los
+• Behalte den Himmel im Blick: Treibfelsen, ein Blasenmond und ein kreisender Kieselring – pass den richtigen Moment für deinen Wurf ab
 
-SO VIEL ZU ENTDECKEN
-• 36 Tierchen für dein Lebensbuch – von häufig bis legendär
-• Lebensraum-Sets, Kapitel mit Schatztruhen und der Sternenpfad
-• Tagesaufgaben, ein Tagesgeschenk und Entdeckerränge
+EINE HEIMATWELT GANZ FÜR DICH
+• Lade die Freunde, die du triffst, auf deine Heimatwelt ein. Dort leben sie ihren ganz eigenen Tag: Nachts schlafen sie im Tierchenbau, abends kommen sie zusammen, und sie freuen sich über Wetter und Jahreszeiten
+• Lass zwischen deinen Gebäuden die Landschaften wachsen, die du entdeckst
+• Bau beim Spielen fünf Wahrzeichen, vom Sprossgarten bis zum Leuchtfeuer des Hüters
+• Wähle einen Kumpel, der hilft, wenn auf einem Planeten eine Sorge auftaucht
+• Gestalte deinen Hüter: Gesicht, Hautton, Haare und Outfits
 
-SPIEL, WIE DU WILLST
-• Planet des Tages – jeden Tag dieselbe Welt für alle; teile dein Ergebnis
-• Meteorsturm – 60 Sekunden, unbegrenzt werfen
-• Zen-Garten – keine Ziele, keine Uhr, eine Welt ganz für dich
-• Fordere Freunde heraus – schick einen Code und findet heraus, wer mehr Leben erschafft
+SPIEL, WIE DU MAGST
+• Über 100 Planeten, die sanft schwieriger werden, mit je 1 bis 3 Sternen
+• Eine Hilfeleiter, wenn ein Planet knifflig ist: was passiert ist, ein Tipp und ein bisschen Extrahilfe
+• Planet des Tages, Wochenreise, Meteorsturm, Zen-Garten und Duelle mit Freunden
+• Bonus-Remix bringt verspielte Überraschungen und Goldsterne in fertige Kapitel
+• Sammle Essenzen auf Planeten und baue Labore auf deiner Heimatwelt
+• Folge der Kosmischen Straße: Mit neuen Sternen und erfüllten Wünschen sammelst du unterwegs Belohnungen
+• Spiele auf English, Español, Français, Deutsch, Português (Brasil) oder 日本語
 
-Fair und freundlich: keine Werbung, keine Leben oder Energie-Timer, keine Lootboxen, kein Tracking. Optionale Käufe zeigen immer genau, was du bekommst.
+RUHIG, FAIR UND PRIVAT
+• Keine Werbung. Keine Leben und keine Energie-Timer. Keine zufälligen Belohnungen gegen Geld.
+• Optionale Käufe gibt es nur im „Elternbereich“, geschützt durch eine Elternabfrage, und sie zeigen immer genau, was man bekommt
+• Einstellung „Sanfte Planeten“, Spielzeit-Übersicht und eine optionale Pausen-Erinnerung
+• Keine Daten erfasst: Das Spiel speichert den Fortschritt auf diesem Gerät
 
-## Keywords (100)
+Fragen oder Ideen? Besuch die unten verlinkte Support-Seite. Viel Spaß beim Werfen!
 
-planet,casual,entspannend,idle,süß,tiere,sammeln,schwerkraft,weltraum,zen,offline,gemütlich,rätsel
+## Keywords (100 bytes, de-DE)
+
+Weltraum,Planet,Asteroid,Meteor,Galaxie,niedlich,Tiere,Physik,Vulkan,Ozean,entspannend,Sterne,Zen
+
+_Native terms: Weltraum (the usual German search word for space), niedlich (cute), Tiere, entspannend (relaxing), Zen (also the Zen-Garten mode). Komet, Welt, werfen and erblühen are left out because the subtitle already has them. Terraforming was cut to fit 100 bytes._
+
+## Support / marketing / privacy
+
+- Support URL: https://YOUR-DOMAIN/support.html (site files in `site/`; same URL for every language)
+- Marketing URL: https://YOUR-DOMAIN/
+- Privacy policy URL: https://YOUR-DOMAIN/privacy.html (the page includes a German section)
+- Copyright: 2026 OWNER NAME
 
 ## What's New
 
-Unsere allererste Version. Danke fürs Spielen!
+Not shown for version 1.0 (Apple has no "What's New" on a first release). From 1.0.1, translate the English notes from `store/whats-new-template.md`; sign-off suggestion: "Viel Spaß beim Werfen! – dein Comet-Garden-Team".
 
-## In-app purchases
+## Lengths
 
-See listing.md
-
-## Review notes
-
-See listing.md
-
-## Screenshots
-
-See listing.md
-
-Character counts: subtitle 29, promo 136, keywords 98
+Subtitle 29/30 chars · Promotional text 167/170 chars · Description 3,054/4,000 chars · Keywords 97/100 bytes (UTF-8). Measured with python3 on the exact text to paste (len() in characters; blank lines in the description counted).

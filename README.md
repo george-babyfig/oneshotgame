@@ -1,84 +1,66 @@
-# 🪐 Pocket Planet
+# Comet Garden
 
-Fling rocks, ice comets, magma and seeds at a tiny spinning planet. Gravity bends every shot, so aiming is part of the fun. Each hit changes the land: rock raises mountains, ice fills oceans, magma builds volcanoes and seeds grow forests. When the right lands sit next to each other, critters move in. A forest beside an ocean brings otters, and a volcano beside the sea brings obsidian turtles.
+Fling rocks, ice comets, magma and seeds at a tiny spinning planet. Gravity bends each shot; the aim preview shows where it will land. Hits reshape the lands, and creatures move in when their habitat recipes fit. Fusions, Combos, sky obstacles and Troubles add ideas as the campaign teaches them.
 
-<p align="center"><img src="resources/icon.png" width="160" alt="App icon" /></p>
+<p align="center"><img src="resources/icon.png" width="160" alt="Comet Garden app icon" /></p>
 
-<p align="center"><img src="store/screenshots/1-level.png" width="150" /> <img src="store/screenshots/3-lifebook.png" width="150" /> <img src="store/screenshots/2-home.png" width="150" /> <img src="store/screenshots/4-modes.png" width="150" /></p>
+The game has campaign chapters and chests, Bonus Remix chapters, a Lifebook, Wishes, the Cosmic Road, Star Calendar, monthly festivals and a themed seven-stop Weekly Voyage. Daily Planet, Meteor Rush, Zen Garden and Challenge a Friend all work without a server.
 
-See [ROADMAP.md](ROADMAP.md) for the production roadmap and the research behind it.
+Your Homeworld grows through five levels. Build object Labs, a Greenhouse, Dens and a Launch Bay; invite friends, send expeditions, and complete permanent Landmarks. Earn and tune gameplay launchers through play. Friends have routines, and the Homeworld has seasons and decorative weather. Campaign wins fuel the Stardust Vault and speed construction. There are no lives, energy timers or paid timer skips.
 
-## What's in the game
+Styles previews Keeper outfits, object effects, Homeworld looks and friend outfits. Paid looks change appearance only. Purchases, restore and outbound actions sit behind the parental gate in Grown-ups. There are no ads, loot boxes, tracking or random paid rewards. Accessibility includes Reduce Motion, larger text, a Clear planet palette, aim assistance and Gentle planets; the app supports English, Spanish, French, German, Portuguese and Japanese.
 
-| Area                 | Features                                                                                                                                                                                                                                                              |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Core play**        | One-minute levels, slingshot aiming with gravity, a landing-spot preview ("⛰️ Mountain 🐐 +13"), tiered callouts and a chain counter, shockwaves, confetti, and a score that heats up. The **Meteor finale** turns unused throws into stardust.                       |
-| **Art**              | 36 vector critters in one house style, a procedural planet renderer (terrain, shallows, soil, clouds, lighting), biome props and six projectile characters. No emoji in the game world.                                                                               |
-| **Progression**      | Star Map chapters of 10 planets with chests. The **Star Road** reward track has a free lane and a **Cosmic Pass** lane. Also: daily quests, **Explorer Rank** (3 standing goals), Lifebook habitat sets, **Momentum** win streaks, and **Hard / Super Hard** planets. |
-| **Modes**            | **Daily Planet** (seeded, with Wordle-style emoji share), **Meteor Rush** (60 s), **Zen Garden** (a persistent sandbox) and **Challenge a Friend** (share codes with a check letter). None of these need a server.                                                    |
-| **Idle & retention** | Your galaxy earns stardust while you're away. **Visitors** leave gifts and mementos. There is a daily gift streak, a welcome-back gift, opt-in reminders (daytime only), and a rating prompt after a 3★ clear.                                                        |
-| **Onboarding**       | Coach tips on the first planets, intro cards for new objects, and the Starter Pack offered once after the first chapter chest.                                                                                                                                        |
-| **Audio**            | Synthesized sound effects plus generative music themes for home, each chapter and each mode. Respects the silent switch.                                                                                                                                              |
-| **Accessibility**    | Reduce-motion setting and separate toggles for sound, music and haptics.                                                                                                                                                                                              |
+## Catalogue
 
-## How it makes money (StoreKit 2, no server)
+Use [store/catalogue-sheet.md](store/catalogue-sheet.md) for the current 12 products, their permanent identifiers, prices, contents and Family Sharing settings. It is the product sheet for App Store Connect; the executable catalogue is `PRODUCTS` in `src/meta/tuning.ts`, checked against `ios/App/PocketPlanet.storekit` by tests.
 
-| Product ID                         | Type           | Price  | What you get                                                                                                       |
-| ---------------------------------- | -------------- | ------ | ------------------------------------------------------------------------------------------------------------------ |
-| `com.pocketplanet.game.gems80`     | Consumable     | $0.99  | 80 💎                                                                                                              |
-| `com.pocketplanet.game.gems500`    | Consumable     | $4.99  | 500 💎                                                                                                             |
-| `com.pocketplanet.game.gems1200`   | Consumable     | $9.99  | 1,200 💎                                                                                                           |
-| `com.pocketplanet.game.gems2800`   | Consumable     | $19.99 | 2,800 💎                                                                                                           |
-| `com.pocketplanet.game.piggy`      | Consumable     | $1.99  | Breaks the piggy bank. Each planet you finish adds 💎4, up to 250. It appears from chapter 2.                      |
-| `com.pocketplanet.game.starter`    | Non-consumable | $2.99  | 300 💎, 5 of every booster, and the Aurora atmosphere                                                              |
-| `com.pocketplanet.game.cosmicpass` | Non-consumable | $4.99  | Premium Star Road lane (880 💎 in total, the Cosmic atmosphere, stardust and boosters). It pays out retroactively. |
+The catalogue has four gem packs, the Piggy Bank, Starter Crew, the Cosmic Road pass, two themes, one planet pack and two style singles. The seven non-consumables grant fixed looks; the Road's paid lane grants cosmetics. Earned gems can buy looks and optional round helpers. A continue adds five throws for a flat 50 gems. The Vault has no paid doubling action, and Starter Crew has no automatic offer.
 
-Gem sinks: +5 throws (40 / 70 / 110 💎), boosters, atmospheres, and doubling offline stardust (💎10).
+## Code and tools
 
-The game has no ads, no lives or energy timers, no loot boxes and no tracking. Every purchase shows exactly what you get.
+TypeScript, Vite, Vitest and Canvas 2D, wrapped for iOS with Capacitor 8 and Swift Package Manager. Art in the game world is drawn in code. The app-local `PurchaseJournalPlugin.swift` owns StoreKit 2: transactions finish only after their profile grant is saved. `@capgo/native-purchases` remains installed pending the owner's dependency decision, but has no source imports and is excluded from the iOS package through `includePlugins`. Native plugins also cover Game Center, haptics, preferences, notifications, sharing, filesystem, review, splash and status bar.
 
-## Tech
-
-TypeScript + Vite + Canvas 2D, wrapped as a native iOS app with **Capacitor 8** (Swift Package Manager, no CocoaPods). Plugins: native-purchases (StoreKit 2), haptics, preferences, local notifications, in-app review, share, filesystem, splash screen, status bar, plus a small built-in Game Center plugin (`ios/App/App/GameCenterPlugin.swift`).
-
+```text
+src/core/        pure world, round, flight, launcher and level rules
+src/meta/        saves, rewards, purchases, Labs, Homeworld, Landmarks,
+                 launcher selection, Roads, Wishes, cosmetics and tuning
+src/ui/app.ts    navigation, round lifecycle and purchase reconciliation
+src/ui/screens/  Play, Missions, Homeworld, Collection, Styles and their detail views
+src/ui/flows/    pre-level, results, wishes, gate, checkout, settings and other sheets
+src/ui/art/      procedural world, creatures, Keeper, launchers and cosmetic rendering
+tests/           unit tests, save goldens, frozen level/rules fixtures and simulation gates
+e2e/             browser journeys and visual/accessibility checks
+store/           catalogue, submission copy, screenshots and preview
+site/            static marketing, support and privacy pages
+docs/            architecture, QA, handoff and product specifications
+ios/             Xcode project and app-local native plugins
 ```
-src/core/        simulation (world.ts) and seeded level generator + solver (levels.ts)
-src/meta/        pure game logic: profile/saves, economy, progression, momentum,
-                 visitors, rank, habitats, modes, config (all prices & tuning)
-src/ui/app.ts    app shell: screens, level flow, purchases
-src/ui/screens/  home, galaxy, star map, star road, lifebook, upgrades, shop
-src/ui/flows/    modals: pre-level, results, daily gift, quests, rank, visitors,
-                 modes, offers, settings
-src/ui/art/      procedural planet, critters, props, projectiles
-src/ui/game.ts   the level scene: physics, aiming, effects, HUD, modes
-tests/           world, recipes, economy, progression, features, level balance
-store/           App Store listing copy and framed screenshots
-docs/            privacy policy (host with GitHub Pages)
-resources/       icon/splash renderer (uses the game's own art code)
-ios/             Xcode project
-```
+
+See [the architecture map](docs/handoff/03-architecture.md) for module responsibilities and [the roadmap](docs/product/ROADMAP-v2.md) for planned work.
 
 ```bash
 npm install
-npm run dev          # play in a browser; purchases are simulated in dev
-npm test             # includes "every level in the first six chapters is beatable"
-npm run typecheck && npm run format:check
-npm run icon         # re-render icon + splash (needs `npm run dev` running)
-npm run ios:sync     # build + copy into Xcode project
+npm run dev          # browser play; purchases use the mock store in dev
+npm run typecheck
+npm test
+npm run format:check
+npm run sim:quick
+npm run ios:sync     # build and copy the web app into the native project
 npm run ios:open
 ```
 
-CI runs formatting, the typecheck, the tests and the build on every push.
+CI runs formatting, typecheck, tests, web build, simulation gates, browser journeys and native builds. Its `PocketPlanet-Simulator` artifact keeps its historical filename; the displayed app name is Comet Garden. On a Mac with Xcode, unzip that artifact and install it:
+
+```bash
+open -a Simulator
+xcrun simctl install booted App.app
+xcrun simctl launch booted com.pocketplanet.game
+```
+
+Purchase testing uses the shared Xcode scheme's StoreKit configuration; TestFlight uses the Apple sandbox.
 
 ## Shipping to the App Store
 
-1. **You need** a Mac with Xcode 16+ and an [Apple Developer Program](https://developer.apple.com/programs/) membership ($99/year).
-2. **Make it yours:** change `appId` in `capacitor.config.ts` and the bundle ID in Xcode to one you own. If you change the product IDs, update them in `src/meta/config.ts`.
-3. **Build:** run `npm install`, `npm run ios:sync` and `npm run ios:open`. In Xcode, pick your Team under _Signing & Capabilities_ and add the **In-App Purchase** capability. **Game Center** is already enabled through `App.entitlements`.
-4. **Test purchases in the Simulator:** go to _Product → Scheme → Edit Scheme → Run → Options → StoreKit Configuration_ and choose `PocketPlanet.storekit`. It includes all 7 products.
-5. **App Store Connect:** sign the Paid Apps agreement, create the app, then create the 7 in-app purchases listed above. Copy for the listing and the IAP review notes is in [`store/listing.md`](store/listing.md).
-6. **Privacy:** answer "Data Not Collected". `PrivacyInfo.xcprivacy` is included. For the privacy policy URL, enable GitHub Pages on `/docs` and use `…/privacy.html`.
-7. **Screenshots and localization:** upload `store/screenshots/*.png` (1290 × 2796), plus `store/screenshots/<lang>/` and `store/listing.<lang>.md` for each localization. Set up Game Center from `store/gamecenter.md`.
-8. **Upload:** _Product → Archive → Distribute → App Store Connect_, test through TestFlight with a Sandbox account, then submit with the in-app purchases attached.
+Follow [the iOS release checklist](docs/qa/release.md) and [the store package](store/README.md). The registered bundle ID remains `com.pocketplanet.game`; the app is iPhone-only with minimum iOS 15.4.
 
-The app is iPhone-only and portrait-only.
+The owner configures signing, agreements, tax, banking, Game Center and App Store Connect, creating IAPs from the current catalogue sheet. From a clean working tree, `npm run ios:release` builds and syncs, checks the native bundle for development hooks, bumps the build number and prints the archive command. Verify native purchases, restore, Game Center, localization and Photos; inspect the archive privacy report and upload current store assets. Complete the adult TestFlight soak before submission and manual release.

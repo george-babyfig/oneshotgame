@@ -1,17 +1,46 @@
+import { M15_DEFERRED_KEYS } from '../src/meta/m15strings';
+import { CONTENT_FRAGMENTS, LANGS, mergeContentStrings, type ContentStrings } from '../src/i18n';
+import { allStrings } from './helpers/locales';
 // Every translatable string must exist in every locale, with the same {placeholders}.
 // Run with DUMP_KEYS=1 to write the key list to src/locales/_keys.json.
+import { FESTIVALS } from '../src/meta/festivals';
+import { ALBUM_PAGES, SCRAP_BGS, STICKERS } from '../src/meta/stickers';
+import { PORTS, THEME_PORTS, VOYAGE_NAMES } from '../src/meta/voyage';
+import { ROAD_CATALOG } from '../src/meta/starroad';
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { BIOMES, KINDS, SPECIES } from '../src/core/world';
+import { BIOMES, KINDS, SPECIES, TRAITS } from '../src/core/world';
+import { TROUBLES, TROUBLE_BEHAVIOUR } from '../src/core/troubles';
+import { LAUNCHERS, LAUNCHER_COPY } from '../src/core/launchers';
 import { TWISTS } from '../src/core/levels';
-import { BOOSTERS, PRODUCTS, SKINS, UPGRADES } from '../src/meta/config';
+import { OBSTACLES } from '../src/core/sky';
+import { BOOSTERS, SKINS } from '../src/meta/config';
+import { LANDMARKS, PRODUCT_TEXT_KEYS } from '../src/meta/tuning';
 import { HABITATS } from '../src/meta/habitats';
 import { EVENTS } from '../src/meta/events';
-import { RANK_TITLES, RANK_UNLOCKS } from '../src/meta/rank';
 import { CHAPTER_NAMES } from '../src/meta/progression';
 import { ITEMS } from '../src/meta/visitors';
-import { COACH } from '../src/meta/coach';
+import { COACH, COACH_EVENTS, PRACTICE_GIFT_LINE } from '../src/meta/coach';
+import { COSMETICS, EXPRESSION_NAMES, EYE_NAMES, FACE_NAMES, HAIR_NAMES, SLOT_NAMES } from '../src/meta/cosmetics';
+import { BANNERS, PORTRAIT_FRAMES } from '../src/meta/passport';
+import { REMIX_TITLES } from '../src/meta/remix';
+import { ACHIEVEMENTS } from '../src/meta/achievements';
+import { BUILDINGS } from '../src/meta/homeworld';
+import { FRAMES, REASON } from '../src/ui/screens/homeworld';
+import { PAINTS, RESIDENT_ACCS } from '../src/meta/homeworld';
+import { letterStrings } from '../src/meta/inbox';
+import { CONSTELLATIONS, MAT_NAMES } from '../src/meta/constellations';
+import { DYES } from '../src/meta/dyes';
+import { LORE } from '../src/meta/lore';
+import { OBJECT_TITLES } from '../src/meta/records';
+import { SEASON_NAMES, SKY_EVENTS } from '../src/meta/seasons';
+import { WISH_TEMPLATES } from '../src/meta/wishes';
+import { NEW_FEATURE } from '../src/meta/nextup';
+import { FACTS } from '../src/ui/screens/fieldguide';
+import { REACTIONS } from '../src/core/round';
+import { GUSTY_WIND_TIP, UNLOCKS } from '../src/meta/unlocks';
+import { LAB_NAME, LAB_LEVEL, LAB_GUARD_NAME, LAB_FORM, LAB_FIRST_COPY, ESSENCE_NAME, LAB_TEXT } from '../src/meta/labcopy';
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
@@ -38,19 +67,91 @@ export function allKeys(): string[] {
   const add = (s?: string) => s && keys.add(s);
   Object.values(BIOMES).forEach((b) => (add(b.name), add(b.recipe)));
   Object.values(KINDS).forEach((k) => (add(k.name), add(k.desc)));
+  Object.values(LAUNCHERS).forEach((launcher) => (add(launcher.name), add(launcher.job)));
+  Object.values(LAUNCHER_COPY).forEach((copy) => (add(copy.description), add(copy.goodHereReason), add(copy.unlockStep)));
   Object.values(TWISTS).forEach((x) => (add(x.name), add(x.desc)));
+  Object.values(OBSTACLES).forEach((x) => (add(x.name), add(x.rule), add(x.counter), add(x.intro)));
+  Object.values(TROUBLES).forEach((x) => (add(x.name), add(x.rule), add(x.counter)));
+  Object.values(TRAITS).forEach((x) => (add(x.name), add(x.rule)));
+  add(PRACTICE_GIFT_LINE);
+  add(GUSTY_WIND_TIP);
+  M15_DEFERRED_KEYS.forEach(add);
+  Object.values(REACTIONS).forEach((x) => (add(x.name), add(x.fieldGuide)));
+  Object.values(TROUBLE_BEHAVIOUR).forEach(
+    (x) => (x.helpLine.forEach(add), add(x.aimTag), add(x.actLine), add(x.settledLine), add(x.forecastLabel)),
+  );
+  UNLOCKS.forEach((x) => (add(x.intro?.title), add(x.intro?.body)));
   SPECIES.forEach((s) => (add(s.name), !s.home && add(s.hint)));
   Object.values(BOOSTERS).forEach((b) => (add(b.name), add(b.desc)));
-  Object.values(UPGRADES).forEach((u) => add(u.name));
   SKINS.forEach((s) => add(s.name));
-  PRODUCTS.forEach((p) => (add(p.title), add(p.tag)));
+  PRODUCT_TEXT_KEYS.forEach(add);
+  [
+    'Starter Crew is in Styles → Keeper. The Aurora banner is in Passport.',
+    'Cosmic Road looks are in Missions, gold paints are in Homeworld, and the banner and title are in Passport',
+    '{n} gems added',
+    '{n} gems saved',
+    'To continue to the App Store, please answer:',
+    'Sharing is for grown-ups. Please answer:',
+    'To rate the game, please answer:',
+    'To turn on reminders, please answer:',
+    'To sign in to Game Center, please answer:',
+    'To leave the game, please answer:',
+    'To open Grown-ups, please answer:',
+  ].forEach(add);
   HABITATS.forEach((h) => add(h.name));
-  EVENTS.forEach((e) => (add(e.name), add(e.desc)));
-  RANK_TITLES.forEach(add);
-  Object.values(RANK_UNLOCKS).forEach(add);
+  EVENTS.forEach((e) => add(e.name));
   CHAPTER_NAMES.forEach(add);
   Object.values(COACH).forEach((tips) => Object.values(tips).forEach(add));
+  Object.values(COACH_EVENTS).forEach(add);
   ITEMS.forEach(add);
+  COSMETICS.forEach((c) => add(c.name));
+  [...FACE_NAMES, ...HAIR_NAMES, ...EYE_NAMES, ...EXPRESSION_NAMES].forEach(add);
+  PORTRAIT_FRAMES.forEach((f) => add(f.name));
+  Object.values(SLOT_NAMES).forEach(add);
+  BANNERS.forEach((b) => (add(b.name), add(b.how)));
+  ACHIEVEMENTS.forEach((a) => add(a.title));
+  add('Star Captain');
+  add('Little Chemist');
+  add('Chain Maker');
+  REMIX_TITLES.forEach((x) => add(x.title));
+  Object.values(BUILDINGS).forEach((b) => (add(b.name), add(b.desc)));
+  Object.values(REASON).forEach(add);
+  PAINTS.forEach((x) => add(x.name));
+  RESIDENT_ACCS.forEach((x) => add(x.name));
+  FRAMES.forEach((x) => add(x.name));
+  letterStrings().forEach(add);
+  CONSTELLATIONS.forEach((c) => add(c.name));
+  LANDMARKS.forEach(
+    (site) => (
+      add(site.name),
+      add(site.finish),
+      site.stages.forEach((stage) => (add(stage.ask), stage.routes.forEach((route) => add(route.label))))
+    ),
+  );
+  Object.values(MAT_NAMES).forEach(add);
+  DYES.forEach((d) => add(d.name));
+  Object.values(LORE).forEach(add);
+  Object.values(OBJECT_TITLES).forEach(add);
+  Object.values(SEASON_NAMES).forEach(add);
+  SKY_EVENTS.forEach((e) => add(e.name));
+  FESTIVALS.forEach((f) => add(f.name));
+  STICKERS.forEach((s) => (add(s.name), add(s.hint[0])));
+  ALBUM_PAGES.forEach((pg) => add(pg.name));
+  SCRAP_BGS.forEach((b) => add(b.name));
+  PORTS.forEach(add);
+  Object.values(THEME_PORTS).forEach((ports) => ports.forEach(add));
+  VOYAGE_NAMES.forEach(add);
+  ROAD_CATALOG.forEach((road) => add(road.name));
+  WISH_TEMPLATES.forEach((wish) => add(wish.text));
+  Object.values(NEW_FEATURE).forEach(add);
+  Object.values(FACTS).forEach((fact) => (add(fact.element), add(fact.job)));
+  Object.values(LAB_NAME).forEach(add);
+  Object.values(LAB_LEVEL).forEach((ladder) => Object.values(ladder).forEach(add));
+  Object.values(LAB_GUARD_NAME).forEach(add);
+  Object.values(LAB_FORM).forEach((form) => Object.values(form).forEach(add));
+  Object.values(LAB_FIRST_COPY).forEach(add);
+  Object.values(ESSENCE_NAME).forEach(add);
+  Object.values(LAB_TEXT).forEach(add);
   // mode names/descriptions live in a UI module (src/ui/flows/modes.ts)
   [
     'Daily Planet',
@@ -64,6 +165,9 @@ export function allKeys(): string[] {
   ].forEach(add);
   ['Common', 'Uncommon', 'Rare', 'Legendary'].forEach(add); // src/ui/text.ts rarityName()
   ['short', 'medium', 'long', 'full', 'Someone', 'Paradise!', 'Thriving!', 'Blooming!', 'Nice!'].forEach(add);
+  Object.keys(allStrings('en'))
+    .filter((key) => CONTENT_FRAGMENTS.some((fragment) => key in fragment.en))
+    .forEach(add);
   keys.delete('');
   return [...keys].sort();
 }
@@ -75,7 +179,47 @@ const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1
 
 describe('i18n', () => {
   const keys = allKeys();
-  if (process.env.DUMP_KEYS) writeFileSync('src/locales/_keys.json', JSON.stringify(keys, null, 2) + '\n');
+  // _keys.json lists the main-locale keys; per-Road content keys live in their own fragments.
+  const fragmentKeys = new Set(CONTENT_FRAGMENTS.flatMap((fragment) => Object.keys(fragment.en ?? {})));
+  if (process.env.DUMP_KEYS)
+    writeFileSync(
+      process.env.DUMP_KEYS_PATH ?? 'src/locales/_keys.json',
+      JSON.stringify(
+        keys.filter((key) => !fragmentKeys.has(key)),
+        null,
+        2,
+      ) + '\n',
+    );
+
+  it('merges installed Road copy in every language and keeps main keys and placeholders', () => {
+    const main = Object.fromEntries(LANGS.map(({ id }) => [id, { Main: `${id}: main` } as Record<string, string>])) as ContentStrings;
+    const fragment = Object.fromEntries(
+      LANGS.map(({ id }) => [id, { 'Road {n}': `${id}: road {n}` } as Record<string, string>]),
+    ) as ContentStrings;
+    const dicts = mergeContentStrings(main, [fragment]);
+    for (const { id } of LANGS) {
+      expect(dicts[id]).toEqual({ Main: `${id}: main`, 'Road {n}': `${id}: road {n}` });
+      expect(main[id]).toEqual({ Main: `${id}: main` });
+    }
+  });
+
+  it('registers every on-disk fragment in the offline static import list', () => {
+    const source = readFileSync('src/i18n.ts', 'utf8');
+    const registered = [...source.matchAll(/from ['"]\.\/locales\/content\/([^'"]+\.json)['"]/g)].map((match) => match[1]).sort();
+    expect(registered).toEqual(
+      readdirSync('src/locales/content')
+        .filter((file) => file.endsWith('.json'))
+        .sort(),
+    );
+    for (const { id } of LANGS) {
+      const all = allStrings(id);
+      for (const fragment of CONTENT_FRAGMENTS) expect(all).toMatchObject(fragment[id]);
+    }
+  });
+
+  it('registers the deferred M15 English inventory without translating it', () => {
+    expect(M15_DEFERRED_KEYS.every((key) => keys.includes(key))).toBe(true);
+  });
 
   it('collects a sensible number of keys', () => {
     expect(keys.length).toBeGreaterThan(150);
@@ -83,7 +227,7 @@ describe('i18n', () => {
 
   for (const lang of LANGS_DONE) {
     it(`${lang} translates every key with matching placeholders`, () => {
-      const dict = JSON.parse(readFileSync(`src/locales/${lang}.json`, 'utf8')) as Record<string, string>;
+      const dict = allStrings(lang);
       const missing = keys.filter((k) => !(k in dict));
       expect(missing, `missing in ${lang}`).toEqual([]);
       const bad = keys.filter((k) => placeholders(k).join() !== placeholders(dict[k]).join());

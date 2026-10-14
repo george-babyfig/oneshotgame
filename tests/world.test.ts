@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { biomeOf, impact, lifeScore, newPlanet, SPECIES } from '../src/core/world';
-import { makeLevel, greedyScore } from '../src/core/levels';
+import { biomeOf, impact, lifeScore, neededHabitat, newPlanet, SPECIES, traitOf } from '../src/core/world';
+import { makeLevel, solve2 } from '../src/core/levels';
+import { rulesForLevel } from '../src/core/round';
 
 describe('biomes', () => {
   it('maps sector values to biomes', () => {
@@ -32,6 +33,19 @@ describe('impacts', () => {
   it('species ids are unique', () => {
     expect(new Set(SPECIES.map((s) => s.id)).size).toBe(SPECIES.length);
   });
+  it('uses a creature’s primary home land for its trait', () => {
+    expect(traitOf('otter')).toBe('weedproof');
+    expect(traitOf('turtle')).toBe('fireproof');
+    expect(traitOf('leviathan')).toBe('calm');
+    expect(traitOf('missing')).toBeNull();
+  });
+  it('points a wandering neighbour creature toward its missing land', () => {
+    const p = newPlanet((i) => (i === 4 ? { life: 2 } : {}));
+    expect(neededHabitat('otter', p, 4)).toBe('ocean');
+    p.sectors[4].life = 0;
+    p.sectors[4].biome = 'barren';
+    expect(neededHabitat('otter', p, 4)).toBe('forest');
+  });
 });
 
 describe('levels', () => {
@@ -41,7 +55,7 @@ describe('levels', () => {
       expect(L.queue.length).toBeGreaterThanOrEqual(L.throws);
       expect(L.stars[0]).toBeLessThan(L.stars[1]);
       expect(L.stars[1]).toBeLessThan(L.stars[2]);
-      expect(greedyScore(L.start, L.queue, L.throws)).toBeGreaterThanOrEqual(L.stars[2]);
+      expect(lifeScore(solve2(L, rulesForLevel(L.n)))).toBeGreaterThanOrEqual(L.stars[2]);
     }
   });
 });

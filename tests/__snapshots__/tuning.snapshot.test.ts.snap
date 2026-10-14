@@ -1,0 +1,56 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`pins the dormant M13 trip contract without changing 1.0 tables 1`] = `
+{
+  "TRIP_CAP": {
+    "1": 2,
+    "4": 6,
+    "8": 10,
+  },
+  "TRIP_FACTOR": {
+    "1": 0.15,
+    "4": 0.6,
+    "8": 1.25,
+  },
+  "TRIP_FRIENDSHIP": {
+    "1": [
+      1,
+      1,
+    ],
+    "4": [
+      1,
+      2,
+    ],
+    "8": [
+      2,
+      3,
+    ],
+  },
+  "TRIP_GEMS": {
+    "1": 1,
+    "4": 2,
+    "8": 3,
+  },
+  "TRIP_HOURS_BY_BAY": {
+    "2": [
+      1,
+    ],
+    "3": [
+      1,
+      4,
+    ],
+    "4": [
+      1,
+      4,
+      8,
+    ],
+    "5": [
+      1,
+      4,
+      8,
+    ],
+  },
+  "TRIP_MATCH_MULTIPLIER": 1.25,
+  "TRIP_MATCH_SECTORS": 3,
+}
+`;

@@ -1,0 +1,33 @@
+import { makeLevel, greedyScore } from './levels.ts';
+import { lifeScore } from './world.ts';
+import { play, CLASH, type Rules } from './proto.ts';
+const ttl = Number(process.env.TTL ?? 2), gr = Number(process.env.GR ?? 1);
+const R: Rules = { fusion: true, glowTtl: ttl, glowR: gr };
+const agg: any = { n: 0, g0: 0, blind: 0, aware: 0, awareSwap: 0, fBlind: 0, cBlind: 0, fAware: 0, cAware: 0, fSwap: 0, throws: 0, nb0: [] as number[], nb1: [] as number[], trade: 0, byType: {} as Record<string, number> };
+const rows: any[] = [];
+for (let n = 6; n <= 60; n++) {
+  const L = makeLevel(n);
+  const base = lifeScore(L.start);
+  const g0 = greedyScore(L.start, L.queue, L.throws);
+  const noRx = play(L.start, L.queue, L.throws, { fusion: false, glowTtl: ttl, glowR: gr }, { aware: false, swap: false });
+  const blind = play(L.start, L.queue, L.throws, R, { aware: false, swap: false });
+  const aware = play(L.start, L.queue, L.throws, R, { aware: true, swap: false });
+  const sw = play(L.start, L.queue, L.throws, R, { aware: true, swap: true });
+  agg.n++; agg.throws += L.throws;
+  agg.g0 += g0 - base; agg.blind += blind.score - base; agg.aware += aware.score - base; agg.awareSwap += sw.score - base;
+  agg.fBlind += blind.fusions.filter((f) => !CLASH.has(f)).length; agg.cBlind += blind.fusions.filter((f) => CLASH.has(f)).length;
+  agg.fAware += aware.fusions.filter((f) => !CLASH.has(f)).length; agg.cAware += aware.fusions.filter((f) => CLASH.has(f)).length;
+  agg.fSwap += sw.fusions.length;
+  agg.nb0.push(...noRx.nearBest); agg.nb1.push(...aware.nearBest); agg.trade += aware.tradeoff;
+  for (const f of aware.fusions) agg.byType[f] = (agg.byType[f] ?? 0) + 1;
+  if (n % 6 === 0) rows.push({ n, throws: L.throws, gain0: g0 - base, blind: blind.score - base, aware: aware.score - base, swap: sw.score - base, fus: aware.fusions.join(',') });
+}
+const med = (a: number[]) => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
+const avg = (a: number[]) => (a.reduce((x, y) => x + y, 0) / a.length).toFixed(2);
+console.table(rows);
+console.log(`TTL=${ttl} GR=${gr} levels=${agg.n} throws=${agg.throws}`);
+console.log(`mean gain: base-greedy ${(agg.g0 / agg.n).toFixed(1)} | fusion-blind ${(agg.blind / agg.n).toFixed(1)} | fusion-aware ${(agg.aware / agg.n).toFixed(1)} | aware+swap ${(agg.awareSwap / agg.n).toFixed(1)}`);
+console.log(`fusions/level blind ${(agg.fBlind / agg.n).toFixed(2)} (+clash ${(agg.cBlind / agg.n).toFixed(2)}) | aware ${(agg.fAware / agg.n).toFixed(2)} (+clash ${(agg.cAware / agg.n).toFixed(2)}) | aware+swap ${(agg.fSwap / agg.n).toFixed(2)}`);
+console.log(`near-best sectors/throw: no reactions median ${med(agg.nb0)} mean ${avg(agg.nb0)} | with reactions median ${med(agg.nb1)} mean ${avg(agg.nb1)}`);
+console.log(`throws where reaction-aware best != blind best: ${(100 * agg.trade / agg.throws).toFixed(1)}%`);
+console.log('aware fusions by type', agg.byType);

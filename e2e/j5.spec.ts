@@ -1,0 +1,840 @@
+// J5 — M10 Homeworld Labs at 320×568 in every shipped language.
+import { expect, test, type Page } from '@playwright/test';
+import { LAUNCHER_IDS, LAUNCHERS, LAUNCH_ROSTER } from '../src/core/launchers';
+import { weatherOn } from '../src/meta/weather';
+import { seasonOf } from '../src/meta/seasons';
+import {
+  BROWSER_LOCALE,
+  OPEN_MODAL,
+  GATE,
+  gateAnswer,
+  typeGate,
+  tripReady,
+  dismissSheets,
+  expectKidSafe,
+  expectNoErrors,
+  freshInstall,
+  installJourneyClock,
+  launcherBayReady,
+  localesToRun,
+  midGame,
+  planetFiveHomeworld,
+  settle,
+  snap,
+  tr,
+  useJourneyViewport,
+  watchErrors,
+} from './helpers';
+
+const state = (page: Page) => page.evaluate(() => (window as any).__app.p);
+
+// The buttons expose the same handler as a canvas tap to VoiceOver and the journey.
+async function selectPlot(page: Page, index: number) {
+  const button = page.locator('.hw-plot-list button').nth(index);
+  await expect(button).toHaveAttribute('aria-label', /.+/);
+  await button.dispatchEvent('click');
+}
+
+for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
+  test.describe(`J5 ${loc}`, () => {
+    test.use({ locale: BROWSER_LOCALE[loc], timezoneId: 'UTC' });
+
+    test('M14 Road Landmark on the Floating Isle builds, gifts and Passport', async ({ page }, info) => {
+      await useJourneyViewport(page);
+      await installJourneyClock(page, '2026-02-26T12:00:00.000Z');
+      const guard = watchErrors(page);
+      await freshInstall(page);
+      await midGame(page, { level: 121 });
+      // Inline (not imported): landmarks.ts pulls in tuning.ts/package.json, which Node's loader refuses.
+      const roadSite = { stage: 0, progress: [0, 0, 0, 0, 0, 0], rewarded: [], rounds: [], arrivals: [], planets: [] };
+      roadSite.progress[0] = 12;
+      await page.evaluate((roadSite) => {
+        const a = (window as any).__app;
+        // DEV-only scenario date; production remains dormant awaiting the owner.
+        (window as any).__e2eRoadOpening('2026-02-26');
+        a.p.home.level = 5;
+        a.p.home.firstHour = 2;
+        a.p.home.intro = true;
+        a.p.settings.reduceMotion = true;
+        for (const state of Object.values(a.p.home.landmarks) as any[]) state.stage = 4;
+        a.p.cometPier.stage = 4;
+        a.p.home.roadLandmarks.rl_road01 = roadSite;
+        a.selectTab('homeworld');
+      }, roadSite);
+      // Finishing the other Landmarks above queues their celebration; close it like a child would.
+      await dismissSheets(page);
+      await page.locator('.hw-road-landmarks summary').click();
+      const site = page.locator('.hw-road-landmarks button');
+      await expect(site).toHaveCount(1);
+      expect((await site.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      await site.click();
+      const sheet = page.locator(OPEN_MODAL).and(page.locator('.hw-road-landmark-sheet'));
+      await expect(sheet).toBeVisible();
+      await expect(sheet.getByRole('button', { name: tr(loc, 'Build'), exact: true })).toBeEnabled();
+      await snap(page, info, guard, 'j5-m14-road-landmark-ready');
+      await sheet.getByRole('button', { name: tr(loc, 'Build'), exact: true }).click();
+      expect((await state(page)).home.roadLandmarks.rl_road01.stage).toBe(1);
+      await expect(sheet.getByRole('button', { name: tr(loc, 'Build'), exact: true })).toBeDisabled();
+      await dismissSheets(page);
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.roadLandmarks.rl_road01.stage = 3;
+        a.p.mats.leaf = a.p.mats.dew = a.p.mats.stone = 20;
+        a.showHomeworld();
+      });
+      await dismissSheets(page);
+      await page.locator('.hw-road-landmarks summary').click();
+      await site.click();
+      await sheet.getByRole('button', { name: tr(loc, 'Build'), exact: true }).click();
+      const p = await state(page);
+      expect(p.home.roadLandmarks.rl_road01.stage).toBe(4);
+      expect(p.home.isleDecor).toEqual([null, null, null]);
+      expect(p.wardrobe).toContain('decor_sky_loom');
+      expect(p.wardrobe).toContain('title_sky_weaver');
+      await snap(page, info, guard, 'j5-m14-road-landmark-finished');
+      await expectKidSafe(page, loc);
+      await dismissSheets(page);
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        if (!a.p.wardrobe.includes('decor_sky_loom')) throw Error('earned decoration unavailable');
+        a.p.home.isleDecor[0] = 'decor_sky_loom';
+        a.p.passport.title = 'title_sky_weaver';
+        a.showPassport();
+      });
+      await expect(page.locator('.pp-stats').getByText(tr(loc, 'Road Landmarks'), { exact: true })).toHaveCount(1);
+      await expect(page.locator('.pp-stats').getByText(tr(loc, 'Road Landmarks'), { exact: true })).toBeVisible();
+      await snap(page, info, guard, 'j5-m14-road-landmark-passport');
+      await expectNoErrors(guard);
+    });
+
+    test('M11.5 morning, night, winter and drizzle at an injected date', async ({ page }, info) => {
+      test.skip(
+        !['chromium-320x568', 'webkit-320x568'].includes(info.project.name),
+        'The Homeworld Life qualification uses the 320 phone projects and nightly viewport override',
+      );
+      await useJourneyViewport(page);
+      await installJourneyClock(page, '2026-04-06T08:00:00.000Z');
+      const guard = watchErrors(page);
+      await freshInstall(page);
+      await midGame(page, { level: 45 });
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.firstHour = 2;
+        a.p.home.intro = true;
+        a.p.settings.hemi = 'north';
+        a.p.stats.grown.meadow = 10;
+        a.p.home.residents.push({ species: 'owl', fp: 8, lastReq: -1, rewarded: 3 });
+        a.p.home.residents.push({ species: 'otter', fp: 2, lastReq: -1, rewarded: 1 });
+        a.selectTab('homeworld');
+      });
+      for (const [name, date] of [
+        ['morning', '2026-04-06T08:00:00.000Z'],
+        ['night', '2026-04-06T23:00:00.000Z'],
+        ['winter', '2026-01-06T12:00:00.000Z'],
+      ] as const) {
+        await page.clock.setFixedTime(new Date(date));
+        await page.evaluate(() => (window as any).__app.showHomeworld());
+        expect(await page.evaluate(() => new Date().getHours())).toBe(new Date(date).getUTCHours());
+        await expect(page.locator('.hw-canvas')).toBeVisible();
+        await expect(page.locator('.hw-canvas')).toHaveAttribute('data-season', seasonOf(new Date(date), 'north'));
+        await expect(page.locator('.hw-canvas')).toHaveAttribute('data-weather', weatherOn(new Date(date), 'north'));
+        // Short phones give the controls panel the room; the planet keeps at least 160 px (P18).
+        const canvasBox = await page.locator('.hw-canvas').evaluate((canvas) => ({
+          height: canvas.getBoundingClientRect().height,
+          viewport: innerHeight,
+        }));
+        expect(canvasBox.height).toBeGreaterThanOrEqual(canvasBox.viewport > 700 ? 250 : 160);
+        await snap(page, info, guard, `j5-life-${name}`);
+        await expectKidSafe(page, loc);
+      }
+      // Found in Node: WebKit refuses in-page module imports once the page clock is frozen.
+      const drizzle = (() => {
+        for (let day = 1; day <= 366; day++) {
+          const date = new Date(Date.UTC(2026, 3, day, 12));
+          const result: unknown = weatherOn(date, 'north');
+          if ((typeof result === 'string' ? result : (result as { kind: string }).kind) === 'drizzle') return date.toISOString();
+        }
+        throw new Error('No deterministic drizzle date in a full year');
+      })();
+      await page.clock.setFixedTime(new Date(drizzle));
+      await page.evaluate(() => (window as any).__app.showHomeworld());
+      await expect(page.locator('.hw-canvas')).toHaveAttribute('data-weather', 'drizzle');
+      await snap(page, info, guard, 'j5-life-drizzle');
+      await expectKidSafe(page, loc);
+      await page.getByRole('button', { name: tr(loc, 'Homeworld list') }).click();
+      const list = page.locator(OPEN_MODAL).last();
+      const plots = (await state(page)).home.plots.length;
+      expect(await list.getByRole('button').count()).toBeGreaterThanOrEqual(2 * plots + 6);
+      await expect(list).toContainText(tr(loc, 'Landmarks'));
+      await expect(list).toContainText(tr(loc, 'Pine Owl'));
+      await expect(list).toContainText(tr(loc, 'Tide Otter'));
+      await snap(page, info, guard, 'j5-life-voiceover-list');
+      // Open land 1 by its label: the list starts with a sticky Back button, so positions shift.
+      await list
+        .getByRole('button')
+        .filter({ hasText: tr(loc, 'Land {n}: {name}', { n: 1, name: '' }).trim() })
+        .first()
+        .click();
+      const picker = page.locator(OPEN_MODAL).last();
+      await expect(picker).toContainText(tr(loc, 'Choose a land for this space between plots. You can change it any time.'));
+      await snap(page, info, guard, 'j5-life-land-picker');
+      await picker
+        .getByRole('button')
+        .filter({ hasText: tr(loc, 'Meadow') })
+        .first()
+        .click();
+      expect((await state(page)).home.gaps[0]).toBe('meadow');
+      await page.getByRole('button', { name: tr(loc, 'Choose lands') }).click();
+      await page
+        .locator(OPEN_MODAL)
+        .last()
+        .getByRole('button', { name: tr(loc, 'Automatic') })
+        .click();
+      expect((await state(page)).home.gaps[0]).toBeNull();
+      await dismissSheets(page);
+      expectNoErrors(guard);
+    });
+
+    test('M13 picker fits 320×568 Extra-large text with reachable rows and Back', async ({ page }, info) => {
+      await page.setViewportSize({ width: 320, height: 568 });
+      await installJourneyClock(page);
+      const guard = watchErrors(page);
+      await freshInstall(page);
+      await tripReady(page, { reduceMotion: true });
+      await page.evaluate(() => {
+        const app = (window as any).__app;
+        app.p.settings.textSize = 'extra-large';
+        app.applySettings();
+      });
+      await page.getByRole('button', { name: tr(loc, 'Trip'), exact: true }).click();
+      const picker = page.locator(`${OPEN_MODAL}.trip-picker`).last();
+      await expect(picker).toBeVisible();
+      const list = picker.locator('.trip-planets');
+      const rows = list.locator('.trip-planet-row');
+      expect(await rows.count()).toBeGreaterThanOrEqual(120);
+      const layout = await list.evaluate((el) => {
+        const box = el.getBoundingClientRect();
+        return { height: box.height, clipped: el.scrollHeight > el.clientHeight, overflow: getComputedStyle(el).overflowY };
+      });
+      expect(layout.height).toBeGreaterThanOrEqual(132);
+      expect(layout.clipped).toBe(true);
+      expect(layout.overflow).toBe('auto');
+      const last = rows.last();
+      await last.scrollIntoViewIfNeeded();
+      await expect(last).toBeInViewport();
+      const back = picker.locator('.trip-back');
+      await back.scrollIntoViewIfNeeded();
+      await expect(back).toBeInViewport();
+      const bounds = await picker.evaluate((el) => {
+        const list = el.querySelector('.trip-planets')!.getBoundingClientRect();
+        const back = el.querySelector('.trip-back')!.getBoundingClientRect();
+        return { listBottom: list.bottom, backTop: back.top, width: el.clientWidth, contentWidth: el.scrollWidth };
+      });
+      expect(bounds.backTop).toBeGreaterThanOrEqual(bounds.listBottom);
+      expect(bounds.contentWidth).toBeLessThanOrEqual(bounds.width + 1);
+      await snap(page, info, guard, 'M13-trip-picker-extra-large');
+      await back.click();
+      await expect(picker).not.toBeVisible();
+      expectNoErrors(guard);
+    });
+
+    for (const reduceMotion of [false, true]) {
+      test(`M13 trip: send, win, return, postcard, gated share and Call home; Reduce Motion ${reduceMotion}`, async ({ page }, info) => {
+        await useJourneyViewport(page);
+        await installJourneyClock(page);
+        await page.emulateMedia({ reducedMotion: reduceMotion ? 'reduce' : 'no-preference' });
+        const guard = watchErrors(page);
+        await freshInstall(page);
+        await tripReady(page, { reduceMotion });
+        await page.getByRole('button', { name: tr(loc, 'Trip'), exact: true }).click();
+        const picker = page.locator(`${OPEN_MODAL}.trip-picker`).last();
+        await expect(picker).toBeVisible();
+        const offered = await picker.locator('.trip-planet-row').count();
+        expect(offered).toBeGreaterThanOrEqual(120);
+        await expect(picker.locator('.trip-planet-row').first()).toHaveAttribute('aria-label', /.+/);
+        await picker.getByRole('button', { name: tr(loc, 'All'), exact: true }).click();
+        await snap(page, info, guard, 'M13-trip-picker');
+        await expectKidSafe(page, loc);
+        await picker.locator('.trip-planet-row').first().click();
+        const preview = page.locator(`${OPEN_MODAL}.trip-preview`).last();
+        await expect(preview.locator('.trip-planet')).toHaveAttribute('aria-label', /.+/);
+        await expect(preview).toContainText(tr(loc, '{friend} feels at home here', { friend: tr(loc, 'Hopper Bunny') }));
+        await snap(page, info, guard, 'M13-trip-preview');
+        await expectKidSafe(page, loc);
+        await preview.getByRole('button', { name: tr(loc, 'Send'), exact: true }).click();
+        const sent = (await state(page)).home.expedition;
+        expect(sent.species).toBe('bunny');
+        await expect(page.locator('.hw-canvas')).toHaveAttribute('data-celebration', 'homeworld');
+        if (reduceMotion) await expect(page.locator('.hw-canvas')).toHaveClass(/celebrate-still/);
+        // A tap skips the wave without collecting or changing the trip promise.
+        await page.locator('.hw-canvas').dispatchEvent('celebration-skip');
+        await expect(page.locator('.hw-canvas')).toHaveClass(/celebrate-done/);
+        await page.evaluate(() => {
+          const a = (window as any).__app;
+          a.startLevel(45);
+          a.scene.finish(3);
+        });
+        await page.clock.runFor(2500);
+        const won = (await state(page)).home.expedition;
+        expect(won.ends).toBe(sent.ends - 600000);
+        await page.evaluate(() => (window as any).__app.selectTab('homeworld'));
+        await dismissSheets(page);
+        // Read the stored promise; advancing wall time rather than editing ends exercises settlement.
+        await page.clock.setFixedTime(new Date(won.ends));
+        await page.evaluate(() => (window as any).__app.showHomeworld());
+        await expect(page.locator('.hw-canvas')).toHaveAttribute('data-celebration', 'homeworld');
+        await page.clock.runFor(1700);
+        await dismissSheets(page);
+        const paid = await state(page);
+        expect(paid.home.expedition).toBeNull();
+        expect(paid.home.tripReturn.yield).toEqual(sent.yield);
+        expect(paid.home.seen.celebrations.filter((id: string) => id.startsWith('trip:'))).toHaveLength(1);
+        const collect = page
+          .locator('.hw-panel button')
+          .filter({ hasText: tr(loc, 'A friend is back from a trip') })
+          .last();
+        await collect.click();
+        const postcard = page.locator(`${OPEN_MODAL}.trip-return`).last();
+        await expect(postcard.locator('canvas')).toHaveAttribute('aria-label', /.+/);
+        await snap(page, info, guard, 'M13-trip-postcard');
+        const exported: string[] = [];
+        page.on('download', (download) => exported.push(download.suggestedFilename()));
+        await postcard.getByRole('button', { name: tr(loc, 'Share postcard'), exact: true }).click();
+        await expect(page.locator(GATE)).toBeVisible();
+        expect(exported).toEqual([]);
+        await page
+          .locator(GATE)
+          .getByRole('button', { name: tr(loc, 'Cancel'), exact: true })
+          .click();
+        await expect(page.locator(GATE)).toHaveCount(0);
+        expect(exported).toEqual([]);
+        // Force the browser download path after the same parental gate, on both engines.
+        await page.evaluate(() => Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => false }));
+        await postcard.getByRole('button', { name: tr(loc, 'Share postcard'), exact: true }).click();
+        await typeGate(page, await gateAnswer(page));
+        const confirm = page.locator(GATE).locator('.gate-v2-confirm');
+        await confirm.scrollIntoViewIfNeeded();
+        const box = (await confirm.boundingBox())!;
+        const downloaded = page.waitForEvent('download');
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await page.mouse.down();
+        await page.clock.runFor(1700);
+        await page.mouse.up();
+        expect((await downloaded).suggestedFilename()).toMatch(/^comet-garden.*\.png$/);
+        await expect(page.locator(GATE)).toHaveCount(0);
+        await postcard.getByRole('button', { name: tr(loc, 'Back'), exact: true }).click();
+        expect((await state(page)).home.tripReturn).toBeNull();
+        // The campaign win lets another trip go. Calling it home returns the friend with no payout.
+        await page.getByRole('button', { name: tr(loc, 'Trip'), exact: true }).click();
+        await page.locator(`${OPEN_MODAL}.trip-picker`).last().locator('.trip-planet-row').first().click();
+        await page
+          .locator(`${OPEN_MODAL}.trip-preview`)
+          .last()
+          .getByRole('button', { name: tr(loc, 'Send'), exact: true })
+          .click();
+        await page.locator('.hw-canvas').dispatchEvent('celebration-skip');
+        const beforeCall = await state(page);
+        await page
+          .locator('.hw-panel button')
+          .filter({ hasText: tr(loc, 'Trip') })
+          .last()
+          .click();
+        const flight = page.locator(`${OPEN_MODAL}.trip-flight`).last();
+        await expect(flight).toContainText(tr(loc, 'Each win brings your friend home 10 minutes sooner'));
+        await flight.getByRole('button', { name: tr(loc, 'Call {friend} home', { friend: tr(loc, 'Hopper Bunny') }), exact: true }).click();
+        const called = await state(page);
+        expect(called.home.expedition).toBeNull();
+        expect(called.home.tripFuel).toBe(true);
+        expect({ mats: called.mats, gems: called.gems, friends: called.home.residents }).toEqual({
+          mats: beforeCall.mats,
+          gems: beforeCall.gems,
+          friends: beforeCall.home.residents,
+        });
+        await page.clock.runFor(1700);
+        await snap(page, info, guard, 'M13-trip-call-home');
+        await expectKidSafe(page, loc);
+        expectNoErrors(guard);
+      });
+    }
+
+    test('noun window keeps Lands taps consistent and hides an empty Homeworld looks tab', async ({ page }, info) => {
+      test.skip(info.project.name !== 'chromium-320x568', 'J5 locale matrix runs at 320×568');
+      const guard = watchErrors(page);
+      await freshInstall(page, { title: 'tap' });
+      await midGame(page, { level: 11 });
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.level = 1;
+        a.p.home.firstHour = 2;
+        a.p.home.intro = true;
+        a.p.home.plots = Array(6).fill(null);
+        a.p.home.gaps = Array(6).fill(null);
+        a.p.home.residents = [];
+        a.p.settings.reduceMotion = true;
+        a.selectTab('homeworld');
+      });
+      await page.getByRole('button', { name: tr(loc, 'Homeworld list'), exact: true }).click();
+      await expect(page.locator(OPEN_MODAL).last()).not.toContainText(tr(loc, 'Land {n}: {name}', { n: 1, name: '' }).trim());
+      await dismissSheets(page);
+      // Halfway between plots 0 and 1 at the same radius used by canvas.ts.
+      const box = await page.locator('.hw-canvas').boundingBox();
+      expect(box).not.toBeNull();
+      const radius = Math.min(box!.width, box!.height) * 0.228;
+      // A raw tap right after a sheet closes would land inside the 300 ms tap guard.
+      await page.waitForFunction(() => !document.documentElement.classList.contains('input-settling'));
+      await page.mouse.click(box!.x + box!.width / 2 + radius * 0.5, box!.y + box!.height * 0.55 - (radius * Math.sqrt(3)) / 2);
+      await expect(page.locator(OPEN_MODAL)).toHaveCount(0);
+      await expect(page.locator('.hw-panel .hw-title')).toContainText(tr(loc, 'Empty plot'));
+      await page.evaluate(() => (window as any).__app.showStyles());
+      await expect(page.locator('.tabs').getByRole('button', { name: tr(loc, 'Homeworld looks'), exact: true })).toHaveCount(0);
+      await expect(page.locator('.ws-grid button').first()).toBeVisible();
+      expectNoErrors(guard);
+    });
+
+    for (const reduceMotion of [false, true]) {
+      test(`Level 1 to 2, Vault and Greenhouse choice; Reduce Motion ${reduceMotion}`, async ({ page }, info) => {
+        test.skip(info.project.name !== 'chromium-320x568', 'M11 locale matrix runs at 320×568');
+        await installJourneyClock(page);
+        await page.emulateMedia({ reducedMotion: reduceMotion ? 'reduce' : 'no-preference' });
+        const guard = watchErrors(page);
+        await freshInstall(page, { title: 'tap' });
+        await midGame(page, { level: 11 });
+        await page.evaluate(() => {
+          const a = (window as any).__app;
+          a.p.home.level = 1;
+          a.p.settings.reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+          a.p.home.firstHour = 2;
+          a.p.home.intro = true;
+          a.p.home.plots = Array(6).fill(null);
+          a.p.dust = 2000;
+          a.p.mats.leaf = 20;
+          a.p.mats.dew = 20;
+          a.selectTab('homeworld');
+        });
+        await expect(page.locator('.hw-level-badge')).toContainText(tr(loc, 'Level {n}', { n: 1 }));
+        await snap(page, info, guard, 'j5-level-1');
+        await expectKidSafe(page, loc);
+        await page.locator('.hw-level-badge').click();
+        await expect(page.locator(OPEN_MODAL).last()).toContainText(tr(loc, 'Grow your Homeworld to Level {n}', { n: 2 }));
+        await expect(page.locator(OPEN_MODAL).last().getByAltText(tr(loc, 'Greenhouse'), { exact: true })).toHaveCount(1);
+        await expect(page.locator(OPEN_MODAL).last().getByAltText(tr(loc, 'Launch Bay'), { exact: true })).toHaveCount(0);
+        await expect(page.locator(OPEN_MODAL).last()).not.toContainText(tr(loc, 'Two more plots, Greenhouse and Launch Bay'));
+        await snap(page, info, guard, 'j5-level-checklist');
+        await expectKidSafe(page, loc);
+        await page
+          .locator(OPEN_MODAL)
+          .last()
+          .getByRole('button', { name: tr(loc, 'Grow to Level {n}', { n: 2 }) })
+          .click();
+        await expect(page.locator('.hw-level-up')).toBeVisible();
+        expect((await state(page)).home.level).toBe(2);
+        expect((await state(page)).dust).toBe(500);
+        expect((await state(page)).mats.leaf).toBe(0);
+        expect((await state(page)).mats.dew).toBe(0);
+        await expect(page.locator('.hw-level-up')).toHaveClass(reduceMotion ? /celebrate-still/ : /hw-level-up/);
+        await snap(page, info, guard, 'j5-level-up');
+        await expectKidSafe(page, loc);
+        await page.locator('.hw-level-up button').click();
+        await page.evaluate(() => {
+          const a = (window as any).__app;
+          a.p.home.plots[0] = {
+            type: 'greenhouse',
+            lv: 1,
+            since: Date.now(),
+            greenhouse: { choice: 'shower', winsTowardNext: 0, stored: 0 },
+          };
+          a.showHomeworld();
+        });
+        await selectPlot(page, 0);
+        await page
+          .locator('.hw-greenhouse-choices')
+          .getByRole('button', { name: tr(loc, 'Life Spark') })
+          .click();
+        expect((await state(page)).home.plots[0].greenhouse.choice).toBe('spark');
+        await page.evaluate(async () => {
+          const a = (window as any).__app;
+          const rules = await (window as any).__e2eImport('/src/meta/homeworld.ts');
+          for (let n = 0; n < 6; n++)
+            rules.recordGreenhouseWin(a.p, { mode: 'campaign', planetKey: `j5-${n}`, buddySpecies: null, at: Date.now() });
+          a.showHomeworld();
+        });
+        await expect(page.locator('.hw-panel')).toContainText(
+          tr(loc, 'Stored {stored}/{cap} · {wins}/6 wins', { stored: 1, cap: 1, wins: 0 }),
+        );
+        await snap(page, info, guard, 'j5-greenhouse');
+        await expectKidSafe(page, loc);
+        await page
+          .locator('.hw-panel')
+          .getByRole('button', { name: tr(loc, 'Collect') })
+          .click();
+        expect((await state(page)).boosters.spark).toBeGreaterThan(0);
+        await page.evaluate(async () => {
+          const a = (window as any).__app;
+          const economy = await (window as any).__e2eImport('/src/meta/economy.ts');
+          economy.creditVaultWin(a.p, { mode: 'campaign', planetKey: 'j5-vault', buddySpecies: null, at: Date.now() });
+          a.save();
+        });
+        await page.clock.fastForward(3_600_000);
+        await page.locator('[data-tab="home"]').click();
+        await expect(page.locator('.dust-btn')).toContainText('✨');
+        await page.locator('.dust-btn').click();
+        await expect(page.locator('.vault-sheet')).toBeVisible();
+        await snap(page, info, guard, 'j5-vault');
+        await expectKidSafe(page, loc);
+        await expect(page.locator('.vault-sheet button.primary')).toBeVisible();
+        const dustBeforeCollect = (await state(page)).dust;
+        await page.locator('.vault-sheet button.primary').click();
+        expect((await state(page)).dust).toBeGreaterThan(dustBeforeCollect);
+        expectNoErrors(guard);
+      });
+    }
+
+    for (const reduceMotion of [false, true]) {
+      test(`first hour, Labs and pouch; Reduce Motion ${reduceMotion}`, async ({ page }, info) => {
+        test.skip(info.project.name !== 'chromium-320x568', 'J5 locale matrix runs at 320×568');
+        await installJourneyClock(page);
+        await page.emulateMedia({ reducedMotion: reduceMotion ? 'reduce' : 'no-preference' });
+        const guard = watchErrors(page);
+        await freshInstall(page, { title: 'tap' });
+        await planetFiveHomeworld(page, { reduceMotion }); // setting is applied before Homeworld mounts
+        await expect(page.getByRole('navigation', { name: tr(loc, 'Homeworld plots') })).toHaveCount(1);
+
+        const firstLab = page.locator(`${OPEN_MODAL}.first-hour`).last();
+        await expect(firstLab).toBeVisible();
+        for (const name of ['Rain Lab', 'Sun Lab']) await expect(firstLab.locator('.first-lab-choices')).not.toContainText(tr(loc, name));
+        await snap(page, info, guard, 'j5-first-hour-lab');
+        await expectKidSafe(page, loc);
+        const before = (await state(page)).dust;
+        await firstLab.locator('.first-lab-choices .btn').first().click();
+        await firstLab.locator('button.primary.wide').click();
+        expect((await state(page)).home.firstHour).toBe(1);
+        expect((await state(page)).dust).toBe(before);
+
+        const friendWaiting = page.locator(`${OPEN_MODAL}.first-hour`).last();
+        await expect(friendWaiting).toBeVisible();
+        await expect(friendWaiting).toContainText(tr(loc, 'Rock Lab'));
+        await friendWaiting.locator('button.primary.wide, button.ghost.wide.dim').first().click();
+        expect((await state(page)).home.firstHour).toBe(1);
+        expect((await state(page)).dust).toBe(before);
+        await snap(page, info, guard, 'j5-first-hour-wait');
+        await expectKidSafe(page, loc);
+        await page.clock.fastForward('00:31');
+        await friendWaiting.getByRole('button', { name: tr(loc, 'Close') }).click();
+        await page.locator('.hw-panel button.primary.wide').click();
+        const invite = page.locator(`${OPEN_MODAL}.first-hour`).last();
+        await snap(page, info, guard, 'j5-first-hour-friend');
+        await expectKidSafe(page, loc);
+        await invite.locator('button.primary.wide').click();
+        const completed = await state(page);
+        expect(completed.home.firstHour).toBe(2);
+        expect(completed.home.residents).toHaveLength(1);
+        expect(completed.dust).toBe(before + 100);
+        const friendMoment = page.locator(`${OPEN_MODAL}.lab-moment`).last();
+        await expect(friendMoment).toBeVisible();
+        await snap(page, info, guard, 'j5-first-friend-moment');
+        await expectKidSafe(page, loc);
+        await friendMoment.locator('button').last().click();
+
+        await page.evaluate(() => {
+          const a = (window as any).__app;
+          a.p.mats.stone = 100;
+          a.save();
+          a.showHomeworld();
+        });
+        await page.locator('.hw-pouch-head').click();
+        const pouch = page.locator(`${OPEN_MODAL}.essence-sheet`).last();
+        await expect(pouch).toBeVisible();
+        await snap(page, info, guard, 'j5-pouch');
+        await expectKidSafe(page, loc);
+        await pouch.getByRole('button', { name: tr(loc, 'Close') }).click();
+
+        await selectPlot(page, 0);
+        await expect(page.locator('.hw-lab-card')).toBeVisible();
+        await snap(page, info, guard, 'j5-lab-card');
+        await expectKidSafe(page, loc);
+        await page.locator('.lab-buy button').click();
+        const levelMoment = page.locator(`${OPEN_MODAL}.lab-moment`).last();
+        await expect(levelMoment).toBeVisible();
+        await expect(levelMoment).toHaveClass(reduceMotion ? /celebrate-still/ : /lab-moment/);
+        if (!reduceMotion) await expect(levelMoment).not.toHaveClass(/celebrate-still/);
+        await snap(page, info, guard, 'j5-lab-level-moment');
+        await expectKidSafe(page, loc);
+        await levelMoment.locator('button').last().click();
+        expect((await state(page)).lab.rock).toBe(2);
+
+        await page.evaluate(() => {
+          const a = (window as any).__app;
+          a.p.home.level = 2;
+          a.p.level = 12; // Rock Fusion is untaught until planet 25.
+          a.save();
+          a.showHomeworld();
+        });
+        await selectPlot(page, 0);
+        const buy = page.locator('.lab-buy');
+        await expect(buy).toContainText(tr(loc, 'A new trick, later'));
+        await expect(buy.locator('button')).toHaveCount(0);
+        await expect(buy).not.toContainText('✨');
+        await snap(page, info, guard, 'j5-untaught-buy');
+
+        await page.evaluate(() => {
+          const a = (window as any).__app;
+          a.p.dust = 1000; // The rollback guard, not the price, must stop this build.
+          a.p.home.lastTick = Date.now() + 60_000;
+        });
+        const plots = (await state(page)).home.plots as ({ type: string } | null)[];
+        const debris = (await state(page)).home.debris as number[];
+        const free = plots.findIndex((building, index) => !building && !debris.includes(index));
+        expect(free).toBeGreaterThanOrEqual(0);
+        await selectPlot(page, free);
+        await snap(page, info, guard, 'j5-build-list');
+        await page
+          .locator('.hw-opt.lab-opt')
+          .filter({ hasText: tr(loc, 'Ice Lab') })
+          .click();
+        expect((await state(page)).home.plots.filter((b: any) => b?.type === 'lab')).toHaveLength(1);
+        expect((await state(page)).dust).toBe(1000);
+        await expect(page.locator('.toasts')).toContainText(tr(loc, 'Already being built'));
+
+        await page.evaluate(() => {
+          const a = (window as any).__app;
+          a.p.home.lastTick = Date.now();
+          a.startLevel(6);
+          // Give the injected three-star win two green lands, so Essence must appear.
+          for (const sector of a.scene.planet.sectors.slice(0, 2)) sector.biome = 'meadow';
+          a.scene.finish(3);
+        });
+        await page.clock.runFor(2500);
+        const results = page
+          .locator(OPEN_MODAL)
+          .filter({ has: page.locator('.end-stars') })
+          .last();
+        await expect(results).toBeVisible();
+        await expect(results.locator('.essence-progress')).toBeVisible();
+        await snap(page, info, guard, 'j5-results-essence');
+        await expectKidSafe(page, loc);
+        await expectNoErrors(guard);
+      });
+    }
+
+    test('Launch Bay: choose, tune, free practice and forced Sling chip', async ({ page }, info) => {
+      test.skip(info.project.name !== 'chromium-320x568', 'J5 locale matrix runs at 320×568');
+      const guard = watchErrors(page);
+      await freshInstall(page, { title: 'tap' });
+      await launcherBayReady(page);
+      await selectPlot(page, 0);
+      expect(await page.locator('.hw-actions').evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+      await page
+        .locator('.hw-actions')
+        .getByRole('button', { name: tr(loc, 'Launch Bay') })
+        .click();
+      await expect(page.locator('.launch-bay')).toBeVisible();
+      for (const id of LAUNCHER_IDS.filter((id) => !LAUNCH_ROSTER.includes(id)))
+        await expect(page.locator(`.bay-card[data-launcher="${id}"]`)).toHaveCount(0);
+      await snap(page, info, guard, 'j5-launch-bay');
+      await expectKidSafe(page, loc);
+      await expect(page.locator('.bay-card[data-launcher="sling"] .bay-effect')).toHaveCount(0);
+      const bayNameSize = await page
+        .locator('.bay-name')
+        .first()
+        .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+      await page.evaluate(() => document.documentElement.style.setProperty('--text-scale', '1.36'));
+      // The size can settle a frame later (card transitions), so wait for it rather than reading once.
+      await expect
+        .poll(() =>
+          page
+            .locator('.bay-name')
+            .first()
+            .evaluate((el) => parseFloat(getComputedStyle(el).fontSize)),
+        )
+        .toBeGreaterThan(bayNameSize);
+      await page.evaluate(() => document.documentElement.style.setProperty('--text-scale', '1'));
+      await expect(page.locator('.bay-card[data-launcher="zip"]')).not.toContainText(
+        tr(loc, 'After that, arrives at planet {n}', { n: 43 }),
+      );
+      const swoop = page.locator('.bay-card[data-launcher="swoop"]');
+      await expect(swoop).toContainText(tr(loc, 'Swoop'));
+      await swoop.getByRole('button', { name: tr(loc, 'Choose {name}', { name: tr(loc, 'Swoop') }) }).click();
+      expect((await state(page)).launcher.selected).toBe('swoop');
+      await expect(swoop.locator('.bay-state[tabindex]')).toBeFocused();
+      await swoop.getByRole('button', { name: tr(loc, 'Tune {name} to {n}', { name: tr(loc, 'Swoop'), n: 2 }) }).click();
+      expect((await state(page)).launcher.tunes.swoop).toBe(2);
+      await expect(swoop.locator('button[data-action="tune"]')).toBeFocused();
+      await expect(swoop.locator('button[data-action="tune"]')).toHaveAttribute('aria-disabled', 'true');
+      await swoop.locator('button[data-action="tune"]').dispatchEvent('click');
+      await expect(page.locator('.toast').last()).toBeVisible();
+      await expect(page.locator('.bay-card[data-launcher="zip"]')).toHaveClass(/locked/);
+      await snap(page, info, guard, 'j5-launch-bay-tuned');
+      const practiceFacts = (p: any) =>
+        JSON.stringify({
+          dust: p.dust,
+          gems: p.gems,
+          mats: p.mats,
+          stars: p.stars,
+          launcher: p.launcher,
+          stats: p.stats,
+          feats: p.feats,
+          seen: p.seen,
+        });
+      const beforePractice = practiceFacts(await state(page));
+      await swoop.getByRole('button', { name: tr(loc, 'Try {name} for free', { name: tr(loc, 'Swoop') }) }).click();
+      await expect(page.locator('.practice-exit')).toBeVisible();
+      await snap(page, info, guard, 'j5-launch-bay-practice');
+      await page.locator('.practice-exit').click();
+      expect(practiceFacts(await state(page))).toBe(beforePractice);
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.plots[0] = { type: 'launch_bay', lv: 1, since: Date.now(), done: Date.now() + 300000 };
+        a.showHomeworld();
+      });
+      await selectPlot(page, 0);
+      await page
+        .locator('.hw-actions')
+        .getByRole('button', { name: tr(loc, 'Launch Bay') })
+        .click();
+      await expect(page.locator('.launch-bay .page-title')).toContainText(tr(loc, 'Level {n}', { n: 0 }));
+      await expect(page.locator('.bay-card[data-launcher="sling"]')).toContainText(tr(loc, 'Try it'));
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.level = 4;
+        a.p.home.plots[0] = { type: 'launch_bay', lv: 3, since: Date.now(), done: Date.now() + 300000 };
+        a.p.cometPier.stage = 3;
+        a.p.level = 45;
+        for (const id of ['sprout_garden', 'skyglass', 'sky_bridge']) a.p.home.landmarks[id].stage = 4;
+        a.p.launcher.tunes.swoop = 1;
+        a.p.mats.leaf = 45;
+        a.p.mats.dew = 60;
+        a.save();
+        a.showHomeworld();
+      });
+      await selectPlot(page, 0);
+      const actions = page.locator('.hw-actions');
+      await expect(actions.getByRole('button', { name: tr(loc, 'Launch Bay') })).toBeVisible();
+      expect(await actions.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+      await snap(page, info, guard, 'j5-launch-bay-building-panel');
+      await actions.getByRole('button', { name: tr(loc, 'Launch Bay') }).click();
+      await expect(page.locator('.launch-bay .page-title')).toContainText(tr(loc, 'Level {n}', { n: 2 }));
+      await expect(swoop.locator('button[data-action="tune"]')).toHaveAttribute('aria-disabled', 'false');
+      await swoop.getByRole('button', { name: tr(loc, 'Tune {name} to {n}', { name: tr(loc, 'Swoop'), n: 2 }) }).click();
+      expect((await state(page)).launcher.tunes.swoop).toBe(2);
+      const zip = page.locator('.bay-card[data-launcher="zip"]');
+      await expect(zip).toContainText(tr(loc, 'Visit your Homeworld to build Comet Pier'));
+      await expect(zip.getByRole('button', { name: tr(loc, 'Finish Comet Pier') })).toHaveCount(0);
+      await page.evaluate(async () => {
+        const a = (window as any).__app;
+        const landmarks = await (window as any).__e2eImport('/src/meta/landmarks.ts');
+        landmarks.finishLandmark(a.p, 'comet_pier');
+        a.renderScreen('launchbay');
+      });
+      expect((await state(page)).cometPier.stage).toBe(4);
+      await expect(zip).not.toHaveClass(/locked/);
+      await snap(page, info, guard, 'j5-launch-bay-zip-earned');
+      // Bring the Try button itself into view, so the click below doesn't scroll after the measurement.
+      const tryZip = zip.getByRole('button', { name: tr(loc, 'Try {name} for free', { name: tr(loc, 'Zip') }) });
+      // Let the 300 ms tap guard after the re-render clear, or Playwright re-scrolls while it waits to click.
+      await page.waitForFunction(() => !document.documentElement.classList.contains('input-settling'));
+      await tryZip.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+      // The child comes back to the card they tried, where it was on screen (scroll anchoring may shift scrollTop).
+      const cardTop = () => zip.evaluate((el) => Math.round(el.getBoundingClientRect().top));
+      const topBefore = await cardTop();
+      await tryZip.click();
+      await page.locator('.practice-exit').click();
+      await settle(page);
+      expect(Math.abs((await cardTop()) - topBefore)).toBeLessThanOrEqual(2);
+      await page.evaluate(() => (window as any).__app.preRemix(31));
+      const lockedChip = page.locator('.launcher-chip.locked');
+      await expect(lockedChip).toBeVisible();
+      await expect(lockedChip).toHaveAttribute('aria-label', tr(loc, 'Everyone uses the Star Sling here'));
+      await snap(page, info, guard, 'j5-launch-bay-forced-sling');
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.level = 70;
+        a.p.launcher.selected = 'pinpoint';
+        a.p.launcher.tunes.pinpoint = 3;
+        a.save();
+        a.preLevel(70);
+      });
+      await expect(page.locator('.launcher-chip:not(.locked)')).toContainText(tr(loc, 'Star Sling'));
+      expect((await state(page)).launcher.selected).toBe('pinpoint');
+      await page.locator('.launcher-chip:not(.locked)').click();
+      const tray = page.locator('.launcher-tray');
+      await expect(tray.locator('.launcher-option')).toHaveCount(3);
+      for (const id of LAUNCHER_IDS.filter((id) => !LAUNCH_ROSTER.includes(id)))
+        await expect(tray).not.toContainText(tr(loc, LAUNCHERS[id].name));
+      await expectNoErrors(guard);
+    });
+  });
+}
+
+for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
+  test.describe(`FC Homeworld readiness [${loc}]`, () => {
+    test.use({ locale: BROWSER_LOCALE[loc] });
+    test(`FC ${loc}: a returned trip pays on arrival, Next Up names it and its postcard clears the tab badge (M13)`, async ({ page }) => {
+      await freshInstall(page);
+      await tripReady(page, { reduceMotion: true, planets: 1 });
+      const before = await state(page);
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        const now = Date.now();
+        a.p.home.expedition = {
+          species: 'bunny',
+          hours: 1,
+          ends: now - 1,
+          planet: -1,
+          n: 1,
+          sentAt: now - 3_600_001,
+          match: false,
+          yield: { mats: { frost: 1 }, gems: 1, fp: 1 },
+        };
+        a.p.home.tripFuel = false;
+        a.showHomeworld();
+      });
+      await dismissSheets(page);
+      const paid = await state(page);
+      expect(paid.home.expedition).toBeNull();
+      expect(paid.gems).toBe(before.gems + 1);
+      await expect(page.locator('.hw-next-up')).toContainText(tr(loc, 'A friend is back from a trip'));
+      await expect(page.locator('[data-tab="homeworld"] .nb')).toHaveText('1');
+      await page
+        .locator('.hw-panel button')
+        .filter({ hasText: tr(loc, 'A friend is back from a trip') })
+        .last()
+        .click();
+      const postcard = page.locator(`${OPEN_MODAL}.trip-return`).last();
+      await expect(postcard).toBeVisible();
+      await postcard.getByRole('button', { name: tr(loc, 'Back'), exact: true }).click();
+      await expect(page.locator('[data-tab="homeworld"] .nb')).toHaveCount(0);
+      expect((await state(page)).gems).toBe(paid.gems);
+    });
+
+    test(`FC ${loc}: early Atlas gate agrees with Collection and queued milestones merge`, async ({ page }) => {
+      await freshInstall(page);
+      await midGame(page, { level: 6 });
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.intro = true;
+        a.p.home.firstHour = 2;
+        a.p.bundles = [];
+        a.p.constellations = [];
+        a.p.mats.leaf = a.p.mats.dew = 100;
+        a.selectTab('homeworld');
+      });
+      await expect(page.locator('.hw-panel').getByRole('button', { name: new RegExp(tr(loc, 'Star Atlas')) })).toHaveCount(0);
+      await page.locator('[data-tab="collection"]').click();
+      await expect(page.getByRole('button', { name: new RegExp(tr(loc, 'Star Atlas')) })).toHaveCount(0);
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.residents = [{ species: 'bunny', fp: 26, lastReq: 0, rewarded: 5 }];
+        a.p.home.landmarks.sprout_garden.stage = 4;
+        a.p.home.seen.celebrations = ['friend:bunny:level:2', 'friend:bunny:level:3', 'sprout_garden:stage:1', 'sprout_garden:stage:3'];
+        a.selectTab('homeworld');
+      });
+      const reward = page.locator('.hw-earned');
+      await expect(reward.locator('.hw-earned-card')).toHaveCount(2);
+      await expect(reward).toContainText(tr(loc, 'Friendship Level {n}!', { n: 5 }));
+      await expect(reward).not.toContainText(tr(loc, 'Stage {n} is complete!', { n: 1 }));
+      await reward.getByRole('button', { name: tr(loc, 'Wonderful!'), exact: true }).click();
+      expect((await state(page)).home.seen.celebrations).toEqual([]);
+      await expect(page.locator('[data-tab="homeworld"] .nb')).toHaveCount(0);
+    });
+  });
+}

@@ -1,0 +1,20 @@
+const { open, shot, txt, clickText, nav } = require('./lib.cjs');
+const fs = require('fs');
+(async () => {
+  const prof = fs.readFileSync(__dirname + '/mid.json', 'utf8');
+  const { b, ctx, page } = await open();
+  await ctx.addInitScript((p) => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('pp.profile', p); } }, prof);
+  await page.goto('http://127.0.0.1:5173/');
+  await page.waitForTimeout(2500);
+  await clickText(page, /Stamp day/); await page.waitForTimeout(1200);
+  await page.evaluate(() => window.__app.showLifebook()); await page.waitForTimeout(700);
+  await page.evaluate(() => document.querySelector('.album-link').click()); await page.waitForTimeout(700);
+  console.log('screen', await page.evaluate(() => window.__app.screen));
+  await page.evaluate(() => document.querySelector('.topbar button.icon').click()); await page.waitForTimeout(700);
+  console.log('after back from Album ->', await page.evaluate(() => window.__app.screen));
+  await page.evaluate(() => window.__app.showPassport()); await page.waitForTimeout(500);
+  await clickText(page, /Workshop/); await page.waitForTimeout(700);
+  await page.evaluate(() => document.querySelector('.topbar button.icon').click()); await page.waitForTimeout(700);
+  console.log('after back from Workshop ->', await page.evaluate(() => window.__app.screen));
+  await b.close();
+})();

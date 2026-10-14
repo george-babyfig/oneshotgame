@@ -1,0 +1,21 @@
+const { chromium, devices } = require('/opt/node22/lib/node_modules/playwright');
+const D = __dirname;
+(async () => {
+  const b = await chromium.launch();
+  const ctx = await b.newContext({ ...devices['iPhone 14'] });
+  const page = await ctx.newPage();
+  const logs = [];
+  page.on('console', m => { if (m.type()==='error'||m.type()==='warning') logs.push(m.type()+': '+m.text()); });
+  page.on('pageerror', e => logs.push('PAGEERR '+e.message));
+  await page.goto('http://127.0.0.1:5173/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForTimeout(2500);
+  await page.screenshot({ path: D+'/a01-first-launch.png' });
+  console.log('screen', await page.evaluate(() => window.__app && window.__app.screen));
+  console.log(await page.evaluate(() => document.body.innerText.slice(0,600)));
+  await page.waitForTimeout(3000);
+  await page.screenshot({ path: D+'/a02-first-launch-3s.png' });
+  console.log(logs.join('\n'));
+  await b.close();
+})();

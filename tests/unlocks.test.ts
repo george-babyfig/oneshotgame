@@ -1,0 +1,249 @@
+import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+import { GOALS_FROM } from '../src/core/levels';
+import { KINDS, type Kind } from '../src/core/world';
+import { buddyEligible } from '../src/meta/buddy';
+import { festivalActive, FESTIVAL_UNLOCK_LEVEL } from '../src/meta/festivals';
+import { homeUnlocked, HOME_UNLOCK_LEVEL } from '../src/meta/homeworld';
+import { letterStrings } from '../src/meta/inbox';
+import { momentumActive, MOMENTUM_UNLOCK } from '../src/meta/momentum';
+import { defaultProfile, migrate } from '../src/meta/profile';
+import { unlocked as rankUnlocked } from '../src/meta/unlocks';
+import { GUSTY_WIND_TIP, UNLOCKS, debutsAt, unlocked } from '../src/meta/unlocks';
+import { pendingLauncherIntroAfterWin } from '../src/meta/launcherPick';
+import { voyageActive, VOYAGE_UNLOCK_LEVEL } from '../src/meta/voyage';
+
+// M3 must empty this list as it moves today's crowded Home debuts.
+const KNOWN_UNTIL_M3: number[] = [];
+
+describe('unlock ladder', () => {
+  it('has three shipped launcher introductions on distinct planets', () => {
+    const rows = UNLOCKS.filter((row) => row.id.startsWith('launcher_'));
+    expect(rows.map((row) => row.planet)).toEqual([31, 43, 48]);
+    expect(rows.every((row) => !!row.intro)).toBe(true);
+    for (const row of rows) expect(debutsAt(row.planet).filter((entry) => !!entry.intro)).toHaveLength(1);
+  });
+  it('waits for ownership and offers one late launcher card per won planet', () => {
+    const p = defaultProfile();
+    p.level = 54;
+    expect(pendingLauncherIntroAfterWin(p, 53)).toBeUndefined();
+    p.chapters.push(3, 5);
+    expect(pendingLauncherIntroAfterWin(p, 53)?.id).toBe('launcher_swoop');
+    p.mailSeen.push('coach-launcher_swoop', 'launcher-intro-planet:53');
+    expect(pendingLauncherIntroAfterWin(p, 53)).toBeUndefined();
+    expect(pendingLauncherIntroAfterWin(p, 54)).toBeUndefined();
+  });
+  it('preserves old gates while fresh players follow the new ladder', () => {
+    const fresh = defaultProfile();
+    fresh.level = 12;
+    expect(unlocked(fresh, 'festival')).toBe(false);
+    expect(unlocked(fresh, 'voyage')).toBe(false);
+    const old = migrate({ ...fresh, tutorial: true, m3Migrated: undefined });
+    expect(unlocked(old, 'festival')).toBe(true);
+    expect(unlocked(old, 'voyage')).toBe(true);
+    expect(old.mailSeen).toContain('coach-festival');
+    expect(old.mailSeen).toContain('coach-voyage');
+    fresh.pass = true;
+    expect(unlocked(fresh, 'star_road')).toBe(true);
+    fresh.quests.list = [{ id: 'collect2', progress: 1, claimed: false }];
+    expect(unlocked(fresh, 'quests')).toBe(true);
+  });
+  it('has one row per feature and keeps known debut collisions honest', () => {
+    expect(new Set(UNLOCKS.map((entry) => entry.id)).size).toBe(UNLOCKS.length);
+    const crowded = Array.from({ length: 60 }, (_, i) => i + 1).filter(
+      (planet) => debutsAt(planet).filter((entry) => entry.intro || entry.letter || entry.button).length > 1,
+    );
+    expect(crowded).toEqual(KNOWN_UNTIL_M3);
+  });
+
+  it('teaches the M7 reactions and Combo on their ladder planets', () => {
+    const debuts = { steam: 8, rainGarden: 13, wildflowers: 22, glacier: 25, combo: 26, scorch: 32 } as const;
+    for (const [id, planet] of Object.entries(debuts)) {
+      const row = UNLOCKS.find((x) => x.id === id)!;
+      expect(row.planet).toBe(planet);
+      expect(row.intro?.icon).toBeTruthy();
+      expect(row.intro!.body.split(/\s+/).length).toBeLessThanOrEqual(row.id === 'scorch' ? 20 : 12);
+      const p = defaultProfile();
+      p.level = planet - 1;
+      expect(unlocked(p, id as typeof row.id)).toBe(false);
+      p.level = planet;
+      expect(unlocked(p, id as typeof row.id)).toBe(true);
+    }
+  });
+
+  it('teaches each sky obstacle once and grandfathers earlier saves', () => {
+    for (const [id, planet] of Object.entries({ rocks: 33, bubble: 41, mist: 46, ring: 51, tug: 57 }) as [
+      'rocks' | 'bubble' | 'mist' | 'ring' | 'tug',
+      number,
+    ][]) {
+      const row = UNLOCKS.find((entry) => entry.id === id)!;
+      expect(row.planet).toBe(planet);
+      expect(row.intro?.body.toLowerCase()).toContain('red bonk badge warns you');
+      expect(row.intro!.body.split(/\s+/).length).toBeLessThanOrEqual(25);
+      const old = defaultProfile();
+      old.level = planet + 1;
+      const migrated = migrate(Object.fromEntries(Object.entries(old).filter(([key]) => key !== 'skySeen')));
+      expect(migrated.skySeen).toContain(id);
+      expect(migrated.mailSeen).toContain(`coach-${id}`);
+    }
+    expect(GUSTY_WIND_TIP).toContain('Solar Wind');
+    expect(defaultProfile().settings.gentle).toBe(false);
+    expect(defaultProfile().skySeen).toEqual([]);
+    expect(defaultProfile().gustSeen).toBe(false);
+  });
+
+  it('has translations for every intro and letter in all five locales', () => {
+    const keys = [...UNLOCKS.flatMap((entry) => (entry.intro ? [entry.intro.title, entry.intro.body] : [])), ...letterStrings()];
+    for (const lang of ['de', 'pt', 'es', 'ja', 'fr']) {
+      const dict = JSON.parse(readFileSync(`src/locales/${lang}.json`, 'utf8')) as Record<string, string>;
+      for (const key of keys) {
+        expect(dict[key], `${lang}: ${key}`).toBeDefined();
+        expect([...key.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()).toEqual(
+          [...dict[key].matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort(),
+        );
+      }
+    }
+  });
+
+  it('matches the existing level, rank, and achievement gates', () => {
+    for (let level = 1; level <= 60; level++) {
+      for (const rank of [1, 2, 3, 4, 5, 8]) {
+        const p = defaultProfile();
+        p.level = level;
+        p.rank = rank;
+        p.tutorial = level > 1;
+        p.stats.wins = level - 1;
+        expect(unlocked(p, 'homeworld')).toBe(level >= HOME_UNLOCK_LEVEL);
+        expect(homeUnlocked(p)).toBe(level >= HOME_UNLOCK_LEVEL);
+        expect(unlocked(p, 'festival')).toBe(level >= FESTIVAL_UNLOCK_LEVEL);
+        expect(festivalActive(p)).toBe(level >= FESTIVAL_UNLOCK_LEVEL);
+        expect(unlocked(p, 'voyage')).toBe(level >= VOYAGE_UNLOCK_LEVEL);
+        expect(voyageActive(p)).toBe(level >= VOYAGE_UNLOCK_LEVEL);
+        expect(unlocked(p, 'momentum')).toBe(level >= MOMENTUM_UNLOCK);
+        expect(momentumActive(p)).toBe(level >= MOMENTUM_UNLOCK);
+        expect(unlocked(p, 'goals')).toBe(level >= GOALS_FROM);
+        expect(unlocked(p, 'quest_spot')).toBe(level >= FESTIVAL_UNLOCK_LEVEL);
+        expect(unlocked(p, 'quest_voyage')).toBe(level >= VOYAGE_UNLOCK_LEVEL);
+        for (const kind of Object.keys(KINDS) as Kind[]) expect(unlocked(p, kind)).toBe(level >= KINDS[kind].unlock);
+        for (const [mode, need] of Object.entries({ daily: 27, rush: 38, zen: 30, challenge: 40 }) as [
+          'daily' | 'rush' | 'zen' | 'challenge',
+          number,
+        ][]) {
+          const oldRank = { daily: 2, rush: 3, zen: 4, challenge: 5 }[mode];
+          expect(unlocked(p, mode)).toBe(level >= need || rank >= oldRank);
+          expect(rankUnlocked(p, mode)).toBe(level >= need || rank >= oldRank);
+        }
+        expect(unlocked(p, 'star_calendar')).toBe(level >= 21);
+        expect(unlocked(p, 'passport_setup')).toBe(p.stats.wins >= 1);
+        expect(unlocked(p, 'buddy')).toBe(false);
+        p.sightings.bunny = 5;
+        expect(unlocked(p, 'buddy')).toBe(false);
+        expect(buddyEligible(p).includes('bunny')).toBe(false);
+        p.home.residents.push({ species: 'bunny', fp: 0, rewarded: 0 });
+        expect(unlocked(p, 'buddy')).toBe(level >= 18);
+        expect(buddyEligible(p).includes('bunny')).toBe(level >= 18);
+      }
+    }
+  });
+});
+
+describe('noun window unlocks', () => {
+  it.each([
+    ['star_road', 22],
+    ['sticker_album', 24],
+    ['passport', 21],
+    ['voyage', 24],
+    ['quest_voyage', 24],
+  ] as const)('opens %s at planet %i', (id, planet) => {
+    const p = defaultProfile();
+    p.level = planet - 1;
+    expect(unlocked(p, id)).toBe(false);
+    p.level = planet;
+    expect(unlocked(p, id)).toBe(true);
+  });
+  it('preserves old gates and recognizes progress even without wins counters', () => {
+    for (const level of [1, 3, 12, 16, 20]) {
+      const p = defaultProfile();
+      p.level = level;
+      const old = migrate({ ...p, nounBudgetMigrated: undefined });
+      expect(old.nounBudgetMigrated).toBe(true);
+      expect(old.legacyUnlocks.includes('noun-window')).toBe(level > 1);
+      for (const [id, n] of [
+        ['star_road', 12],
+        ['passport', 16],
+        ['sticker_album', 3],
+        ['voyage', 20],
+        ['quest_voyage', 20],
+      ] as const)
+        expect(old.legacyUnlocks.includes(id)).toBe(level >= n);
+      p.stats.wins = 1;
+      expect(migrate({ ...p, nounBudgetMigrated: undefined }).legacyUnlocks).toContain('noun-window');
+    }
+  });
+  it('opens the Album as soon as a Road sticker is owned', () => {
+    const p = defaultProfile();
+    p.level = 22;
+    expect(unlocked(p, 'sticker_album')).toBe(false);
+    p.roadStickers.push('cosmic_road');
+    expect(unlocked(p, 'sticker_album')).toBe(true);
+  });
+  it('retains banners and used scrapbook pages and milestones', () => {
+    for (const flag of ['starter', 'pass'] as const) {
+      const p = defaultProfile();
+      p[flag] = true;
+      expect(unlocked(p, 'passport')).toBe(true);
+    }
+    const p = defaultProfile();
+    p.album.milestones = 1;
+    expect(unlocked(p, 'sticker_album')).toBe(true);
+    p.album.milestones = 0;
+    p.album.pages.push({ items: [] } as unknown as (typeof p.album.pages)[number]);
+    expect(unlocked(p, 'sticker_album')).toBe(false);
+    p.album.pages[0].items.push({} as (typeof p.album.pages)[number]['items'][number]);
+    expect(unlocked(p, 'sticker_album')).toBe(true);
+  });
+});
+
+import { lateArrivalIntro, unlocksForPlay } from '../src/meta/unlocks';
+import { makeLevel } from '../src/core/levels';
+import { rulesForLevel } from '../src/core/round';
+import { includeFlood } from '../src/core/rulesets';
+
+it('gates M15 ladder rows by play and keeps Flood absent until its gate is on', () => {
+  const ids = ['wonder', 'pebble', 'motes', 'firemount', 'rainbow', 'flood'];
+  expect(
+    unlocksForPlay(1)
+      .filter((row) => ids.includes(row.id))
+      .map((row) => [row.id, row.planet]),
+  ).toEqual([['wonder', 42]]);
+  expect(
+    unlocksForPlay(2)
+      .filter((row) => ids.includes(row.id))
+      .map((row) => [row.id, row.planet]),
+  ).toEqual([['wonder', 42], ['pebble', 52], ['motes', 56], ['firemount', 63], ['rainbow', 67], ...(includeFlood ? [['flood', 74]] : [])]);
+  for (let n = 1; n <= 120; n++)
+    expect(debutsAt(n, 2).filter((row) => row.intro || row.button || row.letter).length).toBeLessThanOrEqual(1);
+});
+
+it('chooses one present late idea, prioritizing cost and then teaching order', () => {
+  const rules = rulesForLevel(90, 'campaign', 90, 2);
+  const L = {
+    ...makeLevel(90, 'PP', { rulesVersion: 1 }),
+    rulesVersion: 2 as const,
+    queue: ['rock', 'magma', 'storm', 'sun'] as const,
+    troubles: [],
+    motes: [{ kind: 'wide' as const, x: 0, y: -1.4, r: 0.1 }],
+  };
+  const level = { ...L, queue: [...L.queue] };
+  expect(lateArrivalIntro(level, new Set(), rules, 2)?.id).toBe('motes');
+  expect(lateArrivalIntro({ ...level, motes: [], queue: ['seed'] }, new Set(), rules, 2)).toBeUndefined();
+  expect(lateArrivalIntro(level, new Set(['motes']), rules, 2)?.id).toBe('firemount');
+  expect(lateArrivalIntro(level, new Set(['motes', 'firemount']), rules, 2)?.id).toBe('rainbow');
+  expect(lateArrivalIntro(level, new Set(['motes', 'firemount', 'rainbow']), rules, 2)).toBeUndefined();
+  expect(lateArrivalIntro(level, new Set(), rulesForLevel(90, 'campaign', 90, 1), 1)).toBeUndefined();
+  for (let n = 52; n <= 120; n++) {
+    const pebble = { ...level, n, troubles: [{ id: 'pebble' as const, source: 0 }] };
+    expect(lateArrivalIntro(pebble, new Set(), rules, 2)?.id).toBe('pebble');
+    expect(lateArrivalIntro(pebble, new Set(['pebble']), rules, 2)?.id).toBe('motes');
+  }
+});

@@ -1,0 +1,1026 @@
+{
+  "v": 6,
+  "gems": 122,
+  "dust": 4880,
+  "level": 31,
+  "stars": {
+    "1": 3,
+    "2": 3,
+    "3": 3,
+    "4": 3,
+    "5": 3,
+    "6": 3,
+    "7": 3,
+    "8": 3,
+    "9": 3,
+    "10": 3,
+    "11": 3,
+    "12": 3,
+    "13": 3,
+    "14": 3,
+    "15": 3,
+    "16": 3,
+    "17": 3,
+    "18": 3,
+    "19": 3,
+    "20": 3,
+    "21": 3,
+    "22": 3,
+    "23": 3,
+    "24": 3,
+    "25": 3,
+    "26": 3,
+    "27": 3,
+    "28": 3,
+    "29": 3,
+    "30": 3
+  },
+  "remix": {},
+  "roadPoints": 60,
+  "roadDay": {
+    "day": "2026-11-03",
+    "earned": 4
+  },
+  "roadRecords": {
+    "road00": {
+      "points": 60,
+      "claimedFreeTierIds": [],
+      "claimedPaidTierIds": [],
+      "lastCreditedDay": "2026-11-03",
+      "earnedOnLastCreditedDay": 4,
+      "creditedEarningKeys": [
+        "campaign:planet:1:best:3",
+        "campaign:planet:2:best:3",
+        "campaign:golden:5",
+        "campaign:golden:6",
+        "campaign:golden:7",
+        "campaign:golden:8",
+        "campaign:golden:9",
+        "campaign:golden:10",
+        "campaign:golden:11",
+        "campaign:golden:12",
+        "campaign:golden:13",
+        "campaign:golden:14",
+        "campaign:golden:15",
+        "campaign:golden:16",
+        "campaign:golden:17",
+        "campaign:golden:18",
+        "campaign:golden:19",
+        "campaign:golden:20",
+        "campaign:golden:21",
+        "campaign:golden:22",
+        "voyage:stop:2026-W45:0:best:2",
+        "voyage:stop:2026-W45:1:best:3"
+      ],
+      "openedOn": "2026-10-03",
+      "legacyGrantIds": []
+    }
+  },
+  "roadCreditedEarningKeys": [
+    "campaign:planet:1:best:3",
+    "campaign:planet:2:best:3",
+    "campaign:golden:5",
+    "campaign:golden:6",
+    "campaign:golden:7",
+    "campaign:golden:8",
+    "campaign:golden:9",
+    "campaign:golden:10",
+    "campaign:golden:11",
+    "campaign:golden:12",
+    "campaign:golden:13",
+    "campaign:golden:14",
+    "campaign:golden:15",
+    "campaign:golden:16",
+    "campaign:golden:17",
+    "campaign:golden:18",
+    "campaign:golden:19",
+    "campaign:golden:20",
+    "campaign:golden:21",
+    "campaign:golden:22",
+    "voyage:stop:2026-W45:0:best:2",
+    "voyage:stop:2026-W45:1:best:3"
+  ],
+  "roadPassEntitlements": ["road00"],
+  "roadLegacySerial": 0,
+  "roadStickers": [],
+  "m12RoadMigrated": true,
+  "m12LegacyLooksMigrated": true,
+  "seen": ["bunny", "fox", "otter"],
+  "skySeen": [],
+  "gustSeen": false,
+  "fusionsFound": [],
+  "reactionPairsTried": [],
+  "combo": {
+    "best": 0,
+    "stamps": 0
+  },
+  "galaxy": [
+    {
+      "n": 1,
+      "name": "Nova Orb",
+      "hue": 210,
+      "stars": 3,
+      "species": ["leviathan", "goat", "frog", "fish"],
+      "life": 226,
+      "colors": []
+    },
+    {
+      "n": 2,
+      "name": "Lumen Isle",
+      "hue": 252,
+      "stars": 3,
+      "species": ["leviathan", "fish", "bunny", "deer", "bear", "goat", "frog", "llama", "reeffish"],
+      "life": 308,
+      "colors": ["#8a7f8d", "#2f7fe0", "#8fd65a", "#2f9e4f"]
+    },
+    {
+      "n": 3,
+      "name": "Zephyr Isle",
+      "hue": 249,
+      "stars": 3,
+      "species": ["leviathan", "reeffish", "duck", "llama", "goat", "bear", "deer", "bunny", "fish", "frog"],
+      "life": 320,
+      "colors": ["#2f7fe0", "#8a7f8d", "#8fd65a", "#7fa36a"]
+    },
+    {
+      "n": 4,
+      "name": "Ember World",
+      "hue": 278,
+      "stars": 3,
+      "species": ["scorpion", "fish", "whale", "turtle", "leviathan", "octopus", "parrot", "giraffe", "newt", "frog"],
+      "life": 326,
+      "colors": ["#2f7fe0", "#d9533b", "#e6c170", "#bfe8ff"]
+    },
+    {
+      "n": 5,
+      "name": "Zephyr World",
+      "hue": 242,
+      "stars": 3,
+      "species": ["llama", "leviathan", "fish", "reeffish", "elephant", "bunny", "whale", "goat", "dragon", "deer"],
+      "life": 353,
+      "colors": ["#2f7fe0", "#8fd65a", "#1fc6c0", "#7fa36a"]
+    },
+    {
+      "n": 6,
+      "name": "Comet World",
+      "hue": 211,
+      "stars": 3,
+      "species": [
+        "elephant",
+        "llama",
+        "goat",
+        "bear",
+        "deer",
+        "bunny",
+        "scorpion",
+        "newt",
+        "giraffe",
+        "parrot",
+        "octopus",
+        "fish",
+        "reeffish"
+      ],
+      "life": 273,
+      "colors": ["#8a7f8d", "#8fd65a", "#2f7fe0", "#d9b84a"]
+    },
+    {
+      "n": 7,
+      "name": "Dewdrop Rock",
+      "hue": 226,
+      "stars": 3,
+      "species": ["leviathan", "reeffish", "llama", "dragon", "goat", "bunny", "deer", "bear", "frog", "fish", "turtle"],
+      "life": 368,
+      "colors": ["#2f7fe0", "#8a7f8d", "#7fa36a", "#d9533b"]
+    },
+    {
+      "n": 8,
+      "name": "Nova Rock",
+      "hue": 203,
+      "stars": 3,
+      "species": [
+        "scorpion",
+        "goat",
+        "llama",
+        "duck",
+        "butterfly",
+        "leviathan",
+        "fish",
+        "reeffish",
+        "kraken",
+        "whale",
+        "bunny",
+        "parrot",
+        "giraffe",
+        "newt",
+        "bear",
+        "deer"
+      ],
+      "life": 453,
+      "colors": ["#8a7f8d", "#8fd65a", "#2f7fe0", "#1fc6c0"]
+    },
+    {
+      "n": 9,
+      "name": "Tumble Globe",
+      "hue": 240,
+      "stars": 3,
+      "species": ["otter", "deer", "bear", "dragon", "goat", "frog", "duck", "reeffish", "bunny", "leviathan", "fish", "llama"],
+      "life": 403,
+      "colors": ["#2f7fe0", "#7fa36a", "#8a7f8d", "#2f9e4f"]
+    },
+    {
+      "n": 10,
+      "name": "Tumble Globe",
+      "hue": 278,
+      "stars": 3,
+      "species": ["dragon", "leviathan", "turtle", "fish", "frog", "goat", "bear", "deer", "llama"],
+      "life": 369,
+      "colors": ["#2f7fe0", "#8a7f8d", "#7fa36a", "#d9533b"]
+    },
+    {
+      "n": 11,
+      "name": "Ember Major",
+      "hue": 277,
+      "stars": 3,
+      "species": ["giraffe", "leviathan", "reeffish", "fish", "turtle", "newt", "llama", "goat", "bear", "deer", "crab", "parrot"],
+      "life": 396,
+      "colors": ["#1fc6c0", "#d9533b", "#7fa36a", "#1f8a3b"]
+    },
+    {
+      "n": 12,
+      "name": "Nova Major",
+      "hue": 242,
+      "stars": 3,
+      "species": [
+        "parrot",
+        "octopus",
+        "flamingo",
+        "duck",
+        "llama",
+        "goat",
+        "fish",
+        "otter",
+        "deer",
+        "bear",
+        "frog",
+        "whale",
+        "bunny",
+        "elephant"
+      ],
+      "life": 333,
+      "colors": ["#8a7f8d", "#7fa36a", "#2f7fe0", "#2f9e4f"]
+    },
+    {
+      "n": 13,
+      "name": "Comet Minor",
+      "hue": 273,
+      "stars": 3,
+      "species": ["whale", "llama", "duck", "reeffish", "deer", "leviathan", "fish", "otter", "bear", "dragon", "goat", "frog"],
+      "life": 417,
+      "colors": ["#2f7fe0", "#8a7f8d", "#1fc6c0", "#2f9e4f"]
+    },
+    {
+      "n": 14,
+      "name": "Tumble Globe",
+      "hue": 254,
+      "stars": 3,
+      "species": [
+        "duck",
+        "fish",
+        "otter",
+        "unicorn",
+        "parrot",
+        "elephant",
+        "bunny",
+        "llama",
+        "bear",
+        "deer",
+        "reeffish",
+        "leviathan",
+        "camel",
+        "crab"
+      ],
+      "life": 446,
+      "colors": ["#2f7fe0", "#1fc6c0", "#7fa36a", "#2f9e4f"]
+    },
+    {
+      "n": 15,
+      "name": "Mossy Haven",
+      "hue": 15,
+      "stars": 3,
+      "species": [
+        "leviathan",
+        "reeffish",
+        "deer",
+        "bear",
+        "frog",
+        "flamingo",
+        "duck",
+        "octopus",
+        "parrot",
+        "sunbird",
+        "scorpion",
+        "goat",
+        "llama",
+        "fish"
+      ],
+      "life": 459,
+      "colors": ["#1fc6c0", "#7fa36a", "#1f8a3b", "#4f8f5a"]
+    },
+    {
+      "n": 16,
+      "name": "Marble Sphere",
+      "hue": 265,
+      "stars": 3,
+      "species": [
+        "llama",
+        "dragon",
+        "goat",
+        "frog",
+        "butterfly",
+        "fish",
+        "whale",
+        "otter",
+        "deer",
+        "bear",
+        "duck",
+        "leviathan",
+        "reeffish"
+      ],
+      "life": 442,
+      "colors": ["#2f7fe0", "#1fc6c0", "#7fa36a", "#4f8f5a"]
+    },
+    {
+      "n": 17,
+      "name": "Marble Sphere",
+      "hue": 305,
+      "stars": 3,
+      "species": [
+        "octopus",
+        "parrot",
+        "sunbird",
+        "scorpion",
+        "bunny",
+        "deer",
+        "leviathan",
+        "fish",
+        "reeffish",
+        "duck",
+        "llama",
+        "newt",
+        "giraffe",
+        "goat"
+      ],
+      "life": 442,
+      "colors": ["#1fc6c0", "#7fa36a", "#d9b84a", "#1f8a3b"]
+    },
+    {
+      "n": 18,
+      "name": "Ember Orb",
+      "hue": 202,
+      "stars": 3,
+      "species": [
+        "giraffe",
+        "duck",
+        "llama",
+        "bear",
+        "deer",
+        "frog",
+        "fish",
+        "otter",
+        "unicorn",
+        "parrot",
+        "leviathan",
+        "flamingo",
+        "reeffish"
+      ],
+      "life": 441,
+      "colors": ["#1fc6c0", "#7fa36a", "#d9b84a", "#2f9e4f"]
+    },
+    {
+      "n": 19,
+      "name": "Cosmo Isle",
+      "hue": 285,
+      "stars": 3,
+      "species": [
+        "leviathan",
+        "reeffish",
+        "duck",
+        "flamingo",
+        "elephant",
+        "bunny",
+        "fish",
+        "otter",
+        "deer",
+        "bear",
+        "dragon",
+        "goat",
+        "parrot",
+        "giraffe",
+        "octopus"
+      ],
+      "life": 485,
+      "colors": ["#1fc6c0", "#2f9e4f", "#4f8f5a", "#d9b84a"]
+    },
+    {
+      "n": 20,
+      "name": "Lumen Sphere",
+      "hue": 15,
+      "stars": 3,
+      "species": [
+        "elephant",
+        "bunny",
+        "parrot",
+        "octopus",
+        "reeffish",
+        "duck",
+        "leviathan",
+        "otter",
+        "deer",
+        "bear",
+        "llama",
+        "goat",
+        "frog",
+        "seal",
+        "fish",
+        "newt"
+      ],
+      "life": 446,
+      "colors": ["#1fc6c0", "#7fa36a", "#2f7fe0", "#2f9e4f"]
+    },
+    {
+      "n": 21,
+      "name": "Dewdrop Sphere",
+      "hue": 245,
+      "stars": 3,
+      "species": ["deer", "bear", "dragon", "goat", "duck", "flamingo", "giraffe", "newt", "parrot", "leviathan", "reeffish", "llama"],
+      "life": 431,
+      "colors": ["#7fa36a", "#1fc6c0", "#4f8f5a", "#d9533b"]
+    },
+    {
+      "n": 22,
+      "name": "Ember World",
+      "hue": 211,
+      "stars": 3,
+      "species": [
+        "octopus",
+        "parrot",
+        "llama",
+        "duck",
+        "flamingo",
+        "leviathan",
+        "reeffish",
+        "fish",
+        "otter",
+        "deer",
+        "giraffe",
+        "bunny",
+        "elephant",
+        "newt",
+        "turtle"
+      ],
+      "life": 447,
+      "colors": ["#1fc6c0", "#d9533b", "#d9b84a", "#2f7fe0"]
+    },
+    {
+      "n": 23,
+      "name": "Cosmo Orb",
+      "hue": 269,
+      "stars": 3,
+      "species": [
+        "scorpion",
+        "newt",
+        "giraffe",
+        "duck",
+        "reeffish",
+        "deer",
+        "bear",
+        "llama",
+        "leviathan",
+        "fish",
+        "crab",
+        "octopus",
+        "parrot",
+        "sunbird",
+        "turtle"
+      ],
+      "life": 463,
+      "colors": ["#1fc6c0", "#d9533b", "#d9b84a", "#4f8f5a"]
+    },
+    {
+      "n": 24,
+      "name": "Mossy World",
+      "hue": 268,
+      "stars": 3,
+      "species": [
+        "newt",
+        "goat",
+        "bear",
+        "deer",
+        "llama",
+        "frog",
+        "reeffish",
+        "leviathan",
+        "fish",
+        "turtle",
+        "duck",
+        "butterfly",
+        "elephant",
+        "scorpion",
+        "camel",
+        "crab"
+      ],
+      "life": 455,
+      "colors": ["#d9533b", "#1fc6c0", "#2f7fe0", "#4f8f5a"]
+    },
+    {
+      "n": 25,
+      "name": "Marble Rock",
+      "hue": 15,
+      "stars": 3,
+      "species": [
+        "elephant",
+        "giraffe",
+        "parrot",
+        "octopus",
+        "wolf",
+        "mammoth",
+        "eagle",
+        "frog",
+        "newt",
+        "reeffish",
+        "flamingo",
+        "duck",
+        "llama",
+        "bunny",
+        "crab"
+      ],
+      "life": 382,
+      "colors": ["#d9533b", "#d9b84a", "#1fc6c0", "#5ed1b8"]
+    },
+    {
+      "n": 26,
+      "name": "Tumble Minor",
+      "hue": 293,
+      "stars": 3,
+      "species": [
+        "camel",
+        "newt",
+        "giraffe",
+        "parrot",
+        "deer",
+        "otter",
+        "fish",
+        "turtle",
+        "reeffish",
+        "kraken",
+        "whale",
+        "goat",
+        "frog",
+        "leviathan",
+        "crab",
+        "duck"
+      ],
+      "life": 476,
+      "colors": ["#1fc6c0", "#d9533b", "#2f9e4f", "#2f7fe0"]
+    },
+    {
+      "n": 27,
+      "name": "Pebble Rock",
+      "hue": 220,
+      "stars": 3,
+      "species": [
+        "deer",
+        "unicorn",
+        "parrot",
+        "giraffe",
+        "leviathan",
+        "reeffish",
+        "fish",
+        "turtle",
+        "newt",
+        "seal",
+        "wolf",
+        "penguin",
+        "bear",
+        "crab"
+      ],
+      "life": 452,
+      "colors": ["#1fc6c0", "#d9533b", "#2f9e4f", "#8fd65a"]
+    },
+    {
+      "n": 28,
+      "name": "Zephyr Isle",
+      "hue": 262,
+      "stars": 3,
+      "species": [
+        "crab",
+        "newt",
+        "flamingo",
+        "duck",
+        "llama",
+        "octopus",
+        "parrot",
+        "elephant",
+        "bunny",
+        "bear",
+        "worldtree",
+        "deer",
+        "giraffe",
+        "reeffish"
+      ],
+      "life": 439,
+      "colors": ["#7fa36a", "#d9533b", "#5ed1b8", "#1fc6c0"]
+    },
+    {
+      "n": 29,
+      "name": "Lumen Globe",
+      "hue": 285,
+      "stars": 3,
+      "species": [
+        "parrot",
+        "duck",
+        "llama",
+        "owl",
+        "wolf",
+        "mammoth",
+        "eagle",
+        "goat",
+        "fish",
+        "crab",
+        "frog",
+        "bear",
+        "deer",
+        "bunny",
+        "leviathan",
+        "reeffish",
+        "octopus"
+      ],
+      "life": 490,
+      "colors": ["#1fc6c0", "#7fa36a", "#5f9a7f", "#8a7f8d"]
+    },
+    {
+      "n": 30,
+      "name": "Marble World",
+      "hue": 15,
+      "stars": 3,
+      "species": ["leviathan", "fish", "turtle", "goat", "frog", "newt", "flamingo", "llama", "duck", "parrot", "octopus", "reeffish"],
+      "life": 400,
+      "colors": ["#d9533b", "#7fa36a", "#2f7fe0", "#1fc6c0"]
+    }
+  ],
+  "lastCollect": 1793793600000,
+  "vault": {
+    "bankedProductionMs": 43200000,
+    "storedDust": 0,
+    "lastTick": 1793793600000
+  },
+  "upgrades": {
+    "vault": 0
+  },
+  "m11Migrated": true,
+  "m115Migrated": true,
+  "boosters": {
+    "shower": 1,
+    "spark": 1,
+    "scope": 1
+  },
+  "gemBoosters": {
+    "shower": 0,
+    "spark": 0,
+    "scope": 0
+  },
+  "piggy": 120,
+  "starter": false,
+  "pass": true,
+  "m3Migrated": true,
+  "nounBudgetMigrated": true,
+  "legacyUnlocks": [],
+  "roadPass": [],
+  "skin": "classic",
+  "skins": ["classic"],
+  "processedTx": ["golden-road00", "golden-theme"],
+  "pendingPiggy": null,
+  "pendingPurchaseRecords": [],
+  "daily": {
+    "last": "",
+    "streak": 0
+  },
+  "quests": {
+    "day": "2026-11-03",
+    "list": [
+      {
+        "id": "2026-11-03-0-0",
+        "template": "meadow2",
+        "species": "otter",
+        "goal": 3,
+        "progress": 0,
+        "claimed": false,
+        "born": "2026-11-03"
+      },
+      {
+        "id": "2026-11-03-1-1",
+        "template": "forest2",
+        "species": "otter",
+        "goal": 3,
+        "progress": 0,
+        "claimed": false,
+        "born": "2026-11-03"
+      },
+      {
+        "id": "2026-11-03-2-2",
+        "template": "reef1",
+        "species": "otter",
+        "goal": 2,
+        "progress": 0,
+        "claimed": false,
+        "born": "2026-11-03"
+      }
+    ],
+    "bonusClaimed": false,
+    "serial": 3
+  },
+  "road": [],
+  "chapters": [],
+  "dailyPlanet": {
+    "day": "",
+    "best": 0,
+    "stars": 0,
+    "rewarded": false
+  },
+  "settings": {
+    "sound": true,
+    "music": true,
+    "haptics": true,
+    "reduceMotion": false,
+    "fullAimLine": false,
+    "planetColours": "classic",
+    "notifications": true,
+    "gameCenter": true,
+    "lang": "",
+    "hemi": "north",
+    "textSize": "standard",
+    "hidePaidLooks": false,
+    "spendingReminder": null,
+    "breakAfterRounds": null,
+    "parentPin": null,
+    "gatePausedUntil": 0,
+    "gentle": false
+  },
+  "tutorial": false,
+  "meta": {
+    "installed": 1793707200000,
+    "lastSeen": 1793707200000,
+    "sessions": 0,
+    "rated": false,
+    "notifAsked": false,
+    "lastWelcomeAt": 0,
+    "passLooksOnly": true,
+    "productEntitlements": ["com.pocketplanet.game.theme.tidepool"]
+  },
+  "stats": {
+    "grown": {},
+    "throws": 0,
+    "plays": 0,
+    "wins": 30,
+    "bestLife": 490,
+    "creatures": 0,
+    "threeStars": 30,
+    "dailies": 0,
+    "rushBest": 0,
+    "rushPlays": 0,
+    "zenThrows": 0,
+    "challenges": 0,
+    "hardWins": 6,
+    "bestStreak": 0
+  },
+  "momentum": {
+    "streak": 0,
+    "shieldDay": "",
+    "paused": false,
+    "scopeReady": false,
+    "scopeWins": 0
+  },
+  "visitors": [],
+  "mementos": [],
+  "rank": 1,
+  "m4RankPaidThrough": 0,
+  "m4RankPaidRanks": [],
+  "habitats": [],
+  "challengeLog": [],
+  "zen": null,
+  "event": {
+    "week": "",
+    "tokens": 0,
+    "claimed": [],
+    "retired": false,
+    "legacyGems": 0
+  },
+  "gcReported": [],
+  "look": {
+    "suit": "suit_sky",
+    "hat": "hat_antenna",
+    "launcher": "l_pad",
+    "trail": "tr_dots",
+    "emote": "em_cheer"
+  },
+  "avatar": {
+    "face": 0,
+    "skin": 3,
+    "hair": 0,
+    "hairColor": 0,
+    "eyes": 0,
+    "expression": "happy"
+  },
+  "wardrobe": [],
+  "favourites": [],
+  "stylesNewSeen": "",
+  "launcher": {
+    "selected": "sling",
+    "tunes": {},
+    "flings": {},
+    "completedRounds": {},
+    "comboThreePlanets": []
+  },
+  "cometPier": {
+    "hardWins": 0,
+    "normalThreeStars": 0,
+    "hardPlanets": [],
+    "normalPlanets": [],
+    "troubles": 0,
+    "fusions": 0,
+    "stage": 0
+  },
+  "m105Migrated": true,
+  "passport": {
+    "first": -1,
+    "second": -1,
+    "set": false,
+    "title": "",
+    "banner": 0,
+    "frame": 0,
+    "badges": [],
+    "badgesSet": false
+  },
+  "home": {
+    "level": 3,
+    "ring": 3,
+    "firstHour": 0,
+    "labFreeUsed": false,
+    "plots": [
+      {
+        "type": "launch_bay",
+        "lv": 2
+      },
+      {
+        "type": "den",
+        "lv": 2
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "gaps": [null, null, null, null, null, null, null, null, null, null],
+    "isleDecor": [null, null, null],
+    "landmarks": {
+      "sprout_garden": {
+        "stage": 0,
+        "progress": [],
+        "rewarded": [],
+        "rounds": [],
+        "arrivals": [],
+        "planets": []
+      },
+      "skyglass": {
+        "stage": 0,
+        "progress": [],
+        "rewarded": [],
+        "rounds": [],
+        "arrivals": [],
+        "planets": []
+      },
+      "sky_bridge": {
+        "stage": 0,
+        "progress": [],
+        "rewarded": [],
+        "rounds": [],
+        "arrivals": [],
+        "planets": []
+      },
+      "comet_pier": {
+        "stage": 0,
+        "progress": [],
+        "rewarded": [],
+        "rounds": [],
+        "arrivals": [],
+        "planets": []
+      },
+      "keepers_beacon": {
+        "stage": 0,
+        "progress": [],
+        "rewarded": [],
+        "rounds": [],
+        "arrivals": [],
+        "planets": []
+      }
+    },
+    "seen": {
+      "celebrations": []
+    },
+    "grownRoundKeys": [],
+    "residents": [
+      {
+        "species": "bunny",
+        "fp": 2,
+        "rewarded": 1
+      },
+      {
+        "species": "fox",
+        "fp": 9,
+        "rewarded": 1
+      },
+      {
+        "species": "otter",
+        "fp": 24,
+        "rewarded": 1
+      }
+    ],
+    "expedition": {
+      "species": "otter",
+      "hours": 4,
+      "ends": 1793808000000,
+      "planet": 5
+    },
+    "lastTick": 1793707200000,
+    "intro": false,
+    "paint": {
+      "ground": "meadow",
+      "sea": "blue"
+    },
+    "paints": [],
+    "friends": {},
+    "accs": []
+  },
+  "lab": {},
+  "feats": {},
+  "forms": {},
+  "formsSeen": [],
+  "flings": {},
+  "sightings": {},
+  "mail": [],
+  "mailSeen": [],
+  "bosses": [],
+  "presets": [null, null, null],
+  "mats": {},
+  "bundles": [],
+  "constellations": [],
+  "dyes": [],
+  "dye": {
+    "main": null,
+    "trim": null
+  },
+  "festival": {
+    "key": "",
+    "spotted": 0,
+    "claimed": []
+  },
+  "voyage": {
+    "week": "2026-W45",
+    "base": 27,
+    "cleared": 2,
+    "stars": [2, 3],
+    "hemisphere": "north",
+    "legacyCatchUpPaid": true
+  },
+  "voyageDone": 0,
+  "fails": {},
+  "continuesUsed": {},
+  "visits": {},
+  "album": {
+    "fest": [],
+    "milestones": 0,
+    "pagesClaimed": [],
+    "pages": [
+      {
+        "bg": 0,
+        "items": []
+      },
+      {
+        "bg": 1,
+        "items": []
+      },
+      {
+        "bg": 0,
+        "items": []
+      }
+    ]
+  },
+  "buddy": {
+    "species": null,
+    "acc": null
+  }
+}

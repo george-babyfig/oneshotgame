@@ -1,0 +1,1495 @@
+import {
+  ROAD_LANDMARKS,
+  roadLandmarkOpen,
+  roadLandmarkState,
+  roadLandmarkReady,
+  buildRoadLandmarkStage,
+  roadLandmarkName,
+  roadLandmarkDecorationName,
+  roadLandmarkTitleName,
+  roadLandmarkAsk,
+  roadLandmarkRouteLabel,
+} from '../../../meta/roadLandmarks';
+import type { RoadLandmarkId } from '../../../meta/m14types';
+import { drawRoadLandmark } from '../../art/landmarks';
+import type { Profile } from '../../../meta/profile';
+import { tripVisible, launchBayBuildable, dyeTab, landsSection } from '../../../meta/reveals';
+import { structIcon } from './panel';
+import { HOMEWORLD_MAX_LEVEL } from '../../../meta/tuning';
+import { h, btn, fmt, modal, toast } from '../../dom';
+import { confirmGemUse } from './gemConfirm';
+import { BOOSTERS } from '../../../meta/tuning';
+import { sfx } from '../../audio';
+import { haptic } from '../../haptics';
+import { burst, effectiveReduceMotion } from '../../motion';
+import { LANDMARKS } from '../../../meta/tuning';
+import { finishLandmark, landmarkFinishStatus, landmarkOpen, landmarkState } from '../../../meta/landmarks';
+import { drawIsleDecoration, drawLandmark } from '../../art/landmarks';
+import { keepsakeFor } from '../../../meta/friends';
+import type { LandmarkId } from '../../../meta/homeworldLife';
+import {
+  BUILDINGS,
+  BUILDING_TYPES,
+  FRIEND_LEVELS,
+  RING_PLOTS,
+  canExpand,
+  candidates,
+  chaptersDone,
+  denCapacity,
+  expand,
+  friendLevel,
+  invite,
+  sendHome,
+  RESIDENT_ACCS,
+  accAvailable,
+  wearAcc,
+  NICKNAMES,
+  setNick,
+  isBestFriend,
+  currentPaint,
+  applyPaint,
+  ownsPaint,
+  PAINTS,
+  availableLands,
+  GROWABLE_LANDS,
+  resolvedGaps,
+  setGapLand,
+  ownedIsleDecorations,
+  setIsleDecoration,
+  type BuildCheck,
+  type Collected,
+} from '../../../meta/homeworld';
+import { BIOMES, SPECIES_BY_ID } from '../../../core/world';
+import { drawCreature, critterCanvas } from '../../art/critters';
+import { renderTripPostcard, shareCanvas } from '../../postcard';
+import { callHome, previewTrip, settleTrips, startTrip, tripPlanets, tripStatus } from '../../../meta/trips';
+import { M13_STRINGS as copy } from '../../../meta/m13strings';
+import type { TripBlock, TripYield } from '../../../meta/m13types';
+import type { Mat } from '../../../meta/constellations';
+import { decodePlanet } from '../../../meta/galaxyCodec';
+import { renderPlanet } from '../../art/planet';
+import { SEASON_EMOJI, SEASON_NAMES, seasonOf } from '../../../meta/seasons';
+import { drawSeason } from '../../art/seasons';
+import { passportName } from '../../../meta/passport';
+import { getLang, planetName, t, tp } from '../../../i18n';
+import { visibleCosmetics, clearStyleSlot, equip, owns, previewLook } from '../../../meta/cosmetics';
+import { homeworldStyleColors } from '../../art/styleRender';
+import { whenText } from '../../../meta/dates';
+import { canvasDpr } from '../../devcapture';
+import { KINDS, type Kind } from '../../../core/world';
+import { MATS, MAT_EMOJI } from '../../../meta/constellations';
+import { labBuildCost, labLevel, labPlot, suggestedFirstLab } from '../../../meta/labs';
+import { firstHourStep, firstHourLab, firstHourFriend } from '../../../meta/firsthour';
+import { LAB_NAME, LAB_TEXT, LAB_FIRST_COPY, ESSENCE_NAME } from '../../../meta/labcopy';
+import { showFirstFriend } from '../../flows/labmoments';
+import { HOME_LEVEL_REQUIREMENTS } from '../../../meta/tuning';
+import { celebrate } from '../../celebrate';
+import { unlocked } from '../../../meta/unlocks';
+import type { App } from '../../app';
+import type { HomeworldLevel } from '../../../meta/homeworldTypes';
+
+const TAU = Math.PI * 2;
+function landmarkPicture(id: LandmarkId, stage: 0 | 1 | 2 | 3 | 4): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  const dpr = canvasDpr();
+  canvas.width = Math.round(112 * dpr);
+  canvas.height = Math.round(100 * dpr);
+  canvas.style.width = '112px';
+  canvas.style.height = '100px';
+  const g = canvas.getContext('2d')!;
+  g.scale(dpr, dpr);
+  drawLandmark(g, id, stage, 56, 53, 88);
+  return canvas;
+}
+
+export function landmarkStageLabel(stage: number): string {
+  return stage >= 4 ? t('Landmark finished') : t('Stage {n} of 4', { n: stage + 1 });
+}
+
+function landmarkLockReason(app: App, id: LandmarkId): string {
+  const p = app.p;
+  const index = LANDMARKS.findIndex((site) => site.id === id);
+  if (p.level < 30) return t('Landmarks open after planet 29');
+  const site = LANDMARKS[index];
+  // Name the first unfinished earlier site: that is the one the child can work on now.
+  const blocker = LANDMARKS.slice(0, index).find((earlier) => landmarkState(p, earlier.id).stage < 4);
+  if (blocker && p.home.level < site.level)
+    return t('Reach Homeworld Level {n} and finish {name}', { n: site.level, name: t(blocker.name) });
+  if (blocker) return t('Finish {name} first', { name: t(blocker.name) });
+  if (p.home.level < site.level) return t('Opens at Homeworld Level {n}', { n: site.level });
+  return t('Landmark is not open yet');
+}
+
+/** Snapshot counters are shown live, without paying a reward from a read path. */
+function visibleRouteProgress(app: App, metric: string, stored: number): number {
+  const p = app.p;
+  if (metric === 'bestFriends') return Math.max(stored, p.home.residents.filter((friend) => friendLevel(friend.fp) >= 5).length);
+  if (metric === 'friendLevelThree') return Math.max(stored, p.home.residents.filter((friend) => friendLevel(friend.fp) >= 3).length);
+  if (metric === 'constellations') return Math.max(stored, p.constellations.length);
+  if (metric === 'bundles') return Math.max(stored, p.bundles.length);
+  return stored;
+}
+
+function missingEssences(app: App, delivery: (typeof LANDMARKS)[number]['delivery']): string {
+  return Object.entries(delivery)
+    .map(([mat, need]) => {
+      const missing = Math.max(0, need! - (app.p.mats[mat as keyof typeof app.p.mats] ?? 0));
+      return missing ? t('{n} more {name}', { n: missing, name: t(ESSENCE_NAME[mat as keyof typeof ESSENCE_NAME]) }) : '';
+    })
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function stageReward(reward: { dust?: number; gems?: number }): string {
+  return [reward.dust ? `✨${reward.dust}` : '', reward.gems ? `💎${reward.gems}` : ''].filter(Boolean).join(' ');
+}
+
+/** A site is always inspectable; only its final delivery changes the save. */
+export function landmarkSheet(app: App, id: LandmarkId, after: () => void) {
+  const p = app.p;
+  const site = LANDMARKS.find((item) => item.id === id)!;
+  const state = landmarkState(p, id);
+  const open = landmarkOpen(p, id);
+  const stage = state.stage;
+  const featStage = Math.min(stage, 2) as 0 | 1 | 2;
+  const ask = stage < 3 ? t(site.stages[featStage].ask) : stage === 3 ? t('Bring Essences to finish this Landmark') : t(site.finish);
+  const routes =
+    !open || stage === 4
+      ? []
+      : stage < 3
+        ? site.stages[featStage].routes.map((route, lane) =>
+            h(
+              'p',
+              { class: 'hw-landmark-route' },
+              t('{name}: {done}/{total}', {
+                name: t(route.label || site.stages[featStage].ask),
+                done: Math.min(visibleRouteProgress(app, route.metric, state.progress[featStage * 2 + lane] ?? 0), route.target),
+                total: route.target,
+              }),
+            ),
+          )
+        : Object.entries(site.delivery).map(([mat, count]) =>
+            h(
+              'p',
+              { class: 'hw-landmark-route' },
+              t('{name}: {have}/{need}', {
+                name: t(ESSENCE_NAME[mat as keyof typeof ESSENCE_NAME]),
+                have: p.mats[mat as keyof typeof p.mats] ?? 0,
+                need: count,
+              }),
+            ),
+          );
+  const status = landmarkFinishStatus(p, id);
+  const m = modal(
+    [
+      h('div', { class: 'm-title' }, t(site.name)),
+      btn(t('Back'), 'ghost wide hw-sheet-back', () => m.close()),
+      h('div', { class: 'hw-landmark-picture', 'aria-hidden': 'true' }, landmarkPicture(id, stage)),
+      h('p', null, open ? landmarkStageLabel(stage) : landmarkLockReason(app, id)),
+      open ? h('p', null, ask) : h('p', { class: 'muted' }, t('Progress starts when this Landmark opens')),
+      ...routes,
+      open
+        ? h(
+            'div',
+            { class: 'hw-landmark-rewards' },
+            h('b', null, t('Rewards')),
+            ...site.stages.map((step, index) =>
+              h(
+                'p',
+                { class: index < stage ? 'hw-reward-earned' : 'hw-landmark-reward' },
+                `${index < stage ? '✓ ' : ''}${t('Stage {n}: {reward}', { n: index + 1, reward: stageReward(step.reward) })}`,
+              ),
+            ),
+            h('p', { class: 'hw-landmark-reward' }, t('Finish to get {reward}', { reward: t(site.finish) })),
+          )
+        : null,
+      stage === 3 && open
+        ? (() => {
+            const finishButton = btn(t('Finish this Landmark'), status === 'ready' ? 'primary wide' : 'ghost wide dim', () => {
+              if (status === 'resources') return toast(t('Bring {list} to finish', { list: missingEssences(app, site.delivery) }));
+              const result = finishLandmark(p, id);
+              if (result !== 'ok')
+                return toast(
+                  result === 'resources'
+                    ? t('Bring {list} to finish', { list: missingEssences(app, site.delivery) })
+                    : landmarkLockReason(app, id),
+                );
+              sfx.levelUp();
+              burst(finishButton, 'bright');
+              // btn() has just fired a light tap; wait past the haptic throttle for the finish beat.
+              window.setTimeout(() => haptic.heavy(), 170);
+              toast(t('{name} is finished! {gift}', { name: t(site.name), gift: t(site.finish) }), 'good');
+              app.save();
+              m.close();
+              after();
+              landmarkSheet(app, id, after);
+            });
+            if (status !== 'ready') {
+              finishButton.setAttribute('aria-disabled', 'true');
+              if (status === 'resources')
+                finishButton.setAttribute(
+                  'aria-label',
+                  t('Finish this Landmark. Bring {list}', { list: missingEssences(app, site.delivery) }),
+                );
+            }
+            return finishButton;
+          })()
+        : null,
+    ],
+    { cls: 'hw-landmark-sheet' },
+  );
+}
+
+/** Choosing a land changes only the Homeworld picture. */
+export function landSheet(app: App, gap: number, after: () => void) {
+  const p = app.p;
+  const current = p.home.gaps[gap];
+  const lands = availableLands(p);
+  const pick = (choice: typeof current) => {
+    if (!setGapLand(p, gap, choice)) return;
+    app.save();
+    sfx.click();
+    m.close();
+    after();
+  };
+  const m = modal(
+    [
+      h('div', { class: 'm-title' }, t('Land {n}', { n: gap + 1 })),
+      btn(t('Back'), 'ghost wide hw-sheet-back', () => m.close()),
+      h('p', { class: 'muted' }, t('Choose a land for this space between plots. You can change it any time.')),
+      btn(t('Automatic'), current === null ? 'primary wide' : 'ghost wide', () => pick(null)),
+      ...GROWABLE_LANDS.map((id) => {
+        const unlocked = lands.includes(id);
+        const button = btn(
+          `${BIOMES[id].deco} ${t(BIOMES[id].name)} · ${Math.min(10, p.stats.grown[id] ?? 0)}/10`,
+          current === id ? 'primary wide' : unlocked ? 'ghost wide' : 'ghost wide dim',
+          () => {
+            if (unlocked) pick(id);
+            else toast(t('Grow 10 {name} sectors to place it here', { name: t(BIOMES[id].name) }));
+          },
+        );
+        if (!unlocked) {
+          button.setAttribute('aria-disabled', 'true');
+          button.setAttribute('aria-label', t('Grow 10 {name} sectors to place it here', { name: t(BIOMES[id].name) }));
+        }
+        return button;
+      }),
+      lands.length ? null : h('p', { class: 'muted' }, t('Grow ten sectors of a land to place it here.')),
+    ],
+    { cls: 'hw-land-sheet' },
+  );
+}
+
+export function isleDecorationName(id: string | null): string {
+  if (!id) return t('Empty spot');
+  if (id === 'decor_sky_loom') return roadLandmarkDecorationName();
+  if (id.startsWith('keepsake:')) {
+    const species = SPECIES_BY_ID[id.slice('keepsake:'.length)];
+    return t('Keepsake from {name}', { name: species ? t(species.name) : id });
+  }
+  return t(BUILDINGS[id as keyof typeof BUILDINGS].name);
+}
+
+/** A visual copy of an owned decoration; placement never spends or changes a plot. */
+export function isleDecorationSheet(app: App, spot: number, after: () => void) {
+  const p = app.p;
+  const options = ownedIsleDecorations(p);
+  const current = p.home.isleDecor[spot];
+  const choose = (id: string | null) => {
+    if (!setIsleDecoration(p, spot, id)) return;
+    app.save();
+    sfx.click();
+    m.close();
+    after();
+  };
+  const choice = (id: string) => {
+    const preview = h('canvas', { 'aria-hidden': 'true' }) as HTMLCanvasElement;
+    preview.width = 54;
+    preview.height = 44;
+    const g = preview.getContext('2d');
+    if (g) drawIsleDecoration(g, id, 27, 34, 35);
+    const button = btn(isleDecorationName(id), current === id ? 'primary wide' : 'ghost wide', () => choose(id));
+    button.prepend(preview);
+    return button;
+  };
+  const m = modal([
+    h('div', { class: 'm-title' }, t('Isle spot {n}', { n: spot + 1 })),
+    h('p', { class: 'muted' }, t('Choose a decoration for the Floating Isle. You can move it any time.')),
+    btn(t('Clear this spot'), current === null ? 'primary wide' : 'ghost wide', () => choose(null)),
+    ...options.map(choice),
+    options.length ? null : h('p', { class: 'muted' }, t('Earn or build a decoration to place it here.')),
+    btn(t('Back'), 'ghost wide', () => m.close()),
+  ]);
+}
+
+/** All canvas actions have a text route for VoiceOver and switch access. */
+export function homeworldListSheet(app: App, onPlot: (index: number) => void, after: () => void) {
+  const p = app.p;
+  const m = modal(
+    [
+      h('div', { class: 'm-title' }, t('Homeworld list')),
+      btn(t('Back'), 'ghost wide hw-sheet-back', () => m.close()),
+      h('div', { class: 'sec-title' }, t('Plots and lands')),
+      ...p.home.plots.flatMap((building, index) => [
+        btn(
+          t('Plot {n}: {description}', {
+            n: index + 1,
+            description:
+              building?.type === 'lab' && building.kind
+                ? t('{name}, level {level}', { name: t(LAB_NAME[building.kind]), level: labLevel(p, building.kind) })
+                : building
+                  ? t('{name}, level {level}', { name: t(BUILDINGS[building.type].name), level: building.lv })
+                  : t('Empty plot'),
+          }),
+          'ghost wide',
+          () => {
+            m.close();
+            onPlot(index);
+          },
+        ),
+        landsSection(p)
+          ? btn(
+              t('Land {n}: {name}', {
+                n: index + 1,
+                name: p.home.gaps[index] === null ? t('Automatic land') : t(BIOMES[resolvedGaps(p)[index] ?? 'barren'].name),
+              }),
+              'ghost wide',
+              () => {
+                m.close();
+                landSheet(app, index, after);
+              },
+            )
+          : null,
+      ]),
+      h('div', { class: 'sec-title' }, t('Friends')),
+      btn(t('Friends ({n})', { n: p.home.residents.length }), 'ghost wide', () => {
+        m.close();
+        residentsSheet(app, after);
+      }),
+      ...p.home.residents.map((friend) =>
+        btn(
+          t('Friend: {name}, friendship level {n}', {
+            name: friend.nick ?? t(SPECIES_BY_ID[friend.species].name),
+            n: friendLevel(friend.fp),
+          }),
+          'ghost wide',
+          () => {
+            m.close();
+            residentsSheet(app, after);
+          },
+        ),
+      ),
+      ...(p.level >= 30
+        ? [
+            h('div', { class: 'sec-title' }, t('Landmarks')),
+            ...LANDMARKS.map((site) =>
+              btn(
+                t('Landmark {name}: {stage}', { name: t(site.name), stage: landmarkStageLabel(landmarkState(p, site.id).stage) }),
+                landmarkOpen(p, site.id) ? 'ghost wide' : 'ghost wide dim',
+                () => {
+                  m.close();
+                  landmarkSheet(app, site.id, after);
+                },
+              ),
+            ),
+          ]
+        : []),
+      ...(landmarkState(p, 'sky_bridge').stage === 4
+        ? [
+            h('div', { class: 'sec-title' }, t('Floating Isle')),
+            ...ROAD_LANDMARKS.filter((site) => roadLandmarkOpen(p, site.id)).map((site) =>
+              btn(roadLandmarkName(), 'ghost wide', () => {
+                m.close();
+                roadLandmarkSheet(app, site.id, after);
+              }),
+            ),
+            ...p.home.isleDecor.map((id, spot) =>
+              btn(t('Isle spot {n}: {name}', { n: spot + 1, name: isleDecorationName(id) }), 'ghost wide', () => {
+                m.close();
+                isleDecorationSheet(app, spot, after);
+              }),
+            ),
+          ]
+        : []),
+    ],
+    { cls: 'hw-homeworld-list-sheet' },
+  );
+}
+
+export const REASON: Record<BuildCheck | 'locked', string> = {
+  ok: '',
+  ring: 'Grow your Homeworld first',
+  max: 'You have the most of these',
+  drones: 'All drones are busy',
+  dust: 'Not enough stardust',
+  gems: 'Not enough gems',
+  busy: 'Already being built',
+  occupied: 'This plot is taken',
+  maxlv: 'Fully upgraded',
+  locked: 'Unlock this object first',
+};
+
+export function gotText(c: Collected) {
+  const parts: string[] = [];
+  if (c.dust) parts.push(`✨${fmt(c.dust)}`);
+  if (c.gems) parts.push(`💎${c.gems}`);
+  const e = Object.fromEntries(Object.entries(BOOSTERS).map(([id, def]) => [id, def.emoji]));
+  for (const [k, v] of Object.entries(c.boosters)) if (v) parts.push(`${e[k]}×${v}`);
+  return parts.join('  ');
+}
+
+export function essenceSheet(app: App) {
+  const p = app.p;
+  const m = modal(
+    [
+      h('div', { class: 'm-title' }, t(LAB_TEXT.pouch)),
+      ...MATS.map((mat) => {
+        const uses = [
+          ...(Object.keys(LAB_NAME) as Kind[])
+            .filter((kind) => unlocked(p, kind) || labPlot(p, kind) >= 0)
+            .filter((kind) =>
+              kind === 'seed' || kind === 'sun'
+                ? mat === 'leaf'
+                : ({ rock: 'stone', ice: 'frost', magma: 'ember', storm: 'dew' } as Partial<Record<Kind, string>>)[kind] === mat,
+            )
+            .map((kind) => t(LAB_NAME[kind])),
+          ...(unlocked(p, 'star_atlas') ? [t('Star Atlas')] : []),
+          ...(dyeTab(p) ? [t('Dyes')] : []),
+        ];
+        return h(
+          'div',
+          { class: 'essence-row' },
+          h('b', null, `${MAT_EMOJI[mat]} ${t(ESSENCE_NAME[mat])} · ${fmt(p.mats[mat] ?? 0)}`),
+          uses.length
+            ? h(
+                'small',
+                null,
+                t('What uses it: {list}', {
+                  list: new Intl.ListFormat(getLang(), { style: 'long', type: 'conjunction' }).format(uses),
+                }),
+              )
+            : null,
+        );
+      }),
+      btn(t('Close'), 'ghost wide', () => m.close()),
+    ],
+    { cls: 'essence-sheet' },
+  );
+}
+
+export function firstHourSheet(app: App, refresh: () => void) {
+  const step = firstHourStep(app.p);
+  if (step === 'done') return;
+  const choice = suggestedFirstLab(app.p);
+  let chosen = choice;
+  const introText = h('p', null, t(LAB_FIRST_COPY[choice]));
+  let buildButton: HTMLButtonElement;
+  const buildLabel = (kind: Kind) =>
+    labBuildCost(app.p, kind) === 0
+      ? t(LAB_TEXT.buildSelected, { name: t(LAB_NAME[kind]) })
+      : t('Build {name} · ✨{cost}', { name: t(LAB_NAME[kind]), cost: fmt(labBuildCost(app.p, kind)) });
+  const choiceButtons: HTMLButtonElement[] = [];
+  for (const kind of Object.keys(KINDS) as Kind[]) {
+    if (KINDS[kind].unlock > app.p.level) continue;
+    const button = btn(t(LAB_NAME[kind]), kind === choice ? 'primary' : 'ghost', () => {
+      chosen = kind;
+      introText.textContent = t(LAB_FIRST_COPY[kind]);
+      buildButton.textContent = buildLabel(kind);
+      choiceButtons.forEach((item) => {
+        item.classList.toggle('primary', item === button);
+        item.classList.toggle('ghost', item !== button);
+      });
+    });
+    choiceButtons.push(button);
+  }
+  buildButton = btn(buildLabel(choice), 'primary wide', () => {
+    const result = firstHourLab(app.p, chosen, undefined, Date.now());
+    if (result !== 'ok') return toast(t(REASON[result]));
+    app.save();
+    m.close();
+    refresh();
+    firstHourSheet(app, refresh);
+  });
+  const buildingLab = step === 'friend' ? app.p.home.plots.find((b) => b?.type === 'lab' && b.done && b.done > Date.now()) : null;
+  const m = modal(
+    [
+      h('div', { class: 'm-title' }, t(LAB_TEXT.firstTitle)),
+      h('p', null, t(step === 'lab' ? LAB_TEXT.firstLab : LAB_TEXT.firstFriend)),
+      step === 'lab'
+        ? introText
+        : h(
+            'p',
+            null,
+            buildingLab?.done
+              ? t('{name} is being built · ready at {time}', {
+                  name: t(LAB_NAME[buildingLab.kind!]),
+                  time: whenText(buildingLab.done, Date.now(), getLang()),
+                })
+              : t(LAB_TEXT.firstFriendCopy),
+          ),
+      step === 'lab'
+        ? h('div', { class: 'first-lab-choices' }, ...choiceButtons)
+        : btn(t(LAB_TEXT.firstFriend), buildingLab ? 'ghost wide dim' : 'primary wide', () => {
+            if (buildingLab?.done && buildingLab.done > Date.now())
+              return toast(
+                t('{name} is being built · ready at {time}', {
+                  name: t(LAB_NAME[buildingLab.kind!]),
+                  time: whenText(buildingLab.done, Date.now(), getLang()),
+                }),
+              );
+            const result = firstHourFriend(app.p, Date.now());
+            if (!result) return toast(t('Make room for a friend first'));
+            app.save();
+            m.close();
+            refresh();
+            showFirstFriend(app, result.species);
+          }),
+      step === 'lab' ? buildButton : null,
+      btn(t('Close'), 'ghost wide', () => m.close()),
+    ],
+    { cls: 'first-hour' },
+  );
+}
+
+// ---------------------------------------------------------------- sheets
+export function residentsSheet(app: App, after: () => void) {
+  const p = app.p;
+  const home = p.home;
+  const cap = denCapacity(home);
+  const rows = home.residents.map((r) => {
+    const sp = SPECIES_BY_ID[r.species];
+    const lv = friendLevel(r.fp);
+    const away = p.level >= 21 && home.expedition?.species === r.species;
+    const next = FRIEND_LEVELS[lv] ?? null;
+    const friendNote = away
+      ? `${copy.onTrip({ friend: r.nick ?? t(sp.name) })} · ${t('Back at {time}', { time: whenText(home.expedition!.ends, Date.now(), getLang()) })}`
+      : unlocked(p, 'buddy')
+        ? t('Wins with this Buddy and Wishes grow friendship')
+        : unlocked(p, 'quests')
+          ? t('Wishes grow friendship')
+          : t('Your friend is at home here');
+    return h(
+      'div',
+      { class: 'hw-res' },
+      critterCanvas(r.species, 52, 0.4, r.acc),
+      h(
+        'div',
+        { class: 'grow' },
+        h(
+          'div',
+          { class: 'nick-row' },
+          h(
+            'button',
+            { class: 'nick', onclick: () => (m.close(), nickSheet(app, r.species, () => residentsSheet(app, after))) },
+            r.nick ? h('b', null, r.nick) : null,
+            h('small', null, r.nick ? ` · ${t(sp.name)}` : t(sp.name)),
+            ' ✏️',
+          ),
+          h(
+            'button',
+            {
+              class: 'dress',
+              'aria-label': t('Dress up {name}', { name: r.nick ?? t(sp.name) }),
+              onclick: () => (m.close(), accSheet(app, r.species, () => residentsSheet(app, after))),
+            },
+            '👒',
+          ),
+          isBestFriend(r) ? h('span', { class: 'ribbon' }, t('🎀 Best friends')) : null,
+        ),
+        h(
+          'div',
+          { class: 'hearts' },
+          '💖'.repeat(lv) + '🤍'.repeat(FRIEND_LEVELS.length - lv),
+          next !== null ? h('small', { class: 'muted' }, ` ${r.fp}/${next}`) : null,
+        ),
+        h('small', { class: 'muted' }, friendNote),
+        lv >= 3 ? h('small', { class: 'hw-signature' }, t('Signature move: {name}', { name: t('Star twirl') })) : null,
+        keepsakeFor(r)
+          ? h(
+              'span',
+              { class: 'hw-keepsake' },
+              critterCanvas(r.species, 30, 0, r.acc),
+              t('Keepsake from {name}', { name: r.nick ?? t(sp.name) }),
+            )
+          : null,
+      ),
+      away
+        ? null
+        : h(
+            'button',
+            {
+              class: 'hw-x',
+              'aria-label': t('Say goodbye'),
+              onclick: () => {
+                sendHome(p, r.species);
+                app.save();
+                m.close();
+                residentsSheet(app, after);
+                after();
+              },
+            },
+            '×',
+          ),
+    );
+  });
+  const free = cap - home.residents.length;
+  const cands = candidates(p);
+  const invites =
+    free > 0 && cands.length
+      ? h(
+          'div',
+          { class: 'hw-invite' },
+          ...cands.map((s) =>
+            h(
+              'button',
+              {
+                class: 'lb',
+                onclick: () => {
+                  if (!invite(p, s.id)) return;
+                  sfx.chest();
+                  haptic.success();
+                  toast(t('{name} moved in!', { name: t(s.name) }), 'good');
+                  app.save();
+                  m.close();
+                  residentsSheet(app, after);
+                  after();
+                },
+              },
+              critterCanvas(s.id, 44),
+              h('small', null, t(s.name)),
+            ),
+          ),
+        )
+      : null;
+  const m = modal([
+    h('div', { class: 'm-title' }, t('Friends'), h('small', { class: 'muted' }, ` ${home.residents.length}/${cap}`)),
+    ...rows,
+    cap === 0 ? h('p', { class: 'muted' }, t('Build a Critter Den so creatures can move in.')) : null,
+    free > 0 && cands.length
+      ? h('div', { class: 'sec-title' }, tp(free, 'Invite a creature ({n} room left)', 'Invite a creature ({n} rooms left)'))
+      : null,
+    invites,
+    free > 0 && !cands.length && cap > 0 ? h('p', { class: 'muted' }, t('Discover more creatures in your levels to invite them.')) : null,
+    // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
+    btn(t('Back'), 'ghost wide', () => m.close()),
+  ]);
+}
+
+export { tripVisible } from '../../../meta/reveals';
+
+export function tripBlockText(block: TripBlock | null): string {
+  switch (block) {
+    case 'bay_level':
+      return copy.bayUnlock();
+    case 'no_friend':
+    case 'only_buddy':
+      return copy.inviteFriend();
+    case 'no_planets':
+      return copy.winPlanet();
+    case 'needs_win':
+      return copy.needsWin();
+    case 'clock':
+      return t('Check your device clock to send a trip');
+    default:
+      return copy.tripEssences();
+  }
+}
+
+export function tripLabel(p: Profile): string {
+  if (p.home.tripReturn) return `${t('Collect')} · ${copy.friendBack()}`;
+  if (p.home.expedition)
+    return `${copy.trip()} · ${t('Back at {time}', { time: whenText(p.home.expedition.ends, Date.now(), getLang()) })}`;
+  return copy.trip();
+}
+
+function friendName(p: Profile, species: string): string {
+  return p.home.residents.find((r) => r.species === species)?.nick ?? t(SPECIES_BY_ID[species].name);
+}
+
+function essenceText(mats: TripYield['mats'], spoken = false): string {
+  return MATS.filter((mat) => (mats[mat] ?? 0) > 0)
+    .map((mat) => `${spoken ? t(ESSENCE_NAME[mat]) : MAT_EMOJI[mat]} ${fmt(mats[mat]!)}`)
+    .join(' · ');
+}
+
+function tripRewards(yielded: TripYield): HTMLElement {
+  return h(
+    'div',
+    { class: 'trip-rewards' },
+    h('span', { 'aria-label': essenceText(yielded.mats, true) }, essenceText(yielded.mats)),
+    h('span', null, `💎 ${fmt(yielded.gems)}`),
+    h('span', null, copy.friendshipPoints(yielded.fp)),
+  );
+}
+
+function tripPlanetPicture(entry: Profile['galaxy'][number]): HTMLCanvasElement {
+  const c = h('canvas', { class: 'trip-planet', role: 'img', 'aria-label': planetName(entry.name) });
+  const dpr = canvasDpr();
+  c.width = c.height = Math.round(144 * dpr);
+  const g = c.getContext('2d')!;
+  g.scale(dpr, dpr);
+  const planet = decodePlanet(entry);
+  renderPlanet(g, planet, {
+    cx: 72,
+    cy: 72,
+    R: 55,
+    rot: -Math.PI / 2,
+    time: 0.5,
+    glow: '#c9c2ff',
+    lifeK: 0.9,
+    creature: (gg, i, x, y, a) => {
+      const species = planet.sectors[i].species;
+      if (species) drawCreature(gg, species, x, y, a + Math.PI / 2, 14, 0.5);
+    },
+  });
+  return c;
+}
+
+export interface TripSheetOptions {
+  after?: () => void;
+}
+
+/** All rewards have already settled; opening or dismissing a postcard never pays. */
+export function tripSheet(app: App, opts: TripSheetOptions = {}) {
+  const p = app.p;
+  const after = opts.after ?? (() => app.refresh());
+  if (!tripVisible(p)) return;
+  if (settleTrips(p)) {
+    app.save();
+    after();
+  }
+  const status = tripStatus(p);
+  const returned = status.returned;
+  if (returned) {
+    const entry = p.galaxy.find((row) => row.n === returned.n);
+    const title = entry ? copy.postcard({ planet: planetName(entry.name) }) : copy.friendBack();
+    const card = entry ? renderTripPostcard(entry, returned.species) : critterCanvas(returned.species, 144);
+    card.classList.add('trip-postcard');
+    card.setAttribute('role', 'img');
+    card.setAttribute('aria-label', title);
+    const acknowledge = () => {
+      if (p.home.tripReturn === returned) p.home.tripReturn = null;
+      p.home.seen.celebrations = p.home.seen.celebrations.filter((id) => id !== `trip:${returned.n}`);
+      app.save();
+      after();
+    };
+    const m = modal(
+      [
+        h(
+          'div',
+          { class: 'm-title' },
+          entry ? copy.returned({ friend: friendName(p, returned.species), planet: planetName(entry.name) }) : copy.friendBack(),
+        ),
+        card,
+        returned.yield
+          ? tripRewards(returned.yield)
+          : returned.legacyLoot
+            ? h('div', { class: 'reward-list' }, gotText(returned.legacyLoot))
+            : null,
+        entry
+          ? btn(copy.sharePostcard(), 'ghost wide', () => {
+              void shareCanvas(renderTripPostcard(entry, returned.species), title, 'trip-postcard');
+            })
+          : null,
+        btn(t('Back'), 'primary wide', () => m.close()),
+      ],
+      { cls: 'trip-sheet trip-return', onClose: acknowledge, onAbort: acknowledge },
+    );
+    sfx.chest();
+    haptic.success();
+    return;
+  }
+  if (status.trip) {
+    const trip = status.trip;
+    const friend = friendName(p, trip.species);
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const stop = () => clearInterval(timer);
+    const recheck = () => {
+      const paid = settleTrips(p);
+      if (p.home.expedition === trip) return false;
+      if (paid) app.save();
+      m.close();
+      after();
+      tripSheet(app, opts);
+      return true;
+    };
+    const m = modal(
+      [
+        h('div', { class: 'm-title' }, copy.trips()),
+        critterCanvas(trip.species, 90),
+        h('p', null, copy.onTrip({ friend })),
+        h('p', null, t('Back at {time}', { time: whenText(trip.ends, Date.now(), getLang()) })),
+        h('p', { class: 'muted' }, copy.winSpeedup()),
+        btn(copy.callHome({ friend }), 'primary wide', () => {
+          if (recheck()) return;
+          if (!callHome(p)) return;
+          app.save();
+          m.close();
+          after();
+          document.dispatchEvent(new CustomEvent('homeworld-trip-moment', { detail: { species: trip.species, kind: 'return' } }));
+        }),
+        btn(t('Back'), 'ghost wide', () => m.close()),
+      ],
+      { cls: 'trip-sheet trip-flight', onClose: stop, onAbort: stop },
+    );
+    timer = setInterval(recheck, 1000);
+    return;
+  }
+  if (status.block) {
+    const m = modal(
+      [
+        h('div', { class: 'm-title' }, copy.trips()),
+        h('p', null, tripBlockText(status.block)),
+        status.block === 'only_buddy' ? h('p', { class: 'muted' }, copy.buddyHome()) : null,
+        btn(t('Back'), 'ghost wide', () => m.close()),
+      ],
+      { cls: 'trip-sheet' },
+    );
+    return;
+  }
+
+  let hours = status.options[status.options.length - 1];
+  let filter: Mat | null = null;
+  const rows = tripPlanets(p);
+  const list = h('div', { class: 'trip-planets', role: 'list', 'aria-label': copy.pickPlanet() });
+  const filters = h('div', { class: 'trip-filters', role: 'group', 'aria-label': copy.tripEssences() });
+  const drawRows = () => {
+    list.replaceChildren(
+      ...rows
+        .map((row) => ({ row, promise: rowPreview(row.n) }))
+        .filter((item) => item.promise && (!filter || (item.promise.yield.mats[filter] ?? 0) > 0))
+        .map(({ row, promise }) => {
+          const label = copy.planetLabel({
+            planet: planetName(row.entry.name),
+            stars: row.entry.stars,
+            list: essenceText(promise!.yield.mats, true),
+          });
+          const button = btn(
+            h(
+              'span',
+              { class: 'stack' },
+              h('b', null, planetName(row.entry.name)),
+              h('small', null, `${'★'.repeat(row.entry.stars)} · ${essenceText(promise!.yield.mats)}`),
+            ),
+            'ghost wide trip-planet-row',
+            () => preview(row.n),
+          );
+          button.setAttribute('aria-label', label);
+          button.setAttribute('data-planet', String(row.n));
+          return h('div', { role: 'listitem' }, button);
+        }),
+    );
+    filters.replaceChildren(
+      ...([null, ...MATS] as (Mat | null)[]).map((mat) => {
+        const button = btn(mat ? `${MAT_EMOJI[mat]} ${t(ESSENCE_NAME[mat])}` : copy.all(), 'ghost small', () => {
+          filter = mat;
+          drawRows();
+        });
+        button.setAttribute('aria-pressed', String(filter === mat));
+        return button;
+      }),
+    );
+  };
+  const durations = h('div', { class: 'trip-hours', role: 'group', 'aria-label': copy.trips() });
+  const drawHours = () =>
+    durations.replaceChildren(
+      ...status.options.map((option) => {
+        const button = btn(copy.tripHours(option), 'ghost', () => {
+          hours = option;
+          drawHours();
+          drawRows();
+        });
+        button.setAttribute('aria-pressed', String(hours === option));
+        return button;
+      }),
+    );
+  const picker = modal(
+    [
+      h('div', { class: 'm-title' }, copy.pickPlanet()),
+      h('p', { class: 'muted trip-intro' }, copy.tripEssences()),
+      durations,
+      filters,
+      list,
+      status.options.length < 3 ? h('small', { class: 'muted' }, copy.longerTrips({ n: status.options.length === 1 ? 3 : 4 })) : null,
+      btn(t('Back'), 'ghost wide trip-back', () => picker.close()),
+    ],
+    { cls: 'trip-sheet trip-picker' },
+  );
+  drawRows();
+  drawHours();
+
+  // Sole Trouble counters stay home by default; an explicit choice is always reachable.
+  function rowPreview(n: number) {
+    return previewTrip(p, n, hours) ?? p.home.residents.map((r) => previewTrip(p, n, hours, r.species)).find(Boolean) ?? null;
+  }
+  function chooseFriend(n: number, back: () => void, exclude?: string) {
+    const friends = modal(
+      [
+        h('div', { class: 'm-title' }, copy.someoneElse()),
+        ...p.home.residents
+          .filter((r) => r.species !== exclude && previewTrip(p, n, hours, r.species))
+          .map((r) =>
+            btn(h('span', { class: 'trip-friend-choice' }, critterCanvas(r.species, 44), friendName(p, r.species)), 'ghost wide', () => {
+              friends.close();
+              preview(n, r.species);
+            }),
+          ),
+        btn(t('Back'), 'ghost wide', () => {
+          friends.close();
+          back();
+        }),
+      ],
+      { cls: 'trip-sheet trip-friends' },
+    );
+  }
+  function preview(n: number, species?: string) {
+    const chosen = previewTrip(p, n, hours, species);
+    if (!chosen) {
+      if (rowPreview(n)) {
+        picker.close();
+        chooseFriend(n, () => tripSheet(app, opts));
+      }
+      return;
+    }
+    picker.close();
+    const friend = friendName(p, chosen.species);
+    const m = modal(
+      [
+        h('div', { class: 'm-title' }, copy.sendFriend()),
+        h('div', { class: 'trip-preview-art' }, tripPlanetPicture(chosen.entry), critterCanvas(chosen.species, 72)),
+        h('b', null, planetName(chosen.entry.name)),
+        h('p', { class: 'trip-friend' }, copy.friendGoing({ friend })),
+        chosen.match ? h('p', { class: 'trip-match' }, copy.homeMatch({ friend })) : null,
+        h('b', null, copy.bringsBack()),
+        tripRewards(chosen.yield),
+        h('p', null, t('Back at {time}', { time: whenText(chosen.ends, Date.now(), getLang()) })),
+        h(
+          'div',
+          { class: 'trip-actions' },
+          btn(t('Send'), 'primary wide', () => {
+            if (chosen.ends <= Date.now()) {
+              m.close();
+              preview(n, chosen.species);
+              return;
+            }
+            const result = startTrip(p, n, hours, chosen.species, Date.now(), chosen.ends);
+            if (result !== 'ok') {
+              toast(tripBlockText(result));
+              return;
+            }
+            app.save();
+            m.close();
+            after();
+            if (!document.querySelector('.hw-canvas')) app.showHomeworld();
+            document.dispatchEvent(new CustomEvent('homeworld-trip-moment', { detail: { species: chosen.species, kind: 'send' } }));
+            sfx.launch();
+            haptic.medium();
+          }),
+          btn(copy.someoneElse(), 'ghost wide', () => {
+            m.close();
+            chooseFriend(n, () => preview(n, chosen.species), chosen.species);
+          }),
+          btn(t('Cancel'), 'ghost wide', () => {
+            m.close();
+            tripSheet(app, opts);
+          }),
+          btn(t('Back'), 'ghost wide', () => m.close()),
+        ),
+      ],
+      { cls: 'trip-sheet trip-preview' },
+    );
+  }
+}
+
+function levelOpening(p: Profile, level: HomeworldLevel): string {
+  switch (level) {
+    case 1:
+      return t('Six plots and your first Labs');
+    case 2:
+      return launchBayBuildable(p) ? t('Two more plots, Greenhouse and Launch Bay') : t('Two more plots and a Greenhouse');
+    case 3:
+      return t('Two more plots and a third drone');
+    case 4:
+      return t('Two more plots and stronger Labs');
+    case 5:
+      return t('Fourteen plots, a ring of light and crystal buildings');
+  }
+}
+
+export function levelChecklist(app: App, level: HomeworldLevel): HTMLElement {
+  const p = app.p;
+  const need = HOME_LEVEL_REQUIREMENTS[level];
+  const item = (done: boolean, label: string) => h('div', { class: `hw-check${done ? ' done' : ''}` }, done ? '✓ ' : '○ ', label);
+  return h(
+    'div',
+    { class: 'hw-level-checklist' },
+    item(chaptersDone(p) >= need.chapter, t('Finish chapter {n}', { n: need.chapter })),
+    item(p.dust >= need.dust, t('✨ {have}/{need} stardust', { have: fmt(p.dust), need: fmt(need.dust) })),
+    ...Object.entries(need.essence).map(([mat, count]) =>
+      item(
+        (p.mats[mat as keyof typeof p.mats] ?? 0) >= count,
+        t('{name}: {have}/{need}', {
+          name: t(ESSENCE_NAME[mat as keyof typeof ESSENCE_NAME]),
+          have: p.mats[mat as keyof typeof p.mats] ?? 0,
+          need: count,
+        }),
+      ),
+    ),
+  );
+}
+
+export function levelSheet(app: App, after: () => void) {
+  const p = app.p;
+  const home = p.home;
+  if (home.level >= HOMEWORLD_MAX_LEVEL) {
+    const done = modal([
+      h('div', { class: 'm-title' }, t('Homeworld Level 5')),
+      h('p', null, t('Your Homeworld is fully grown. 🌍')),
+      btn(t('Back'), 'ghost wide', () => done.close()),
+    ]);
+    return;
+  }
+  const r = (home.level + 1) as HomeworldLevel;
+  const check = canExpand(p);
+  const unlocks = BUILDING_TYPES.filter((x) => BUILDINGS[x].ring === r && (x !== 'launch_bay' || launchBayBuildable(p))).map((x) => {
+    const img = structIcon(x, 1, 48);
+    img.alt = t(BUILDINGS[x].name);
+    return img;
+  });
+  const planet = (level: number, label: string) =>
+    h(
+      'div',
+      { class: 'hw-planet-stage' },
+      h(
+        'div',
+        { class: `hw-mini-planet level-${level}`, 'aria-hidden': 'true' },
+        ...Array.from({ length: level + 1 }, (_, i) => h('i', { style: `--i:${i}` })),
+      ),
+      h('small', null, label),
+    );
+  const m = modal([
+    h('div', { class: 'm-title' }, t('Grow your Homeworld to Level {n}', { n: r })),
+    h('div', { class: 'hw-level-preview' }, planet(home.level, t('Now')), planet(r, t('Next'))),
+    h(
+      'div',
+      { class: 'howto' },
+      h('p', null, t('🌍 {n} plots (now {m})', { n: RING_PLOTS[r], m: RING_PLOTS[home.level] })),
+      h('p', null, t('⬆️ Labs can reach level {n}', { n: Math.min(5, r + 1) })),
+      unlocks.length ? h('div', { class: 'row', style: 'flex-wrap:wrap' }, ...unlocks) : null,
+      levelChecklist(app, r),
+    ),
+    btn(t('Grow to Level {n}', { n: r }), check === 'ok' ? 'primary wide' : 'ghost wide dim', () => {
+      const res = expand(p);
+      if (res === 'chapter') return toast(t('Finish chapter {n} first', { n: HOME_LEVEL_REQUIREMENTS[r].chapter }));
+      if (res === 'dust' || res === 'essence') return toast(t('Check what your next Level needs'));
+      if (res !== 'ok') return;
+      app.save();
+      m.close();
+      after();
+      const skyline = h(
+        'div',
+        { class: `hw-skyline-change level-${r}`, 'aria-hidden': 'true' },
+        planet(r - 1, t('Before')),
+        planet(r, t('After')),
+      );
+      const celebration = modal(
+        [
+          skyline,
+          h('div', { class: 'm-title' }, t('Homeworld Level {n}!', { n: r })),
+          h('p', null, levelOpening(p, r)),
+          btn(t('Wonderful!'), 'primary wide', () => {
+            show.skip();
+            celebration.close();
+          }),
+        ],
+        { cls: 'hw-level-up' },
+      );
+      const show = celebrate('homeworld', {
+        root: celebration.el,
+        reduceMotion: effectiveReduceMotion(p),
+        duration: 1700,
+        beats: [
+          {
+            at: 120,
+            play: (instant) => {
+              if (!instant) {
+                sfx.levelUp();
+                haptic.heavy();
+              }
+              skyline.classList.add('grown');
+            },
+          },
+        ],
+      });
+    }),
+    btn(t('Back'), 'ghost wide', () => m.close()),
+  ]);
+}
+
+// ---------------------------------------------------------------- paint
+export function paintSheet(app: App) {
+  const p = app.p;
+  const cur = currentPaint(p);
+  const styled = homeworldStyleColors(previewLook(p));
+  const row = (channel: 'ground' | 'sea') =>
+    h(
+      'div',
+      { class: 'paint-row' },
+      ...PAINTS.filter((x) => x.channel === channel && ((p.chapters.length >= 1 && p.meta.sessions > 1) || ownsPaint(p, x.id))).map((x) => {
+        const owned = ownsPaint(p, x.id);
+        const on = !styled[channel] && cur[channel].id === x.id;
+        return h(
+          'button',
+          {
+            class: `paint${on ? ' on' : ''}${owned ? '' : ' locked'}`,
+            onclick: async () => {
+              if (
+                !owned &&
+                x.gems &&
+                !(await confirmGemUse(
+                  t(x.name),
+                  x.gems,
+                  h('i', { style: `display:block;width:96px;height:96px;border-radius:50%;background:${x.colors[0]}` }),
+                ))
+              )
+                return;
+              const r = applyPaint(p, x.id);
+              if (r === 'gems') return app.needGems();
+              if (r === 'unavailable') return;
+              clearStyleSlot(p, channel);
+              sfx.click();
+              haptic.light();
+              app.save();
+              m.close();
+              paintSheet(app);
+            },
+          },
+          h('i', { style: `background:radial-gradient(circle at 35% 30%,${x.colors[0]},${x.colors[1]} 55%,${x.colors[2]})` }),
+          h('small', null, t(x.name)),
+          h('b', null, owned ? (on ? '✓' : '') : `💎${x.gems}`),
+        );
+      }),
+      ...visibleCosmetics(p, channel)
+        .filter((x) => owns(p, x.id))
+        .map((x) =>
+          h(
+            'button',
+            {
+              class: `paint${previewLook(p)[channel] === x.id ? ' on' : ''}`,
+              onclick: () => {
+                equip(p, x.id);
+                sfx.click();
+                haptic.light();
+                app.save();
+                m.close();
+                paintSheet(app);
+              },
+            },
+            h('i', { style: `background:${x.colors[0]}` }),
+            h('small', null, t(x.name)),
+            h('b', null, previewLook(p)[channel] === x.id ? '✓' : ''),
+          ),
+        ),
+    );
+  const m = modal([
+    h('div', { class: 'm-title' }, t('Paint your Homeworld')),
+    h('div', { class: 'sec-title' }, t('Ground')),
+    row('ground'),
+    h('div', { class: 'sec-title' }, t('Water')),
+    row('sea'),
+    h('p', { class: 'muted tiny' }, t('Paints are yours forever once unlocked.')),
+    // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
+    btn(t('Back'), 'ghost wide', () => m.close()),
+  ]);
+}
+
+// ---------------------------------------------------------------- photo mode
+type Frame = 'clean' | 'polaroid' | 'stars' | 'season' | 'starfield' | 'gold';
+export const FRAMES: { id: Frame; name: string }[] = [
+  { id: 'polaroid', name: 'Instant' },
+  { id: 'clean', name: 'Clean' },
+  { id: 'stars', name: 'Starry' },
+  { id: 'season', name: 'Seasonal' },
+  { id: 'starfield', name: 'Starfield photo frame' },
+  { id: 'gold', name: 'Golden photo frame' },
+];
+
+function renderPhoto(app: App, src: HTMLCanvasElement, frame: Frame): HTMLCanvasElement {
+  const p = app.p;
+  const W = 1080;
+  const H = 1350;
+  const c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
+  const g = c.getContext('2d')!;
+  const bg = g.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#231c5e');
+  bg.addColorStop(1, '#0b0a24');
+  g.fillStyle = bg;
+  g.fillRect(0, 0, W, H);
+  // the live scene, cropped to a square around the planet
+  const pad = frame === 'polaroid' ? 70 : 60;
+  const size = W - pad * 2;
+  const sw = src.width;
+  const sh = src.height;
+  const side = Math.min(sw, sh);
+  g.drawImage(src, (sw - side) / 2, sh * 0.55 - side / 2, side, side, pad, pad + 40, size, size);
+  const font = (w: number, px: number) => `${w} ${px}px Fredoka, ui-rounded, system-ui, sans-serif`;
+  const season = seasonOf(new Date(), p.settings.hemi);
+  if (frame === 'polaroid') {
+    g.fillStyle = '#fbf7ee';
+    g.fillRect(0, 0, W, pad + 40);
+    g.fillRect(0, 0, pad, H);
+    g.fillRect(W - pad, 0, pad, H);
+    g.fillRect(0, pad + 40 + size, W, H);
+  } else {
+    g.strokeStyle = frame === 'gold' ? '#ffd24a' : frame === 'starfield' ? '#6679a4' : 'rgba(255,255,255,0.8)';
+    g.lineWidth = frame === 'gold' ? 18 : frame === 'starfield' ? 10 : 8;
+    g.strokeRect(pad, pad + 40, size, size);
+  }
+  if (frame === 'starfield') {
+    // Muted code-drawn stars keep the earned Golden frame brightest.
+    g.fillStyle = '#99a9cf';
+    for (let i = 0; i < 24; i++) {
+      const x = 18 + ((i * 317) % (W - 36));
+      const y = 18 + ((i * 193) % (H - 36));
+      if (x > pad && x < W - pad && y > pad + 40 && y < pad + 40 + size) continue;
+      g.beginPath();
+      g.arc(x, y, i % 4 === 0 ? 3 : 2, 0, TAU);
+      g.fill();
+    }
+  }
+  if (frame === 'stars' || frame === 'gold') {
+    const col = frame === 'gold' ? '#ffd24a' : '#fff6b0';
+    for (let i = 0; i < 26; i++) {
+      const a = (i / 26) * TAU;
+      const x = W / 2 + Math.cos(a) * W * 0.5;
+      const y = pad + 40 + size / 2 + Math.sin(a) * size * 0.56;
+      g.fillStyle = col;
+      g.font = font(700, 30 + (i % 3) * 10);
+      g.textAlign = 'center';
+      g.fillText('★', Math.max(30, Math.min(W - 30, x)), Math.max(60, Math.min(H - 30, y)));
+    }
+  }
+  if (frame === 'season') drawSeason(g, W, H, 3.3, season, 0.8, 90);
+  const ink = frame === 'polaroid' ? '#2a2440' : '#ffffff';
+  g.textAlign = 'center';
+  g.fillStyle = ink;
+  g.font = font(700, 58);
+  g.fillText(t("{name}'s Homeworld", { name: passportName(p) }), W / 2, pad + 40 + size + 95);
+  g.font = font(500, 36);
+  g.fillStyle = frame === 'polaroid' ? '#6a6480' : '#c9c2ff';
+  g.fillText(
+    `${SEASON_EMOJI[season]} ${t(SEASON_NAMES[season])} · ${t('Level {n}', { n: p.home.level })} · ${new Date().toLocaleDateString(getLang() || undefined)}`,
+    W / 2,
+    pad + 40 + size + 150,
+  );
+  g.font = font(700, 34);
+  g.fillStyle = frame === 'polaroid' ? '#3fae6a' : '#5ef2b0';
+  g.fillText('Comet Garden', W / 2, H - 40);
+  return c;
+}
+
+function liveCanvas(fallback: HTMLCanvasElement) {
+  return (document.querySelector('.hw-canvas') as HTMLCanvasElement | null) ?? fallback;
+}
+
+export function photoMode(app: App, src: HTMLCanvasElement) {
+  const p = app.p;
+  let frame: Frame = 'polaroid';
+  sfx.whoosh();
+  const preview = h('div', { class: 'photo-prev' });
+  const paint = () => {
+    const img = renderPhoto(app, src, frame);
+    img.style.width = '100%';
+    img.style.height = 'auto';
+    preview.replaceChildren(img);
+  };
+  paint();
+  const frames = h(
+    'div',
+    { class: 'photo-frames' },
+    ...FRAMES.filter((f) =>
+      f.id === 'gold'
+        ? (p.home.landmarks.keepers_beacon.stage === 4 || !p.settings.hidePaidLooks) && owns(p, 'frame_gold')
+        : f.id === 'starfield'
+          ? !p.settings.hidePaidLooks && owns(p, 'frame_starfield')
+          : true,
+    ).map((f) => {
+      const el = h(
+        'button',
+        {
+          class: `tab${f.id === frame ? ' on' : ''}`,
+          onclick: () => {
+            frame = f.id;
+            frames.querySelectorAll('.tab').forEach((x) => x.classList.remove('on'));
+            el.classList.add('on');
+            sfx.click();
+            paint();
+          },
+        },
+        t(f.name),
+      );
+      return el;
+    }),
+  );
+  const box = modal([
+    h('div', { class: 'm-title' }, t('Photo mode')),
+    preview,
+    frames,
+    btn(t('📤 Share photo'), 'primary wide', () =>
+      // use the live canvas (the screen may have re-rendered while this sheet was open)
+      shareCanvas(renderPhoto(app, liveCanvas(src), frame), t('My Homeworld in Comet Garden ☄️'), 'homeworld-photo'),
+    ),
+    // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
+    btn(t('Back'), 'ghost wide', () => box.close()),
+  ]);
+}
+
+function nickSheet(app: App, species: string, back: () => void) {
+  const p = app.p;
+  const r = p.home.residents.find((x) => x.species === species);
+  if (!r) return;
+  const pick = (nick: string | undefined) => {
+    setNick(p, species, nick);
+    sfx.click();
+    haptic.light();
+    app.save();
+    m.close();
+    back();
+  };
+  const m = modal([
+    h('div', { class: 'm-title' }, t('Name your {name}', { name: t(SPECIES_BY_ID[species].name) })),
+    h('div', { class: 'pe-av' }, critterCanvas(species, 80)),
+    h('div', { class: 'nick-grid' }, ...NICKNAMES.map((n) => btn(n, `ghost small${r.nick === n ? ' on' : ''}`, () => pick(n)))),
+    r.nick ? btn(t('No nickname'), 'ghost wide', () => pick(undefined)) : null,
+    // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
+    btn(t('Back'), 'ghost wide', () => m.close()),
+  ]);
+}
+
+function accSheet(app: App, species: string, back: () => void) {
+  const p = app.p;
+  const r = p.home.residents.find((x) => x.species === species);
+  if (!r) return;
+  const pick = async (id: string | undefined) => {
+    const acc = RESIDENT_ACCS.find((a) => a.id === id);
+    if (acc?.gems && !accAvailable(p, r, acc.id) && !(await confirmGemUse(t(acc.name), acc.gems, critterCanvas(species, 96, 0, acc.id))))
+      return;
+    const res = wearAcc(p, species, id);
+    if (res === 'gems') return app.needGems();
+    if (res === 'locked')
+      return toast(
+        RESIDENT_ACCS.find((a) => a.id === id)?.fest ? t('Earn it in a monthly festival') : t('Become better friends to unlock it'),
+      );
+    sfx.click();
+    haptic.light();
+    app.save();
+    m.close();
+    back();
+  };
+  const m = modal([
+    h('div', { class: 'm-title' }, t('Dress up {name}', { name: r.nick ?? t(SPECIES_BY_ID[species].name) })),
+    h('div', { class: 'pe-av' }, critterCanvas(species, 96, 0.4, r.acc)),
+    h(
+      'div',
+      { class: 'acc-grid' },
+      ...RESIDENT_ACCS.filter((a) => !a.gems || p.home.accs.includes(a.id) || (p.chapters.length >= 1 && p.meta.sessions > 1)).map((a) => {
+        const ok = accAvailable(p, r, a.id);
+        return h(
+          'button',
+          { class: `acc${r.acc === a.id ? ' on' : ''}${ok ? '' : ' locked'}`, onclick: () => pick(a.id) },
+          critterCanvas(species, 54, 0.4, a.id),
+          h('small', null, t(a.name)),
+          h('b', null, ok ? '' : a.friend ? `💖${a.friend}` : a.fest ? '🎪' : `💎${a.gems}`),
+        );
+      }),
+    ),
+    r.acc ? btn(t('Take it off'), 'ghost wide', () => pick(undefined)) : null,
+    // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
+    btn(t('Back'), 'ghost wide', () => m.close()),
+  ]);
+}
+
+/** Isle build rows share the 44 px sheet controls and never contain a purchase path. */
+export function roadLandmarkSheet(app: App, id: RoadLandmarkId, after: () => void) {
+  const p = app.p;
+  const site = ROAD_LANDMARKS.find((site) => site.id === id);
+  if (!site || !roadLandmarkOpen(p, id)) return;
+  const state = roadLandmarkState(p, id);
+  const stage = state.stage;
+  const picture = document.createElement('canvas');
+  const dpr = canvasDpr();
+  picture.width = Math.round(112 * dpr);
+  picture.height = Math.round(100 * dpr);
+  picture.style.cssText = 'width:112px;height:100px';
+  const g = picture.getContext('2d')!;
+  g.scale(dpr, dpr);
+  drawRoadLandmark(g, stage, 56, 53, 88);
+  const routes =
+    stage < 3
+      ? site.stages[stage as 0 | 1 | 2].routes.map((route, lane) =>
+          h(
+            'p',
+            { class: 'hw-landmark-route' },
+            t('{name}: {done}/{total}', {
+              name: roadLandmarkRouteLabel(stage, lane),
+              done: Math.min(route.target, state.progress[stage * 2 + lane] ?? 0),
+              total: route.target,
+            }),
+          ),
+        )
+      : stage === 3
+        ? Object.entries(site.delivery).map(([mat, count]) =>
+            h(
+              'p',
+              { class: 'hw-landmark-route' },
+              t('{name}: {have}/{need}', {
+                name: t(ESSENCE_NAME[mat as keyof typeof ESSENCE_NAME]),
+                have: p.mats[mat as keyof typeof p.mats] ?? 0,
+                need: count,
+              }),
+            ),
+          )
+        : [];
+  const ready = roadLandmarkReady(p, id);
+  const build = btn(t('Build'), ready ? 'primary wide' : 'ghost wide dim', () => {
+    if (!buildRoadLandmarkStage(p, id)) return;
+    app.save();
+    sfx.levelUp();
+    burst(build, 'bright');
+    m.close();
+    after();
+    roadLandmarkSheet(app, id, after);
+  });
+  build.style.minHeight = '44px';
+  build.disabled = !ready;
+  build.setAttribute('aria-disabled', String(!ready));
+  const m = modal(
+    [
+      h('div', { class: 'm-title' }, roadLandmarkName()),
+      btn(t('Back'), 'ghost wide hw-sheet-back', () => m.close()),
+      h('div', { class: 'hw-landmark-picture', 'aria-hidden': 'true' }, picture),
+      h('p', null, landmarkStageLabel(stage)),
+      stage < 4
+        ? h('p', null, roadLandmarkAsk(stage))
+        : h(
+            'p',
+            null,
+            t('{landmark} is complete. Your {decoration} and {title} are ready.', {
+              landmark: roadLandmarkName(),
+              decoration: roadLandmarkDecorationName(),
+              title: roadLandmarkTitleName(),
+            }),
+          ),
+      ...routes,
+      h(
+        'p',
+        { class: 'muted' },
+        t('You can build {landmark} on the Floating Isle. Its steps stay open.', { landmark: roadLandmarkName() }),
+      ),
+      stage < 4 ? build : null,
+    ],
+    { cls: 'hw-landmark-sheet hw-road-landmark-sheet' },
+  );
+}

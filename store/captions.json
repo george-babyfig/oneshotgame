@@ -1,0 +1,106 @@
+{
+  "scenes": [
+    {
+      "id": "1-fling",
+      "scene": "Aiming a fling: the curved aim line and the on-planet aim tag (+life, new land, a friend moving in) on a lively, half-grown planet",
+      "bg": "#ff9a3d"
+    },
+    {
+      "id": "2-friends",
+      "scene": "A lively planet with many creatures, a new-creature reveal or 'moved in' moment",
+      "bg": "#3fbf7f"
+    },
+    {
+      "id": "3-fusions",
+      "scene": "A Fusion moment (STEAM! / Rain Garden) with Combo beads or 'COMBO 3!'",
+      "bg": "#ffc93d"
+    },
+    {
+      "id": "4-sky",
+      "scene": "A sky-obstacle planet (Bubble Moon bank shot or Rubble Ring) with the aim line bending/bouncing",
+      "bg": "#5aa8ff"
+    },
+    {
+      "id": "5-troubles",
+      "scene": "An Ember Vent planet with the forecast strip, wall icons and a Buddy/trait shield",
+      "bg": "#ff6f6f"
+    },
+    {
+      "id": "6-homeworld",
+      "scene": "The Homeworld screen with resident friends and Labs",
+      "bg": "#7ad7c7"
+    },
+    {
+      "id": "7-lifebook",
+      "scene": "The Lifebook / Collection page full of creatures",
+      "bg": "#b58cff"
+    },
+    {
+      "id": "8-grownups",
+      "scene": "The Grown-ups area (after the gate): play time, Gentle planets, spending reminder — no prices visible",
+      "bg": "#2d3a8c"
+    }
+  ],
+  "captions": {
+    "en": [
+      "Fling comets, grow a world",
+      "Cute friends move in",
+      "Mix Fusions, chain Combos",
+      "Read the sky, time your throw",
+      "Friends keep Troubles away",
+      "Build your Homeworld",
+      "Collect 36 creatures",
+      "No ads. Purchases stay with grown-ups."
+    ],
+    "es": [
+      "Lanza cometas, haz crecer un mundo",
+      "Llegan amigos adorables",
+      "Mezcla Fusiones, encadena Combos",
+      "Lee el cielo, elige el momento",
+      "Tus amigos alejan los Problemas",
+      "Construye tu Planeta Hogar",
+      "Colecciona 36 criaturas",
+      "Sin anuncios. Solo compran los adultos."
+    ],
+    "fr": [
+      "Lance des comètes, fais pousser un monde",
+      "De mignons amis emménagent",
+      "Crée des Fusions, enchaîne les Combos",
+      "Observe le ciel, choisis ton moment",
+      "Tes amis éloignent les Soucis",
+      "Construis ta Planète Mère",
+      "Collectionne 36 créatures",
+      "Sans pub. Seuls les adultes achètent."
+    ],
+    "de": [
+      "Wirf Kometen, lass eine Welt wachsen",
+      "Süße Freunde ziehen ein",
+      "Mische Fusionen, verkette Combos",
+      "Behalte den Himmel im Blick",
+      "Freunde halten Sorgen fern",
+      "Bau deine Heimatwelt",
+      "Sammle 36 Wesen",
+      "Keine Werbung. Käufe machen Erwachsene."
+    ],
+    "pt": [
+      "Lance cometas, faça um mundo crescer",
+      "Amigos fofos vêm morar",
+      "Misture Fusões, encadeie Combos",
+      "Leia o céu, acerte a hora",
+      "Seus amigos afastam os Problemas",
+      "Construa seu Mundo-Lar",
+      "Colecione 36 criaturas",
+      "Sem anúncios. Compras só com adultos."
+    ],
+    "ja": [
+      "すいせいを投げて、せかいをそだてよう",
+      "かわいいなかまがひっこしてくる",
+      "フュージョンでコンボをのばそう",
+      "そらを見て、タイミングよく投げよう",
+      "なかまがこまりごとをふせぐよ",
+      "ホームワールドをつくろう",
+      "36ひきのいきものをあつめよう",
+      "広告なし。おかいものは大人だけ。"
+    ]
+  }
+}

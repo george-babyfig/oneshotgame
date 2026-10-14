@@ -4,6 +4,8 @@ Goal: a polished, studio-quality casual iOS game you can open in a waiting room,
 
 Status key: ✅ done · 🔨 in progress · ⏳ planned · 💭 later / needs a backend · ❌ decided against
 
+**The plan after round 7 is [docs/product/ROADMAP-v2.md](docs/product/ROADMAP-v2.md)**: a senior-PM scope of the whole game (what the game is for, shot synergies, hazards, a Homeworld with a purpose, a looks-only store, journeys, data) with milestones M0–M12 to launch. The research tables below remain the record of rounds 1–7.
+
 ## Research: what the best casual games do that we should borrow
 
 We compared this roadmap against top-grossing and high-retention casual games (Royal Match, Candy Crush, Monopoly GO, Two Dots, Angry Birds 2, Neko Atsume, Alto's Odyssey, Mini Metro, Wordle, Balatro, Block Blast). Constraints: one developer, no server, no ads, no gambling or random paid rewards, safe for kids.
@@ -27,6 +29,95 @@ We compared this roadmap against top-grossing and high-retention casual games (R
 | Rewarded ads, loot boxes, gacha                                                      | —                                                                    | ❌ No ads, and no random paid rewards.                                                                                                                                                                   |
 
 Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · [2] candycrush.fandom.com/wiki/Candy_Necklace · [3] oldcynic.com/royal-match-gets-harder · [4] township.fandom.com/wiki/Match-3 · [5] nekoatsume.fandom.com/wiki/Mementos · [6] candycrush.fandom.com/wiki/Sugar_Crush · [7] angrybirds2.rovio.com (cards help article) · [8] altosodyssey.fandom.com/wiki/Goals · [9] x.com/powerlanguish/status/1471493886031773707 · [10] store.steampowered.com/news/app/287980 · [11] balatrowiki.org/w/Seed · [12] thegamer.com/monopoly-go-sticker-albums-faq-complete-guide · [13] twodots.fandom.com/wiki/Expeditions · [14] royalmatch.fandom.com/wiki/Sky_Race · [15] blakecrosley.com/guides/design/balatro · [16] heroiclabs.com/blog/understanding-piggy-bank-mechanics-mobile-games · [17] deconstructoroffun.com/blog/2024/4/8/free-to-play-starter-pack-pricing · [18] gamerefinery.com/four-ways-how-mobile-games-re-engage-lapsed-players · [19] developer.apple.com GameKit Guide: Achievements & Leaderboards · [20] adriancrook.com/energy-systems-lessons-top-freemium-games
+
+## Round 3 research: depth, identity and the passive side
+
+A second research pass (Clash Royale, Brawl Stars, Royal Match, Monopoly GO, Animal Crossing Pocket Camp, Neko Atsume, Viva Piñata, Pikmin Bloom, Township, Clash of Clans, Idle Miner, Cats & Soup, Duolingo, Alto's Odyssey, Marvel Snap, Stumble Guys) plus a playtest simulation of our own levels.
+
+| Finding                                                                                                                  | Where it comes from                                                             | What we built                                                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Levels were too easy: a simulated "decent" player failed ~6% of planets after the opening, so near-misses never happened | Our skill-level simulation (`npm run sim`) vs. match-3 tuning practice          | ✅ **Level goals** (grow N of a land type, bring a creature) taken from the solver's own play so they're always beatable; a **chapter sawtooth** curve; tougher Hard/Super Hard; "Still needed" + "So close!" on failure; retries go through the booster sheet |
+| Players need a character and a way to express themselves                                                                 | Brawl Stars skins, Stumble Guys customize screen, Angry Birds 2 hats            | ✅ **The Keeper** astronaut beside the launcher; **Workshop** with suit/hat/launcher/trail, live try-on, earned or bought directly (never random); launcher **mastery** glow                                                                                   |
+| A profile card players are proud to share                                                                                | Clash Royale banners, Pocket Camp Camper Card, Brawl Stars titles               | ✅ **Planet Passport**: kid-safe word-list names, earned titles and banners, 3 pinned trophies, stats page, shareable card image                                                                                                                               |
+| Season-pass presentation that feels premium                                                                              | Pass Royale, Royal Pass (gold name), Subway Surfers                             | ✅ Animated **Cosmic Pass** hero art, the exclusive Star Captain set, gold Passport for owners, "rewards already waiting" callout, shimmering golden lane                                                                                                      |
+| Upgrades that visibly make throws stronger                                                                               | Angry Birds 2 card levels, Peglin orbs                                          | ✅ **Object Lab**: each object levels 1-5 with perks that only add life (never spoil a goal)                                                                                                                                                                   |
+| A power moment you charge up by playing well                                                                             | Angry Birds 2 Destructometer, Peggle Fever                                      | ✅ **Supernova** meter around the launcher; a full meter supercharges the next throw                                                                                                                                                                           |
+| A passive home to tend between levels                                                                                    | Clash of Clans, Pocket Camp, Neko Atsume, Viva Piñata, Pikmin Bloom expeditions | ✅ **Homeworld**: rings that grow the planet, structures and upgrades, drones (no paid skips; campaign wins speed them up), producers with caps, residents with requests and friendship, expeditions with postcards, meteor rocks                              |
+| Paid timer skips                                                                                                         | Clash of Clans gem skips                                                        | ❌ Predatory for kids; wins speed builds up instead                                                                                                                                                                                                            |
+| Raids / PvP bases                                                                                                        | Clash of Clans                                                                  | ❌ Needs a server; meteor rocks are the single-player stand-in                                                                                                                                                                                                 |
+
+Next up from this research: photo mode with frames, Lifebook lore entries, a login calendar and inbox, iMessage stickers, seasonal (rotating) passes.
+
+## Round 4 research: customization, long-term depth and a living world
+
+Sources: Animal Crossing (Pocket Camp, New Horizons), Cats & Soup, Sky: Children of the Light, Stardew Valley, Pokémon GO, Fortnite, Cookie Run Kingdom, Hollow Knight, Candy Crush, Neko Atsume, Alto's Odyssey, Pikmin Bloom, Royal Match, Two Dots, Angry Birds 2, Toca Boca, plus Apple's App Review Guidelines.
+
+| Finding                                                  | Where it comes from                                         | What we built                                                                                                                                                                                |
+| -------------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kids Category apps need a parental gate before purchases | Apple App Review Guidelines                                 | ✅ Grown-up question before every real-money purchase                                                                                                                                        |
+| Emotes and expressions make an avatar feel alive         | Sky expressions, Fortnite/Brawl Stars emotes                | ✅ **Emote** slot: 7 victory emotes, played on every win and previewed in the Workshop                                                                                                       |
+| Streak calendars that reset punish kids                  | Candy Crush Treat Calendar (resets) vs. kinder designs      | ✅ **Star Calendar**: 28 stamps that never reset, calendar-only items on days 14 and 28                                                                                                      |
+| A world that follows the real calendar feels alive       | Animal Crossing seasons, Neko Atsume yard, Alto's day/night | ✅ **Seasons** with hemisphere setting (snow, blossoms, fireflies, leaves), local **day/night** on the Homeworld, real **meteor showers** (Perseids, Geminids…) that double Supernova charge |
+| Recolourable homes                                       | Pocket Camp camper paint                                    | ✅ **Homeworld paint**: ground + water colours; some free, some for gems, gold for pass holders                                                                                              |
+| Photo mode and stickers                                  | Alto's photo mode, Pikmin Bloom postcards                   | ✅ **Photo mode** with 5 frames, shareable                                                                                                                                                   |
+| Mailbox of letters                                       | Animal Crossing letters                                     | ✅ **Inbox**: letters from Mission Control and residents on milestones, seasons, sky events, some with gifts                                                                                 |
+| Codex that rewards repeat sightings                      | Hollow Knight Hunter's Journal                              | ✅ **Field notes** for all 36 creatures (unlock at 5 sightings) and a gold "Studied" frame at 15                                                                                             |
+| Records instead of grind                                 | Brawl Stars Records                                         | ✅ **Object records** (50/200/500/1000 flings) with Passport titles                                                                                                                          |
+| Bonds with named creatures                               | Pokémon GO buddies, Cats & Soup                             | ✅ Resident **nicknames** (kid-safe list) and a **Best Friends** ribbon                                                                                                                      |
+| Boss levels every chapter                                | Royal Match / Angry Birds 2 boss stages                     | ✅ **Comet Guardian** on every 10th planet: blocks shots, 3 hits defeats it for a first-time bonus                                                                                           |
+| Community-center bundles fed by level drops              | Stardew Valley bundles                                      | ✅ **Star Atlas**: planets drop materials from their lands; fill bundles to relight 6 constellations in the Homeworld sky, each with an exclusive item                                       |
+| Dye system                                               | Stardew dyes, Pocket Camp paint                             | ✅ 16 **suit dyes** (body + trim), unlocked with materials                                                                                                                                   |
+| Creature cosmetics                                       | Cats & Soup equipment                                       | ✅ Resident **accessories** (friendship-earned, two for gems)                                                                                                                                |
+| Loadout presets                                          | Fortnite locker presets                                     | ✅ Three **outfit presets** in the Workshop                                                                                                                                                  |
+| Fortune cookies / random paid rewards                    | Pocket Camp, Angry Birds 2                                  | ❌ Never: every paid item is fixed-price and previewable                                                                                                                                     |
+
+Next up from this research: monthly themed events with creature variants, a non-random sticker album, a weekly 7-planet mini-chapter, and an optional New Game+.
+
+## Round 5: festivals, a weekly voyage and a sticker album
+
+Sources: Animal Crossing (monthly events and seasonal items), Pokémon GO (costumed Pokémon during events), Royal Match and Candy Crush (weekly mini-chapters and Kingdom/Treasure Hunt style short routes), Panini and Pikmin Bloom (sticker albums and postcards), Toca Boca and Sanrio games (free-form sticker scrapbooks).
+
+| Finding                                                 | Where it comes from                            | What we built                                                                                                                                                 |
+| ------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Costumed creature variants make events feel special     | Pokémon GO event costumes, Animal Crossing     | ✅ **Monthly festivals**: every creature wears the month's costume (10 new drawn accessories); spot them for a sticker, gems and a costume for your residents |
+| Events that return every year beat one-off FOMO         | Animal Crossing seasonal calendar              | ✅ All 12 festivals come back each year; nothing is lost if you miss one                                                                                      |
+| A short weekly route gives a mid-term goal              | Royal Match / Candy Crush weekly mini-chapters | ✅ **Weekly Voyage**: 7 seeded planets with goals, scaled to your progress, a Comet Guardian at the end, rewards per stop                                     |
+| Collecting is fun when there are no duplicates or packs | Criticism of loot-box sticker packs            | ✅ **Sticker Album**: 63 stickers, each earned by a specific deed (creatures, festivals, voyages, feats); page and every-10 bonuses                           |
+| Kids love decorating                                    | Toca Boca, sticker scrapbook apps              | ✅ **Scrapbook**: 3 pages to place, turn, resize and layer stickers on 8 unlockable papers, shared as a picture                                               |
+| Random sticker packs for money                          | Many collectible games                         | ❌ Never: stickers are only earned by playing                                                                                                                 |
+
+Next up: an optional New Game+ (replay the campaign with remixed planets), sticker packs for iMessage, and festival music themes.
+
+## Round 6: a buddy and tying round 5 together
+
+| Finding                                       | Where it comes from                            | What we built                                                                                                                                |
+| --------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| A companion makes the avatar feel less alone  | Pokémon GO buddies, Sky's spirits, Cats & Soup | ✅ **Buddy**: befriend a creature (5 sightings); it stands beside your Keeper in every level, hops when land changes, shows on your Passport |
+| Companions are a second customization canvas  | Pokémon GO buddy outfits, Animal Crossing      | ✅ Buddies wear any resident accessory you own, or this month's festival costume                                                             |
+| New systems need to show up in the daily loop | Royal Match / Candy Crush daily tasks          | ✅ Daily quests for Voyage stops and festival spotting (only offered once unlocked)                                                          |
+| Tell players when something new starts        | Animal Crossing letters                        | ✅ Inbox letters when each festival begins, when the Voyage unlocks, and when a creature asks to be your buddy                               |
+| Events should touch the whole world           | Animal Crossing villagers dressing up          | ✅ Homeworld residents join the festival in costume                                                                                          |
+| Platform achievements for new systems         | Game Center                                    | ✅ 5 new achievements (27 total, still under Apple's 1000-point limit)                                                                       |
+
+## Round 7: replay, remix and stickers
+
+Sources: Super Mario Galaxy (Prankster Comets), Portal (Advanced Chambers), Mario Kart (Mirror Mode), Where's My Water? (Challenges), Super Mario 3D World, Celeste (B-Sides), Tetris Effect, Candy Crush Saga (Dreamworld, Sugar Stars, Master Trophies), Hollow Knight (Steel Soul), Alto's Adventure (Zen), Slay the Spire (Ascension), Apple's Messages and App Review documentation, the UK Children's Code and research on manipulative design in children's apps. A second agent checked every finding against its source; 15 claims it could not confirm were dropped.
+
+| Finding                                                      | Where it comes from                                                                                         | What we built / plan                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| One visible twist on a familiar level beats bigger numbers   | Super Mario Galaxy Prankster Comets, Portal Advanced Chambers, Mario Kart Mirror Mode ([1], [2], [3])       | 🔨 Every remixed planet gets exactly one named twist chip, picked from its seed and shown before the first throw. The deck is our own existing twists (Solar Wind, Dense Core, Wobbly Spin, Twin Moons, Moon Guard, Tiny World, Fast Spin, Scorched, Snowball, Water World) plus a new Short Supply tray twist. The 10th planet keeps its Comet Guardian. No timer twists |
+| An added objective turns a known level into a new puzzle     | Where's My Water? Challenges, Super Mario 3D World remixed courses ([4], [5])                               | 🔨 Always-on goals: every remixed planet, chapter 1 included, has exactly one goal taken from what the greedy solver built. It is shown as an icon                                                                                                                                                                                                                        |
+| Unlock the harder version on completion, not perfection      | Celeste B-Sides, Mario Kart 8 (v4.1 opened Mirror to all), Tetris Effect Expert ([6], [7], [8])             | 🔨 A chapter's Remix opens once its boss planet is cleared, at any star count. Nothing can be bought to open it sooner                                                                                                                                                                                                                                                    |
+| Mastery layers must be generated, provable and never revoked | Candy Crush Saga (Dreamworld, Sugar Stars, Master Trophies) ([9], [10], [11], [12])                         | 🔨 Remix planets are a pure function of the planet number plus a fixed 'RX' salt, so there is no hand-built track to maintain. Star targets come from the solver run on that exact seed, never from a multiplier. Remix stars are a best-ever record that no retune can take away                                                                                         |
+| Prestige players see on every launch, with no power attached | Hollow Knight Steel Soul menu style, Mario Kart 8 Deluxe gold parts ([13], [14])                            | 🔨 Remix stars (their own gold counter, x/30 per chapter), a chapter frame that goes silver then gold on the Star Map and Passport, and a chapter Passport title. No gems, dust, materials or new currency                                                                                                                                                                |
+| Changed music tells players a familiar place feels different | Celeste B-Sides soundtrack, Alto's Adventure Zen Mode ([15], [16])                                          | ✅ Festival and Voyage music themes are built. Festival music plays only while the month's festival is unfinished                                                                                                                                                                                                                                                         |
+| A code-free sticker pack can ship inside the existing app    | Apple Messages docs, iMessage and App Review pages (platform, not a game) ([17], [18], [19])                | ⏳ Free iMessage sticker pack: about 24 wordless 408 px stickers exported from our own sticker and creature art and bundled as an extension. Every sticker is unlocked. No purchases, links or promo stickers                                                                                                                                                             |
+| Paid skips or random reveals for mastery content             | Angry Birds Mighty Eagle, Rayman Legends Lucky Tickets, Monument Valley paid expansion ([20], [21], [22])   | ❌ Never: no paid Remix unlock, skip or continue, no Remix currency, and no scratch-card or random reward reveal. Remix is free                                                                                                                                                                                                                                           |
+| First-try, limited-try or expiring mastery challenges        | Candy Crush Gold Crowns, Rhythm Heaven Perfect Campaign, Mini Motorways Daily Challenges ([23], [24], [25]) | ❌ Never: retries are unlimited and free, the best result is kept, and seeds stay fixed. No Remix timers, streaks, expiry or push notifications                                                                                                                                                                                                                           |
+
+Sources: [1] www.mariowiki.com/Prankster_Comet · [2] strategywiki.org/wiki/Portal/Advanced_Chambers · [3] mariokart.fandom.com/wiki/Mirror_Mode · [4] wheresmywater.fandom.com/wiki/Challenges · [5] www.mariowiki.com/World_Mushroom_(Super_Mario_3D_World) · [6] celeste.ink/wiki/Alternate_sides · [7] www.destructoid.com/mario-kart-8-update-unlocks-200cc-and-mirror-mode-for-everyone/ · [8] tetris.wiki/Tetris_Effect · [9] candycrush.fandom.com/wiki/Dreamworld · [10] candycrush.zendesk.com/hc/en-us/articles/360002087578-How-do-I-collect-Sugar-Stars · [11] candycrush.fandom.com/wiki/Trophy · [12] community.king.com/en/candy-crush-saga/discussion/344013/impossible-sugar-stars · [13] hollowknight.fandom.com/wiki/Menu_Styles_(Hollow_Knight) · [14] www.nintendolife.com/guides/mario-kart-8-deluxe-gold-kart-how-to-unlock-all-gold-kart-parts-and-gold-mario · [15] radicaldreamland.bandcamp.com/album/celeste-b-sides · [16] blog.builtbysnowman.com/post/145301948017/altos-adventure-zen-mode · [17] developer.apple.com/documentation/messages/adding-your-sticker-packs-to-messages · [18] developer.apple.com/imessage/ · [19] developer.apple.com/app-store/review/guidelines/ · [20] toucharcade.com/2010/12/23/new-angry-birds-update-adds-the-mighty-eagle-new-chapter · [21] raymanpc.com/wiki/en/Lucky_ticket · [22] www.gamedeveloper.com/business/ustwo-responds-to-complaints-about-paid-i-monument-valley-i-dlc · [23] candycrush.fandom.com/wiki/Sugar_Stars · [24] rhythmheaven.fandom.com/wiki/Perfect_Campaign · [25] steamcommunity.com/app/1127500/discussions/0/597386372524909497/
+
+The full Remix design (unlock rule, generation, targets, rewards, Star Map presentation, pitfalls for kids and build order) and the iMessage sticker plan are in [docs/product/REMIX.md](docs/product/REMIX.md). The bigger plan that follows round 7 is [docs/product/ROADMAP-v2.md](docs/product/ROADMAP-v2.md).
 
 ## 1. Foundation
 
@@ -62,6 +153,10 @@ Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · 
 - ✅ Physics twists for later chapters: solar wind, heavy gravity, wobbling spin, twin moons
 - ✅ Explorer Rank (3 standing goals; rank-ups unlock modes)
 - ✅ Lifebook habitat sets
+- ✅ Level goals and a simulation-tuned difficulty curve
+- ✅ Object Lab (per-object upgrades) and the Supernova shot
+- ✅ Homeworld (passive base building) with residents and expeditions
+- ✅ Comet Guardian boss planets, object records, Lifebook field notes
 
 ## 5. Modes
 
@@ -71,6 +166,7 @@ Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · 
 - ✅ Zen Garden: unlimited throws, a sandbox world that persists
 - ✅ Challenge a Friend: share a code; friends play the same planet and compare (versus without a server)
 - ✅ Weekly events (six themes rotating by ISO week, 6-tier reward track, exclusive atmosphere)
+- 🔨 Remix: replay a finished chapter as remixed planets, one twist and one goal each, for gold Remix stars and chapter frames (spec in [docs/product/REMIX.md](docs/product/REMIX.md))
 - ✅ Game Center: 4 leaderboards and 22 achievements through the app's own Swift plugin (IDs in `store/gamecenter.md`)
 - ❌ Live real-time versus: needs a server and fits a two-minute casual game poorly
 
@@ -80,6 +176,8 @@ Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · 
 - ✅ Cosmic Pass: one-time purchase for the premium Star Road lane (pays out retroactively)
 - ✅ Welcome-back offer: double your offline stardust for gems
 - ✅ Offer timing: Starter Pack after the first chest; piggy bank from chapter 2
+- ✅ Workshop cosmetics bought directly with gems; Cosmic Pass hero screen
+- ⏳ Rotating seasonal passes (one purchase per season)
 
 ## 7. Onboarding
 
@@ -96,11 +194,15 @@ Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · 
 - ✅ Share Daily Planet results and challenge codes
 - ✅ Share a rendered planet postcard image
 - ✅ Settings: reduce motion, reminders, credits
+- ✅ Planet Passport profile + shareable card; expedition postcards
+- ✅ Photo mode, Star Calendar, inbox, real-calendar seasons and meteor showers
 
 ## 9. Audio
 
 - ✅ Music that changes with each chapter
 - ✅ Chest, level-up, callout and finale sounds
+- ✅ Festival music on the menus while the month's festival is unfinished; a Voyage theme for the map and its stops
+- ✅ `npm run music` records every theme to WAV for listening checks
 
 ## 10. Localization
 
@@ -113,3 +215,4 @@ Sources: [1] oldcynic.com/royal-match-tips-and-tricks-cheats-for-new-players · 
 - ✅ Framed App Store screenshots, listing copy, privacy policy page
 - ✅ Automated tests (world, recipes, economy, progression)
 - 🔨 QA: bot playthroughs and three full code reviews in the browser; ⏳ on-device pass on small and large iPhones
+- ⏳ iMessage sticker pack (free, bundled; needs Xcode on a Mac, see [docs/product/REMIX.md](docs/product/REMIX.md))

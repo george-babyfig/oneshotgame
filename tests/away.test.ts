@@ -1,0 +1,132 @@
+import { tickHome } from '../src/meta/homeworld';
+import { describe, expect, it } from 'vitest';
+import { defaultProfile } from '../src/meta/profile';
+import { awayCollectables, awayRecapLines, collectAway, creditVaultWin } from '../src/meta/economy';
+
+const HOUR = 3600000;
+
+describe('away collection', () => {
+  it('waits for four hours unless something is ready', () => {
+    const now = 10 * HOUR;
+    const p = defaultProfile(now - HOUR);
+    p.tutorial = true;
+    p.galaxy.push({ n: 1, name: 'Test', hue: 0, stars: 1, species: [], life: 10, colors: [] });
+    creditVaultWin(p, { mode: 'campaign', planetKey: 'campaign:1', buddySpecies: null, at: now - HOUR });
+    expect(awayCollectables(p, HOUR, now).vault).toBeGreaterThan(0);
+    expect(awayCollectables(p, HOUR, now).show).toBe(false);
+    expect(awayCollectables(p, 20 * 60_000, now).show).toBe(false);
+    expect(awayCollectables(p, 3 * HOUR, now).show).toBe(false);
+    expect(awayCollectables(p, 4 * HOUR, now).show).toBe(true);
+    p.visitors.push({ species: 'moss_deer', dust: 30, gems: 0, memento: null });
+    expect(awayCollectables(p, HOUR, now).show).toBe(true);
+    expect(awayCollectables(p, 20 * 60_000, now).show).toBe(false);
+  });
+
+  it('collects a fuelled Vault, greenhouse booster and visitors together', () => {
+    const now = 10 * HOUR;
+    const p = defaultProfile(now - HOUR);
+    p.tutorial = true;
+    p.level = 12;
+    p.galaxy.push({ n: 1, name: 'Test', hue: 0, stars: 1, species: [], life: 10, colors: [] });
+    creditVaultWin(p, { mode: 'campaign', planetKey: 'campaign:1', buddySpecies: null, at: now - HOUR });
+    p.home.plots[0] = {
+      type: 'greenhouse',
+      lv: 1,
+      since: now - 2 * HOUR,
+      greenhouse: { choice: 'scope', winsTowardNext: 0, stored: 1 },
+    };
+    p.visitors.push({ species: 'moss_deer', dust: 30, gems: 0, memento: null });
+    const before = awayCollectables(p, 5 * HOUR, now);
+    expect(before.vault).toBeGreaterThan(0);
+    expect(before.home.dust).toBe(0);
+    expect(before.home.boosters).toBe(1);
+    const collected = collectAway(p, 5 * HOUR, now);
+    expect(collected.vault).toBe(before.vault);
+    expect(collected.home.boosters).toEqual({ scope: before.home.boosters });
+    expect(p.boosters.scope).toBeGreaterThan(0);
+    expect(collected.visitors).toBe(30);
+    expect(p.visitors).toHaveLength(0);
+    const again = collectAway(p, 5 * HOUR, now);
+    expect(again).toMatchObject({ vault: 0, visitors: 0, visitorCount: 0, welcomeGems: 0 });
+    expect(again.home.boosters).toEqual({});
+    expect(awayCollectables(p, 0, now).show).toBe(false);
+  });
+
+  it('recap teaches boosters from four and keepsakes only once visible', () => {
+    const p = defaultProfile(0);
+    for (const level of [1, 3, 4, 19, 21]) {
+      p.level = level;
+      const line = awayRecapLines(p, 7 * 24 * HOUR, 0)[0];
+      expect(line.includes('boosters')).toBe(level >= 4);
+      expect(line).not.toContain('keepsakes');
+    }
+    p.mementos.push('bunny');
+    expect(awayRecapLines(p, 7 * 24 * HOUR, 0)[0]).toContain('keepsakes');
+  });
+  it('keeps the three-day gift and gives a three-line long-away recap', () => {
+    const now = 20 * HOUR;
+    const p = defaultProfile(now);
+    p.tutorial = true;
+    p.level = 34;
+    p.home.residents.push({ species: 'otter', fp: 0, rewarded: 1 });
+    p.visitors.push({ species: 'moss_deer', dust: 30, gems: 2, memento: 'moss_deer' });
+    expect(awayRecapLines(p, 7 * 24 * HOUR, now)[0]).not.toContain('keepsakes');
+    p.mementos.push('otter');
+    expect(awayRecapLines(p, 7 * 24 * HOUR, now)[0]).toContain('1 keepsakes');
+    const gift = awayCollectables(p, 7 * 24 * HOUR, now).welcomeGems;
+    expect(gift).toBeGreaterThan(0);
+    expect(collectAway(p, 7 * 24 * HOUR, now).welcomeGems).toBe(gift);
+    expect(collectAway(p, 7 * 24 * HOUR, now).welcomeGems).toBe(0);
+    expect(collectAway(p, 7 * 24 * HOUR, now + HOUR).welcomeGems).toBe(0);
+    expect(p.mementos).toContain('moss_deer');
+    expect(awayRecapLines(p, 7 * 24 * HOUR, now)).toHaveLength(3);
+    expect(awayRecapLines(p, 7 * 24 * HOUR, now)[0]).toContain('💎0');
+    expect(awayRecapLines(p, 7 * 24 * HOUR, now)[2]).toContain('34');
+    expect(awayRecapLines(p, 7 * 24 * HOUR, now)[1]).toContain('Tide Otter');
+  });
+});
+
+describe('noun-window pending visitor gifts', () => {
+  it('keeps gifts already waiting collectible before 21', () => {
+    const p = defaultProfile(0);
+    p.level = 10;
+    p.tutorial = true;
+    p.visitors.push({ species: 'bunny', dust: 30, gems: 0, memento: null });
+    expect(awayCollectables(p, 5 * HOUR, 5 * HOUR).show).toBe(true);
+    const before = p.dust;
+    collectAway(p, 5 * HOUR);
+    expect(p.dust).toBeGreaterThanOrEqual(before + 30);
+    expect(p.visitors).toEqual([]);
+  });
+});
+
+describe('M13 away trip data', () => {
+  it('includes an already paid return and never pays it a second time on Collect all', () => {
+    const p = defaultProfile(0);
+    p.level = 30;
+    p.tutorial = true;
+    p.home.plots[0] = { type: 'launch_bay', lv: 3, since: 0 };
+    p.home.residents.push({ species: 'bunny', fp: 0, rewarded: 1 });
+    p.home.expedition = {
+      species: 'bunny',
+      hours: 4,
+      ends: HOUR,
+      planet: -1,
+      n: 25,
+      match: false,
+      yield: { mats: { leaf: 2 }, gems: 2, fp: 1 },
+    };
+    tickHome(p, 8 * HOUR);
+    const gems = p.gems,
+      leaf = p.mats.leaf;
+    expect(awayCollectables(p, 8 * HOUR, 8 * HOUR).trip).toEqual(p.home.tripReturn);
+    expect(awayRecapLines(p, 8 * HOUR, 8 * HOUR)[1]).toBe('A friend is back from a trip');
+    collectAway(p, 8 * HOUR, 8 * HOUR);
+    expect(p.gems).toBe(gems);
+    expect(p.mats.leaf).toBe(leaf);
+    expect(p.home.residents[0].fp).toBe(1);
+    p.level = 20;
+    expect(awayCollectables(p, 8 * HOUR, 8 * HOUR).trip).toBeNull();
+    expect(awayRecapLines(p, 8 * HOUR, 8 * HOUR)[1]).not.toContain('trip');
+  });
+});

@@ -1,59 +1,77 @@
-# App Store listing — Pocket Planet (Français)
+# Comet Garden — App Store listing (Français, fr-FR)
 
-**Name:** Pocket Planet
-**Subtitle (30):** Lance, cultive et découvre !
+**App name (30):** Comet Garden
+**Subtitle (30):** Lance, fais fleurir des mondes
+**Primary category:** Games → Casual · **Secondary:** Games → Simulation (set once; same for every language)
+**Age rating:** 4+ (same as en-US)
+**Price:** same as en-US (not part of the localized text)
 
 ## Promotional text (170)
 
-Nouveau : Planète du jour, Pluie de météores, Jardin zen et défis entre amis. Et des visiteurs qui laissent des cadeaux pendant ton absence !
+Lance des comètes, fais pousser de petits mondes et bâtis des Lieux magiques sur ta Planète Mère, où tes amis vivent leur vie. Sans pub. Achats sous contrôle parental.
 
-## Description
+## Description (4,000)
 
-Lance des rochers, des comètes de glace, du magma et des graines sur une toute petite planète qui tourne… et regarde-la prendre vie !
+Lance une comète, regarde un petit monde fleurir et accueille les créatures qui viennent s'y installer.
 
-La gravité courbe chaque lancer : viser, c'est déjà la moitié du plaisir. Le rocher élève des montagnes, la glace remplit les océans, le magma crée des volcans et les graines font pousser des forêts. Place les bons terrains côte à côte et d'adorables bestioles s'installent : des loutres là où la forêt rencontre l'océan, des tortues d'obsidienne là où les volcans bordent la mer, et des merveilles légendaires pour les planètes les plus audacieuses.
+LANCE ET FAIS POUSSER
+• Tire, vise et relâche : la gravité courbe chaque lancer autour de la planète
+• Les Rochers dressent des montagnes, les Comètes de glace remplissent les océans, les Cosses de graines font pousser prairies et forêts, le Magma bâtit des volcans, et les Nuages de pluie et les Éclats solaires aident tout à s'épanouir
+• Avant même que tu relâches, la planète te montre l'effet de ton lancer : de nouvelles terres, qui emménage, et qui pourrait partir se balader
+• Choisis un lanceur pour chaque planète : le Lance-étoiles, Virevolte, Zoum ou Badaboum, chacun avec un point fort et un petit point faible
 
-PARFAIT POUR UNE PETITE PAUSE
-• Des niveaux d'une minute, à finir en salle d'attente
-• Jusqu'à 3 étoiles par planète, puis rejoue pour viser le score parfait
-• Des planètes difficiles et super difficiles pour un vrai défi
+RENCONTRE LES CRÉATURES
+• 36 créatures à découvrir, chacune avec son coin préféré : des loutres là où la forêt rejoint la mer, des tritons sur les volcans tièdes, des hiboux dans les pins enneigés
+• Chaque créature apporte un talent qui protège son coin
+• Garde-les toutes dans ton Livre de la Vie, des plus communes aux légendes rares
 
-UNE GALAXIE QUI GRANDIT AVEC TOI
-• Chaque planète terminée rejoint ta galaxie et produit de la poussière d'étoiles pendant ton absence
-• Des bestioles visitent ta galaxie et laissent des cadeaux et des souvenirs
-• Dépense ta poussière d'étoiles en améliorations permanentes
+MÉLANGE, ENCHAÎNE ET PRÉVOIS
+• Fusions : deux lancers qui s'associent, comme la glace et le magma qui font de la Vapeur
+• Combos : des lancers malins à la suite font grandir une chaîne de bonus
+• Supernova : charge-la et envoie un lancer géant
+• Observe le ciel : des Rochers flottants, une Lune Bulle et un Anneau de cailloux qui tourne ; choisis bien le moment de lancer
 
-TANT DE CHOSES À DÉCOUVRIR
-• 36 bestioles à collectionner dans ton Livre de la Vie, des plus communes aux légendaires
-• Des collections d'habitats, des chapitres avec coffres au trésor et la Route des étoiles
-• Des quêtes du jour, un cadeau du jour et des rangs d'explorateur
+TA PROPRE PLANÈTE MÈRE
+• Invite les amis que tu rencontres à vivre sur ta Planète Mère, où ils ont leur propre journée : ils dorment dans la Tanière la nuit, se retrouvent le soir et profitent de la météo au fil des saisons
+• Fais pousser les terres que tu découvres entre tes constructions
+• Construis cinq Lieux magiques en jouant, du Jardin des pousses au Phare du Gardien
+• Choisis un Compagnon qui t'aide quand un Souci apparaît sur une planète
+• Crée ton Gardien : visage, couleur de peau, cheveux et tenues
 
-JOUE COMME TU VEUX
-• Planète du jour : le même monde pour tout le monde chaque jour ; partage ton résultat
-• Pluie de météores : 60 secondes, lancers illimités
-• Jardin zen : pas d'objectifs, pas de chrono, un monde rien qu'à toi
-• Défie un ami : envoie un code et voyez qui fait naître le plus de vie
+JOUE À TA FAÇON
+• Plus de 100 planètes qui se corsent tout en douceur, avec 1 à 3 étoiles sur chacune
+• Une échelle d'aide quand une planète résiste : ce qui s'est passé, une astuce, puis un petit coup de pouce
+• Planète du jour, Voyage de la semaine, Pluie de météores, Jardin zen et défis entre amis
+• Le Remix bonus ajoute des surprises et des étoiles dorées aux chapitres terminés
+• Gagne des Essences sur les planètes et construis des Laboratoires sur ta Planète Mère
+• Suis la Route Cosmique : tes nouvelles étoiles et tes Souhaits t'apportent des récompenses tout au long du chemin
+• Joue en English, Español, Français, Deutsch, Português (Brasil) ou 日本語
 
-Juste et bienveillant : pas de pub, pas de vies ni de minuteurs d'énergie, pas de coffres à butin, aucun pistage. Les achats facultatifs indiquent toujours exactement ce que tu obtiens.
+CALME, ÉQUITABLE ET PRIVÉ
+• Pas de pub. Pas de vies ni de minuteurs d'énergie. Pas de récompenses payantes au hasard.
+• Les achats facultatifs se font uniquement dans l'Espace parents, protégé par un contrôle parental, et montrent toujours exactement ce que l'on obtient
+• Réglage Planètes douces, résumé du temps de jeu et rappel de pause facultatif
+• Données non collectées : le jeu garde la progression sur cet appareil
 
-## Keywords (100)
+Des questions ou des idées ? Rends-toi sur la page d'assistance indiquée ci-dessous. Bons lancers !
 
-planète,casual,relaxant,idle,mignon,animaux,collection,gravité,espace,zen,hors ligne,cosy,puzzle
+## Keywords (100 bytes, fr-FR)
+
+comète,espace,planète,astéroïde,météore,galaxie,mignon,créature,animaux,physique,volcan,zen
+
+_Native terms: mignon (cute), animaux, physique (physics games), zen (calm; also the Jardin zen mode). comète is included because the French subtitle has no comet in it. lancer, fleurir and monde are left out because the subtitle already has them. terraformer and océan were cut to fit 100 bytes._
+
+## Support / marketing / privacy
+
+- Support URL: https://YOUR-DOMAIN/support.html (site files in `site/`; same URL for every language)
+- Marketing URL: https://YOUR-DOMAIN/
+- Privacy policy URL: https://YOUR-DOMAIN/privacy.html (the page includes a French section)
+- Copyright: 2026 OWNER NAME
 
 ## What's New
 
-Notre toute première version. Merci de jouer !
+Not shown for version 1.0 (Apple has no "What's New" on a first release). From 1.0.1, translate the English notes from `store/whats-new-template.md`; sign-off suggestion: "Bons lancers ! — l'équipe Comet Garden".
 
-## In-app purchases
+## Lengths
 
-See listing.md
-
-## Review notes
-
-See listing.md
-
-## Screenshots
-
-See listing.md
-
-Character counts: subtitle 28, promo 141, keywords 96
+Subtitle 30/30 chars · Promotional text 167/170 chars · Description 3,141/4,000 chars · Keywords 98/100 bytes (UTF-8). Measured with python3 on the exact text to paste (len() in characters; blank lines in the description counted).

@@ -1,7 +1,8 @@
 import Capacitor
 import GameKit
 
-/// Minimal Game Center bridge: sign-in, leaderboards and achievements.
+/// Minimal Game Center bridge: sign-in and achievements. Version 1.0 ships achievements only (decision 46):
+/// no leaderboards, so no other children's nicknames appear and the age rating's "Contests" answer stays None.
 /// Every call resolves (never rejects) when Game Center is unavailable, so the game keeps working offline.
 @objc(GameCenterPlugin)
 public class GameCenterPlugin: CAPPlugin, CAPBridgedPlugin, GKGameCenterControllerDelegate {
@@ -19,35 +20,35 @@ public class GameCenterPlugin: CAPPlugin, CAPBridgedPlugin, GKGameCenterControll
             call.resolve(["authenticated": true])
             return
         }
+        let interactive = call.getBool("interactive") ?? false
         var resolved = false
-        GKLocalPlayer.local.authenticateHandler = { [weak self] viewController, error in
-            if let viewController = viewController {
-                DispatchQueue.main.async {
-                    self?.bridge?.viewController?.present(viewController, animated: true)
-                }
-                return
-            }
-            if resolved { return }
+        let finish: (Bool, String) -> Void = { authenticated, error in
+            guard !resolved else { return }
             resolved = true
-            call.resolve([
-                "authenticated": GKLocalPlayer.local.isAuthenticated,
-                "error": error?.localizedDescription ?? "",
-            ])
+            call.resolve(["authenticated": authenticated, "error": error])
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20) {
+            finish(false, "Game Center timed out")
+        }
+        GKLocalPlayer.local.authenticateHandler = { [weak self] viewController, error in
+            DispatchQueue.main.async {
+                guard !resolved else { return }
+                if let viewController = viewController {
+                    guard interactive, let presenter = self?.bridge?.viewController, presenter.presentedViewController == nil else {
+                        finish(false, "")
+                        return
+                    }
+                    presenter.present(viewController, animated: true)
+                    return
+                }
+                finish(GKLocalPlayer.local.isAuthenticated, error?.localizedDescription ?? "")
+            }
         }
     }
 
     @objc func submitScore(_ call: CAPPluginCall) {
-        guard let leaderboardId = call.getString("leaderboardId"), let score = call.getInt("score") else {
-            call.resolve(["submitted": false])
-            return
-        }
-        guard GKLocalPlayer.local.isAuthenticated else {
-            call.resolve(["submitted": false])
-            return
-        }
-        GKLeaderboard.submitScore(score, context: 0, player: GKLocalPlayer.local, leaderboardIDs: [leaderboardId]) { error in
-            call.resolve(["submitted": error == nil])
-        }
+        // Leaderboards are off in 1.0 (decision 46). Kept so older web bundles still resolve.
+        call.resolve(["submitted": false])
     }
 
     @objc func reportAchievements(_ call: CAPPluginCall) {
@@ -78,7 +79,7 @@ public class GameCenterPlugin: CAPPlugin, CAPBridgedPlugin, GKGameCenterControll
                 call.resolve(["shown": false])
                 return
             }
-            let viewController = GKGameCenterViewController(state: .dashboard)
+            let viewController = GKGameCenterViewController(state: .achievements)
             viewController.gameCenterDelegate = self
             self.bridge?.viewController?.present(viewController, animated: true)
             call.resolve(["shown": true])

@@ -2,6 +2,7 @@
 // ground, "up" is -y, `s` is the unit size (about a tenth of the planet radius).
 import type { BiomeId } from '../../core/world';
 import { hash01 } from './color';
+import { canvasDpr } from '../devcapture';
 
 type G = CanvasRenderingContext2D;
 
@@ -341,4 +342,25 @@ export function drawProps(g: G, biome: BiomeId, s: number, seed: number, t: numb
       puff(g, x1 + s * 0.3, -s * 0.1, s, t, r1 + 0.5);
       break;
   }
+}
+
+const movingProps = new Set<BiomeId>(['jungle', 'swamp', 'marsh', 'volcano', 'ocean', 'springs']);
+const propSprites = new Map<string, HTMLCanvasElement>();
+
+/** Static scenery shares a sprite across frames as the planet turns. */
+export function drawCachedProps(g: G, biome: BiomeId, s: number, seed: number, t: number) {
+  if (movingProps.has(biome)) return drawProps(g, biome, s, seed, t);
+  const dpr = canvasDpr();
+  const key = `${biome}|${s.toFixed(2)}|${seed}|${dpr}`;
+  let sprite = propSprites.get(key);
+  if (!sprite) {
+    sprite = document.createElement('canvas');
+    sprite.width = sprite.height = Math.ceil(s * 6 * dpr);
+    const pg = sprite.getContext('2d')!;
+    pg.setTransform(dpr, 0, 0, dpr, 3 * s * dpr, 3 * s * dpr);
+    drawProps(pg, biome, s, seed, 0);
+    if (propSprites.size >= 96) propSprites.delete(propSprites.keys().next().value!);
+    propSprites.set(key, sprite);
+  }
+  g.drawImage(sprite, -3 * s, -3 * s, sprite.width / dpr, sprite.height / dpr);
 }

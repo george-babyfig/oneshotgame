@@ -1,0 +1,1 @@
+export default { root: '/home/user/oneshotgame', server: { fs: { strict: false } }, test: { include: ['/tmp/claude-0/-home-user-oneshotgame/c29f86da-8da7-5431-85c5-fc6402d6214f/scratchpad/scope/ld/daily.sim.ts'], dir: '/tmp/claude-0/-home-user-oneshotgame/c29f86da-8da7-5431-85c5-fc6402d6214f/scratchpad/scope/ld', testTimeout: 900000 } };

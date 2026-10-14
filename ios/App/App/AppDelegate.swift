@@ -7,7 +7,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Start before Capacitor auto-loads the purchases plugin and its finishing listener.
+        MainActor.assumeIsolated { PurchaseJournal.shared.start() }
         return true
     }
 
