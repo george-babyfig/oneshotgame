@@ -5,6 +5,7 @@ import { BIOMES, type BiomeId, type Kind, type Planet } from '../core/world';
 import type { ObstacleId, SkyState } from '../core/sky';
 import {
   defaultHome,
+  bayLevel,
   effLevel,
   migrateGreenhouses,
   ownedIsleDecorations,
@@ -34,6 +35,10 @@ import { earn } from './wallet';
 import { COSMIC_ROAD_ID, newRoadState, roadCloseOn, STAR_ROAD, type RoadState } from './starroad';
 import type { Hemisphere } from './seasons';
 import { retireEventProgress } from './events';
+import { approxSectors } from './galaxyCodec';
+import { legacyExpeditionLoot } from './tripsLegacy';
+import type { Trip, TripHours, TripReturn, TripYield, LegacyTripLoot } from './m13types';
+import { SPECIES_BY_ID } from '../core/world';
 
 export interface GalaxyPlanet {
   n: number;
@@ -43,6 +48,8 @@ export interface GalaxyPlanet {
   species: string[];
   life: number;
   colors: string[];
+  sec?: string;
+  approx?: 1;
 }
 
 export interface QuestState {
@@ -303,6 +310,7 @@ export interface Profile {
   m11Migrated: boolean;
   /** M11.5 Homeworld Life state has been validated once. */
   m115Migrated: boolean;
+  m13Migrated: boolean;
   boosters: Record<BoosterId, number>;
   /** Subset of inventory bought with gems, kept separate from earned stock. */
   gemBoosters: Record<BoosterId, number>;
@@ -416,7 +424,15 @@ export interface Profile {
   /** This month's festival: costumed critters spotted and tiers claimed. */
   festival: { key: string; spotted: number; claimed: number[] };
   /** This week's Voyage: difficulty base, stops cleared, best stars per stop; and voyages ever finished. */
-  voyage: { week: string; base: number; cleared: number; stars: number[]; hemisphere?: Hemisphere; legacyCatchUpPaid?: boolean };
+  voyage: {
+    week: string;
+    base: number;
+    cleared: number;
+    stars: number[];
+    hemisphere?: Hemisphere;
+    theme?: string;
+    legacyCatchUpPaid?: boolean;
+  };
   voyageDone: number;
   /** Campaign fails in a row per planet (cleared on a win); drives the continue rule. */
   fails: Record<number, number>;
@@ -437,7 +453,7 @@ export interface Profile {
 
 const KEY = 'pp.profile';
 const BACKUP_KEY = 'pp.profile.bak';
-export const PROFILE_VERSION = 6;
+export const PROFILE_VERSION = 7;
 
 export function defaultProfile(now = Date.now()): Profile {
   return {
@@ -468,6 +484,7 @@ export function defaultProfile(now = Date.now()): Profile {
     upgrades: { vault: 0 },
     m11Migrated: true,
     m115Migrated: true,
+    m13Migrated: true,
     boosters: { shower: 1, spark: 1, scope: 1 },
     gemBoosters: { shower: 0, spark: 0, scope: 0 },
     piggy: 0,
@@ -594,6 +611,75 @@ function merge<T>(base: T, saved: unknown): T {
     out[k] = merge((base as Record<string, unknown>)[k], v);
   }
   return out as T;
+}
+
+const tripRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
+const tripAmount = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0;
+const tripInteger = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= -1;
+function sanitizeTripYield(value: unknown): TripYield | undefined {
+  if (!tripRecord(value) || !tripRecord(value.mats) || !tripAmount(value.gems) || !tripAmount(value.fp)) return;
+  const mats: TripYield['mats'] = {};
+  for (const mat of ['stone', 'dew', 'leaf', 'ember', 'frost'] as const) {
+    if (value.mats[mat] !== undefined && !tripAmount(value.mats[mat])) return;
+    if (value.mats[mat] !== undefined) mats[mat] = value.mats[mat] as number;
+  }
+  return { mats, gems: value.gems, fp: value.fp };
+}
+function sanitizeLegacyLoot(value: unknown): LegacyTripLoot | undefined {
+  if (!tripRecord(value) || !tripAmount(value.dust) || !tripAmount(value.gems) || !tripRecord(value.boosters)) return;
+  const boosters: LegacyTripLoot['boosters'] = {};
+  for (const id of ['shower', 'spark', 'scope'] as const) {
+    if (value.boosters[id] !== undefined && !tripAmount(value.boosters[id])) return;
+    if (value.boosters[id] !== undefined) boosters[id] = value.boosters[id] as number;
+  }
+  return { dust: value.dust, gems: value.gems, boosters };
+}
+function sanitizeTrip(value: unknown): Trip | null {
+  if (
+    !tripRecord(value) ||
+    typeof value.species !== 'string' ||
+    !SPECIES_BY_ID[value.species] ||
+    (value.hours !== 1 && value.hours !== 4 && value.hours !== 8) ||
+    !tripAmount(value.ends) ||
+    !tripInteger(value.planet)
+  )
+    return null;
+  const trip: Trip = { species: value.species, hours: value.hours, ends: value.ends, planet: value.planet };
+  if (value.n !== undefined) {
+    if (!tripInteger(value.n)) return null;
+    trip.n = value.n;
+  }
+  if (value.sentAt !== undefined) {
+    if (!tripAmount(value.sentAt)) return null;
+    trip.sentAt = value.sentAt;
+  }
+  if (value.match !== undefined) {
+    if (typeof value.match !== 'boolean') return null;
+    trip.match = value.match;
+  }
+  if (value.yield !== undefined) {
+    trip.yield = sanitizeTripYield(value.yield);
+    if (!trip.yield) return null;
+  }
+  if (value.legacyLoot !== undefined) {
+    trip.legacyLoot = sanitizeLegacyLoot(value.legacyLoot);
+    if (!trip.legacyLoot) return null;
+  }
+  return trip;
+}
+function sanitizeTripReturn(value: unknown): TripReturn | null {
+  if (!tripRecord(value) || !tripInteger(value.n) || !tripAmount(value.returnedAt) || typeof value.match !== 'boolean') return null;
+  const trip = sanitizeTrip({ ...value, planet: -1, ends: value.returnedAt });
+  if (!trip) return null;
+  return {
+    n: value.n,
+    species: trip.species,
+    hours: trip.hours as TripHours,
+    returnedAt: value.returnedAt,
+    match: value.match,
+    ...(trip.yield ? { yield: trip.yield } : {}),
+    ...(trip.legacyLoot ? { legacyLoot: trip.legacyLoot } : {}),
+  };
 }
 
 /** Upgrade older save formats in place. */
@@ -1058,6 +1144,29 @@ export function migrate(raw: Record<string, unknown>): Profile {
   delete (p.home as HomeState & { debris?: unknown }).debris;
   delete (p.home as HomeState & { lastDebris?: unknown }).lastDebris;
   for (const friend of [...p.home.residents, ...Object.values(p.home.friends)]) delete (friend as { lastReq?: unknown }).lastReq;
+  // Decision 68: preserve the 1.0 promise before a later package replaces the trip engine.
+  const m13 = raw.m13Migrated !== true || (typeof raw.v === 'number' && raw.v < 7);
+  if (m13) {
+    for (const entry of p.galaxy) {
+      if (typeof entry.sec !== 'string' || entry.sec.length !== 120) {
+        entry.sec = approxSectors(entry.colors);
+        entry.approx = 1;
+      }
+    }
+    p.home.tripFuel = true;
+    p.home.tripReturn = null;
+  }
+  const now = Date.now();
+  p.home.expedition = sanitizeTrip(p.home.expedition);
+  if (p.home.expedition && m13 && p.home.expedition.n === undefined) {
+    const trip = p.home.expedition;
+    trip.n = p.galaxy[trip.planet]?.n ?? -1;
+    trip.legacyLoot = legacyExpeditionLoot(trip.hours, bayLevel(p.home, now), trip.species);
+    trip.ends = Math.min(trip.ends, now + trip.hours * 3_600_000);
+  }
+  p.home.tripFuel = p.home.tripFuel === true;
+  p.home.tripReturn = sanitizeTripReturn(p.home.tripReturn);
+  p.m13Migrated = true;
   p.v = PROFILE_VERSION;
   return p;
 }
@@ -1136,7 +1245,8 @@ export async function loadProfile(): Promise<Profile> {
         version !== PROFILE_VERSION ||
         (parsed as Record<string, unknown>).m11Migrated !== true ||
         (parsed as Record<string, unknown>).m115Migrated !== true ||
-        (parsed as Record<string, unknown>).nounBudgetMigrated !== true
+        (parsed as Record<string, unknown>).nounBudgetMigrated !== true ||
+        (parsed as Record<string, unknown>).m13Migrated !== true
       ) {
         // Keep first bytes per target migration; an older rescue must not hide the pre-M11 save.
         try {

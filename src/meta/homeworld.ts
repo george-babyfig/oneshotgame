@@ -1,3 +1,4 @@
+import type { Trip, TripReturn } from './m13types';
 import { RING_PLOTS, WIN_SPEEDUP, FRIEND_LEVELS, EXPEDITION_HOURS, HOME_LEVEL_REQUIREMENTS, HOMEWORLD_MAX_LEVEL } from './tuning';
 import { FRIENDSHIP_REWARD_GEMS_PER_LEVEL, EXPEDITION_REWARD, EXPEDITION_MULTIPLIER } from './tuning';
 import { ledger } from './ledger';
@@ -162,13 +163,8 @@ export function setNick(p: Profile, species: string, nick: string | undefined) {
 
 export const isBestFriend = (r: Resident) => friendLevel(r.fp) >= FRIEND_LEVELS.length;
 
-export interface Expedition {
-  species: string;
-  hours: number;
-  ends: number;
-  /** Galaxy planet index visited (for the postcard). */
-  planet: number;
-}
+/** Legacy exported name; the persistent key stays expedition. */
+export type Expedition = Trip;
 
 export interface HomeState {
   level: HomeworldLevel;
@@ -186,7 +182,10 @@ export interface HomeState {
   /** Stable win keys already included in stats.grown. */
   grownRoundKeys: string[];
   residents: Resident[];
-  expedition: Expedition | null;
+  expedition: Trip | null;
+  /** Internal win flag; never shown as an energy system. */
+  tripFuel: boolean;
+  tripReturn: TripReturn | null;
   /** Latest observed clock time; a rollback cannot finish work early. */
   lastTick?: number;
   /** Last handled win event, so a repeated callback cannot award it twice. */
@@ -263,6 +262,8 @@ export function defaultHome(now = Date.now()): HomeState {
     grownRoundKeys: [],
     residents: [],
     expedition: null,
+    tripFuel: true,
+    tripReturn: null,
     lastTick: now,
     intro: false,
     paint: { ground: 'meadow', sea: 'blue' },

@@ -189,3 +189,10 @@ export function friendPairs(friends: readonly Resident[], date: Date, gaps: (Bio
     }
   return pairs;
 }
+
+/** Decision 70: one home land for trip matches, Wishes and (in B) the Homeworld spot. */
+export function homeLandFor(species: string): BiomeId | null {
+  if (species === 'leviathan') return 'ocean';
+  if (species === 'worldtree') return 'forest';
+  return SPECIES_BY_ID[species]?.home?.[0] ?? null;
+}

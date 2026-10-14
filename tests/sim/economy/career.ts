@@ -31,6 +31,8 @@ import {
   PAINTS,
   applyPaint,
   build,
+  bayLevel,
+  denCapacity,
   canExpand,
   collectAll,
   expand,
@@ -119,9 +121,12 @@ export interface DayRow {
   idleActiveRatio: number | null;
   labBlocks: Partial<Record<Kind, string>>;
   homeLevel: number;
+  bayLevel: number;
   landmarkStages: Record<LandmarkId, number>;
 }
 export interface Career {
+  profile: Profile;
+  bayLevelDays: Partial<Record<1 | 2 | 3 | 4 | 5, number>>;
   type: PlayerType;
   start: Record<Currency, number>;
   final: Record<Currency, number>;
@@ -235,8 +240,12 @@ function routeWitnesses(p: Profile, site: LandmarkDef): boolean[][] {
       if (route.metric === 'bestFriends' || route.metric === 'friendLevelThree') {
         copy.home.residents.forEach((resident) => (resident.fp = Math.min(resident.fp, 8)));
         for (const saved of Object.values(copy.home.friends)) saved.fp = Math.min(saved.fp, 8);
-        for (const species of p.seen.slice(0, route.metric === 'bestFriends' ? 1 : route.target))
-          copy.home.friends[species] = { fp: route.metric === 'bestFriends' ? 25 : 8, rewarded: 0 };
+        for (const species of p.seen.slice(0, route.metric === 'bestFriends' ? 1 : route.target)) {
+          const fp = route.metric === 'bestFriends' ? 25 : 8;
+          const resident = copy.home.residents.find((friend) => friend.species === species);
+          if (resident) resident.fp = fp;
+          else copy.home.friends[species] = { fp, rewarded: 0 };
+        }
         refreshLandmarkSnapshots(copy);
         return done();
       }
@@ -411,14 +420,34 @@ function spendPolicy(p: Profile, type: PlayerType, day: number, now: number) {
               : check;
     }
   }
-  // A Level 4 player with Chapter 8 open saves for the visible Level 5 payment.
-  const savingForHome = p.home.level === 4 && p.level >= 81;
+  // Decision 61: a visible trip Bay gets the first non-Lab plot and its next trip tier,
+  // after affordable Labs, even while saving for the next Homeworld level.
+  if (homeUnlocked(p)) {
+    let bay = p.home.plots.findIndex((b) => b?.type === 'launch_bay');
+    if (bay < 0 && p.home.level >= 2 && p.level >= 21) {
+      const plot = p.home.plots.findIndex((b) => !b);
+      if (plot >= 0 && build(p, plot, 'launch_bay', now + 62_000) === 'ok') bay = plot;
+    }
+    const target = Math.min(4, p.home.level);
+    if (bay >= 0 && p.home.plots[bay]!.lv < target) upgrade(p, bay, now + 62_000);
+  }
+  // Save for each visible Homeworld payment once its chapter is open; Bay trip tiers remain exempt.
+  const homeGoal = p.home.level < 5 ? HOME_LEVEL_REQUIREMENTS[(p.home.level + 1) as 2 | 3 | 4 | 5] : null;
+  const savingForHome = !!homeGoal && p.level > homeGoal.chapter * 10;
   // At these rates tiers 4/5 cannot repay 8k/20k within this career; Regular saves for visible goals.
   if (!savingForHome) while (p.upgrades.vault < 2 && buyVaultTier(p, now)) {}
   // A visible look gets one turn before optional building upgrades after core growth is paid.
   buyLooks(p, type, day);
   const savingForFirstLook = day >= 50 && p.home.level >= 5 && !!STARDUST_COSMETICS[0] && !owns(p, STARDUST_COSMETICS[0].id);
-  if (homeUnlocked(p) && !savingForHome && !savingForFirstLook) {
+  // Keep the launch career's first Greenhouse before planet 20, reserving a Bay plot.
+  // The Bay's planet-21 gate lives in the UI, not canBuild; the bot must respect it too.
+  if (homeUnlocked(p) && p.level < 21 && !p.home.plots.some((b) => b?.type === 'greenhouse') && p.home.plots.filter((b) => !b).length > 1) {
+    const plot = p.home.plots.findIndex((b) => !b);
+    build(p, plot, 'greenhouse', now + 62_000);
+  }
+  // Planet 21 is now the build gate: keep its plot free rather than fill it with decor.
+  const hasBay = p.home.plots.some((b) => b?.type === 'launch_bay');
+  if (homeUnlocked(p) && (p.home.level === 1 || hasBay) && !savingForHome && !savingForFirstLook) {
     for (const type of BUILDING_TYPES) {
       if (type === 'lab') continue;
       if (p.home.plots.some((b) => b?.type === type)) continue;
@@ -437,9 +466,17 @@ function spendPolicy(p: Profile, type: PlayerType, day: number, now: number) {
         if (plot < 0 || build(p, plot, type, now + 62_000) !== 'ok') break;
       }
     }
-    for (let plot = 0; plot < p.home.plots.length; plot++) while (upgrade(p, plot, now + 62_000) === 'ok') {}
-    if (p.seen.length && !p.home.residents.length) invite(p, p.seen[0]);
+    for (let plot = 0; plot < p.home.plots.length; plot++) {
+      // Bay 5 opens no new M13 trip; save for the visible growth goals instead.
+      if (p.home.plots[plot]?.type === 'launch_bay') continue;
+      while (upgrade(p, plot, now + 62_000) === 'ok') {}
+    }
   }
+  if (homeUnlocked(p))
+    for (const species of p.seen) {
+      if (p.home.residents.length >= denCapacity(p.home, now)) break;
+      invite(p, species);
+    }
   return labBlocks;
 }
 
@@ -748,12 +785,10 @@ function visit(
   freeBoosters += lastRewards;
   boosterSources.rewards += lastRewards;
   const labBlocks = spendPolicy(p, type, day, now);
-  const nextVisitHours = visitNo < 2 ? 4 : 16;
-  const hours = expeditionOptions(p.home)
-    .filter((option) => option <= nextVisitHours)
-    .at(-1);
-  // Paired Regular/Payer players remember one short trip each active day.
-  if (hours && p.home.residents[0] && (!['Regular', 'Payer'].includes(type) || visitNo === 0))
+  const hours = expeditionOptions(p.home).at(-1);
+  const lastVisit = type === 'Weekender' ? 0 : 2;
+  // Regular/Payer remember one trip at the last visit, before the 16-hour gap.
+  if (hours && p.home.residents[0] && (!['Regular', 'Payer'].includes(type) || visitNo === lastVisit))
     startExpedition(p, p.home.residents[0].species, hours, now);
   return {
     wins,
@@ -770,10 +805,14 @@ function visit(
 /** `purchases: false` plays the Payer persona without buying anything: the paired control for "money never buys growth". */
 export interface SimulationOptions {
   purchases?: boolean;
+  /** Full calendar days, including absence days; supports the backup size career. */
+  days?: number;
   untilLevel?: number;
   onLevel?: (p: Profile, now: number) => void;
 }
 export async function simulate(type: PlayerType, masterSeed = 'default', opts: SimulationOptions = {}): Promise<Career> {
+  const dayCount = opts.days ?? 90;
+  if (!Number.isInteger(dayCount) || dayCount < 1 || dayCount > 180) throw new RangeError('days must be an integer from 1 to 180');
   const buys = type === 'Payer' && opts.purchases !== false;
   await clearLedger();
   vi.useFakeTimers();
@@ -793,6 +832,7 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: S
   const exhausted = { lab: null, upgrades: null, buildings: null, looks: null } as Career['exhausted'];
   const labDays = Object.fromEntries((Object.keys(KINDS) as Kind[]).map((kind) => [kind, {}])) as Career['labDays'];
   const homeLevelDays: Career['homeLevelDays'] = {};
+  const bayLevelDays: Career['bayLevelDays'] = {};
   const landmarkOpenDays: Career['landmarkOpenDays'] = {};
   const landmarkStageDays = Object.fromEntries(landmarkIds.map((id) => [id, {}])) as Career['landmarkStageDays'];
   const landmarkRouteCapacity: Career['landmarkRouteCapacity'] = {};
@@ -806,7 +846,7 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: S
   const boosterSources = { greenhouse: 0, trip: 0, rewards: 0, momentum: 0 };
   let day60Sinks: Career['reachableSinks'] | null = null;
   try {
-    for (let day = 1; day <= 90 && p.level <= (opts.untilLevel ?? Infinity); day++) {
+    for (let day = 1; day <= dayCount && p.level <= (opts.untilLevel ?? Infinity); day++) {
       const budget = attemptsFor(type, day);
       const visits = budget ? (type === 'Weekender' ? 1 : 3) : 0;
       let wins = 0;
@@ -886,6 +926,8 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: S
       const freeGems = Object.entries(earned)
         .filter(([k]) => k.startsWith('gems_') && k !== 'gems_iap')
         .reduce((n, [, v]) => n + v, 0);
+      const bay = bayLevel(p.home, now);
+      for (const level of [1, 2, 3, 4, 5] as const) if (bay >= level && bayLevelDays[level] === undefined) bayLevelDays[level] = day;
       days.push({
         day,
         active: !!budget,
@@ -903,6 +945,7 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: S
         idleActiveRatio: activeDust ? idleDust / activeDust : idleDust ? Infinity : null,
         labBlocks,
         homeLevel: p.home.level,
+        bayLevel: bay,
         landmarkStages: Object.fromEntries(landmarkIds.map((id) => [id, landmarkState(p, id).stage])) as Record<LandmarkId, number>,
       });
       if (day === 60) day60Sinks = reachableSinks(p);
@@ -927,10 +970,12 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: S
       )
         exhausted.looks = day;
     }
-    const summary = ledgerSummary(START + 89 * DAY);
+    const summary = ledgerSummary(START + (days.length - 1) * DAY + 8 * 3_600_000);
     const active = days.filter((x) => x.active);
     const career: Career = {
       type,
+      profile: p,
+      bayLevelDays,
       start,
       final: balances(p),
       earned: totals(summary.economy, 'earn_'),

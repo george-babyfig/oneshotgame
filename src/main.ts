@@ -1,3 +1,4 @@
+import './styles/wide.css';
 import '@fontsource/fredoka/500.css';
 import '@fontsource/fredoka/700.css';
 import './styles.css';

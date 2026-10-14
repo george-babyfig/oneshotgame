@@ -18,7 +18,7 @@
 //   j-pre-noun-budget.v5.json  Old planet-20 Voyage gate, before its moved debut
 //   k-pre-stats.v1.json    Pre-counter save: wins must backfill before noun migration
 //   l-voyage-seen.v5.json  Old planet-23 player who already saw the Voyage intro
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { defaultProfile, migrate, PROFILE_VERSION, readInterruptedRound, type Profile } from '../src/meta/profile';
@@ -44,6 +44,7 @@ const DUST_DELTAS: Record<string, number> = {
   'h-pre-m11.v3.json': 22980,
   'i-pre-m115.v4.json': 0,
   'j-pre-noun-budget.v5.json': 0,
+  'j-release-1.0.v6.json': 0,
   'k-pre-stats.v1.json': 1600,
   'l-voyage-seen.v5.json': 0,
 };
@@ -95,6 +96,7 @@ describe('save goldens', () => {
       'h-pre-m11.v3.json',
       'i-pre-m115.v4.json',
       'j-pre-noun-budget.v5.json',
+      'j-release-1.0.v6.json',
       'k-pre-stats.v1.json',
       'l-voyage-seen.v5.json',
     ]);
@@ -282,7 +284,7 @@ describe('save goldens: specific migrations', () => {
     const tower = ((raw.home as Raw).plots as (Raw | null)[]).find((b) => b?.type === 'tower')!;
     const bay = p.home.plots.find((b) => b?.type === 'launch_bay')!;
     expect(bay).toEqual({ ...tower, type: 'launch_bay' });
-    expect(p.home.expedition).toEqual((raw.home as Raw).expedition);
+    expect(p.home.expedition).toMatchObject((raw.home as Raw).expedition as Raw);
     expect(p).not.toHaveProperty('mastery'); // Cosmetic fling counts never drive gameplay launchers.
     expect(p.launcher.flings).toEqual({});
     expect(p.m105Migrated).toBe(true);
@@ -440,4 +442,25 @@ describe('save goldens: specific migrations', () => {
     expect(p.passport.badgesSet).toBe(false);
     expect(p.stats.wins).toBeGreaterThanOrEqual(Object.keys(p.stars).length);
   });
+});
+
+it('pays the captured 1.0 in-flight trip once, with frozen loot and no friendship', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(Date.UTC(2026, 10, 4, 12));
+  try {
+    const raw = load('j-release-1.0.v6.json');
+    const p = migrate(structuredClone(raw));
+    const trip = p.home.expedition!;
+    const before = { dust: p.dust, gems: p.gems, boosters: { ...p.boosters }, residents: structuredClone(p.home.residents) };
+    const paid = finishExpedition(p, trip.ends);
+    expect(paid).toMatchObject(trip.legacyLoot!);
+    expect(p.dust - before.dust).toBe(trip.legacyLoot!.dust);
+    expect(p.gems - before.gems).toBe(trip.legacyLoot!.gems);
+    for (const id of ['shower', 'spark', 'scope'] as const)
+      expect(p.boosters[id] - before.boosters[id]).toBe(trip.legacyLoot!.boosters[id] ?? 0);
+    expect(p.home.residents).toEqual(before.residents);
+    expect(finishExpedition(p, trip.ends)).toBeNull();
+  } finally {
+    vi.useRealTimers();
+  }
 });

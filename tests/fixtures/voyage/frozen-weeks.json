@@ -1,0 +1,722 @@
+[
+  {
+    "week": "2026-W44",
+    "hemisphere": "north",
+    "taught": 16,
+    "sha256": "a16d8beceaf6de1620dc309df89378d7a0705f3a1a02c0241034d4c0b2d29492"
+  },
+  {
+    "week": "2026-W44",
+    "hemisphere": "north",
+    "taught": 28,
+    "sha256": "a38f983997f1a1a2990b41a942d7b137a572bc7bb6763adae0e02fe0f3d66af5"
+  },
+  {
+    "week": "2026-W44",
+    "hemisphere": "north",
+    "taught": 36,
+    "sha256": "6da26afe0533d2fe3ecedba971bbf458117da00f006df76cc0a93ee82bbd674f"
+  },
+  {
+    "week": "2026-W44",
+    "hemisphere": "north",
+    "taught": 60,
+    "sha256": "9fa9b480d3a51edd9fa310f3c2118f7fd7d0ab9719c580e917b70416b1db2275"
+  },
+  {
+    "week": "2026-W44",
+    "hemisphere": "north",
+    "taught": 120,
+    "sha256": "9fa9b480d3a51edd9fa310f3c2118f7fd7d0ab9719c580e917b70416b1db2275"
+  },
+  {
+    "week": "2026-W44",
+    "hemisphere": "south",
+    "taught": 16,
+    "sha256": "a16d8beceaf6de1620dc309df89378d7a0705f3a1a02c0241034d4c0b2d29492"
+  },
+  {
+    "week": "2026-W44",
+    "hemisphere": "south",
+    "taught": 28,
+    "sha256": "a38f983997f1a1a2990b41a942d7b137a572bc7bb6763adae0e02fe0f3d66af5"
+  },
+  {
+    "week": "2026-W44",
+    "hemisphere": "south",
+    "taught": 36,
+    "sha256": "6da26afe0533d2fe3ecedba971bbf458117da00f006df76cc0a93ee82bbd674f"
+  },
+  {
+    "week": "2026-W44",
+    "hemisphere": "south",
+    "taught": 60,
+    "sha256": "9fa9b480d3a51edd9fa310f3c2118f7fd7d0ab9719c580e917b70416b1db2275"
+  },
+  {
+    "week": "2026-W44",
+    "hemisphere": "south",
+    "taught": 120,
+    "sha256": "9fa9b480d3a51edd9fa310f3c2118f7fd7d0ab9719c580e917b70416b1db2275"
+  },
+  {
+    "week": "2026-W45",
+    "hemisphere": "north",
+    "taught": 16,
+    "sha256": "eb0a1eb87ef0eeb72fac997c4fc72091744a2226f4a7a2afd4efccd52410df7f"
+  },
+  {
+    "week": "2026-W45",
+    "hemisphere": "north",
+    "taught": 28,
+    "sha256": "cedc663a83c29d3a4b8f3d6bff6871ea2f05a1e0bf8b2cc18119e6026f0e5164"
+  },
+  {
+    "week": "2026-W45",
+    "hemisphere": "north",
+    "taught": 36,
+    "sha256": "a7f14941a7e027d8b25ecf58be7c8e95428f1ec9237f7a602e04bdaa44c1fe7c"
+  },
+  {
+    "week": "2026-W45",
+    "hemisphere": "north",
+    "taught": 60,
+    "sha256": "ec05a5b7a94e8e52353ded5820f0b5949aead950a8bfbbf2354fce7d16aef58e"
+  },
+  {
+    "week": "2026-W45",
+    "hemisphere": "north",
+    "taught": 120,
+    "sha256": "ec05a5b7a94e8e52353ded5820f0b5949aead950a8bfbbf2354fce7d16aef58e"
+  },
+  {
+    "week": "2026-W45",
+    "hemisphere": "south",
+    "taught": 16,
+    "sha256": "bd72a1cf93df94c58071fd04ef697a5d54044b46b1afcf572a90b88dcab5bb45"
+  },
+  {
+    "week": "2026-W45",
+    "hemisphere": "south",
+    "taught": 28,
+    "sha256": "d7babb2cc81ae1c8a3a751496c53e2ec790ed95c944c99216b5d5805e78550a5"
+  },
+  {
+    "week": "2026-W45",
+    "hemisphere": "south",
+    "taught": 36,
+    "sha256": "388b42d12df9e256f38928e921ca9e7a58b0f568f7e6a15469abbf96f17d11c1"
+  },
+  {
+    "week": "2026-W45",
+    "hemisphere": "south",
+    "taught": 60,
+    "sha256": "392633044f105860286ce5dfbc18873e55194c65ec0aa4e742688a855c4b50be"
+  },
+  {
+    "week": "2026-W45",
+    "hemisphere": "south",
+    "taught": 120,
+    "sha256": "392633044f105860286ce5dfbc18873e55194c65ec0aa4e742688a855c4b50be"
+  },
+  {
+    "week": "2026-W46",
+    "hemisphere": "north",
+    "taught": 16,
+    "sha256": "b0da22b2925492c0ed398579cb5e001dbc574c0d5aad671fd0ba159bfd2d7952"
+  },
+  {
+    "week": "2026-W46",
+    "hemisphere": "north",
+    "taught": 28,
+    "sha256": "bb2b135bdc60e73a99915d73d58712899ef697a38c166009253dc049a2745c02"
+  },
+  {
+    "week": "2026-W46",
+    "hemisphere": "north",
+    "taught": 36,
+    "sha256": "dd39892593d61954bfd093b01e96a19b8c81777c31a02eb8edb5c9331e3bf824"
+  },
+  {
+    "week": "2026-W46",
+    "hemisphere": "north",
+    "taught": 60,
+    "sha256": "2cc5f802b817c438c4f73a511c7252d06481209d258b15dcf85a529acb9bc602"
+  },
+  {
+    "week": "2026-W46",
+    "hemisphere": "north",
+    "taught": 120,
+    "sha256": "2cc5f802b817c438c4f73a511c7252d06481209d258b15dcf85a529acb9bc602"
+  },
+  {
+    "week": "2026-W46",
+    "hemisphere": "south",
+    "taught": 16,
+    "sha256": "b0da22b2925492c0ed398579cb5e001dbc574c0d5aad671fd0ba159bfd2d7952"
+  },
+  {
+    "week": "2026-W46",
+    "hemisphere": "south",
+    "taught": 28,
+    "sha256": "bb2b135bdc60e73a99915d73d58712899ef697a38c166009253dc049a2745c02"
+  },
+  {
+    "week": "2026-W46",
+    "hemisphere": "south",
+    "taught": 36,
+    "sha256": "dd39892593d61954bfd093b01e96a19b8c81777c31a02eb8edb5c9331e3bf824"
+  },
+  {
+    "week": "2026-W46",
+    "hemisphere": "south",
+    "taught": 60,
+    "sha256": "2cc5f802b817c438c4f73a511c7252d06481209d258b15dcf85a529acb9bc602"
+  },
+  {
+    "week": "2026-W46",
+    "hemisphere": "south",
+    "taught": 120,
+    "sha256": "2cc5f802b817c438c4f73a511c7252d06481209d258b15dcf85a529acb9bc602"
+  },
+  {
+    "week": "2026-W47",
+    "hemisphere": "north",
+    "taught": 16,
+    "sha256": "1c98ba2105c8e8df1cd2dbaa0db0bb27ecf0dd382efcb6b9181f85c4c79bf396"
+  },
+  {
+    "week": "2026-W47",
+    "hemisphere": "north",
+    "taught": 28,
+    "sha256": "b3c75af7274d05a7f5dac509c058384ae8d4f9cff48dbc3809812605d23eccfe"
+  },
+  {
+    "week": "2026-W47",
+    "hemisphere": "north",
+    "taught": 36,
+    "sha256": "396bc3fe4bd52689eab0db42bb3b72cec1b4b44a36a625331d7e77f02ffb0257"
+  },
+  {
+    "week": "2026-W47",
+    "hemisphere": "north",
+    "taught": 60,
+    "sha256": "35678bfcd78d1d1292aa23c329b1e2b03f809e3473981dd2afbc0b9bba5d130e"
+  },
+  {
+    "week": "2026-W47",
+    "hemisphere": "north",
+    "taught": 120,
+    "sha256": "35678bfcd78d1d1292aa23c329b1e2b03f809e3473981dd2afbc0b9bba5d130e"
+  },
+  {
+    "week": "2026-W47",
+    "hemisphere": "south",
+    "taught": 16,
+    "sha256": "7f387263c508c997045793a3fb6cd8fe8f734d6564ea4f5e9475be42412b0a24"
+  },
+  {
+    "week": "2026-W47",
+    "hemisphere": "south",
+    "taught": 28,
+    "sha256": "07f68cfd3a6a9d54de75f4fff2ee04f50eb0a8058df30a0f4601b8d28c3c40d9"
+  },
+  {
+    "week": "2026-W47",
+    "hemisphere": "south",
+    "taught": 36,
+    "sha256": "27b5f9f0f624e080eb6e3d8873e73e3e7349770afcdfbcc8529d324399acfbc8"
+  },
+  {
+    "week": "2026-W47",
+    "hemisphere": "south",
+    "taught": 60,
+    "sha256": "83b87931f2f25c172099c595caff7b6ca5c47b3463af5a2e6d50d1159e60245f"
+  },
+  {
+    "week": "2026-W47",
+    "hemisphere": "south",
+    "taught": 120,
+    "sha256": "83b87931f2f25c172099c595caff7b6ca5c47b3463af5a2e6d50d1159e60245f"
+  },
+  {
+    "week": "2026-W48",
+    "hemisphere": "north",
+    "taught": 16,
+    "sha256": "873c27f1efe841d91603dfd11128b9134aaf9077cede5de4915e81de8740e9c7"
+  },
+  {
+    "week": "2026-W48",
+    "hemisphere": "north",
+    "taught": 28,
+    "sha256": "d6ff039dc728014bb240c3558085c126e371b846747eba5e9ab707aa65a8c8e4"
+  },
+  {
+    "week": "2026-W48",
+    "hemisphere": "north",
+    "taught": 36,
+    "sha256": "bbdcdb5fc39f46afe89a2dc2c238c3356e03016782ed478ffda48c8d0cc4341c"
+  },
+  {
+    "week": "2026-W48",
+    "hemisphere": "north",
+    "taught": 60,
+    "sha256": "a24f9327933abd6b23fa4f6c25dcddcf1040662cbfd70886eaf87e2240b3fe4a"
+  },
+  {
+    "week": "2026-W48",
+    "hemisphere": "north",
+    "taught": 120,
+    "sha256": "a24f9327933abd6b23fa4f6c25dcddcf1040662cbfd70886eaf87e2240b3fe4a"
+  },
+  {
+    "week": "2026-W48",
+    "hemisphere": "south",
+    "taught": 16,
+    "sha256": "89eb9fa93c711dd0e59878c72a8828ce3f693ecdea78a2c1d7a543034501c0dd"
+  },
+  {
+    "week": "2026-W48",
+    "hemisphere": "south",
+    "taught": 28,
+    "sha256": "1536e1010091e7fbcb50da2c0fd2ecc267551c3b351f19a2ee28681ba97e9e82"
+  },
+  {
+    "week": "2026-W48",
+    "hemisphere": "south",
+    "taught": 36,
+    "sha256": "edf03645bf48c2038d5297e90b9438984dee6e6e4ed8dcc5a0c322f33f8bd486"
+  },
+  {
+    "week": "2026-W48",
+    "hemisphere": "south",
+    "taught": 60,
+    "sha256": "570cf46c0105d60bedf646c9615db5dc7091046341b43cd8c6fe045cea03d143"
+  },
+  {
+    "week": "2026-W48",
+    "hemisphere": "south",
+    "taught": 120,
+    "sha256": "570cf46c0105d60bedf646c9615db5dc7091046341b43cd8c6fe045cea03d143"
+  },
+  {
+    "week": "2026-W49",
+    "hemisphere": "north",
+    "taught": 16,
+    "sha256": "50b4f792b84dc6c7710247ed8f00758156b0837583493cdbefbd425e343d0b9e"
+  },
+  {
+    "week": "2026-W49",
+    "hemisphere": "north",
+    "taught": 28,
+    "sha256": "c16ce2d8b415a6b004fe52d420efdad2682139a1450e99d6078b08e2c57663fe"
+  },
+  {
+    "week": "2026-W49",
+    "hemisphere": "north",
+    "taught": 36,
+    "sha256": "1e4ace43ffa5afff12f82d93175bc5e79f1925712cdfe960a45cb6274ca48052"
+  },
+  {
+    "week": "2026-W49",
+    "hemisphere": "north",
+    "taught": 60,
+    "sha256": "eb1f9869cce2e8cbaf42c0e94673c174e02a49de6ed8f204d39146631811fa28"
+  },
+  {
+    "week": "2026-W49",
+    "hemisphere": "north",
+    "taught": 120,
+    "sha256": "eb1f9869cce2e8cbaf42c0e94673c174e02a49de6ed8f204d39146631811fa28"
+  },
+  {
+    "week": "2026-W49",
+    "hemisphere": "south",
+    "taught": 16,
+    "sha256": "50b4f792b84dc6c7710247ed8f00758156b0837583493cdbefbd425e343d0b9e"
+  },
+  {
+    "week": "2026-W49",
+    "hemisphere": "south",
+    "taught": 28,
+    "sha256": "c16ce2d8b415a6b004fe52d420efdad2682139a1450e99d6078b08e2c57663fe"
+  },
+  {
+    "week": "2026-W49",
+    "hemisphere": "south",
+    "taught": 36,
+    "sha256": "1e4ace43ffa5afff12f82d93175bc5e79f1925712cdfe960a45cb6274ca48052"
+  },
+  {
+    "week": "2026-W49",
+    "hemisphere": "south",
+    "taught": 60,
+    "sha256": "eb1f9869cce2e8cbaf42c0e94673c174e02a49de6ed8f204d39146631811fa28"
+  },
+  {
+    "week": "2026-W49",
+    "hemisphere": "south",
+    "taught": 120,
+    "sha256": "eb1f9869cce2e8cbaf42c0e94673c174e02a49de6ed8f204d39146631811fa28"
+  },
+  {
+    "week": "2026-W50",
+    "hemisphere": "north",
+    "taught": 16,
+    "sha256": "a2339915d760a90aba3308ebf78edfed88c9a0db9438b07c6bfefbd92adc39b0"
+  },
+  {
+    "week": "2026-W50",
+    "hemisphere": "north",
+    "taught": 28,
+    "sha256": "ec7dd34ae826678f4db64409d8fecfeddd50c74f9dbc93da636b4794b6ebb6d5"
+  },
+  {
+    "week": "2026-W50",
+    "hemisphere": "north",
+    "taught": 36,
+    "sha256": "47c75bfbc84631d47ec0b37a979d9297793af355ff79030ad59ec3a315f6a43b"
+  },
+  {
+    "week": "2026-W50",
+    "hemisphere": "north",
+    "taught": 60,
+    "sha256": "95c5b8cbe07f69f9b7fcd6e6bb38eb359769b9811c841f5ab093612b85c58a3c"
+  },
+  {
+    "week": "2026-W50",
+    "hemisphere": "north",
+    "taught": 120,
+    "sha256": "95c5b8cbe07f69f9b7fcd6e6bb38eb359769b9811c841f5ab093612b85c58a3c"
+  },
+  {
+    "week": "2026-W50",
+    "hemisphere": "south",
+    "taught": 16,
+    "sha256": "d1f1aef46240328f53476de26d53b9d6604e5b975747851059415e8928cbe839"
+  },
+  {
+    "week": "2026-W50",
+    "hemisphere": "south",
+    "taught": 28,
+    "sha256": "6671a674d23d32f9e00df9b9e1e7d2b2fd763565d9babbc069b1f4441d005c54"
+  },
+  {
+    "week": "2026-W50",
+    "hemisphere": "south",
+    "taught": 36,
+    "sha256": "5cba13c3109f92b207603407384354628aeeff49655b9097f675fef0ac64a768"
+  },
+  {
+    "week": "2026-W50",
+    "hemisphere": "south",
+    "taught": 60,
+    "sha256": "e08fe0f87d9d5aaf37ae34bb7e7134289f5b7b8e81a5103ac0060d9970900a43"
+  },
+  {
+    "week": "2026-W50",
+    "hemisphere": "south",
+    "taught": 120,
+    "sha256": "e08fe0f87d9d5aaf37ae34bb7e7134289f5b7b8e81a5103ac0060d9970900a43"
+  },
+  {
+    "week": "2026-W51",
+    "hemisphere": "north",
+    "taught": 16,
+    "sha256": "a61989ee285fa6085acb3657c0cf2e2879449415f732fdafbf6712ee9f805cc7"
+  },
+  {
+    "week": "2026-W51",
+    "hemisphere": "north",
+    "taught": 28,
+    "sha256": "d315a5e7c89da9b43a6d5ba06be970fe570d4e8cfe5d74e4f380b643263e9960"
+  },
+  {
+    "week": "2026-W51",
+    "hemisphere": "north",
+    "taught": 36,
+    "sha256": "72b41b1556536b965753b394dcbe3bc3b953263929dbb95acd8d8a9c50668dd3"
+  },
+  {
+    "week": "2026-W51",
+    "hemisphere": "north",
+    "taught": 60,
+    "sha256": "b9bbe8c57770bc065138a84147045d6b3d856e1bec0533fdc2f68b5119facc49"
+  },
+  {
+    "week": "2026-W51",
+    "hemisphere": "north",
+    "taught": 120,
+    "sha256": "b9bbe8c57770bc065138a84147045d6b3d856e1bec0533fdc2f68b5119facc49"
+  },
+  {
+    "week": "2026-W51",
+    "hemisphere": "south",
+    "taught": 16,
+    "sha256": "54cea64a899c593b43ec5382a88ca234e3a752447846a9959c5d4c0f601ac4dd"
+  },
+  {
+    "week": "2026-W51",
+    "hemisphere": "south",
+    "taught": 28,
+    "sha256": "245e6d52a35c013cc6e7cdefbf28ce5db2d1cca5d13afee4c96c72ee9695dd81"
+  },
+  {
+    "week": "2026-W51",
+    "hemisphere": "south",
+    "taught": 36,
+    "sha256": "68ba9aa9ba6857bfbd1afff5657b88696b0ba995bf9407bf02591c134d22b9c3"
+  },
+  {
+    "week": "2026-W51",
+    "hemisphere": "south",
+    "taught": 60,
+    "sha256": "0387f654bb388174a1fa7fd4fa029c59c0a2c29429438e8ecb69b605383df65b"
+  },
+  {
+    "week": "2026-W51",
+    "hemisphere": "south",
+    "taught": 120,
+    "sha256": "0387f654bb388174a1fa7fd4fa029c59c0a2c29429438e8ecb69b605383df65b"
+  },
+  {
+    "week": "2026-W52",
+    "hemisphere": "north",
+    "taught": 16,
+    "sha256": "7e8f353525e3ba9445dc4f8cff7ff6ebfce8a76b74045bc6bf6964ee7e936daf"
+  },
+  {
+    "week": "2026-W52",
+    "hemisphere": "north",
+    "taught": 28,
+    "sha256": "1c4d864c1bc5bc3597d6f074aef8975c449a270e7ec9cc4a580c8938796244c6"
+  },
+  {
+    "week": "2026-W52",
+    "hemisphere": "north",
+    "taught": 36,
+    "sha256": "6c25de1db894841a41e55781c52c0c1ea0d5ffa9e9c7fbc14c689ec91d641929"
+  },
+  {
+    "week": "2026-W52",
+    "hemisphere": "north",
+    "taught": 60,
+    "sha256": "658b7762dc5df49629da0e53e1c40e56cb917a1def9a0eab200b65c56c1e4be8"
+  },
+  {
+    "week": "2026-W52",
+    "hemisphere": "north",
+    "taught": 120,
+    "sha256": "658b7762dc5df49629da0e53e1c40e56cb917a1def9a0eab200b65c56c1e4be8"
+  },
+  {
+    "week": "2026-W52",
+    "hemisphere": "south",
+    "taught": 16,
+    "sha256": "ed3d3d346904f0a19dfd4e12936f6d2e17a817c7446a35a7a96e0cebe5cb3755"
+  },
+  {
+    "week": "2026-W52",
+    "hemisphere": "south",
+    "taught": 28,
+    "sha256": "efab3492e3eb74d9c1e26159870143a24b046c7a3e0942f5965de8368cacb8d8"
+  },
+  {
+    "week": "2026-W52",
+    "hemisphere": "south",
+    "taught": 36,
+    "sha256": "e4302948c39d5720741cc62c2362cba907f5302e193858d69a7633db49bf1e90"
+  },
+  {
+    "week": "2026-W52",
+    "hemisphere": "south",
+    "taught": 60,
+    "sha256": "84fa5235077ed5c3a10bb37a347d9f4f2d2deb6938eb69271e885e8e642d0d34"
+  },
+  {
+    "week": "2026-W52",
+    "hemisphere": "south",
+    "taught": 120,
+    "sha256": "84fa5235077ed5c3a10bb37a347d9f4f2d2deb6938eb69271e885e8e642d0d34"
+  },
+  {
+    "week": "2026-W53",
+    "hemisphere": "north",
+    "taught": 16,
+    "sha256": "390ccec17f09ddab5ff6a3f86293d7dbdf8d08fe316552a5391570be6b5a356b"
+  },
+  {
+    "week": "2026-W53",
+    "hemisphere": "north",
+    "taught": 28,
+    "sha256": "6d5b366bf9b260ad14dd5cf3435efa89a4eb54add0402c0d973e66648fc67144"
+  },
+  {
+    "week": "2026-W53",
+    "hemisphere": "north",
+    "taught": 36,
+    "sha256": "5daab1dd28b3d4db772af2c143875eafdd7d274e9ae12e981d0bd606f9c43cba"
+  },
+  {
+    "week": "2026-W53",
+    "hemisphere": "north",
+    "taught": 60,
+    "sha256": "b7484b04d05e076df45732279f091fa95e0df630925ab8b515a332dc0b8f5e51"
+  },
+  {
+    "week": "2026-W53",
+    "hemisphere": "north",
+    "taught": 120,
+    "sha256": "b7484b04d05e076df45732279f091fa95e0df630925ab8b515a332dc0b8f5e51"
+  },
+  {
+    "week": "2026-W53",
+    "hemisphere": "south",
+    "taught": 16,
+    "sha256": "c7c2000b98c3973e498b15acdacad9ce45d2134162228cdd5ea8e0cf501243ba"
+  },
+  {
+    "week": "2026-W53",
+    "hemisphere": "south",
+    "taught": 28,
+    "sha256": "bd97a6e329975ea3d9b6259c4ad277a1483183877107f2b69caeddb17194596f"
+  },
+  {
+    "week": "2026-W53",
+    "hemisphere": "south",
+    "taught": 36,
+    "sha256": "cfc7730691437e128190e2ffa6014278668fbd149a8918fdeb59f694bd2bf25d"
+  },
+  {
+    "week": "2026-W53",
+    "hemisphere": "south",
+    "taught": 60,
+    "sha256": "33c75bafc63e43d64e088041b4a958494f4ccad1f39c8cb313cbd20df57b5558"
+  },
+  {
+    "week": "2026-W53",
+    "hemisphere": "south",
+    "taught": 120,
+    "sha256": "33c75bafc63e43d64e088041b4a958494f4ccad1f39c8cb313cbd20df57b5558"
+  },
+  {
+    "week": "2027-W01",
+    "hemisphere": "north",
+    "taught": 16,
+    "sha256": "65864ee184d3798cc1e4a51406e7967c0001ea558b0c0141124106936f5ba73e"
+  },
+  {
+    "week": "2027-W01",
+    "hemisphere": "north",
+    "taught": 28,
+    "sha256": "868f9a104b232ba0c5b36437d17c3e3b28e6356ef875b772071b6d170f574a72"
+  },
+  {
+    "week": "2027-W01",
+    "hemisphere": "north",
+    "taught": 36,
+    "sha256": "8d8207ecaf7cd9eb6919a331fce21001d3ec566713e9bfa4a25e998dfd92dbf6"
+  },
+  {
+    "week": "2027-W01",
+    "hemisphere": "north",
+    "taught": 60,
+    "sha256": "ee1af62bb673aa4c20f64d2fb3f87d8267e83f73d8963eeb7e905dffd7a1924d"
+  },
+  {
+    "week": "2027-W01",
+    "hemisphere": "north",
+    "taught": 120,
+    "sha256": "ee1af62bb673aa4c20f64d2fb3f87d8267e83f73d8963eeb7e905dffd7a1924d"
+  },
+  {
+    "week": "2027-W01",
+    "hemisphere": "south",
+    "taught": 16,
+    "sha256": "ac3f83744e84e08c090789faf0f40727bf3832be8efa11cdd84b99f37662cb0f"
+  },
+  {
+    "week": "2027-W01",
+    "hemisphere": "south",
+    "taught": 28,
+    "sha256": "d1bb98fca8d19ae265cb1a36d5c2f92834af71cab4bb80fbbc90e8808b3d7757"
+  },
+  {
+    "week": "2027-W01",
+    "hemisphere": "south",
+    "taught": 36,
+    "sha256": "847a9f98e8586824f7c6499b7ace676dc4176da98a387637447ded0699f4e8ba"
+  },
+  {
+    "week": "2027-W01",
+    "hemisphere": "south",
+    "taught": 60,
+    "sha256": "55107f024636591fa5f2fcbbdcb8d986feb1a19210e6a074bcc7b0dc7e6d757d"
+  },
+  {
+    "week": "2027-W01",
+    "hemisphere": "south",
+    "taught": 120,
+    "sha256": "55107f024636591fa5f2fcbbdcb8d986feb1a19210e6a074bcc7b0dc7e6d757d"
+  },
+  {
+    "week": "2027-W02",
+    "hemisphere": "north",
+    "taught": 16,
+    "sha256": "0d83168565153f3896b5e887bf779aa2c94744f8c3f9bef468b59c019f221852"
+  },
+  {
+    "week": "2027-W02",
+    "hemisphere": "north",
+    "taught": 28,
+    "sha256": "38cb0f214fa2830b6783de13d7cfe291f6516755d4707d9935aebef0bae195c6"
+  },
+  {
+    "week": "2027-W02",
+    "hemisphere": "north",
+    "taught": 36,
+    "sha256": "f90d3d3de0a543d28273e240cefba8bd3c8aebbd518c95b793433965792610f4"
+  },
+  {
+    "week": "2027-W02",
+    "hemisphere": "north",
+    "taught": 60,
+    "sha256": "1bb6987ea785e2565b87bd1891da0c9001a24c29f577ebe331f11cf88096d9f7"
+  },
+  {
+    "week": "2027-W02",
+    "hemisphere": "north",
+    "taught": 120,
+    "sha256": "1bb6987ea785e2565b87bd1891da0c9001a24c29f577ebe331f11cf88096d9f7"
+  },
+  {
+    "week": "2027-W02",
+    "hemisphere": "south",
+    "taught": 16,
+    "sha256": "7185b2d6d70ad8ade0c97b6deaf29b85f5da63d5cbac8cac29338544ba39ded2"
+  },
+  {
+    "week": "2027-W02",
+    "hemisphere": "south",
+    "taught": 28,
+    "sha256": "f2517ab895fc473e8482d80d7cc47c0277306800802693611cf7f6fb16d7a3d2"
+  },
+  {
+    "week": "2027-W02",
+    "hemisphere": "south",
+    "taught": 36,
+    "sha256": "da1f128a1c857ab466369a8463bbad04f6d007480504e77baf5fa9a4e8b471a6"
+  },
+  {
+    "week": "2027-W02",
+    "hemisphere": "south",
+    "taught": 60,
+    "sha256": "6502fb0988cdf82da109f875963d88f277d1a918c7d68174454bcb345c3e7698"
+  },
+  {
+    "week": "2027-W02",
+    "hemisphere": "south",
+    "taught": 120,
+    "sha256": "6502fb0988cdf82da109f875963d88f277d1a918c7d68174454bcb345c3e7698"
+  }
+]

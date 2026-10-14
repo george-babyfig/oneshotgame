@@ -20,7 +20,7 @@ describe('profile migration', () => {
     expect(p.home.level).toBe(3);
     expect(p.home.plots.filter((b) => b?.type === 'mill' || b?.type === 'grove' || b?.type === 'observatory')).toEqual([]);
     expect(p.home.plots.find((b) => b?.type === 'launch_bay')?.lv).toBe(1);
-    expect(p.home.expedition).toEqual(raw.home.expedition);
+    expect(p.home.expedition).toMatchObject(raw.home.expedition);
     expect(p.home.plots.find((b) => b?.type === 'greenhouse')?.greenhouse).toMatchObject({
       choice: 'shower',
       winsTowardNext: 0,
@@ -122,4 +122,93 @@ describe('profile migration', () => {
     expect(p.roadPoints).toBe(5);
     expect(p.stars[0]).toBeUndefined();
   });
+});
+
+describe('M13 preserving save migration', () => {
+  const rawGolden = () => JSON.parse(readFileSync('tests/fixtures/saves/j-release-1.0.v6.json', 'utf8'));
+  it('keeps the untouched 1.0 fixture rich, old-format and reproducible', () => {
+    const raw = rawGolden();
+    expect(raw.v).toBe(6);
+    expect(raw).not.toHaveProperty('m13Migrated');
+    expect(raw.galaxy.length).toBeGreaterThanOrEqual(25);
+    expect(raw.galaxy.some((g: { colors: string[] }) => !g.colors.length)).toBe(true);
+    expect(raw.galaxy.every((g: object) => !('sec' in g))).toBe(true);
+    expect(raw.home.residents.map((r: { fp: number }) => r.fp)).toEqual([2, 9, 24]);
+    expect(raw.home.expedition).toEqual({ species: 'otter', hours: 4, ends: Date.UTC(2026, 10, 4, 16), planet: expect.any(Number) });
+    expect(raw.home.expedition).not.toHaveProperty('n');
+    expect(raw.voyage.cleared).toBe(2);
+    expect(raw.voyage).not.toHaveProperty('theme');
+    expect(raw.quests.list.some((q: { claimed: boolean }) => !q.claimed)).toBe(true);
+    expect(raw.roadPoints).toBe(60);
+    expect(raw.pass).toBe(true);
+    expect(raw.roadPassEntitlements).toContain('road00');
+    expect(raw.meta.productEntitlements).toContain('com.pocketplanet.game.theme.tidepool');
+    expect(raw.settings).toMatchObject({ notifications: true, gameCenter: true });
+    expect(raw.home.lastTick).toBeGreaterThan(0);
+    expect(raw.vault.lastTick).toBeGreaterThan(0);
+  });
+  it('preserves Wishes, Road, Voyage and chosen privacy settings, and migrates once', () => {
+    const raw = rawGolden();
+    const p = migrate(raw);
+    expect(p.v).toBe(7);
+    expect(p.m13Migrated).toBe(true);
+    expect(p.quests).toEqual(raw.quests);
+    expect(p.voyage).toEqual(raw.voyage);
+    expect(p.roadRecords).toEqual(raw.roadRecords);
+    expect(p.settings).toEqual(raw.settings);
+    expect(p.home.tripFuel).toBe(true);
+    expect(p.home.tripReturn).toBeNull();
+    expect(p.home.expedition).toMatchObject({
+      n: p.galaxy[raw.home.expedition.planet].n,
+      legacyLoot: { dust: 24, gems: 2, boosters: { spark: 1 } },
+    });
+    expect(p.galaxy.every((g) => g.sec?.length === 120 && g.approx === 1)).toBe(true);
+    expect(migrate(JSON.parse(JSON.stringify(p)))).toEqual(p);
+  });
+  it.each([
+    null,
+    false,
+    [],
+    {},
+    'bad',
+    { species: 'otter', hours: 2, ends: 100, planet: 0 },
+    { species: 'otter', hours: 4, ends: Infinity, planet: 0 },
+    { species: 'invalid', hours: 4, ends: 100, planet: 0 },
+  ])('rejects malformed null-default trips: %j', (trip) => {
+    const raw = rawGolden();
+    raw.home.expedition = trip;
+    expect(migrate(raw).home.expedition).toBeNull();
+  });
+  it('clamps old future trips and freezes the effective Bay level without paying friendship', () => {
+    const raw = rawGolden();
+    const now = Date.now();
+    raw.home.expedition.ends = now + 100 * 86400000;
+    raw.home.plots[0] = { type: 'launch_bay', lv: 3, done: now + 3600000 };
+    const p = migrate(raw);
+    expect(p.home.expedition?.ends).toBeLessThanOrEqual(Date.now() + 4 * 3600000);
+    expect(p.home.expedition?.legacyLoot?.dust).toBe(24); // upgrading Bay 3 still effectively 2
+    expect(p.home.residents).toEqual(raw.home.residents);
+  });
+});
+
+// This is the contract consumed by noun audits and the nightly backup-size career.
+describe('step-0 career options', () => {
+  it('retains untilLevel/onLevel and returns the profile', async () => {
+    const { simulate } = await import('./sim/economy/career');
+    const levels: number[] = [];
+    const c = await simulate('Regular', 'default', { days: 3, untilLevel: 3, onLevel: (p) => levels.push(p.level) });
+    expect(levels).toEqual([2, 3, 4]);
+    expect(c.profile.level).toBe(4);
+    expect(c.days).toHaveLength(1);
+  });
+  it('supports the complete 180-day size career and rejects invalid day counts', async () => {
+    const { simulate } = await import('./sim/economy/career');
+    for (const days of [0, -1, 181, 1.5, NaN]) await expect(simulate('Regular', 'default', { days })).rejects.toThrow(RangeError);
+    const c = await simulate('Regular', 'default', { days: 180 });
+    expect(c.days).toHaveLength(180);
+    expect(c.profile.level).toBe(c.days.at(-1)?.level);
+    expect(c.profile.home.residents.length).toBeGreaterThan(1);
+    expect(c.bayLevelDays[3]).toBeGreaterThan(0);
+    expect(c.profile.galaxy.every((g) => g.sec?.length === 120)).toBe(true);
+  }, 120000);
 });

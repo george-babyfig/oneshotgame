@@ -278,7 +278,9 @@ Forbidden channels: real money, gems, stardust purchase, random chests, the Cosm
 4. It never adds throws, never reveals the next objects beyond Star Scope's rule, never changes Trouble timing, and never changes per-object gravity (cut in 4b).
 5. Switching launchers is free, instant and remembered. The pre-level overlay shows the chosen launcher as a chip next to the Buddy chip; tapping it opens a 1-row picker.
 
-**Trips (M13), inside the Launch Bay.** The decided M13 rules apply, now launched from the Bay: pick one of your planets; the game picks the best friend and shows the yield before you send; 1/4/8 hours by Bay level; one at a time; about 8-10 frost from an 8-hour trip with a match; a postcard of the real planet, shared through the gate. Additions: the return time shows as a clock time; each campaign win takes 10 minutes off (as for builds); the friend is drawn on the pad waving goodbye and in the postcard on return; trips pay Essences and at most 3 gems, **no stardust** (so trips add nothing to idle stardust).
+**Trips (M13), inside the Launch Bay (decisions 61-72).** The decided M13 rules apply, now launched from the Bay: pick one of your planets; the game picks the best friend and shows the yield before you send; 1/4/8 hours by Bay level; one at a time; about 8-10 frost from an 8-hour trip with a match; a postcard of the real planet, shared through the gate. Additions: the return time shows as a clock time; each campaign win takes 10 minutes off (as for builds); the friend is drawn on the pad waving goodbye and in the postcard on return; trips pay Essences and at most 3 gems, **no stardust** (so trips add nothing to idle stardust).
+
+Trips appear from planet 21 with a working Bay: none at Bay 1, 1 hour at Bay 2, 4 hours at Bay 3, and 8 hours at Bay 4; Bay 5 adds no trip. A counted win since the last send allows a trip. Call home returns the friend immediately without a reward and allows the next send. The Buddy stays home. Yield is fixed at send: the planet's frost sectors count at 1 each; other Essence colours count at 1 per 2 sectors, then factors 0.15/0.60/1.25 and caps 2/6/10 apply. A home-land match on at least 3 sectors multiplies by 1.25. No boosters or rarity bonus. Legacy trips honour their frozen 1.0 loot.
 
 ### 3.6 Decorations
 
@@ -303,7 +305,7 @@ Friends react to decorations (4.3): they gather at the Fountain in the evening, 
 - **Who:** any creature you have seen, as today; there is no building or habitat gate (the critics cut "needs its Workshop first").
 - **How:** Friends sheet → "Invite", or tap the creature's card in the Lifebook → "Invite home". The Den must have room.
 - **The moment (M6.5 celebration, under 2 s; 4 s the first time):** a small bubble-ship arrives from the sky, lands on the creature's home land gap (or by the Den), the creature hops out, looks around and waves. Friends already living there wave back. A banner: "Tide Otter moved in!"
-- **Moving out:** "Take a trip home" (the Friends sheet). Copy: "Tide Otter goes back to its planet for a while. It will remember you." Friendship is kept (today's `friends` record). Nothing is lost and it can come back any time.
+- **Moving out:** "Say goodbye" (the Friends sheet). Copy: "Tide Otter goes back to its planet for a while. It will remember you." Friendship is kept (today's `friends` record). Nothing is lost and it can come back any time.
 - **First friend (decided):** at planet 5 the first creature you met moves in as step 2 of the first hour.
 
 ### 4.2 Homes
@@ -311,7 +313,7 @@ Friends react to decorations (4.3): they gather at the Fountain in the evening, 
 Each friend has three places, all derived, none stored:
 
 1. **Its bed:** the Den it belongs to (the first Den with room when it moved in).
-2. **Its home land:** the land gap showing the first land in its Lifebook recipe (`SpeciesDef.home[0]`; legendaries: the gap with the most life for World Tree Spirit, the sea for Leviathan). If no gap shows it, the friend's home spot is its Den.
+2. **Its home land:** the land gap showing the first land in its Lifebook recipe (`SpeciesDef.home[0]`; legendaries: forest for World Tree Spirit, the sea for Leviathan; the shared `homeLandFor` rule). If no gap shows it, the friend's home spot is its Den.
 3. **Its favourite decoration:** set by personality (4.3). If you own one, the friend visits it in the evening.
 
 ### 4.3 Daily life, routines and personalities
@@ -356,6 +358,8 @@ Decided in 4e: friendship grows from its Wishes (+2), wins with it as your Buddy
 
 - The gems are paid the moment the friendship point arrives, usually on the results card. The **celebration** (the friend dancing, the accessory reveal) plays on the next Homeworld visit, and the Homeworld badge counts it as something to see. The value is never held back to force a visit.
 - Keepsakes are 36 free decorations, one per species, earned only. They make the "all friends" goal visible on the Homeworld.
+
+Trip friendship is +1 for 1 hour, +1/+2 for 4 hours, and +2/+3 for 8 hours (without/with a home-land match). Payment happens once inside `settleTrips`, called by `tickHome` on init, resume and Homeworld open, and after each win. Only viewing the postcard waits for a visit. No trip notification is scheduled. Trips' share of friendship is watched at ≤40%.
 
 ### 4.5 Wishes on the Homeworld
 
@@ -404,8 +408,8 @@ Wishes are decided in 4e and built in M4 (three a day, date-seeded, rewards up f
 2. Friends never leave on their own, never fight, never get hurt, never need anything from the player.
 3. No daily greeting, daily cap, streak or "come back tomorrow". Nothing decays while you are away.
 4. Tapping a friend never pays, so there is no reason to tap-farm.
-5. Words: "moved in", "trip home", "sleeping", "best friends". Never "died", "lost", "abandoned", "starving".
-6. Every Wish and every friendship point comes from rounds, never from a Homeworld chore.
+5. Words: "moved in", "Say goodbye", "sleeping", "best friends". Never "died", "lost", "abandoned", "starving".
+6. Every friendship point traces to a round: Wishes, Buddy wins, and trips sent after a win. No Homeworld chore earns friendship.
 
 ---
 
@@ -671,7 +675,7 @@ At about 1,800-2,500 ✨ a day (active plus capped idle) a Regular player needs 
 
 ### 10.3 The colour budget
 
-Demand from Labs, Homeworld Levels, Landmarks and tunes against model supply for a Regular player (6 planets a day, frost at the M7 band midpoint of 0.65 per planet).
+Historical demand model from Labs, Homeworld Levels, Landmarks and tunes (6 planets a day). The old M7 frost supply estimate below is superseded: 1.0 measures about 19.8 frost per ten planets; the round band is now 15-25 (decision 62).
 
 | Colour | Labs | HW Levels 2-5 | Landmarks | Tunes (share) | Total demand | Supply / day | Days to cover    | Role                                   |
 | ------ | ---- | ------------- | --------- | ------------- | ------------ | ------------ | ---------------- | -------------------------------------- |
@@ -681,7 +685,7 @@ Demand from Labs, Homeworld Levels, Landmarks and tunes against model supply for
 | Ember  | 175  | 90            | 0         | 0             | 265          | ~5           | ~53              | Scarce: Labs and levels only           |
 | Frost  | 175  | 100           | 0         | 0             | 275          | ~4 (+trips)  | ~70 before trips | Scarce: binding                        |
 
-**Rules that follow:** Landmarks and launcher tunes use only leaf, dew and stone, so they never compete with the Ice Lab, Magma Lab or Homeworld Levels for scarce colours. Frost is the binding colour; at the band midpoint it would push Homeworld Level 5 toward day 60-70 before trips exist. See 15, question 5.
+**Rules that follow:** Landmarks and launcher tunes use only leaf, dew and stone, so they never compete with the Ice Lab, Magma Lab or Homeworld Levels for scarce colours. Frost binds the Ice Lab only until Ice Lab 5, then accumulates. In the previous 1.0 report the Ice Lab reaches 5 on day 29 and frost balances rise to 180 on day 60 and 504 on day 90. Watch frost and ember balances on days 60/90 and trip income after the last sink; do not slow round drops or raise in-progress costs. Trip Essences must stay ≤0.5× round Essences in every seven-day window overall and for frost and ember separately (decision 65).
 
 ### 10.4 Bands
 
@@ -782,14 +786,15 @@ ROADMAP-v2 M11.5 asks for "what each building does for your next throw, the next
 
 A pure function in `src/meta/nextup.ts` (M4), called with `context: 'homeworld'`. First match wins:
 
-1. A celebration waiting (friendship level, finished build, finished Landmark stage) → "See what's new".
-2. A Landmark stage ready to build → "Build Skyglass stage 3".
-3. A Homeworld Level ready → "Grow your Homeworld to Level 4".
-4. A Lab level affordable now → "Rock Lab level 3 is ready".
-5. A launcher tune affordable now → "Tune your Thumper".
-6. The level checklist item closest to done → "Level 4: 12 more frost (Glacier makes frost lands)".
-7. The Landmark's current ask → "Sprout Garden: 3 more Wildflowers".
-8. "Play planet N".
+1. A returned trip → "A friend is back from a trip". Its badge is counted once through the `trip:<n>` celebration, with no separate return count.
+2. A celebration waiting (friendship level, finished build, finished Landmark stage) → "See what's new".
+3. A Landmark stage ready to build → "Build Skyglass stage 3".
+4. A Homeworld Level ready → "Grow your Homeworld to Level 4".
+5. A Lab level affordable now → "Rock Lab level 3 is ready".
+6. A launcher tune affordable now → "Tune your Thumper".
+7. The level checklist item closest to done → "Level 4: 12 more frost (Glacier makes frost lands)".
+8. The Landmark's current ask → "Sprout Garden: 3 more Wildflowers".
+9. "Play planet N".
 
 Never an offer, a price in money, or a reason to wait.
 
@@ -857,16 +862,17 @@ Every player-facing string goes through the terms lint (M1) in six languages.
 
 ### 13.3 Noun budget
 
-| Change             | Noun                                                                                                     | Earns its place or retires                                   | First met                              |
-| ------------------ | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | -------------------------------------- |
-| New                | **Landmarks** (and five proper names)                                                                    | The owner's "do stuff for it" goals; retires **meteor rock** | Planet 29                              |
-| New (rename)       | **Launch Bay**                                                                                           | Retires **Launch Tower** (one building instead of two)       | Homeworld Level 2 (about planet 12-20) |
-| New (content name) | Floating Isle                                                                                            | A place, like a land name; arrives through a Landmark        | Sky Bridge                             |
-| Verb, not a noun   | Tune, Try it                                                                                             | –                                                            | Launch Bay                             |
-| Not new            | Friends, Den, Greenhouse, Buddy, Wishes, Labs, Essences, decorations, keepsake (memento), lands          | Already in 4h                                                | –                                      |
-| Retired            | Meteor rock, Launch Tower (plus the 4e list: Mills, Groves, Observatory, charm, resident requests, Ring) | –                                                            | –                                      |
+| Change             | Noun                                                                                                     | Earns its place or retires                                             | First met                              |
+| ------------------ | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------------- |
+| New                | **Landmarks** (and five proper names)                                                                    | The owner's "do stuff for it" goals; retires **meteor rock**           | Planet 29                              |
+| New (rename)       | **Launch Bay**                                                                                           | Retires **Launch Tower** (one building instead of two)                 | Homeworld Level 2 (about planet 12-20) |
+| New                | Trip                                                                                                     | Real-planet trips and postcards; retires player-facing Expedition copy | Planet 21 with a working Bay           |
+| New (content name) | Floating Isle                                                                                            | A place, like a land name; arrives through a Landmark                  | Sky Bridge                             |
+| Verb, not a noun   | Tune, Try it                                                                                             | –                                                                      | Launch Bay                             |
+| Not new            | Friends, Den, Greenhouse, Buddy, Wishes, Labs, Essences, decorations, keepsake (memento), lands          | Already in 4h                                                          | –                                      |
+| Retired            | Meteor rock, Launch Tower (plus the 4e list: Mills, Groves, Observatory, charm, resident requests, Ring) | –                                                                      | –                                      |
 
-**By planet 20 the count is unchanged at 18** (under the cap of 20): Landmarks debut at planet 29, and the Launch Bay replaces a noun (Launch Tower) that isn't in the planet-20 list. The unlock ladder gains one row: planet 29, "Landmarks: your first big build" (planet 26 teaches Combo, FLIGHT.md 2.4). FLIGHT.md places the launcher intro at planet 31, and ROADMAP-v2 4h counts both docs' nouns against the same budget.
+**By planet 20 the Regular count remains 21** (launch decision 60): no trip UI, including its locked line, appears before planet 21. Trip is a new noun with a glossary row, not a swap for Expedition, which was never counted. The Launch Bay is buildable from planet 21. The earlier count of 18 and cap of 20 are superseded. In particular, Landmarks debut at planet 29, and the Launch Bay replaces a noun (Launch Tower) that isn't in the planet-20 list. The unlock ladder gains one row: planet 29, "Landmarks: your first big build" (planet 26 teaches Combo, FLIGHT.md 2.4). FLIGHT.md places the launcher intro at planet 31, and ROADMAP-v2 4h counts both docs' nouns against the same budget.
 
 ---
 
@@ -978,6 +984,8 @@ Additive fields only, so `migrate()` deep-merges defaults (pre-launch saves may 
 | Removed           | `home.debris`, `home.lastDebris`, resident `lastReq`               | Retired systems                                          |
 
 ---
+
+M13 uses save v7 with one-shot `m13Migrated`; the key `home.expedition` remains. Add `home.tripFuel: boolean` (default true, internal only), `home.tripReturn: TripReturn | null`, optional trip `n`, `sentAt`, `match`, fixed `yield` and `legacyLoot`; `GalaxyPlanet.sec` (24 × 5 chars) and `approx?: 1`; optional `voyage.theme` and `WishCard.from`. Old galaxy colours approximate 8/6/4/3 sectors, then barren. Real sectors replace only with an equal-or-better score. An open 1.0 Voyage week is untouched; a newly opened week stores its theme. Backup ids, device nonce and sequence stay in device-local `pp.backup.state`, never in the profile.
 
 ## 15. Open questions for the owner
 

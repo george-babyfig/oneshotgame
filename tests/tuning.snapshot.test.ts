@@ -1,5 +1,12 @@
 import { expect, it } from 'vitest';
 import {
+  TRIP_HOURS_BY_BAY,
+  TRIP_FACTOR,
+  TRIP_CAP,
+  TRIP_GEMS,
+  TRIP_FRIENDSHIP,
+  TRIP_MATCH_MULTIPLIER,
+  TRIP_MATCH_SECTORS,
   PRODUCTS,
   BOOSTERS,
   SKINS,
@@ -172,4 +179,18 @@ it('pins totals of every central balance table', () => {
       "WISH_REWARD": 78,
     }
   `);
+});
+
+it('pins the dormant M13 trip contract without changing 1.0 tables', () => {
+  expect({
+    TRIP_HOURS_BY_BAY,
+    TRIP_FACTOR,
+    TRIP_CAP,
+    TRIP_GEMS,
+    TRIP_FRIENDSHIP,
+    TRIP_MATCH_MULTIPLIER,
+    TRIP_MATCH_SECTORS,
+  }).toMatchSnapshot();
+  expect(TRIP_FACTOR[1]).toBeLessThanOrEqual(TRIP_FACTOR[4] / 4);
+  expect(TRIP_FACTOR[4] / 4).toBeLessThanOrEqual(TRIP_FACTOR[8] / 8);
 });

@@ -1,3 +1,4 @@
+import { encodeSectors } from './galaxyCodec';
 import { WIN_REWARD, GALAXY_RATE } from './tuning';
 import { earn, spend, type SpendSink } from './wallet';
 // Pure game-economy rules. Everything here mutates a Profile and returns what
@@ -270,6 +271,7 @@ export function applyLevelWin(p: Profile, w: WinInput): LevelOutcome {
     species: [...planet.speciesFound],
     life: score,
     colors: planetColors(planet),
+    sec: encodeSectors(planet),
   };
   const i = p.galaxy.findIndex((g) => g.n === n);
   if (i >= 0) {

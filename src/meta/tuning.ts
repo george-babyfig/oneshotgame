@@ -1328,3 +1328,21 @@ export const RING_PLOTS = [0, 6, 8, 10, 12, 14];
 export const WIN_SPEEDUP = 10 * 60e3;
 export const FRIEND_LEVELS = [0, 3, 8, 15, 25];
 export const EXPEDITION_HOURS = [1, 4, 8];
+
+// M13 contract, dormant until package A. Decisions 63-65; legacy tuning above stays frozen in tripsLegacy.
+export const TRIP_HOURS_BY_BAY: Readonly<Record<number, readonly import('./m13types').TripHours[]>> = Object.freeze({
+  2: Object.freeze([1] as const),
+  3: Object.freeze([1, 4] as const),
+  4: Object.freeze([1, 4, 8] as const),
+  5: Object.freeze([1, 4, 8] as const),
+});
+export const TRIP_FACTOR = Object.freeze({ 1: 0.15, 4: 0.6, 8: 1.25 });
+export const TRIP_CAP = Object.freeze({ 1: 2, 4: 6, 8: 10 });
+export const TRIP_GEMS = Object.freeze({ 1: 1, 4: 2, 8: 3 });
+export const TRIP_FRIENDSHIP = Object.freeze({
+  1: Object.freeze([1, 1] as const),
+  4: Object.freeze([1, 2] as const),
+  8: Object.freeze([2, 3] as const),
+});
+export const TRIP_MATCH_MULTIPLIER = 1.25;
+export const TRIP_MATCH_SECTORS = 3;

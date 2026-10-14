@@ -1,3 +1,4 @@
+import type { WishOrigin } from './m13types';
 // Creature Wishes are stored in the old quest slot so existing saves migrate without a new profile field.
 import { SPECIES_BY_ID, type BiomeId, type Planet } from '../core/world';
 import { rngFrom } from '../core/levels';
@@ -25,6 +26,7 @@ interface Template {
   goal: number;
 }
 export interface WishCard extends QuestState {
+  from?: WishOrigin;
   species: string;
   template: string;
   goal: number;
@@ -321,4 +323,9 @@ export function claimWish(p: Profile, id: string, day?: string): boolean {
     earn(p, 'gems', WISH_REWARD.allThreeGems, 'wish');
   }
   return true;
+}
+
+/** Package B fills these display-only bubbles; tapping one never pays a reward. */
+export function wishBubbles(_p: Profile): { species: string; land: BiomeId }[] {
+  return [];
 }

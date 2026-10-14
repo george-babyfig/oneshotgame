@@ -57,7 +57,7 @@ export function voyageBase(level: number) {
 
 export function ensureVoyage(p: Profile, week = isoWeek()) {
   if (week > p.voyage.week || (week < p.voyage.week && !weekAtMostOneAhead(p.voyage.week, week)))
-    p.voyage = { week, base: voyageBase(p.level), cleared: 0, stars: [] };
+    p.voyage = { week, base: voyageBase(p.level), cleared: 0, stars: [], theme: eventFor(week, p.settings.hemi).id };
   const saved = p.voyage as Profile['voyage'] & { hemisphere?: Hemisphere };
   if (saved.hemisphere !== 'north' && saved.hemisphere !== 'south') saved.hemisphere = p.settings.hemi;
   const legacyGems = p.event.week === p.voyage.week ? retireEventProgress(p) : 0;

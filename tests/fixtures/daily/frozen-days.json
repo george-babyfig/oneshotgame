@@ -1,0 +1,1202 @@
+[
+  {
+    "day": "2026-11-02",
+    "taught": 16,
+    "sha256": "8d92d32a05d93f50e4600f438121a9657df8182610931da942c9e91be6be419c"
+  },
+  {
+    "day": "2026-11-02",
+    "taught": 28,
+    "sha256": "8d92d32a05d93f50e4600f438121a9657df8182610931da942c9e91be6be419c"
+  },
+  {
+    "day": "2026-11-02",
+    "taught": 36,
+    "sha256": "03bb03718f51fa4b808dfb9f9ca3554a2bf9456f65f42ff96a67c025212fdf6c"
+  },
+  {
+    "day": "2026-11-03",
+    "taught": 16,
+    "sha256": "83052146c03c6e51ef4866df732a5b90c094969945d695c4c7f52506286fbd2b"
+  },
+  {
+    "day": "2026-11-03",
+    "taught": 28,
+    "sha256": "0d1bf39a7bb0581082f21fedfa4ef4f68e8a15d88dd01b3c1c636a629e900043"
+  },
+  {
+    "day": "2026-11-03",
+    "taught": 36,
+    "sha256": "0cb6a1ef743ffbdb1330ac4eef5cb86bc5a0ece71426e6ef559385dcc10100f7"
+  },
+  {
+    "day": "2026-11-04",
+    "taught": 16,
+    "sha256": "d71ca0cd8eea0fa9af5f9523e31ef8020d688969b773693b74508cebaa783bb2"
+  },
+  {
+    "day": "2026-11-04",
+    "taught": 28,
+    "sha256": "d71ca0cd8eea0fa9af5f9523e31ef8020d688969b773693b74508cebaa783bb2"
+  },
+  {
+    "day": "2026-11-04",
+    "taught": 36,
+    "sha256": "d71ca0cd8eea0fa9af5f9523e31ef8020d688969b773693b74508cebaa783bb2"
+  },
+  {
+    "day": "2026-11-05",
+    "taught": 16,
+    "sha256": "1ae5a4bc7e6028d232c15615b55e09e3eb87e492c699ce1369222cd6cecad325"
+  },
+  {
+    "day": "2026-11-05",
+    "taught": 28,
+    "sha256": "1ae5a4bc7e6028d232c15615b55e09e3eb87e492c699ce1369222cd6cecad325"
+  },
+  {
+    "day": "2026-11-05",
+    "taught": 36,
+    "sha256": "b7397cd17bf364ca8444f0330864eb8313b40fc69d41f0e80c2292a959c83848"
+  },
+  {
+    "day": "2026-11-06",
+    "taught": 16,
+    "sha256": "1ea9507422a0f74e778d42541ec82396a296b53efff21fe11de31ea46056a5e9"
+  },
+  {
+    "day": "2026-11-06",
+    "taught": 28,
+    "sha256": "55e84a8f0ecafc15e633bf811a521f0c3b4fb73d04036d009f0860df96219d42"
+  },
+  {
+    "day": "2026-11-06",
+    "taught": 36,
+    "sha256": "a5c98bed684cd932c84a521b0670c51dae899ada3fc675f1478c336fdc639ea2"
+  },
+  {
+    "day": "2026-11-07",
+    "taught": 16,
+    "sha256": "c252b1a8bd021a2b5f748b693ea61a6dbd419c8e332bce34696f194a96bb2647"
+  },
+  {
+    "day": "2026-11-07",
+    "taught": 28,
+    "sha256": "c252b1a8bd021a2b5f748b693ea61a6dbd419c8e332bce34696f194a96bb2647"
+  },
+  {
+    "day": "2026-11-07",
+    "taught": 36,
+    "sha256": "c252b1a8bd021a2b5f748b693ea61a6dbd419c8e332bce34696f194a96bb2647"
+  },
+  {
+    "day": "2026-11-08",
+    "taught": 16,
+    "sha256": "b7f860225786e5448446b218a82518a7d19ee11650693616e0c741017639b8ab"
+  },
+  {
+    "day": "2026-11-08",
+    "taught": 28,
+    "sha256": "b7f860225786e5448446b218a82518a7d19ee11650693616e0c741017639b8ab"
+  },
+  {
+    "day": "2026-11-08",
+    "taught": 36,
+    "sha256": "99c8e344d77491f7bc671ed9ee2edf47f21d4a26679fce18a8cd8ab2e568bd98"
+  },
+  {
+    "day": "2026-11-09",
+    "taught": 16,
+    "sha256": "828d2d76719a302c3e9211d2d4de7d8b45f6ca250414e1a873bb786568530947"
+  },
+  {
+    "day": "2026-11-09",
+    "taught": 28,
+    "sha256": "828d2d76719a302c3e9211d2d4de7d8b45f6ca250414e1a873bb786568530947"
+  },
+  {
+    "day": "2026-11-09",
+    "taught": 36,
+    "sha256": "6935f62426dc96e4a80e2cf25eaf674c08099b44db46e67992ce14643aeda687"
+  },
+  {
+    "day": "2026-11-10",
+    "taught": 16,
+    "sha256": "9c5261f264246eb9fd2a3a841d9f519812fce299b6646d82890aafd98cdf1da5"
+  },
+  {
+    "day": "2026-11-10",
+    "taught": 28,
+    "sha256": "9c5261f264246eb9fd2a3a841d9f519812fce299b6646d82890aafd98cdf1da5"
+  },
+  {
+    "day": "2026-11-10",
+    "taught": 36,
+    "sha256": "9c5261f264246eb9fd2a3a841d9f519812fce299b6646d82890aafd98cdf1da5"
+  },
+  {
+    "day": "2026-11-11",
+    "taught": 16,
+    "sha256": "d4a0f803117bfa338eb9f74f495f4911eced30213d58faeb2a2c696f845ec232"
+  },
+  {
+    "day": "2026-11-11",
+    "taught": 28,
+    "sha256": "d4a0f803117bfa338eb9f74f495f4911eced30213d58faeb2a2c696f845ec232"
+  },
+  {
+    "day": "2026-11-11",
+    "taught": 36,
+    "sha256": "d4a0f803117bfa338eb9f74f495f4911eced30213d58faeb2a2c696f845ec232"
+  },
+  {
+    "day": "2026-11-12",
+    "taught": 16,
+    "sha256": "7795fd5dfc396fe56ddcdc36d8b8176780bcbf2d02fdbdd44bcd1007eaccbd9b"
+  },
+  {
+    "day": "2026-11-12",
+    "taught": 28,
+    "sha256": "31542c5b99a8b98102b76266aa14a47b9dfcfa0f172311034fd10f260fb19ebb"
+  },
+  {
+    "day": "2026-11-12",
+    "taught": 36,
+    "sha256": "2a297a06ccb4c9eddb01b2bdb863d0a83b745d89108df7b02a56c01260e8e5ce"
+  },
+  {
+    "day": "2026-11-13",
+    "taught": 16,
+    "sha256": "704be25dff304bf07341665ffe691d04ddee9dc2ad6ef722be6cb1b15c61676c"
+  },
+  {
+    "day": "2026-11-13",
+    "taught": 28,
+    "sha256": "704be25dff304bf07341665ffe691d04ddee9dc2ad6ef722be6cb1b15c61676c"
+  },
+  {
+    "day": "2026-11-13",
+    "taught": 36,
+    "sha256": "704be25dff304bf07341665ffe691d04ddee9dc2ad6ef722be6cb1b15c61676c"
+  },
+  {
+    "day": "2026-11-14",
+    "taught": 16,
+    "sha256": "accbd428fb2f691d28d9f244542d994c3cebdd7df22eb34ac84874795bd0f03a"
+  },
+  {
+    "day": "2026-11-14",
+    "taught": 28,
+    "sha256": "89cacf1232d561e9081c4ee112aa79dd3ee5187e62caee73ee042c7533b2f077"
+  },
+  {
+    "day": "2026-11-14",
+    "taught": 36,
+    "sha256": "c9bcbf1976b4a172d2e0916b54ca520bd05d7c6315d26b07ff1fbf1e52369c65"
+  },
+  {
+    "day": "2026-11-15",
+    "taught": 16,
+    "sha256": "30b6375bf5085a394303353136198536e38b96313bee7923fbec88f72a5aefa3"
+  },
+  {
+    "day": "2026-11-15",
+    "taught": 28,
+    "sha256": "30b6375bf5085a394303353136198536e38b96313bee7923fbec88f72a5aefa3"
+  },
+  {
+    "day": "2026-11-15",
+    "taught": 36,
+    "sha256": "30b6375bf5085a394303353136198536e38b96313bee7923fbec88f72a5aefa3"
+  },
+  {
+    "day": "2026-11-16",
+    "taught": 16,
+    "sha256": "5e83cf6578c106f88bc750716343b495450c96af016f2bfa517f6a8044e4d8ee"
+  },
+  {
+    "day": "2026-11-16",
+    "taught": 28,
+    "sha256": "fc8c00cd7340f2cf6fe30f2daa9e801305d10eba8d954d91f309765fff65e413"
+  },
+  {
+    "day": "2026-11-16",
+    "taught": 36,
+    "sha256": "fc8c00cd7340f2cf6fe30f2daa9e801305d10eba8d954d91f309765fff65e413"
+  },
+  {
+    "day": "2026-11-17",
+    "taught": 16,
+    "sha256": "1b34c69bf90f151349e2eb574a58b906f98d0c26651578f9a7bd1189e9653263"
+  },
+  {
+    "day": "2026-11-17",
+    "taught": 28,
+    "sha256": "64984b5dc3ae6aba0ca62cec08cf79ac764b696860df895f703681e1d54b67dc"
+  },
+  {
+    "day": "2026-11-17",
+    "taught": 36,
+    "sha256": "64984b5dc3ae6aba0ca62cec08cf79ac764b696860df895f703681e1d54b67dc"
+  },
+  {
+    "day": "2026-11-18",
+    "taught": 16,
+    "sha256": "371a55b17976dbaf3750576c9fb2808fa14677c2fc5a59a81cee016ed8d59273"
+  },
+  {
+    "day": "2026-11-18",
+    "taught": 28,
+    "sha256": "371a55b17976dbaf3750576c9fb2808fa14677c2fc5a59a81cee016ed8d59273"
+  },
+  {
+    "day": "2026-11-18",
+    "taught": 36,
+    "sha256": "371a55b17976dbaf3750576c9fb2808fa14677c2fc5a59a81cee016ed8d59273"
+  },
+  {
+    "day": "2026-11-19",
+    "taught": 16,
+    "sha256": "f665f74ccd1d90c2d9418afefc4c97232fd697576421212c2587ef652579b57a"
+  },
+  {
+    "day": "2026-11-19",
+    "taught": 28,
+    "sha256": "f665f74ccd1d90c2d9418afefc4c97232fd697576421212c2587ef652579b57a"
+  },
+  {
+    "day": "2026-11-19",
+    "taught": 36,
+    "sha256": "f665f74ccd1d90c2d9418afefc4c97232fd697576421212c2587ef652579b57a"
+  },
+  {
+    "day": "2026-11-20",
+    "taught": 16,
+    "sha256": "0572847199cc6f3324ec0d17e3eebf90b290355fce34f13ce8607cf8bcb028fc"
+  },
+  {
+    "day": "2026-11-20",
+    "taught": 28,
+    "sha256": "0572847199cc6f3324ec0d17e3eebf90b290355fce34f13ce8607cf8bcb028fc"
+  },
+  {
+    "day": "2026-11-20",
+    "taught": 36,
+    "sha256": "0572847199cc6f3324ec0d17e3eebf90b290355fce34f13ce8607cf8bcb028fc"
+  },
+  {
+    "day": "2026-11-21",
+    "taught": 16,
+    "sha256": "2faf8036465d5d02a74e8668c26911582e486bfb3a98271003bad9390c568e58"
+  },
+  {
+    "day": "2026-11-21",
+    "taught": 28,
+    "sha256": "e094d716af05b61843b94288ade78526b93977980374cfd32298c6268cb644da"
+  },
+  {
+    "day": "2026-11-21",
+    "taught": 36,
+    "sha256": "e094d716af05b61843b94288ade78526b93977980374cfd32298c6268cb644da"
+  },
+  {
+    "day": "2026-11-22",
+    "taught": 16,
+    "sha256": "446378710bae0f4a32462595b6aa483a64104a2a2534eb93dbc32eebf65a923d"
+  },
+  {
+    "day": "2026-11-22",
+    "taught": 28,
+    "sha256": "efc088fb0d21eac03235255ac452b1123144bb32b8b6384f395bfdda23fa0a2d"
+  },
+  {
+    "day": "2026-11-22",
+    "taught": 36,
+    "sha256": "1aac3bf016d0a0f9bc9058b33735f546f771cead335e66ad7b7effe7a23595e6"
+  },
+  {
+    "day": "2026-11-23",
+    "taught": 16,
+    "sha256": "817cbcd18ab2f08823ca63e65ba9448629446cf5c2ec3f75031ac59ba29fa729"
+  },
+  {
+    "day": "2026-11-23",
+    "taught": 28,
+    "sha256": "817cbcd18ab2f08823ca63e65ba9448629446cf5c2ec3f75031ac59ba29fa729"
+  },
+  {
+    "day": "2026-11-23",
+    "taught": 36,
+    "sha256": "817cbcd18ab2f08823ca63e65ba9448629446cf5c2ec3f75031ac59ba29fa729"
+  },
+  {
+    "day": "2026-11-24",
+    "taught": 16,
+    "sha256": "f1058968309b0b1230d6907c5354b0064f2d9bb65fddf76df757da7a53591faa"
+  },
+  {
+    "day": "2026-11-24",
+    "taught": 28,
+    "sha256": "155e71908a714f097ee9bf93e53dc8dcf4b5266ecb28e3b7ed0c57a5faf0533b"
+  },
+  {
+    "day": "2026-11-24",
+    "taught": 36,
+    "sha256": "155e71908a714f097ee9bf93e53dc8dcf4b5266ecb28e3b7ed0c57a5faf0533b"
+  },
+  {
+    "day": "2026-11-25",
+    "taught": 16,
+    "sha256": "f40b2648b87f05667acf3fcc1607693b5c3c2bf00bf2f4161846635e534e09c6"
+  },
+  {
+    "day": "2026-11-25",
+    "taught": 28,
+    "sha256": "f40b2648b87f05667acf3fcc1607693b5c3c2bf00bf2f4161846635e534e09c6"
+  },
+  {
+    "day": "2026-11-25",
+    "taught": 36,
+    "sha256": "6e7a889b99948e79c0028f58f7be36bc0ebf6109ca797711443d54bc8398716c"
+  },
+  {
+    "day": "2026-11-26",
+    "taught": 16,
+    "sha256": "70ecfe3eecab6032c87db4a0a4ac5547c1f119d16e2168f4e163e38b78cf0eb0"
+  },
+  {
+    "day": "2026-11-26",
+    "taught": 28,
+    "sha256": "70ecfe3eecab6032c87db4a0a4ac5547c1f119d16e2168f4e163e38b78cf0eb0"
+  },
+  {
+    "day": "2026-11-26",
+    "taught": 36,
+    "sha256": "70ecfe3eecab6032c87db4a0a4ac5547c1f119d16e2168f4e163e38b78cf0eb0"
+  },
+  {
+    "day": "2026-11-27",
+    "taught": 16,
+    "sha256": "36182e35d936465ef43dc9e6470c72c27eec1757f829fc12010220b6efa14ed1"
+  },
+  {
+    "day": "2026-11-27",
+    "taught": 28,
+    "sha256": "36182e35d936465ef43dc9e6470c72c27eec1757f829fc12010220b6efa14ed1"
+  },
+  {
+    "day": "2026-11-27",
+    "taught": 36,
+    "sha256": "36182e35d936465ef43dc9e6470c72c27eec1757f829fc12010220b6efa14ed1"
+  },
+  {
+    "day": "2026-11-28",
+    "taught": 16,
+    "sha256": "94df6e53d1fa85eac8cb82c680cc0989323212a90bfe785e0d94462440994f01"
+  },
+  {
+    "day": "2026-11-28",
+    "taught": 28,
+    "sha256": "94df6e53d1fa85eac8cb82c680cc0989323212a90bfe785e0d94462440994f01"
+  },
+  {
+    "day": "2026-11-28",
+    "taught": 36,
+    "sha256": "94df6e53d1fa85eac8cb82c680cc0989323212a90bfe785e0d94462440994f01"
+  },
+  {
+    "day": "2026-11-29",
+    "taught": 16,
+    "sha256": "7d87ea90f7260bd5e09486f23af90ec90a60ab320c19085eff87207a3fa4f3ba"
+  },
+  {
+    "day": "2026-11-29",
+    "taught": 28,
+    "sha256": "e2e9033a8d573a817e09e3746cdea0d8cb20a21500946fa7f8cb8c28374eac1e"
+  },
+  {
+    "day": "2026-11-29",
+    "taught": 36,
+    "sha256": "51ee0457053ae5618004cf26959241c9b310e28868242c0cc66e6ae50cdcf894"
+  },
+  {
+    "day": "2026-11-30",
+    "taught": 16,
+    "sha256": "9be2fca6a8f8c2f214f572e43bdeafb5da3365e9668e633d89d42aa525cf4c83"
+  },
+  {
+    "day": "2026-11-30",
+    "taught": 28,
+    "sha256": "27fdc321d544b7d778b0e838cacd50b1b320e32d456d8f5772a91ca740523a1a"
+  },
+  {
+    "day": "2026-11-30",
+    "taught": 36,
+    "sha256": "3926f68ade3c69de5083742ad3bb2858943842963569ab6d39a0bff9cf14af28"
+  },
+  {
+    "day": "2026-12-01",
+    "taught": 16,
+    "sha256": "f6e552a11b55c58285014e6a2208ab9ae784ae3ffb61920acaa565a09b8a54c6"
+  },
+  {
+    "day": "2026-12-01",
+    "taught": 28,
+    "sha256": "47bc163d499de57ba3d0648e234928be05d3ffa8e6a217a54d8bc59c16d1f781"
+  },
+  {
+    "day": "2026-12-01",
+    "taught": 36,
+    "sha256": "dee0992142fc982f290d5b1eec685e1c4c52cd11d2836ea873e6ea25ee23fe62"
+  },
+  {
+    "day": "2026-12-02",
+    "taught": 16,
+    "sha256": "9042c3f0b07bb5ef913c8605477f96d6c89fa9c75f23b973ddc0e4a4e41fae96"
+  },
+  {
+    "day": "2026-12-02",
+    "taught": 28,
+    "sha256": "9042c3f0b07bb5ef913c8605477f96d6c89fa9c75f23b973ddc0e4a4e41fae96"
+  },
+  {
+    "day": "2026-12-02",
+    "taught": 36,
+    "sha256": "9042c3f0b07bb5ef913c8605477f96d6c89fa9c75f23b973ddc0e4a4e41fae96"
+  },
+  {
+    "day": "2026-12-03",
+    "taught": 16,
+    "sha256": "e9b760c11511c4cac8932981a773d289009d15eab6444a17f8517b07e076d4cf"
+  },
+  {
+    "day": "2026-12-03",
+    "taught": 28,
+    "sha256": "cbf9b4814d27cde789162606f4e8ecc9619a771cc2c9a6ff1f74e7fc5e3598a6"
+  },
+  {
+    "day": "2026-12-03",
+    "taught": 36,
+    "sha256": "a528a8c54f3995c9f29cf6779c197eef44aa592d5e0e869676415126af9a9d1c"
+  },
+  {
+    "day": "2026-12-04",
+    "taught": 16,
+    "sha256": "d533bb18bf1d76876b2e1c08997a9b9f3b93cc2a5b5f2293b7bc1229f08d8ca4"
+  },
+  {
+    "day": "2026-12-04",
+    "taught": 28,
+    "sha256": "d533bb18bf1d76876b2e1c08997a9b9f3b93cc2a5b5f2293b7bc1229f08d8ca4"
+  },
+  {
+    "day": "2026-12-04",
+    "taught": 36,
+    "sha256": "d533bb18bf1d76876b2e1c08997a9b9f3b93cc2a5b5f2293b7bc1229f08d8ca4"
+  },
+  {
+    "day": "2026-12-05",
+    "taught": 16,
+    "sha256": "c7c4a0a97b3de56d21bdf84d7ad4b889bf1b6830860af1aab642bc5b8646ef92"
+  },
+  {
+    "day": "2026-12-05",
+    "taught": 28,
+    "sha256": "c7c4a0a97b3de56d21bdf84d7ad4b889bf1b6830860af1aab642bc5b8646ef92"
+  },
+  {
+    "day": "2026-12-05",
+    "taught": 36,
+    "sha256": "c7c4a0a97b3de56d21bdf84d7ad4b889bf1b6830860af1aab642bc5b8646ef92"
+  },
+  {
+    "day": "2026-12-06",
+    "taught": 16,
+    "sha256": "16d0fc843b823a6a195b2986c26e97368e6ac45ce755faa8d4582a7e1a78bebd"
+  },
+  {
+    "day": "2026-12-06",
+    "taught": 28,
+    "sha256": "c1f41d73bb91a6d54fbfe94aa3e5281bfe2b6fd929fc649f8eb074c420462f79"
+  },
+  {
+    "day": "2026-12-06",
+    "taught": 36,
+    "sha256": "49ab7f5be63dd09226048b801881596241daf6f58db8a2f4bfa2becadd8e0614"
+  },
+  {
+    "day": "2026-12-07",
+    "taught": 16,
+    "sha256": "866d02394087546b63d70a182e0771611b3ab7c749490382569f17efac6bbba7"
+  },
+  {
+    "day": "2026-12-07",
+    "taught": 28,
+    "sha256": "866d02394087546b63d70a182e0771611b3ab7c749490382569f17efac6bbba7"
+  },
+  {
+    "day": "2026-12-07",
+    "taught": 36,
+    "sha256": "866d02394087546b63d70a182e0771611b3ab7c749490382569f17efac6bbba7"
+  },
+  {
+    "day": "2026-12-08",
+    "taught": 16,
+    "sha256": "07319d44b639b364ad666514a4ba2439c536bff07f12707a51a2fe68a81b56c8"
+  },
+  {
+    "day": "2026-12-08",
+    "taught": 28,
+    "sha256": "07319d44b639b364ad666514a4ba2439c536bff07f12707a51a2fe68a81b56c8"
+  },
+  {
+    "day": "2026-12-08",
+    "taught": 36,
+    "sha256": "07319d44b639b364ad666514a4ba2439c536bff07f12707a51a2fe68a81b56c8"
+  },
+  {
+    "day": "2026-12-09",
+    "taught": 16,
+    "sha256": "27ff0a1f8ab60fafdc0fd719c6a2cd76e0699731aeb67a1a0e6275a827e755b3"
+  },
+  {
+    "day": "2026-12-09",
+    "taught": 28,
+    "sha256": "27ff0a1f8ab60fafdc0fd719c6a2cd76e0699731aeb67a1a0e6275a827e755b3"
+  },
+  {
+    "day": "2026-12-09",
+    "taught": 36,
+    "sha256": "27ff0a1f8ab60fafdc0fd719c6a2cd76e0699731aeb67a1a0e6275a827e755b3"
+  },
+  {
+    "day": "2026-12-10",
+    "taught": 16,
+    "sha256": "2d30a4c56ab9a248c879a11c0b77bac4b113877179018ec50e8236cca4cb4b6c"
+  },
+  {
+    "day": "2026-12-10",
+    "taught": 28,
+    "sha256": "9d5433b2a14b708d614a2eaea32bda0794c3a39a9289a3c304d50747a88d30ea"
+  },
+  {
+    "day": "2026-12-10",
+    "taught": 36,
+    "sha256": "9d5433b2a14b708d614a2eaea32bda0794c3a39a9289a3c304d50747a88d30ea"
+  },
+  {
+    "day": "2026-12-11",
+    "taught": 16,
+    "sha256": "0855a0e9ab4ab2da632205d5b17540c81fca82b6666c32bbcd7e6caa84fe950c"
+  },
+  {
+    "day": "2026-12-11",
+    "taught": 28,
+    "sha256": "0855a0e9ab4ab2da632205d5b17540c81fca82b6666c32bbcd7e6caa84fe950c"
+  },
+  {
+    "day": "2026-12-11",
+    "taught": 36,
+    "sha256": "0855a0e9ab4ab2da632205d5b17540c81fca82b6666c32bbcd7e6caa84fe950c"
+  },
+  {
+    "day": "2026-12-12",
+    "taught": 16,
+    "sha256": "a43a3c3946a9692282c22d0f3f87e8357bf76def240ef52c2deda927a637c7b2"
+  },
+  {
+    "day": "2026-12-12",
+    "taught": 28,
+    "sha256": "483477ebe5e2024b02784ab683081d52a9a6e7397e3a6a3a50762039090b530c"
+  },
+  {
+    "day": "2026-12-12",
+    "taught": 36,
+    "sha256": "483477ebe5e2024b02784ab683081d52a9a6e7397e3a6a3a50762039090b530c"
+  },
+  {
+    "day": "2026-12-13",
+    "taught": 16,
+    "sha256": "33bd11372aab1788b5e3a7f80c44dc1e202a9e3f0b8866a60ed8e2f8fa9325d5"
+  },
+  {
+    "day": "2026-12-13",
+    "taught": 28,
+    "sha256": "33bd11372aab1788b5e3a7f80c44dc1e202a9e3f0b8866a60ed8e2f8fa9325d5"
+  },
+  {
+    "day": "2026-12-13",
+    "taught": 36,
+    "sha256": "684ef154aee6b22999a9e258e0395c8371661d94bf2af91e4626bce856c9b942"
+  },
+  {
+    "day": "2026-12-14",
+    "taught": 16,
+    "sha256": "a35eec846d31dca9852cb016fb213acabd004bdcaf58d1e7895b17f61e148b78"
+  },
+  {
+    "day": "2026-12-14",
+    "taught": 28,
+    "sha256": "6a44a1fac4440e1625d4d9b9c8070cdfeca0105bfa8f8f95525cd8eb701fad53"
+  },
+  {
+    "day": "2026-12-14",
+    "taught": 36,
+    "sha256": "6a44a1fac4440e1625d4d9b9c8070cdfeca0105bfa8f8f95525cd8eb701fad53"
+  },
+  {
+    "day": "2026-12-15",
+    "taught": 16,
+    "sha256": "d789298089e2d59f9497f98b06f72ba4cf825eaef91e70c09d583468bd9e5f2e"
+  },
+  {
+    "day": "2026-12-15",
+    "taught": 28,
+    "sha256": "d789298089e2d59f9497f98b06f72ba4cf825eaef91e70c09d583468bd9e5f2e"
+  },
+  {
+    "day": "2026-12-15",
+    "taught": 36,
+    "sha256": "d789298089e2d59f9497f98b06f72ba4cf825eaef91e70c09d583468bd9e5f2e"
+  },
+  {
+    "day": "2026-12-16",
+    "taught": 16,
+    "sha256": "6c8293c7f00332c9199e85cd483169b50450ce7fe4165cbefb49897c6078f783"
+  },
+  {
+    "day": "2026-12-16",
+    "taught": 28,
+    "sha256": "6c8293c7f00332c9199e85cd483169b50450ce7fe4165cbefb49897c6078f783"
+  },
+  {
+    "day": "2026-12-16",
+    "taught": 36,
+    "sha256": "3bcc74f0c84bd3f054210ea3099fd5d14d048734081ce85a854a4f5156bf7027"
+  },
+  {
+    "day": "2026-12-17",
+    "taught": 16,
+    "sha256": "8ce41bcbf689d2dc23c1f4185f32e32bc064f5bc2f3b044bf967c068bc4892b2"
+  },
+  {
+    "day": "2026-12-17",
+    "taught": 28,
+    "sha256": "8ce41bcbf689d2dc23c1f4185f32e32bc064f5bc2f3b044bf967c068bc4892b2"
+  },
+  {
+    "day": "2026-12-17",
+    "taught": 36,
+    "sha256": "794ad2d3711235d5f5133e1c24a0b7c250be9b03101b75037a5c5822a4a1617b"
+  },
+  {
+    "day": "2026-12-18",
+    "taught": 16,
+    "sha256": "774f57d42f7e71d37cd134b1af010ddc8d0f65ffdae4f39730d1faecd9227add"
+  },
+  {
+    "day": "2026-12-18",
+    "taught": 28,
+    "sha256": "36953f014ae64dc427a2edaae5362f60688a5da7748784f70d1b8393327fe4c3"
+  },
+  {
+    "day": "2026-12-18",
+    "taught": 36,
+    "sha256": "36953f014ae64dc427a2edaae5362f60688a5da7748784f70d1b8393327fe4c3"
+  },
+  {
+    "day": "2026-12-19",
+    "taught": 16,
+    "sha256": "01f79e81175e9edb72a222fb99e268fb1a079028e7077aff1d46326f79cced7d"
+  },
+  {
+    "day": "2026-12-19",
+    "taught": 28,
+    "sha256": "01f79e81175e9edb72a222fb99e268fb1a079028e7077aff1d46326f79cced7d"
+  },
+  {
+    "day": "2026-12-19",
+    "taught": 36,
+    "sha256": "01f79e81175e9edb72a222fb99e268fb1a079028e7077aff1d46326f79cced7d"
+  },
+  {
+    "day": "2026-12-20",
+    "taught": 16,
+    "sha256": "b5a31d1a64bdc0c015de2154bfe27fe97f50c2d87b89e20660348756d19952de"
+  },
+  {
+    "day": "2026-12-20",
+    "taught": 28,
+    "sha256": "b5a31d1a64bdc0c015de2154bfe27fe97f50c2d87b89e20660348756d19952de"
+  },
+  {
+    "day": "2026-12-20",
+    "taught": 36,
+    "sha256": "b5a31d1a64bdc0c015de2154bfe27fe97f50c2d87b89e20660348756d19952de"
+  },
+  {
+    "day": "2026-12-21",
+    "taught": 16,
+    "sha256": "c3b848f825c6034a25508a3e301c9ae838ef518b385805d207b93ae082c5588c"
+  },
+  {
+    "day": "2026-12-21",
+    "taught": 28,
+    "sha256": "c3b848f825c6034a25508a3e301c9ae838ef518b385805d207b93ae082c5588c"
+  },
+  {
+    "day": "2026-12-21",
+    "taught": 36,
+    "sha256": "5abef6f26d09fa16c4eb048d59fb0c33565051a5fc054c2f138eb9627323dbb0"
+  },
+  {
+    "day": "2026-12-22",
+    "taught": 16,
+    "sha256": "fb69f944974da685171c6f9e1cb9ccdd4ed1eb9952e1a9e43a69d8135d8b4abb"
+  },
+  {
+    "day": "2026-12-22",
+    "taught": 28,
+    "sha256": "fb69f944974da685171c6f9e1cb9ccdd4ed1eb9952e1a9e43a69d8135d8b4abb"
+  },
+  {
+    "day": "2026-12-22",
+    "taught": 36,
+    "sha256": "fb69f944974da685171c6f9e1cb9ccdd4ed1eb9952e1a9e43a69d8135d8b4abb"
+  },
+  {
+    "day": "2026-12-23",
+    "taught": 16,
+    "sha256": "71e3baf46538acfdd776233ca5e3eefea092999a324eb92807c567b16734a435"
+  },
+  {
+    "day": "2026-12-23",
+    "taught": 28,
+    "sha256": "71e3baf46538acfdd776233ca5e3eefea092999a324eb92807c567b16734a435"
+  },
+  {
+    "day": "2026-12-23",
+    "taught": 36,
+    "sha256": "71e3baf46538acfdd776233ca5e3eefea092999a324eb92807c567b16734a435"
+  },
+  {
+    "day": "2026-12-24",
+    "taught": 16,
+    "sha256": "89d2da4a83e57f0f7d2146ef2f339d368d13eddfceb28ae4f8f91fb4bca4a00c"
+  },
+  {
+    "day": "2026-12-24",
+    "taught": 28,
+    "sha256": "a6cd2965da9b81a46bb9934005fb96647c16cef9378f26e502c6543448a9a6d6"
+  },
+  {
+    "day": "2026-12-24",
+    "taught": 36,
+    "sha256": "a962f7b9922366933ff2671c83bc73be1d0034725c56e4459222f4561ab23cb5"
+  },
+  {
+    "day": "2026-12-25",
+    "taught": 16,
+    "sha256": "722ea5feb47e2f1dfc17363fbd5e6a44ef162e1d732add974009c26b46fd0577"
+  },
+  {
+    "day": "2026-12-25",
+    "taught": 28,
+    "sha256": "722ea5feb47e2f1dfc17363fbd5e6a44ef162e1d732add974009c26b46fd0577"
+  },
+  {
+    "day": "2026-12-25",
+    "taught": 36,
+    "sha256": "722ea5feb47e2f1dfc17363fbd5e6a44ef162e1d732add974009c26b46fd0577"
+  },
+  {
+    "day": "2026-12-26",
+    "taught": 16,
+    "sha256": "f93bfe5f0f0e4842410701d11e588ded99fc2e46af83e621ee0a6b9ff5910cb7"
+  },
+  {
+    "day": "2026-12-26",
+    "taught": 28,
+    "sha256": "820c8af0b2af7743e108ba46e70638f31f5f3339734fd0fd0162c331975a917d"
+  },
+  {
+    "day": "2026-12-26",
+    "taught": 36,
+    "sha256": "820c8af0b2af7743e108ba46e70638f31f5f3339734fd0fd0162c331975a917d"
+  },
+  {
+    "day": "2026-12-27",
+    "taught": 16,
+    "sha256": "61910dc3e0c4e414830d0a6e779ca6078069468b54273ad49eb32980f01ae8bc"
+  },
+  {
+    "day": "2026-12-27",
+    "taught": 28,
+    "sha256": "f5d9b8f85216b31d8b5d829460e520aa06d55b77adb52142cbf15a7685b982a3"
+  },
+  {
+    "day": "2026-12-27",
+    "taught": 36,
+    "sha256": "f5d9b8f85216b31d8b5d829460e520aa06d55b77adb52142cbf15a7685b982a3"
+  },
+  {
+    "day": "2026-12-28",
+    "taught": 16,
+    "sha256": "d37fe6cebc56fcd7fc5d7bb181bdaedf5a05f06f50d0b19fbfd8f88e01bd3e22"
+  },
+  {
+    "day": "2026-12-28",
+    "taught": 28,
+    "sha256": "876f6ed82b34dfe5942bae81e4ffaa34162ecec39b507fa1be4be8ba415a6dd0"
+  },
+  {
+    "day": "2026-12-28",
+    "taught": 36,
+    "sha256": "876f6ed82b34dfe5942bae81e4ffaa34162ecec39b507fa1be4be8ba415a6dd0"
+  },
+  {
+    "day": "2026-12-29",
+    "taught": 16,
+    "sha256": "5629af8932f0f30ac71c71df00bec39ef791329129b7e9e527400ee820fc2e46"
+  },
+  {
+    "day": "2026-12-29",
+    "taught": 28,
+    "sha256": "5629af8932f0f30ac71c71df00bec39ef791329129b7e9e527400ee820fc2e46"
+  },
+  {
+    "day": "2026-12-29",
+    "taught": 36,
+    "sha256": "ccefe92fc1189ddd6189ad85636855d09872ab6d26ed622a3b2b65e520e87d00"
+  },
+  {
+    "day": "2026-12-30",
+    "taught": 16,
+    "sha256": "622660582ce42988cc17d78fb2e16ca1c6812d9104dc538e206cc597fd2c8eaf"
+  },
+  {
+    "day": "2026-12-30",
+    "taught": 28,
+    "sha256": "65792253e42b9dced2cfb82790b6f8ea20011931b424637d33581a0887b30c60"
+  },
+  {
+    "day": "2026-12-30",
+    "taught": 36,
+    "sha256": "65792253e42b9dced2cfb82790b6f8ea20011931b424637d33581a0887b30c60"
+  },
+  {
+    "day": "2026-12-31",
+    "taught": 16,
+    "sha256": "758c382394b3652eac8d64121137f3084ac5f642668388b06ab40d7fe052e73a"
+  },
+  {
+    "day": "2026-12-31",
+    "taught": 28,
+    "sha256": "1cdce9bffe580820277219a0c2f7f5fa612cbfb0577315113eec487798c76818"
+  },
+  {
+    "day": "2026-12-31",
+    "taught": 36,
+    "sha256": "1cdce9bffe580820277219a0c2f7f5fa612cbfb0577315113eec487798c76818"
+  },
+  {
+    "day": "2027-01-01",
+    "taught": 16,
+    "sha256": "8ea297b4527ee4eded9eec4d087d6212517ae829e839445bfa9c969e352b265e"
+  },
+  {
+    "day": "2027-01-01",
+    "taught": 28,
+    "sha256": "96da8cb10e190fc26189d235d92c780d6ac83f1f9c1ea3cf26f72673b06b24ca"
+  },
+  {
+    "day": "2027-01-01",
+    "taught": 36,
+    "sha256": "fcbc348acd57a52510f00758a11a9f04e261a5363a0a7c054922e9822842ffa6"
+  },
+  {
+    "day": "2027-01-02",
+    "taught": 16,
+    "sha256": "bd80630afebb4613ef0eb5fe037267eab16e2f1a7a6f940affe5b98731d1a37a"
+  },
+  {
+    "day": "2027-01-02",
+    "taught": 28,
+    "sha256": "45ad26e298405fa6dd66c3fcaaf5305828a1bd157e697a88853407dbb44894f6"
+  },
+  {
+    "day": "2027-01-02",
+    "taught": 36,
+    "sha256": "45ad26e298405fa6dd66c3fcaaf5305828a1bd157e697a88853407dbb44894f6"
+  },
+  {
+    "day": "2027-01-03",
+    "taught": 16,
+    "sha256": "cbe15335116246843095d5891f4c07ecf37f4ed29513b304419aa44089c30628"
+  },
+  {
+    "day": "2027-01-03",
+    "taught": 28,
+    "sha256": "fb08b2134a5e15f58ec67fdf520a5122a74410fa34a60e94672a671cd7d10cda"
+  },
+  {
+    "day": "2027-01-03",
+    "taught": 36,
+    "sha256": "81f98a5bbea322e241e7cf848cace53d4eb8e1c2c2264b8ada7d2bb05abac62e"
+  },
+  {
+    "day": "2027-01-04",
+    "taught": 16,
+    "sha256": "5a350a7d8203b644e98cd35fc2daeaf2ca3efe672d7ef3558c0c3e072a9acf63"
+  },
+  {
+    "day": "2027-01-04",
+    "taught": 28,
+    "sha256": "171a175d415dfad391e807be0cf131a301ac05aec5712fd0871aa16a1f502bab"
+  },
+  {
+    "day": "2027-01-04",
+    "taught": 36,
+    "sha256": "171a175d415dfad391e807be0cf131a301ac05aec5712fd0871aa16a1f502bab"
+  },
+  {
+    "day": "2027-01-05",
+    "taught": 16,
+    "sha256": "52c12a93ff806c1ddc82a228bd30abbbde784bc48cdf1ce040bd157214c5b30c"
+  },
+  {
+    "day": "2027-01-05",
+    "taught": 28,
+    "sha256": "0a849fa2d09f3319c89cdcd1c1c9620b5abf7e178f158a1af0fe0584c0038154"
+  },
+  {
+    "day": "2027-01-05",
+    "taught": 36,
+    "sha256": "0a849fa2d09f3319c89cdcd1c1c9620b5abf7e178f158a1af0fe0584c0038154"
+  },
+  {
+    "day": "2027-01-06",
+    "taught": 16,
+    "sha256": "f3715cb4224154645be36532ab6c19d6b1a432d8d5f21eba6c0c4066195884ed"
+  },
+  {
+    "day": "2027-01-06",
+    "taught": 28,
+    "sha256": "f3715cb4224154645be36532ab6c19d6b1a432d8d5f21eba6c0c4066195884ed"
+  },
+  {
+    "day": "2027-01-06",
+    "taught": 36,
+    "sha256": "f3715cb4224154645be36532ab6c19d6b1a432d8d5f21eba6c0c4066195884ed"
+  },
+  {
+    "day": "2027-01-07",
+    "taught": 16,
+    "sha256": "4bd108028fd4150f58a21b7204b1b0cda5ffcc7ba7f1b9be7c9c868822741691"
+  },
+  {
+    "day": "2027-01-07",
+    "taught": 28,
+    "sha256": "a7b38b2aaf6c67992a354db475dc7db1bdd5a2f66c0b7d6d18908566a4fa6b0d"
+  },
+  {
+    "day": "2027-01-07",
+    "taught": 36,
+    "sha256": "a7b38b2aaf6c67992a354db475dc7db1bdd5a2f66c0b7d6d18908566a4fa6b0d"
+  },
+  {
+    "day": "2027-01-08",
+    "taught": 16,
+    "sha256": "eae95dd0beb344d690bc935e691a02a3b0ee15200eece58c4031c352ebc7c7d2"
+  },
+  {
+    "day": "2027-01-08",
+    "taught": 28,
+    "sha256": "eae95dd0beb344d690bc935e691a02a3b0ee15200eece58c4031c352ebc7c7d2"
+  },
+  {
+    "day": "2027-01-08",
+    "taught": 36,
+    "sha256": "eae95dd0beb344d690bc935e691a02a3b0ee15200eece58c4031c352ebc7c7d2"
+  },
+  {
+    "day": "2027-01-09",
+    "taught": 16,
+    "sha256": "17c0a8fb365b033caaa29ecd6290deeb6278c7536a6844ede2acfb57f3f0b31a"
+  },
+  {
+    "day": "2027-01-09",
+    "taught": 28,
+    "sha256": "17c0a8fb365b033caaa29ecd6290deeb6278c7536a6844ede2acfb57f3f0b31a"
+  },
+  {
+    "day": "2027-01-09",
+    "taught": 36,
+    "sha256": "17c0a8fb365b033caaa29ecd6290deeb6278c7536a6844ede2acfb57f3f0b31a"
+  },
+  {
+    "day": "2027-01-10",
+    "taught": 16,
+    "sha256": "ab8347f5684c40d6ec09cda831b6cd76af8797c2e6344cedeaf947169aaf5efb"
+  },
+  {
+    "day": "2027-01-10",
+    "taught": 28,
+    "sha256": "ab8347f5684c40d6ec09cda831b6cd76af8797c2e6344cedeaf947169aaf5efb"
+  },
+  {
+    "day": "2027-01-10",
+    "taught": 36,
+    "sha256": "ab8347f5684c40d6ec09cda831b6cd76af8797c2e6344cedeaf947169aaf5efb"
+  },
+  {
+    "day": "2027-01-11",
+    "taught": 16,
+    "sha256": "0fd962530e07210f5fe0f2a97f11bd147467409f68ec06c48007a0fcc5ea5575"
+  },
+  {
+    "day": "2027-01-11",
+    "taught": 28,
+    "sha256": "fa01d41a01002e4dcbf11d67ea1a1bd0c48efc298569fe8b7bfdea4c115bc5b0"
+  },
+  {
+    "day": "2027-01-11",
+    "taught": 36,
+    "sha256": "43345db042e0ced7ca01f419ab87f8d9dfe4c7be9a6173efc29f4185824d9e33"
+  },
+  {
+    "day": "2027-01-12",
+    "taught": 16,
+    "sha256": "ee01c517d858eb3eff6e4982d8e5b62baf43d6c1ca6b411ae2335715a138edad"
+  },
+  {
+    "day": "2027-01-12",
+    "taught": 28,
+    "sha256": "ee01c517d858eb3eff6e4982d8e5b62baf43d6c1ca6b411ae2335715a138edad"
+  },
+  {
+    "day": "2027-01-12",
+    "taught": 36,
+    "sha256": "ee01c517d858eb3eff6e4982d8e5b62baf43d6c1ca6b411ae2335715a138edad"
+  },
+  {
+    "day": "2027-01-13",
+    "taught": 16,
+    "sha256": "c249c553de7979632a02cdd1f98cca10d47e4ac087e4fc6759312d75220d1d49"
+  },
+  {
+    "day": "2027-01-13",
+    "taught": 28,
+    "sha256": "c249c553de7979632a02cdd1f98cca10d47e4ac087e4fc6759312d75220d1d49"
+  },
+  {
+    "day": "2027-01-13",
+    "taught": 36,
+    "sha256": "c249c553de7979632a02cdd1f98cca10d47e4ac087e4fc6759312d75220d1d49"
+  },
+  {
+    "day": "2027-01-14",
+    "taught": 16,
+    "sha256": "435247752e70098ab8fa66db87348f5d2ec1220a80497e96d5f03901b5fff082"
+  },
+  {
+    "day": "2027-01-14",
+    "taught": 28,
+    "sha256": "435247752e70098ab8fa66db87348f5d2ec1220a80497e96d5f03901b5fff082"
+  },
+  {
+    "day": "2027-01-14",
+    "taught": 36,
+    "sha256": "720d868c073a730392a06f10b2dda9407847bcbdd0132ee3025bb7effe2d30ec"
+  },
+  {
+    "day": "2027-01-15",
+    "taught": 16,
+    "sha256": "2966ad1f6a032b92fbc8eb0a29d9374b3a2197d1ab0ffc16f9836c3701c2426d"
+  },
+  {
+    "day": "2027-01-15",
+    "taught": 28,
+    "sha256": "d716780a9da76d3a30ece12a0d0e2581ec3f28ddbe9ef15a2f0da071fe8b2255"
+  },
+  {
+    "day": "2027-01-15",
+    "taught": 36,
+    "sha256": "d04031af347a110652f782419fab0fffdd7c3f7e94d2814d8eaf24b3bd74e335"
+  },
+  {
+    "day": "2027-01-16",
+    "taught": 16,
+    "sha256": "dfc24dd2a9cebfd53b94c9f46aeaac081d962ddafef37e2a3245855250827bd1"
+  },
+  {
+    "day": "2027-01-16",
+    "taught": 28,
+    "sha256": "dfc24dd2a9cebfd53b94c9f46aeaac081d962ddafef37e2a3245855250827bd1"
+  },
+  {
+    "day": "2027-01-16",
+    "taught": 36,
+    "sha256": "dfc24dd2a9cebfd53b94c9f46aeaac081d962ddafef37e2a3245855250827bd1"
+  },
+  {
+    "day": "2027-01-17",
+    "taught": 16,
+    "sha256": "d5aad49e811f70c2519a3722d023342b46955efc00ec5a1431a7d75dc55d6e1b"
+  },
+  {
+    "day": "2027-01-17",
+    "taught": 28,
+    "sha256": "bbeeb5f6c4f27eb07cc0b3e1a6b4a63fc02560b49e782ceef25a393c7d46e336"
+  },
+  {
+    "day": "2027-01-17",
+    "taught": 36,
+    "sha256": "d7a1719370fd8a85e483d0fb743723c65b855d23bb35fdd814a027ff40df6aaf"
+  },
+  {
+    "day": "2027-01-18",
+    "taught": 16,
+    "sha256": "9de4a9f747921cad16d541527cf776aaf7d77425cad1d2de9f203655079e6b1b"
+  },
+  {
+    "day": "2027-01-18",
+    "taught": 28,
+    "sha256": "9de4a9f747921cad16d541527cf776aaf7d77425cad1d2de9f203655079e6b1b"
+  },
+  {
+    "day": "2027-01-18",
+    "taught": 36,
+    "sha256": "6d6b02b2a101aecfd0b7cb78348d631c82c563328ea220de7ef9be2b3a6d6808"
+  },
+  {
+    "day": "2027-01-19",
+    "taught": 16,
+    "sha256": "65768c2296545effba1cde902642fef3241b646f0cbb2664d0c47e1f7855bcc2"
+  },
+  {
+    "day": "2027-01-19",
+    "taught": 28,
+    "sha256": "65768c2296545effba1cde902642fef3241b646f0cbb2664d0c47e1f7855bcc2"
+  },
+  {
+    "day": "2027-01-19",
+    "taught": 36,
+    "sha256": "65768c2296545effba1cde902642fef3241b646f0cbb2664d0c47e1f7855bcc2"
+  },
+  {
+    "day": "2027-01-20",
+    "taught": 16,
+    "sha256": "86d17c41c7c0e17f996147d9a7fc80c2836e0e6782792662b956f5579a0c17ec"
+  },
+  {
+    "day": "2027-01-20",
+    "taught": 28,
+    "sha256": "86d17c41c7c0e17f996147d9a7fc80c2836e0e6782792662b956f5579a0c17ec"
+  },
+  {
+    "day": "2027-01-20",
+    "taught": 36,
+    "sha256": "86d17c41c7c0e17f996147d9a7fc80c2836e0e6782792662b956f5579a0c17ec"
+  }
+]
