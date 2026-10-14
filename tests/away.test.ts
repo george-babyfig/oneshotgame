@@ -71,3 +71,17 @@ describe('away collection', () => {
     expect(awayRecapLines(p, 7 * 24 * HOUR, now)[1]).toContain('Tide Otter');
   });
 });
+
+describe('noun-window pending visitor gifts', () => {
+  it('keeps gifts already waiting collectible before 21', () => {
+    const p = defaultProfile(0);
+    p.level = 10;
+    p.tutorial = true;
+    p.visitors.push({ species: 'bunny', dust: 30, gems: 0, memento: null });
+    expect(awayCollectables(p, 5 * HOUR, 5 * HOUR).show).toBe(true);
+    const before = p.dust;
+    collectAway(p, 5 * HOUR);
+    expect(p.dust).toBeGreaterThanOrEqual(before + 30);
+    expect(p.visitors).toEqual([]);
+  });
+});

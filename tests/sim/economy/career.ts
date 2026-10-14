@@ -327,15 +327,18 @@ function round(level: LevelDef, seed: string, loadout?: Loadout) {
   return playLevel(level, POLICIES.decent, rngFrom(seed), undefined, undefined, 0, loadout);
 }
 
+// Inbox gifts are not modelled in this career. Rewards below follow visible entry points.
 function claimReady(p: Profile, date: Date) {
   const before = Object.values(p.boosters).reduce((sum, count) => sum + count, 0);
   for (const chapter of chestsReady(p)) openChest(p, chapter);
-  for (const tier of roadReady(p)) claimRoad(p, tier);
+  if (unlocked(p, 'star_road')) for (const tier of roadReady(p)) claimRoad(p, tier);
   for (const q of p.quests.list) claimWish(p, q.id, today(date));
   if (festivalActive(p)) for (const tier of festivalReady(p, date)) claimFestival(p, tier, date);
   for (const habitat of habitatsReady(p)) claimHabitat(p, habitat.id);
-  claimMilestones(p);
-  for (const page of ALBUM_PAGES) if (pageDone(p, page.id)) claimPage(p, page.id);
+  if (unlocked(p, 'sticker_album')) {
+    claimMilestones(p);
+    for (const page of ALBUM_PAGES) if (pageDone(p, page.id)) claimPage(p, page.id);
+  }
   return Object.values(p.boosters).reduce((sum, count) => sum + count, 0) - before;
 }
 
@@ -452,6 +455,7 @@ function visit(
   masterSeed: string,
   landmarkRouteCapacity: Career['landmarkRouteCapacity'],
   landmarkRouteWitness: Career['landmarkRouteWitness'],
+  opts: SimulationOptions,
 ) {
   const now = START + (day - 1) * DAY + visitNo * 4 * 3_600_000;
   vi.setSystemTime(now);
@@ -468,7 +472,8 @@ function visit(
   const tripBoosters = trip ? Object.values(trip.boosters).reduce((n, count) => n + (count ?? 0), 0) : 0;
   const boosterSources = { greenhouse: greenhouseBoosters, trip: tripBoosters, rewards: 0, momentum: 0 };
   let freeBoosters = greenhouseBoosters + tripBoosters;
-  stamp(p, dayKey);
+  // The real Calendar cannot be visited before its entry point opens.
+  if (unlocked(p, 'star_calendar')) stamp(p, dayKey);
   const wishes = ensureWishes(p, dayKey);
   // A child can swap a card that has stayed out of reach across several visits.
   const stuck = wishes.find((q) => !q.claimed && q.progress === 0 && Date.parse(dayKey) - Date.parse(q.born) >= 3 * DAY);
@@ -482,7 +487,8 @@ function visit(
   let replayEssenceWhileLeveling = 0;
   let firstEssenceWhileLeveling = 0;
   let replayDropsWhileLeveling = 0;
-  for (let i = 0; i < budget; i++) {
+  for (let i = 0; i < budget && p.level <= (opts.untilLevel ?? Infinity); i++) {
+    const previousLevel = p.level;
     const shortKind = (Object.keys(KINDS) as Kind[]).find((kind) => canLevelLab(p, kind) === 'essence');
     const replay = shortKind ? bestDrops[LAB_ESSENCE[shortKind]]?.n : undefined;
     const nextHome = p.home.level < 5 ? HOME_LEVEL_REQUIREMENTS[(p.home.level + 1) as 2 | 3 | 4 | 5] : null;
@@ -673,6 +679,7 @@ function visit(
     const rewards = claimReady(p, date);
     freeBoosters += rewards;
     boosterSources.rewards += rewards;
+    if (p.level > previousLevel) opts.onLevel?.(structuredClone(p), now);
   }
   if (visitNo === 0 && unlocked(p, 'daily')) {
     const daily = dailyLevel(dayKey);
@@ -761,7 +768,12 @@ function visit(
 }
 
 /** `purchases: false` plays the Payer persona without buying anything: the paired control for "money never buys growth". */
-export async function simulate(type: PlayerType, masterSeed = 'default', opts: { purchases?: boolean } = {}): Promise<Career> {
+export interface SimulationOptions {
+  purchases?: boolean;
+  untilLevel?: number;
+  onLevel?: (p: Profile, now: number) => void;
+}
+export async function simulate(type: PlayerType, masterSeed = 'default', opts: SimulationOptions = {}): Promise<Career> {
   const buys = type === 'Payer' && opts.purchases !== false;
   await clearLedger();
   vi.useFakeTimers();
@@ -794,7 +806,7 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: {
   const boosterSources = { greenhouse: 0, trip: 0, rewards: 0, momentum: 0 };
   let day60Sinks: Career['reachableSinks'] | null = null;
   try {
-    for (let day = 1; day <= 90; day++) {
+    for (let day = 1; day <= 90 && p.level <= (opts.untilLevel ?? Infinity); day++) {
       const budget = attemptsFor(type, day);
       const visits = budget ? (type === 'Weekender' ? 1 : 3) : 0;
       let wins = 0;
@@ -807,7 +819,7 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: {
         grantRoadPass(p);
       }
       if (buys && day % 7 === 1) grantProduct(p, 'com.pocketplanet.game.gems500', `sim-gems-${day}`);
-      for (let v = 0; v < visits; v++) {
+      for (let v = 0; v < visits && p.level <= (opts.untilLevel ?? Infinity); v++) {
         const visitResult = visit(
           p,
           type,
@@ -820,6 +832,7 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: {
           masterSeed,
           landmarkRouteCapacity,
           landmarkRouteWitness,
+          opts,
         );
         wins += visitResult.wins;
         replayEssenceWhileLeveling += visitResult.replayEssenceWhileLeveling;

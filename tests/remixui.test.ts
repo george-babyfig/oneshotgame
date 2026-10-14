@@ -24,7 +24,7 @@ vi.mock('../src/ui/celebrate', () => ({ celebrate: vi.fn() }));
 describe('Bonus Remix rewards', () => {
   it('climbs outline, silver and gold without lowering a stored star', () => {
     const p = defaultProfile(0);
-    p.level = 11;
+    p.level = 21;
     recordRemix(p, 1, 0);
     expect(remixFrame(p, 1)).toBe('outline');
     expect(ACHIEVEMENTS.find((a) => a.id.endsWith('remix_first'))!.done(p)).toBe(true);
@@ -39,7 +39,7 @@ describe('Bonus Remix rewards', () => {
 
   it('shows the Remix Ribbon without changing Feats completion or sticker gems', () => {
     const p = defaultProfile(0);
-    p.level = 11;
+    p.level = 21;
     p.bosses = [10];
     p.constellations = ['one', 'two', 'three', 'four', 'five', 'six'];
     p.daily.streak = 28;
@@ -63,7 +63,7 @@ describe('Bonus Remix rewards', () => {
 
   it('derives chapter and account titles from best stars on every read', () => {
     const p = defaultProfile(0);
-    p.level = 11;
+    p.level = 21;
     for (let n = 1; n <= 10; n++) recordRemix(p, n, 3);
     const ids = () => titlesOwned(p).map((title) => title.id);
     expect(ids()).toContain('remix:chapter:1');
@@ -91,7 +91,7 @@ describe('Bonus Remix rewards', () => {
 
   it('earns the Guardian achievement only after the tenth Remix planet', () => {
     const p = defaultProfile(0);
-    p.level = 11;
+    p.level = 21;
     const done = () => ACHIEVEMENTS.find((a) => a.id.endsWith('remix_boss'))!.done(p);
     for (let n = 1; n < 10; n++) recordRemix(p, n, 1);
     expect(done()).toBe(false);
@@ -101,7 +101,7 @@ describe('Bonus Remix rewards', () => {
 
   it('records a Remix Guardian without campaign boss or currency rewards', () => {
     const p = defaultProfile(0);
-    p.level = 11;
+    p.level = 21;
     const before = { bosses: [...p.bosses], gems: p.gems, dust: p.dust, mats: { ...p.mats }, stars: { ...p.stars } };
     recordRemix(p, 10, 3);
     expect({ bosses: p.bosses, gems: p.gems, dust: p.dust, mats: p.mats, stars: p.stars }).toEqual(before);
@@ -113,7 +113,7 @@ describe('Bonus Remix rewards', () => {
     p.level = 10;
     checkMail(p);
     expect(p.mail.filter((mail) => mail.kind === 'remix')).toHaveLength(0);
-    p.level = 11;
+    p.level = 21;
     checkMail(p);
     checkMail(p);
     expect(p.mail.filter((mail) => mail.kind === 'remix')).toHaveLength(1);
@@ -142,9 +142,9 @@ describe('Bonus Remix rewards', () => {
 
   it('offers only the map after the last planet of the newest finished chapter', () => {
     const p = defaultProfile(0);
-    p.level = 11;
+    p.level = 21;
     const app = { p, showStarMap: vi.fn(), preRemix: vi.fn() };
-    remixResult(app as never, { level: { n: 10 }, stars: 3, score: 90 } as never, 'outline', false);
+    remixResult(app as never, { level: { n: 20 }, stars: 3, score: 90 } as never, 'outline', false);
     const labels: string[] = [];
     const walk = (value: unknown) => {
       if (Array.isArray(value)) return value.forEach(walk);
@@ -155,7 +155,7 @@ describe('Bonus Remix rewards', () => {
     };
     walk(ui.contents);
     expect(labels).toEqual(['Map']);
-    expect(app.showStarMap).toHaveBeenCalledWith(1);
+    expect(app.showStarMap).toHaveBeenCalledWith(2);
   });
 
   it('makes Map the only primary choice on a first gold frame', () => {

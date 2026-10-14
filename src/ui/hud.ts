@@ -639,7 +639,9 @@ export function showFusionDiscovery(scene: LevelScene, id?: ReactionId) {
         'span',
         null,
         def.kind === 'fusion'
-          ? t('+50 stardust · new sticker!')
+          ? scene.o.stickersShown
+            ? t('+50 stardust · new sticker!')
+            : t('+{n} stardust', { n: 50 })
           : t('It dries the land and hurts the planet. Watch for the red outline on the planet.'),
       ),
     ),

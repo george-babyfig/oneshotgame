@@ -1,4 +1,6 @@
 // Lifebook: every creature (discovered or not) plus the recipe for every land.
+import { habitatSetsVisible, mementosVisible } from '../../meta/reveals';
+import { unlocked } from '../../meta/unlocks';
 import { h, modal } from '../dom';
 import { sfx } from '../audio';
 import { SPECIES, BIOMES, TRAITS, traitOf, type Rarity, type SpeciesDef } from '../../core/world';
@@ -126,61 +128,71 @@ export function showLifebook(app: App) {
       h(
         'div',
         { class: 'scroll' },
-        h(
-          'button',
-          { class: 'album-link', onclick: () => (sfx.click(), app.showAlbum()) },
-          icon('album', 40),
-          h(
-            'span',
-            { class: 'stack' },
-            h('b', null, t('Sticker Album')),
-            h(
-              'small',
-              null,
-              t('{have}/{total} stickers · decorate your scrapbook', { have: ownedStickers(app.p).length, total: STICKERS.length }),
-            ),
-          ),
-          albumReady(app.p) ? h('span', { class: 'nb dot' }, String(albumReady(app.p))) : null,
-        ),
+        unlocked(app.p, 'sticker_album')
+          ? h(
+              'button',
+              { class: 'album-link', onclick: () => (sfx.click(), app.showAlbum()) },
+              icon('album', 40),
+              h(
+                'span',
+                { class: 'stack' },
+                h('b', null, t('Sticker Album')),
+                h(
+                  'small',
+                  null,
+                  t('{have}/{total} stickers · decorate your scrapbook', { have: ownedStickers(app.p).length, total: STICKERS.length }),
+                ),
+              ),
+              albumReady(app.p) ? h('span', { class: 'nb dot' }, String(albumReady(app.p))) : null,
+            )
+          : null,
         h('p', { class: 'muted' }, t('Each new creature gives 💎{n}. Tap a card for its hint.', { n: GEMS_PER_NEW_SPECIES })),
         ...sections,
-        h('div', { class: 'sec-title' }, t('Habitat sets')),
-        h(
-          'div',
-          { class: 'hab-grid' },
-          ...HABITATS.map((hb) => {
-            const have = habitatProgress(app.p, hb);
-            const done = app.p.habitats.includes(hb.id);
-            const ready = !done && have === hb.species.length;
-            return h(
-              'div',
-              { class: `hab${done ? ' done' : ''}` },
-              h('div', { class: 'hab-ic' }, hb.emoji),
+        ...(habitatSetsVisible(app.p)
+          ? [
+              h('div', { class: 'sec-title' }, t('Habitat sets')),
               h(
                 'div',
-                { class: 'hab-body' },
-                h('b', null, t(hb.name)),
-                h('span', { class: 'hab-n' }, `${have}/${hb.species.length}`),
-                h('div', { class: 'qbar' }, h('i', { style: `width:${(have / hb.species.length) * 100}%` })),
-                h('small', null, done ? t('Complete ✓') : rewardText(hb.reward).join(' ')),
+                { class: 'hab-grid' },
+                ...HABITATS.map((hb) => {
+                  const have = habitatProgress(app.p, hb);
+                  const done = app.p.habitats.includes(hb.id);
+                  const ready = !done && have === hb.species.length;
+                  return h(
+                    'div',
+                    { class: `hab${done ? ' done' : ''}` },
+                    h('div', { class: 'hab-ic' }, hb.emoji),
+                    h(
+                      'div',
+                      { class: 'hab-body' },
+                      h('b', null, t(hb.name)),
+                      h('span', { class: 'hab-n' }, `${have}/${hb.species.length}`),
+                      h('div', { class: 'qbar' }, h('i', { style: `width:${(have / hb.species.length) * 100}%` })),
+                      h('small', null, done ? t('Complete ✓') : rewardText(hb.reward).join(' ')),
+                    ),
+                    ready
+                      ? btn(t('Claim'), 'primary small', () => {
+                          if (!claimHabitat(app.p, hb.id)) return;
+                          app.syncGameCenter();
+                          app.save();
+                          sfx.chest();
+                          toast(t('{name} complete! {reward}', { name: t(hb.name), reward: rewardText(hb.reward).join(' ') }), 'good');
+                          showLifebook(app);
+                        })
+                      : null,
+                  );
+                }),
               ),
-              ready
-                ? btn(t('Claim'), 'primary small', () => {
-                    if (!claimHabitat(app.p, hb.id)) return;
-                    app.syncGameCenter();
-                    app.save();
-                    sfx.chest();
-                    toast(t('{name} complete! {reward}', { name: t(hb.name), reward: rewardText(hb.reward).join(' ') }), 'good');
-                    showLifebook(app);
-                  })
-                : null,
-            );
-          }),
-        ),
-        h('div', { class: 'sec-title' }, t('Mementos {have}/{total}', { have: app.p.mementos.length, total: SPECIES.length })),
-        app.p.mementos.length
-          ? h('div', { class: 'memento-grid' }, ...app.p.mementos.map((id) => h('div', null, `🎀 ${mementoName(id)}`)))
-          : h('p', { class: 'muted' }, t('Creatures sometimes leave keepsakes when they visit your galaxy while you are away.')),
+            ]
+          : []),
+        ...(mementosVisible(app.p)
+          ? [
+              h('div', { class: 'sec-title' }, t('Mementos {have}/{total}', { have: app.p.mementos.length, total: SPECIES.length })),
+              app.p.mementos.length
+                ? h('div', { class: 'memento-grid' }, ...app.p.mementos.map((id) => h('div', null, `🎀 ${mementoName(id)}`)))
+                : h('p', { class: 'muted' }, t('Creatures sometimes leave keepsakes when they visit your galaxy while you are away.')),
+            ]
+          : []),
         h('div', { class: 'sec-title' }, t('How to make each land')),
         biomes,
       ),

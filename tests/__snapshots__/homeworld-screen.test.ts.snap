@@ -18,6 +18,7 @@ exports[`Homeworld screen structure > keeps overview and VoiceOver plot list sta
     "children": [
       {
         "attrs": {
+          "aria-label": "Next Up: Build your first Lab. Finish both steps for ✨100",
           "class": "btn ghost wide hw-next-up",
           "type": "button",
         },
@@ -30,16 +31,9 @@ exports[`Homeworld screen structure > keeps overview and VoiceOver plot list sta
               {
                 "attrs": {},
                 "children": [
-                  "Next Up",
-                ],
-                "tag": "b",
-              },
-              {
-                "attrs": {},
-                "children": [
                   "Build your first Lab",
                 ],
-                "tag": "small",
+                "tag": "b",
               },
               {
                 "attrs": {},
@@ -100,20 +94,6 @@ exports[`Homeworld screen structure > keeps overview and VoiceOver plot list sta
           {
             "attrs": {},
             "children": [
-              "🛸 2/2",
-              {
-                "attrs": {},
-                "children": [
-                  "drones free",
-                ],
-                "tag": "small",
-              },
-            ],
-            "tag": "span",
-          },
-          {
-            "attrs": {},
-            "children": [
               "🏡 0/0",
               {
                 "attrs": {},
@@ -146,31 +126,6 @@ exports[`Homeworld screen structure > keeps overview and VoiceOver plot list sta
           "Homeworld list",
         ],
         "tag": "button",
-      },
-      {
-        "attrs": {
-          "class": "hw-land-summary",
-        },
-        "children": [
-          {
-            "attrs": {},
-            "children": [
-              "Lands",
-            ],
-            "tag": "b",
-          },
-          {
-            "attrs": {
-              "class": "btn ghost",
-              "type": "button",
-            },
-            "children": [
-              "Choose lands",
-            ],
-            "tag": "button",
-          },
-        ],
-        "tag": "div",
       },
       {
         "attrs": {
@@ -350,52 +305,6 @@ exports[`Homeworld screen structure > keeps overview and VoiceOver plot list sta
             ],
             "tag": "div",
           },
-          {
-            "attrs": {
-              "class": "hw-lab-summary",
-            },
-            "children": [
-              {
-                "attrs": {},
-                "children": [
-                  "Rain Lab",
-                  "",
-                ],
-                "tag": "b",
-              },
-              {
-                "attrs": {},
-                "children": [
-                  "Unlocks at planet 7",
-                ],
-                "tag": "small",
-              },
-            ],
-            "tag": "div",
-          },
-          {
-            "attrs": {
-              "class": "hw-lab-summary",
-            },
-            "children": [
-              {
-                "attrs": {},
-                "children": [
-                  "Sun Lab",
-                  "",
-                ],
-                "tag": "b",
-              },
-              {
-                "attrs": {},
-                "children": [
-                  "Unlocks at planet 11",
-                ],
-                "tag": "small",
-              },
-            ],
-            "tag": "div",
-          },
         ],
         "tag": "div",
       },
@@ -404,16 +313,6 @@ exports[`Homeworld screen structure > keeps overview and VoiceOver plot list sta
           "class": "row",
         },
         "children": [
-          {
-            "attrs": {
-              "class": "btn ghost",
-              "type": "button",
-            },
-            "children": [
-              "Expedition",
-            ],
-            "tag": "button",
-          },
           {
             "attrs": {
               "class": "btn ghost",
@@ -421,34 +320,6 @@ exports[`Homeworld screen structure > keeps overview and VoiceOver plot list sta
             },
             "children": [
               "Next Level",
-            ],
-            "tag": "button",
-          },
-        ],
-        "tag": "div",
-      },
-      {
-        "attrs": {
-          "class": "row",
-        },
-        "children": [
-          {
-            "attrs": {
-              "class": "btn ghost",
-              "type": "button",
-            },
-            "children": [
-              "🎨 Paint",
-            ],
-            "tag": "button",
-          },
-          {
-            "attrs": {
-              "class": "btn ghost",
-              "type": "button",
-            },
-            "children": [
-              "📷 Photo",
             ],
             "tag": "button",
           },
@@ -487,6 +358,7 @@ exports[`Homeworld screen structure > keeps overview and VoiceOver plot list sta
     "children": [
       {
         "attrs": {
+          "aria-label": "Next Up: Build your first Lab. Finish both steps for ✨100",
           "class": "btn ghost wide hw-next-up",
           "type": "button",
         },
@@ -499,16 +371,9 @@ exports[`Homeworld screen structure > keeps overview and VoiceOver plot list sta
               {
                 "attrs": {},
                 "children": [
-                  "Next Up",
-                ],
-                "tag": "b",
-              },
-              {
-                "attrs": {},
-                "children": [
                   "Build your first Lab",
                 ],
-                "tag": "small",
+                "tag": "b",
               },
               {
                 "attrs": {},
@@ -928,16 +793,6 @@ exports[`Homeworld screen structure > keeps overview and VoiceOver plot list sta
           "class": "row",
         },
         "children": [
-          {
-            "attrs": {
-              "class": "btn ghost",
-              "type": "button",
-            },
-            "children": [
-              "Expedition",
-            ],
-            "tag": "button",
-          },
           {
             "attrs": {
               "class": "btn ghost",

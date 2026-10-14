@@ -1,3 +1,6 @@
+import type { Profile } from '../../../meta/profile';
+import { launchBayBuildable } from '../../../meta/reveals';
+import { structIcon } from './panel';
 import { HOMEWORLD_MAX_LEVEL } from '../../../meta/tuning';
 import { h, btn, fmt, modal, toast } from '../../dom';
 import { confirmGemUse } from './gemConfirm';
@@ -809,12 +812,12 @@ function expeditionCard(species: string, planetName: string, colors: string[], f
   return c;
 }
 
-function levelOpening(level: HomeworldLevel): string {
+function levelOpening(p: Profile, level: HomeworldLevel): string {
   switch (level) {
     case 1:
       return t('Six plots and your first Labs');
     case 2:
-      return t('Two more plots, Greenhouse and Launch Bay');
+      return launchBayBuildable(p) ? t('Two more plots, Greenhouse and Launch Bay') : t('Two more plots and a Greenhouse');
     case 3:
       return t('Two more plots and a third drone');
     case 4:
@@ -859,7 +862,11 @@ export function levelSheet(app: App, after: () => void) {
   }
   const r = (home.level + 1) as HomeworldLevel;
   const check = canExpand(p);
-  const unlocks = BUILDING_TYPES.filter((x) => BUILDINGS[x].ring === r).map((x) => t(BUILDINGS[x].name));
+  const unlocks = BUILDING_TYPES.filter((x) => BUILDINGS[x].ring === r).map((x) => {
+    const img = structIcon(x, 1, 48);
+    img.alt = t(BUILDINGS[x].name);
+    return img;
+  });
   const planet = (level: number, label: string) =>
     h(
       'div',
@@ -877,10 +884,9 @@ export function levelSheet(app: App, after: () => void) {
     h(
       'div',
       { class: 'howto' },
-      h('p', null, levelOpening(r)),
       h('p', null, t('🌍 {n} plots (now {m})', { n: RING_PLOTS[r], m: RING_PLOTS[home.level] })),
       h('p', null, t('⬆️ Labs can reach level {n}', { n: Math.min(5, r + 1) })),
-      unlocks.length ? h('p', null, t('🏗️ New: {list}', { list: unlocks.join(', ') })) : null,
+      unlocks.length ? h('div', { class: 'row', style: 'flex-wrap:wrap' }, ...unlocks) : null,
       levelChecklist(app, r),
     ),
     btn(t('Grow to Level {n}', { n: r }), check === 'ok' ? 'primary wide' : 'ghost wide dim', () => {
@@ -901,7 +907,7 @@ export function levelSheet(app: App, after: () => void) {
         [
           skyline,
           h('div', { class: 'm-title' }, t('Homeworld Level {n}!', { n: r })),
-          h('p', null, levelOpening(r)),
+          h('p', null, levelOpening(p, r)),
           btn(t('Wonderful!'), 'primary wide', () => {
             show.skip();
             celebration.close();

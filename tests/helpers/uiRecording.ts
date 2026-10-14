@@ -102,6 +102,7 @@ const canvasContext = new Proxy(
           : () => {},
   },
 );
+export const recordedModals: RecordedNode[] = [];
 export const recordedDom = {
   h: (tag: string, props?: Record<string, unknown> | null, ...children: Child[]) => {
     const node = new RecordedNode(tag, props);
@@ -115,7 +116,17 @@ export const recordedDom = {
   },
   fmt: (value: number) => Math.floor(value).toLocaleString('en'),
   toast: () => {},
-  modal: (_content: Child[], _options?: unknown) => ({ close() {}, el: new RecordedNode('div') }),
+  modal: (content: Child[], _options?: unknown) => {
+    const el = new RecordedNode('div', { class: 'modal' });
+    el.append(...content);
+    recordedModals.push(el);
+    return {
+      close() {
+        el.remove();
+      },
+      el,
+    };
+  },
 };
 
 /** Closed details expose their summary, never the hidden stage names inside. */

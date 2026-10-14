@@ -1,6 +1,7 @@
 import { h, btn } from '../dom';
 import type { App } from '../app';
 import { t } from '../../i18n';
+import { inboxOpen } from '../../meta/reveals';
 import { unlocked } from '../../meta/unlocks';
 import { stylesAccess } from '../../meta/stylesAccess';
 import { chestsReady } from '../../meta/progression';
@@ -42,9 +43,11 @@ export function showMissions(app: App) {
         'div',
         { class: 'scroll' },
         open ? wishesPanel(app) : h('p', { class: 'locked-note' }, t('Opens at planet {n}', { n: 12 })),
-        open ? entry(t(currentRoad(p).name), roadReady(p, currentRoad(p).id).length, () => app.showRoad()) : null,
+        open && unlocked(p, 'star_road')
+          ? entry(t(currentRoad(p).name), roadReady(p, currentRoad(p).id).length, () => app.showRoad())
+          : null,
         open && chestsReady(p).length ? entry(t('Star Map'), chestsReady(p).length, () => app.showStarMap()) : null,
-        open
+        open && unlocked(p, 'star_calendar')
           ? entry(
               t('Star Calendar'),
               canStamp(p, today()) && unlocked(p, 'star_calendar') ? 1 : 0,
@@ -53,7 +56,9 @@ export function showMissions(app: App) {
               t('Opens at planet {n}', { n: 21 }),
             )
           : null,
-        open ? entry(t('Inbox'), p.mail.filter((mail) => !mail.claimed && !!letterOf(mail)?.gift).length, () => app.inbox()) : null,
+        open && inboxOpen(p)
+          ? entry(t('Inbox'), p.mail.filter((mail) => !mail.claimed && !!letterOf(mail)?.gift).length, () => app.inbox())
+          : null,
         open && unlocked(p, 'voyage') ? entry(t('Weekly Voyage'), 0, () => app.showVoyage()) : null,
         open && unlocked(p, 'festival') ? entry(t('Festival'), festivalReady(p).length, () => app.festival()) : null,
       ),

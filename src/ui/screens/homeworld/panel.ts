@@ -1,3 +1,4 @@
+import { expeditionButton, launchBayBuildable, paintButton, photoButton, dronesNamed, landsSection } from '../../../meta/reveals';
 import { HOMEWORLD_MAX_LEVEL } from '../../../meta/tuning';
 import { h, btn, fmt, toast } from '../../dom';
 import { confirmGemUse } from './gemConfirm';
@@ -76,7 +77,7 @@ export function fmtTime(ms: number) {
 }
 
 const iconCache = new Map<string, string>();
-function structIcon(type: BuildingType, lv: number, px: number, kind?: Kind, style?: string) {
+export function structIcon(type: BuildingType, lv: number, px: number, kind?: Kind, style?: string) {
   const key = `${type}:${lv}:${px}:${kind ?? ''}:${style ?? ''}:${canvasDpr()}`;
   const cached = iconCache.get(key);
   if (cached) {
@@ -229,7 +230,7 @@ export function createPanel(ctx: HomeworldPanelContext) {
         h(
           'div',
           { class: 'hw-stats' },
-          h('span', null, `🛸 ${drones(p) - busy}/${drones(p)}`, h('small', null, t('drones free'))),
+          dronesNamed(p, now) ? h('span', null, `🛸 ${drones(p) - busy}/${drones(p)}`, h('small', null, t('drones free'))) : null,
           h('span', null, `🏡 ${home.residents.length}/${denCapacity(home)}`, h('small', null, t('friends'))),
         ),
       );
@@ -246,14 +247,15 @@ export function createPanel(ctx: HomeworldPanelContext) {
           ),
         ),
       );
-      kids.push(
-        h(
-          'div',
-          { class: 'hw-land-summary' },
-          h('b', null, t('Lands')),
-          btn(t('Choose lands'), 'ghost', () => landSheet(app, 0, renderPanel)),
-        ),
-      );
+      if (landsSection(p))
+        kids.push(
+          h(
+            'div',
+            { class: 'hw-land-summary' },
+            h('b', null, t('Lands')),
+            btn(t('Choose lands'), 'ghost', () => landSheet(app, 0, renderPanel)),
+          ),
+        );
       if (p.level >= 30)
         kids.push(
           h(
@@ -287,7 +289,7 @@ export function createPanel(ctx: HomeworldPanelContext) {
       const nextPlot = home.plots.findIndex((b, index) => !!b && ((!!b.done && b.done <= now) || ready(home, index, now) > 0));
       // Next Up sits directly below the canvas; the main actions follow, and the longer Overview comes last.
       const nextUpButton = btn(
-        h('span', { class: 'stack' }, h('b', null, t('Next Up')), h('small', null, next.title), h('small', null, next.subtitle)),
+        h('span', { class: 'stack' }, h('b', null, next.title), h('small', null, next.subtitle)),
         'ghost wide hw-next-up',
         () => {
           if (next.homeTarget === 'expedition') expeditionSheet(app, renderPanel);
@@ -312,6 +314,7 @@ export function createPanel(ctx: HomeworldPanelContext) {
           else levelSheet(app, ctx.reopen);
         },
       );
+      nextUpButton.setAttribute('aria-label', `${t('Next Up')}: ${next.title}. ${next.subtitle}`);
       kids.unshift(nextUpButton);
       kids.push(
         h(
@@ -322,22 +325,24 @@ export function createPanel(ctx: HomeworldPanelContext) {
             ? h('div', null, h('p', { class: 'muted' }, t('Next Level checklist')), levelChecklist(app, (home.level + 1) as HomeworldLevel))
             : null,
           h('p', { class: 'muted' }, t('For your next throw')),
-          ...(Object.keys(LAB_NAME) as Kind[]).map((kind) =>
-            h(
-              'div',
-              { class: 'hw-lab-summary' },
-              h('b', null, t(LAB_NAME[kind]), labPlot(p, kind) >= 0 ? ` · ${t('Lv {n}', { n: labLevel(p, kind) })}` : ''),
+          ...(Object.keys(KINDS) as Kind[])
+            .filter((kind) => unlocked(p, kind) || labPlot(p, kind) >= 0)
+            .map((kind) =>
               h(
-                'small',
-                null,
-                labPlot(p, kind) >= 0
-                  ? t(labLevel(p, kind) === 1 ? KINDS[kind].stats.job : LAB_LEVEL[kind][labLevel(p, kind) as 2 | 3 | 4 | 5])
-                  : !unlocked(p, kind)
-                    ? t(LAB_TEXT.unlockPlanet, { n: KINDS[kind].unlock })
-                    : t('Build this Lab to help your shots'),
+                'div',
+                { class: 'hw-lab-summary' },
+                h('b', null, t(LAB_NAME[kind]), labPlot(p, kind) >= 0 ? ` · ${t('Lv {n}', { n: labLevel(p, kind) })}` : ''),
+                h(
+                  'small',
+                  null,
+                  labPlot(p, kind) >= 0
+                    ? t(labLevel(p, kind) === 1 ? KINDS[kind].stats.job : LAB_LEVEL[kind][labLevel(p, kind) as 2 | 3 | 4 | 5])
+                    : !unlocked(p, kind)
+                      ? t(LAB_TEXT.unlockPlanet, { n: KINDS[kind].unlock })
+                      : t('Build this Lab to help your shots'),
+                ),
               ),
             ),
-          ),
           ...[
             ...new Set(
               home.plots.filter((building): building is NonNullable<typeof building> => !!building).map((building) => building.type),
@@ -372,21 +377,24 @@ export function createPanel(ctx: HomeworldPanelContext) {
         h(
           'div',
           { class: 'row' },
-          liveText(
-            btn(expeditionLabel(), expeditionBack(home, now) ? 'gem' : 'ghost', () => expeditionSheet(app, renderPanel)),
-            expeditionLabel,
-          ),
+          expeditionButton(p, now)
+            ? liveText(
+                btn(expeditionLabel(), expeditionBack(home, now) ? 'gem' : 'ghost', () => expeditionSheet(app, renderPanel)),
+                expeditionLabel,
+              )
+            : null,
           btn(home.level >= HOMEWORLD_MAX_LEVEL ? t('Fully grown') : t('Next Level'), 'ghost', () => levelSheet(app, ctx.reopen)),
         ),
       );
-      kids.push(
-        h(
-          'div',
-          { class: 'row' },
-          btn(t('🎨 Paint'), 'ghost', () => paintSheet(app)),
-          btn(t('📷 Photo'), 'ghost', () => photoMode(app, canvas)),
-        ),
-      );
+      if (paintButton(p) || photoButton(p))
+        kids.push(
+          h(
+            'div',
+            { class: 'row' },
+            paintButton(p) ? btn(t('🎨 Paint'), 'ghost', () => paintSheet(app)) : null,
+            photoButton(p) ? btn(t('📷 Photo'), 'ghost', () => photoMode(app, canvas)) : null,
+          ),
+        );
       if (unlocked(p, 'star_atlas'))
         kids.push(btn(`✨ ${t('Star Atlas')}${constellationsReady(p) ? ' •' : ''}`, 'ghost wide', () => app.showSky()));
     } else if (!b) {
@@ -396,7 +404,7 @@ export function createPanel(ctx: HomeworldPanelContext) {
           'div',
           { class: 'hw-build' },
           ...(Object.keys(KINDS) as Kind[])
-            .filter((kind) => labPlot(p, kind) < 0)
+            .filter((kind) => labPlot(p, kind) < 0 && unlocked(p, kind))
             .map((kind) => {
               const check = canBuildLab(p, i, kind, now);
               const locked = check === 'locked';
@@ -427,6 +435,8 @@ export function createPanel(ctx: HomeworldPanelContext) {
           ...BUILDING_TYPES.filter(
             (type) =>
               type !== 'lab' &&
+              BUILDINGS[type].ring <= home.level &&
+              (type !== 'launch_bay' || launchBayBuildable(p)) &&
               type !== 'mill' &&
               type !== 'grove' &&
               type !== 'observatory' &&
@@ -490,7 +500,7 @@ export function createPanel(ctx: HomeworldPanelContext) {
               'p',
               { class: 'muted' },
               d.decor
-                ? t('Decoration for your Homeworld')
+                ? t('Makes your Homeworld your own')
                 : b.type === 'greenhouse'
                   ? t('Grow a chosen booster by winning rounds')
                   : t(d.desc),
@@ -578,7 +588,7 @@ export function createPanel(ctx: HomeworldPanelContext) {
             }),
           ),
         );
-      else kids.push(h('div', { class: 'hw-prod' }, t('Decoration for your Homeworld')));
+
       const row: HTMLElement[] = [];
       if (ready(home, i, now) > 0)
         row.push(

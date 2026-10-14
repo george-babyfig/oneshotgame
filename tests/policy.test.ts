@@ -305,6 +305,7 @@ describe('policy: visitors use no chance (0.4)', () => {
   it('visitors never give gems, and the same inputs give the same gifts', () => {
     const now = Date.UTC(2026, 8, 28, 12);
     const p = defaultProfile(now - 30 * 86400000);
+    p.level = 21;
     const ids = SPECIES.slice(0, 6).map((s) => s.id);
     p.seen = [...ids];
     p.galaxy = [{ n: 1, name: 'Test', hue: 120, stars: 3, species: ids.slice(0, 3), life: 50, colors: [] }];

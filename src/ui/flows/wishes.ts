@@ -7,6 +7,7 @@ import { WISH_REWARD } from '../../meta/tuning';
 import { COSMETIC_BY_ID } from '../../meta/cosmetics';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
+import { unlocked } from '../../meta/unlocks';
 import { t } from '../../i18n';
 
 function portrait(card: WishCard): HTMLCanvasElement {
@@ -47,7 +48,7 @@ export function wishesPanel(app: App): HTMLElement {
             h(
               'small',
               null,
-              `💎 ${WISH_REWARD.gems} · ✨ ${WISH_REWARD.dust}${wishRoadPoints(app.p, card) ? ` · 🛣️ ${wishRoadPoints(app.p, card)} ${t('Road point')}` : ''}`,
+              `💎 ${WISH_REWARD.gems} · ✨ ${WISH_REWARD.dust}${unlocked(app.p, 'star_road') && wishRoadPoints(app.p, card) ? ` · 🛣️ ${wishRoadPoints(app.p, card)} ${t('Road point')}` : ''}`,
             ),
             !card.claimed && card.progress === 0 && canSwap
               ? h('small', { class: 'muted wish-swap-note' }, t('Ask for a different Wish (once a day)'))
@@ -76,7 +77,7 @@ export function wishesPanel(app: App): HTMLElement {
                     h(
                       'p',
                       { class: 'reward-list' },
-                      `💎 ${app.p.gems - before.gems} · ✨ ${app.p.dust - before.dust}${road ? ` · 🛣️ ${road} ${t('Road point')}` : ''}`,
+                      `💎 ${app.p.gems - before.gems} · ✨ ${app.p.dust - before.dust}${unlocked(app.p, 'star_road') && road ? ` · 🛣️ ${road} ${t('Road point')}` : ''}`,
                     ),
                     !before.bonus && app.p.quests.bonusClaimed
                       ? h('p', null, t('All three Wishes: 💎{n} bonus', { n: WISH_REWARD.allThreeGems }))

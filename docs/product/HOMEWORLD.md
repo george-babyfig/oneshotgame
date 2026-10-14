@@ -162,21 +162,21 @@ A new, tiny date-seeded system (`src/meta/weather.ts`): `weatherOn(date, hemisph
 
 ### 3.2 The roster at launch
 
-| Building      | Max | Opens at               | Build cost (✨)               | Levels | Needs a drone | Changes in rounds                                                    |
-| ------------- | --- | ---------------------- | ----------------------------- | ------ | ------------- | -------------------------------------------------------------------- |
-| Rock Lab      | 1   | Homeworld opens (P5)   | First Lab free, then 300 each | 1-5    | Build only    | Rock's Power, Fusion reach, Firewall, Supernova reach, Pebble Shower |
-| Ice Lab       | 1   | Homeworld opens        | 300                           | 1-5    | Build only    | Ice Comet (Vent Cooler, Rime Comet)                                  |
-| Seed Lab      | 1   | Seed Pod unlocked (P2) | 300                           | 1-5    | Build only    | Seed Pod (Strong Roots, Grove Pod)                                   |
-| Magma Lab     | 1   | Magma unlocked (P4)    | 300                           | 1-5    | Build only    | Magma (Weed Burner, Obsidian Flow)                                   |
-| Rain Lab      | 1   | Rain Cloud (P7)        | 300                           | 1-5    | Build only    | Rain Cloud (Rinse, Monsoon)                                          |
-| Sun Lab       | 1   | Sunburst (P11)         | 300                           | 1-5    | Build only    | Sunburst (Frost Melter, Solar Flare)                                 |
-| Den           | 2   | Homeworld opens        | 250                           | 1-5    | Yes           | Houses friends; your Buddy comes from here                           |
-| Greenhouse    | 2   | Homeworld Level 2      | 600                           | 1-3    | Yes           | One chosen booster per 6 wins                                        |
-| Launch Bay    | 1   | Homeworld Level 2      | 800                           | 1-5    | Yes           | Launchers: choose, tune, try; trips from M13                         |
-| Fountain      | 2   | Homeworld opens        | 300                           | –      | No            | Looks only                                                           |
-| Lantern       | 3   | Homeworld opens        | 200                           | –      | No            | Looks only                                                           |
-| Comet Flowers | 3   | Homeworld Level 2      | 400                           | –      | No            | Looks only                                                           |
-| Keeper Statue | 1   | Homeworld opens        | 120 gems                      | –      | No            | Looks only                                                           |
+| Building      | Max | Opens at                                      | Build cost (✨)               | Levels | Needs a drone | Changes in rounds                                                    |
+| ------------- | --- | --------------------------------------------- | ----------------------------- | ------ | ------------- | -------------------------------------------------------------------- |
+| Rock Lab      | 1   | Homeworld opens (P5)                          | First Lab free, then 300 each | 1-5    | Build only    | Rock's Power, Fusion reach, Firewall, Supernova reach, Pebble Shower |
+| Ice Lab       | 1   | Homeworld opens                               | 300                           | 1-5    | Build only    | Ice Comet (Vent Cooler, Rime Comet)                                  |
+| Seed Lab      | 1   | Seed Pod unlocked (P2)                        | 300                           | 1-5    | Build only    | Seed Pod (Strong Roots, Grove Pod)                                   |
+| Magma Lab     | 1   | Magma unlocked (P4)                           | 300                           | 1-5    | Build only    | Magma (Weed Burner, Obsidian Flow)                                   |
+| Rain Lab      | 1   | Rain Cloud (P7)                               | 300                           | 1-5    | Build only    | Rain Cloud (Rinse, Monsoon)                                          |
+| Sun Lab       | 1   | Sunburst (P11)                                | 300                           | 1-5    | Build only    | Sunburst (Frost Melter, Solar Flare)                                 |
+| Den           | 2   | Homeworld opens                               | 250                           | 1-5    | Yes           | Houses friends; your Buddy comes from here                           |
+| Greenhouse    | 2   | Homeworld Level 2                             | 600                           | 1-3    | Yes           | One chosen booster per 6 wins                                        |
+| Launch Bay    | 1   | Homeworld Level 2 and planet 21 (decision 59) | 800                           | 1-5    | Yes           | Launchers: choose, tune, try; trips from M13                         |
+| Fountain      | 2   | Homeworld opens                               | 300                           | –      | No            | Looks only                                                           |
+| Lantern       | 3   | Homeworld opens                               | 200                           | –      | No            | Looks only                                                           |
+| Comet Flowers | 3   | Homeworld Level 2                             | 400                           | –      | No            | Looks only                                                           |
+| Keeper Statue | 1   | Homeworld opens                               | 120 gems                      | –      | No            | Looks only                                                           |
 
 Retired (decided in 4e, plus one here): Stardust Mill, Crystal Grove, Observatory, charm, resident requests, **meteor rocks** (the 3-hourly debris on empty plots: a chore with no stakes `[HW]`), and the **Launch Tower** (merged into the Launch Bay; see 15).
 

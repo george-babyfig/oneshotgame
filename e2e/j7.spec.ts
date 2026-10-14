@@ -62,7 +62,7 @@ test.describe('J7 resume a round [en]', () => {
     test.setTimeout(120_000);
     const guard = watchErrors(page);
     await freshInstall(page);
-    await midGame(page, { level: 11 });
+    await midGame(page, { level: 21 });
     await page.evaluate(() => (window as any).__app.startRemix(1));
     await page.waitForFunction(() => (window as any).__app.scene?.L.seed.startsWith('RX') && !!(window as any).__scene);
     await throwAt(page, 2);

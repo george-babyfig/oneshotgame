@@ -148,6 +148,9 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
         await expectKidSafe(page, loc);
         await page.locator('.hw-level-badge').click();
         await expect(page.locator(OPEN_MODAL).last()).toContainText(tr(loc, 'Grow your Homeworld to Level {n}', { n: 2 }));
+        await expect(page.locator(OPEN_MODAL).last().getByAltText(tr(loc, 'Greenhouse'), { exact: true })).toHaveCount(1);
+        await expect(page.locator(OPEN_MODAL).last().getByAltText(tr(loc, 'Launch Bay'), { exact: true })).toHaveCount(1);
+        await expect(page.locator(OPEN_MODAL).last()).not.toContainText(tr(loc, 'Two more plots, Greenhouse and Launch Bay'));
         await snap(page, info, guard, 'j5-level-checklist');
         await expectKidSafe(page, loc);
         await page
@@ -230,6 +233,7 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
 
         const firstLab = page.locator(`${OPEN_MODAL}.first-hour`).last();
         await expect(firstLab).toBeVisible();
+        for (const name of ['Rain Lab', 'Sun Lab']) await expect(firstLab.locator('.first-lab-choices')).not.toContainText(tr(loc, name));
         await snap(page, info, guard, 'j5-first-hour-lab');
         await expectKidSafe(page, loc);
         const before = (await state(page)).dust;
@@ -537,7 +541,7 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
       });
       await expect(page.locator('.hw-panel').getByRole('button', { name: new RegExp(tr(loc, 'Star Atlas')) })).toHaveCount(0);
       await page.locator('[data-tab="collection"]').click();
-      await expect(page.getByRole('button', { name: new RegExp(tr(loc, 'Star Atlas')) })).toBeDisabled();
+      await expect(page.getByRole('button', { name: new RegExp(tr(loc, 'Star Atlas')) })).toHaveCount(0);
       await page.evaluate(() => {
         const a = (window as any).__app;
         a.p.home.residents = [{ species: 'bunny', fp: 26, lastReq: 0, rewarded: 5 }];

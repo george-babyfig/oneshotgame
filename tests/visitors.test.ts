@@ -8,6 +8,7 @@ describe('visitors', () => {
   const now = 10 * 60 * 60 * 1000;
   function profile() {
     const p = defaultProfile(0);
+    p.level = 21;
     p.seen = SPECIES.slice(0, 4).map((s) => s.id);
     p.galaxy = [{ n: 1, name: 'A', hue: 0, stars: 1, species: [], life: 1, colors: [] }];
     return p;

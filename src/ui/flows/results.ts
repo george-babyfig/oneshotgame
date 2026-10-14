@@ -1,3 +1,5 @@
+import { dronesNamed, postcardButton } from '../../meta/reveals';
+import { vaultWinLine } from '../text';
 import { confirmGemUse } from '../screens/homeworld/gemConfirm';
 import { BOSS_REWARD } from '../../meta/tuning';
 // After a won level: record it, celebrate, and point at what's next.
@@ -85,19 +87,13 @@ export function helpEndModal(scene: LevelScene, rungs: HelpRung[]) {
     scene.renderHud();
   };
   const helpTitle =
-    rung === 'tip'
-      ? t('A little tip')
-      : rung === 'buddyThrows'
-        ? buddyGift
-          ? t('A gift from your Buddy')
-          : t('A gift from the Keeper')
-        : t('Show me where');
+    rung === 'tip' ? t('A little tip') : rung === 'buddyThrows' ? (buddyGift ? t('A gift from your Buddy') : null) : t('Show me where');
   const content = [
     ...facts.map((fact) => h('p', { class: 'end-need' }, fact)),
     ...(rung === 'whatHappened'
       ? []
       : [
-          h('div', { class: 'm-title' }, helpTitle),
+          helpTitle ? h('div', { class: 'm-title' }, helpTitle) : null,
           h(
             'p',
             { class: 'end-need' },
@@ -177,7 +173,8 @@ export function levelResults(app: App, r: LevelResult) {
       h('div', { class: 'nudge boss' }, t('☄️ Guardian defeated! +💎{g} +✨{d}', { g: BOSS_REWARD.gems ?? 0, d: BOSS_REWARD.dust ?? 0 })),
     );
   }
-  if (app.roundBuildsSpedUp) extras.push(h('div', { class: 'nudge' }, t('🛸 Your drones built 10 minutes faster!')));
+  if (app.roundBuildsSpedUp && dronesNamed(p, Date.now()))
+    extras.push(h('div', { class: 'nudge' }, t('🛸 Your drones built 10 minutes faster!')));
   const home = () => {
     m.close();
     app.showHome();
@@ -222,7 +219,9 @@ export function levelResults(app: App, r: LevelResult) {
           'span',
           null,
           REACTIONS[id].kind === 'fusion'
-            ? t('+50 stardust · new sticker!')
+            ? unlocked(p, 'sticker_album')
+              ? t('+50 stardust · new sticker!')
+              : t('+{n} stardust', { n: 50 })
             : t('It dries the land and hurts the planet. Watch for the red outline on the planet.'),
         ),
       ),
@@ -248,7 +247,7 @@ export function levelResults(app: App, r: LevelResult) {
             { class: 'purpose-orbit' },
             planetCanvas,
             h('span', { class: 'purpose-dust', 'aria-hidden': 'true' }, '✨'),
-            h('p', null, t('Campaign wins keep your Vault working.')),
+            h('p', null, vaultWinLine(p)),
           )
         : null,
       h('div', { class: 'rewards' }, ...rewards),
@@ -264,9 +263,9 @@ export function levelResults(app: App, r: LevelResult) {
         : null,
       ...fusionCards,
       creatureCard,
-      firstEverWin ? null : h('p', { class: 'muted' }, t('Campaign wins keep your Vault working.')),
+      firstEverWin ? null : h('p', { class: 'muted' }, vaultWinLine(p)),
       ...extras,
-      firstEverWin
+      firstEverWin || !postcardButton(p)
         ? null
         : btn(t('📮 Share postcard'), 'ghost wide small-btn', () =>
             sharePostcard(

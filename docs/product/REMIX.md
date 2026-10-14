@@ -31,6 +31,7 @@ SCOPE. Remix has one tier per chapter. It is built on the existing makeLevel / g
 
 1. UNLOCK RULE
 
+- **Launch note (decision 57):** for a new player, no Remix opens before planet 21. Chapter 1's Remix waits until then; later chapters open as below. Players who already played or were invited to a Remix keep it.
 - A chapter's Remix opens when that chapter's boss planet (planet 10c) is cleared at any star count, which is the same moment the chapter is marked finished. It is never gated on 3 stars, and nothing opens it early for money [6][7][8].
 - How players find it: a quiet gold "Remix" chip on finished chapter cards in the Star Map, plus a single Inbox letter the first time any Remix opens. No pop-up, no push notification, no red dot. It is never shown when the child pauses, quits or ends a session [28].
 

@@ -9,7 +9,11 @@ import { LAUNCHERS, LAUNCH_ROSTER, type LauncherId } from '../core/launchers';
 export const HOME_UNLOCK_LEVEL = 5;
 export const MOMENTUM_UNLOCK = 17;
 export const FESTIVAL_UNLOCK_LEVEL = 34;
-export const VOYAGE_UNLOCK_LEVEL = 20;
+export const VOYAGE_UNLOCK_LEVEL = 24;
+export const NOUN_WINDOW = 20;
+
+/** Existing players retain their familiar screens. */
+export const lateOpen = (p: Profile): boolean => p.level > NOUN_WINDOW || p.legacyUnlocks.includes('noun-window');
 const LEGACY_QUEST_IDS = new Set(['throw25', 'win3', 'star6', 'creature8', 'three1', 'booster1', 'collect2', 'land20', 'spot6', 'voyage1']);
 
 export type UnlockId =
@@ -197,7 +201,7 @@ export const UNLOCKS: readonly Unlock[] = [
       body: 'Explore seven planets, one by one.',
     },
   },
-  { id: 'star_road', planet: 12, placement: 'home' },
+  { id: 'star_road', planet: 22, placement: 'home' },
   { id: 'quests', planet: 12, placement: 'home', button: true },
   { id: 'quest_spot', planet: FESTIVAL_UNLOCK_LEVEL, placement: 'missions' },
   { id: 'quest_voyage', planet: VOYAGE_UNLOCK_LEVEL, placement: 'missions' },
@@ -211,7 +215,7 @@ export const UNLOCKS: readonly Unlock[] = [
     intro: { title: 'A garden signpost', body: 'Finish this planet to start your Homeworld garden.', icon: '🌱' },
   },
   { id: 'lifebook', planet: 3, placement: 'home', button: true },
-  { id: 'sticker_album', planet: 3, placement: 'collection' },
+  { id: 'sticker_album', planet: 24, placement: 'collection' },
   {
     id: 'buddy',
     planet: 18,
@@ -228,7 +232,7 @@ export const UNLOCKS: readonly Unlock[] = [
   { id: 'zen', planet: 30, placement: 'modes' },
   { id: 'rush', planet: 38, placement: 'modes' },
   { id: 'challenge', planet: 40, placement: 'modes' },
-  { id: 'passport', planet: 16, placement: 'home' },
+  { id: 'passport', planet: 21, placement: 'home' },
   { id: 'passport_setup', planet: 0, placement: 'home' },
   { id: 'workshop', planet: 18, placement: 'collection' },
   { id: 'object_lab', planet: HOME_UNLOCK_LEVEL, placement: 'collection' },
@@ -258,8 +262,15 @@ export function unlocked(p: Profile, id: UnlockId): boolean {
   if (id === 'momentum' && p.momentum.streak > 0) return true;
   if (id === 'homeworld' && (p.home.intro || p.home.plots.some(Boolean) || p.home.residents.length > 0)) return true;
   if (id === 'star_atlas' && (p.bundles.length > 0 || p.constellations.length > 0)) return true;
-  if (id === 'sticker_album' && (p.album.fest.length > 0 || p.album.pagesClaimed.length > 0)) return true;
-  if (id === 'passport' && p.passport.set) return true;
+  if (
+    id === 'sticker_album' &&
+    (p.album.fest.length > 0 ||
+      p.album.pagesClaimed.length > 0 ||
+      p.album.milestones > 0 ||
+      p.album.pages.some((pg) => pg.items.length > 0))
+  )
+    return true;
+  if (id === 'passport' && (p.passport.set || p.starter || p.pass)) return true;
   if (id === 'object_lab' && Object.values(p.lab).some((level) => level > 1)) return true;
   if (id === 'buddy') return p.level >= 18 && p.home.residents.length > 0;
   if (id === 'passport_setup') return p.stats.wins >= 1;

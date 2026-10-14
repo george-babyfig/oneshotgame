@@ -152,7 +152,7 @@ describe('FC reward feedback and navigation', () => {
   it('uses translated slot templates and registered decoration names', () => {
     expect(slotName('shotTrail:ice')).toBe('Shot trail: Ice Comet');
     expect(slotName('labSkin:seed')).toBe('Lab: Seed Pod');
-    expect(slotName('decoration:flowers')).toBe('Decoration: Comet Flowers');
+    expect(slotName('decoration:flowers')).toBe('Comet Flowers');
     expect(slotName('ground')).toBe('Ground paint');
   });
   it('gives Life Spark its own symbol in expedition and collect feedback', () => {

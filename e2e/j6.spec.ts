@@ -12,15 +12,16 @@ for (const loc of localesToRun().filter((id) => id !== 'pseudo')) {
     test('finished chapter toggle, round and result keep classic progress', async ({ page }, info) => {
       test.skip(info.project.name !== 'chromium-320x568', 'J6 checks the compact six-language layout');
       await freshInstall(page);
-      await midGame(page, { level: 11 });
+      await midGame(page, { level: 21 });
       await page.evaluate(() => (window as any).__app.showStarMap());
       await waitScreen(page, 'map');
       await settle(page);
       const cards = page.locator('.chapter');
-      await expect(cards.last().locator('.remix-toggle')).toBeVisible();
+      const chapterOne = page.locator('.chapter[data-chapter="1"]');
+      await expect(chapterOne.locator('.remix-toggle')).toBeVisible();
       await expect(cards.first().locator('.remix-toggle')).toHaveCount(0);
-      await expect(cards.nth(1).locator('.remix-toggle')).toHaveCount(0);
-      await cards.last().locator('.remix-toggle button').last().click();
+      await expect(page.locator('.chapter[data-chapter="2"] .remix-toggle')).toBeVisible();
+      await chapterOne.locator('.remix-toggle button').last().click();
       await expect(page.locator('.chapter.remix-chapter')).toBeVisible();
       const selectedRemix = page.locator('.chapter[data-chapter="1"] .remix-toggle button').last();
       await expect(selectedRemix).toHaveAttribute('aria-pressed', 'true');

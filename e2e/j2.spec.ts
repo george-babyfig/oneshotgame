@@ -148,6 +148,7 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
         while (a.p.home.plots.length < 14) a.p.home.plots.push(null);
         while (a.p.home.gaps.length < 14) a.p.home.gaps.push(null);
         a.p.home.plots[0] = { type: 'lantern', lv: 1, since: Date.now() };
+        a.p.home.plots[1] = { type: 'launch_bay', lv: 1, since: Date.now() };
         a.p.home.landmarks.sky_bridge.stage = 4;
         a.p.home.residents.push({ species: 'otter', fp: 8, lastReq: -1, rewarded: 3 });
         a.showHomeworld();

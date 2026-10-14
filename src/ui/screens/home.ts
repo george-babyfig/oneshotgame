@@ -1,4 +1,5 @@
 // Play: one clear next step beside the galaxy.
+import { vaultWinLine, otherModeVisible } from '../text';
 import { h, btn, fmt, modal, toast } from '../dom';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
@@ -48,17 +49,7 @@ export function showHome(app: App) {
       'span',
       { class: 'stack' },
       h('b', null, t('Vault · ✨ {stored}/{cap}', { stored: fmt(pending), cap: fmt(cap) })),
-      h(
-        'small',
-        null,
-        full
-          ? t('Vault full')
-          : !working
-            ? p.stats.wins > 0
-              ? t('Win a campaign planet to keep your Vault working')
-              : t('Win a campaign planet to start your Vault')
-            : t('Working: ✨ {n} an hour', { n: fmt(rate) }),
-      ),
+      h('small', null, full ? t('Vault full') : !working ? vaultWinLine(p) : t('Working: ✨ {n} an hour', { n: fmt(rate) })),
     ),
     `dust-btn${full ? ' full' : ''}`,
     () => {
@@ -67,7 +58,11 @@ export function showHome(app: App) {
         [
           h('div', { class: 'm-title' }, t('Vault level {n}', { n: tier })),
           h('p', null, t('Stored: ✨ {stored}/{cap}', { stored: fmt(pendingDust(p)), cap: fmt(Math.floor(vaultRate(p) * vaultHours(p))) })),
-          h('p', { class: 'muted' }, t('Wins keep the Vault working. One campaign win adds two hours.')),
+          h(
+            'p',
+            { class: 'muted' },
+            otherModeVisible(p) ? t('Wins keep the Vault working. One campaign win adds two hours.') : vaultWinLine(p),
+          ),
           pendingDust(p) > 0
             ? btn(t('Collect ✨ {n}', { n: fmt(pendingDust(p)) }), 'primary wide', () => {
                 const rect = collect.getBoundingClientRect();
@@ -82,7 +77,11 @@ export function showHome(app: App) {
                 m.close();
                 app.showHome(true);
               })
-            : h('p', { class: 'muted' }, t('Nothing to collect yet. Campaign wins keep your Vault working.')),
+            : h(
+                'p',
+                { class: 'muted' },
+                otherModeVisible(p) ? t('Nothing to collect yet. Campaign wins keep your Vault working.') : t('Nothing to collect yet'),
+              ),
           tier < 5
             ? h(
                 'div',
@@ -155,7 +154,7 @@ export function showHome(app: App) {
       p.galaxy.length ? h('div', { class: 'collect-row' }, collect) : null,
       picked.action !== 'play'
         ? btn(
-            h('span', { class: 'stack' }, h('b', null, t('Next Up')), h('small', null, picked.title), h('small', null, picked.subtitle)),
+            h('span', { class: 'stack' }, h('b', null, picked.title), h('small', null, picked.subtitle)),
             'ghost wide next-up-card',
             nextAction,
           )
@@ -178,9 +177,10 @@ export function showHome(app: App) {
     look: currentLook(p),
     onTap: (g) => {
       sfx.click();
-      toast(t('{name} · {stars} · Campaign wins keep your Vault working.', { name: planetName(g.name), stars: '★'.repeat(g.stars) }));
+      toast(`${planetName(g.name)} · ${'★'.repeat(g.stars)}`);
       app.showStarMap();
     },
   });
+  el.querySelector('.next-up-card')?.setAttribute('aria-label', `${t('Next Up')}: ${picked.title}. ${picked.subtitle}`);
   app.mount(el, 'home', view.stop);
 }

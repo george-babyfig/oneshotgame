@@ -169,7 +169,7 @@ const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1
 
 describe('i18n', () => {
   const keys = allKeys();
-  if (process.env.DUMP_KEYS) writeFileSync('src/locales/_keys.json', JSON.stringify(keys, null, 2) + '\n');
+  if (process.env.DUMP_KEYS) writeFileSync(process.env.DUMP_KEYS_PATH ?? 'src/locales/_keys.json', JSON.stringify(keys, null, 2) + '\n');
 
   it('collects a sensible number of keys', () => {
     expect(keys.length).toBeGreaterThan(150);

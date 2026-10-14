@@ -312,6 +312,7 @@ export interface Profile {
   pass: boolean;
   /** M3 migration is complete; older gates already earned are kept. */
   m3Migrated: boolean;
+  nounBudgetMigrated: boolean;
   legacyUnlocks: string[];
   /** Premium Star Road tiers already claimed. */
   roadPass: number[];
@@ -473,6 +474,7 @@ export function defaultProfile(now = Date.now()): Profile {
     starter: false,
     pass: false,
     m3Migrated: true,
+    nounBudgetMigrated: true,
     legacyUnlocks: [],
     roadPass: [],
     skin: 'classic',
@@ -992,6 +994,18 @@ export function migrate(raw: Record<string, unknown>): Profile {
     }
     p.m3Migrated = true;
   }
+  if (raw.nounBudgetMigrated !== true) {
+    if (p.stats.wins > 0 && !p.legacyUnlocks.includes('noun-window')) p.legacyUnlocks.push('noun-window');
+    for (const [id, planet] of [
+      ['star_road', 12],
+      ['passport', 16],
+      ['sticker_album', 3],
+      ['voyage', 20],
+      ['quest_voyage', 20],
+    ] as const)
+      if (p.level >= planet && !p.legacyUnlocks.includes(id)) p.legacyUnlocks.push(id);
+    p.nounBudgetMigrated = true;
+  }
   if (!Object.hasOwn(raw, 'skySeen')) {
     for (const row of UNLOCKS) {
       if (['rocks', 'bubble', 'mist', 'ring', 'tug'].includes(row.id) && p.level > row.planet) {
@@ -1115,7 +1129,8 @@ export async function loadProfile(): Promise<Profile> {
       if (
         version !== PROFILE_VERSION ||
         (parsed as Record<string, unknown>).m11Migrated !== true ||
-        (parsed as Record<string, unknown>).m115Migrated !== true
+        (parsed as Record<string, unknown>).m115Migrated !== true ||
+        (parsed as Record<string, unknown>).nounBudgetMigrated !== true
       ) {
         // Keep first bytes per target migration; an older rescue must not hide the pre-M11 save.
         try {

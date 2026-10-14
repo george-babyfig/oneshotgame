@@ -2,6 +2,7 @@ import { makeLevel, type LevelDef } from '../core/levels';
 import { rulesForLevel } from '../core/round';
 import { t } from '../i18n';
 import type { Profile } from './profile';
+import { NOUN_WINDOW } from './unlocks';
 
 export const REMIX_RULES = 1;
 
@@ -33,7 +34,15 @@ export function remixLevel(n: number, p?: Profile): LevelDef {
 }
 
 export function remixUnlocked(p: Profile, chapter: number): boolean {
-  return Number.isInteger(chapter) && chapter > 0 && p.level > chapter * 10;
+  return (
+    Number.isInteger(chapter) &&
+    chapter > 0 &&
+    p.level > chapter * 10 &&
+    (p.level > NOUN_WINDOW ||
+      chapterData(p, chapter) !== undefined ||
+      p.mailSeen.includes('remix-intro') ||
+      p.legacyUnlocks.includes('noun-window'))
+  );
 }
 
 function chapterData(p: Profile, chapter: number): RemixChapter | undefined {

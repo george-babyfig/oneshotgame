@@ -19,6 +19,8 @@ import { KINDS, SPECIES_BY_ID, type Kind } from '../core/world';
 import { LAUNCHER_ESSENCE, TUNE_COST, launcherBay } from './launchbay';
 import { bayLevel } from './homeworld';
 
+import { inboxOpen, habitatSetsVisible } from './reveals';
+
 const landmarkAsk = (site: NonNullable<ReturnType<typeof activeLandmark>>, stage: number): string =>
   stage === 3 ? 'Bring Essences to finish this Landmark' : site.stages[stage].ask;
 
@@ -91,6 +93,7 @@ export function nextUp(p: Profile, _now: number): NextUp {
       x.planet === p.level - 1 &&
       (x.intro || x.button || x.placement === 'modes') &&
       unlocked(p, x.id) &&
+      (x.id !== 'inbox' || inboxOpen(p)) &&
       (x.id !== 'homeworld' || firstHourStep(p) !== 'done') &&
       (!['quests', 'star_road', 'star_calendar', 'inbox'].includes(x.id) || unlocked(p, 'quests')) &&
       (x.id !== 'workshop' || p.chapters.length >= 1),
@@ -133,7 +136,7 @@ export function nextUp(p: Profile, _now: number): NextUp {
       habitatProgress(p, h) >= h.species.length - 2 &&
       h.species.filter((id) => !p.seen.includes(id)).every((id) => ['common', 'uncommon'].includes(SPECIES_BY_ID[id]?.rarity)),
   );
-  if (unlocked(p, 'lifebook') && habitat)
+  if (unlocked(p, 'lifebook') && habitatSetsVisible(p) && habitat)
     suggestions.push({
       kind: 'goal',
       title: t('Meet more creatures'),

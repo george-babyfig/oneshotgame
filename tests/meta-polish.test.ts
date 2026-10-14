@@ -164,17 +164,19 @@ describe('FC first sessions and consistent collection gates', () => {
       COSMETICS.filter((item) => item.source === 'gems').length,
     );
   });
-  it('opens the Album with Lifebook and keeps Atlas at planet 23', () => {
+  it('opens Lifebook at 3, Atlas at 23 and Album at 24', () => {
     const p = defaultProfile();
     p.level = 2;
     expect(unlocked(p, 'sticker_album')).toBe(false);
     p.level = 3;
-    expect(unlocked(p, 'sticker_album')).toBe(true);
+    expect(unlocked(p, 'sticker_album')).toBe(false);
     expect(unlocked(p, 'lifebook')).toBe(true);
     p.level = 6;
     expect(unlocked(p, 'star_atlas')).toBe(false);
     p.level = 23;
     expect(unlocked(p, 'star_atlas')).toBe(true);
+    p.level = 24;
+    expect(unlocked(p, 'sticker_album')).toBe(true);
   });
   it('uses one Crystal Frost name and a unique Life Spark symbol', () => {
     expect(PRODUCTS.find((item) => item.key === 'pack_crystalfrost')!.contents).toContain('Crystal Frost crown');
@@ -194,6 +196,9 @@ describe('FC first sessions and consistent collection gates', () => {
     p.seen = ['goat', 'llama', 'newt', 'dragon'];
     expect(nextUp(p, 0).action).toBe('play');
     p.seen = ['llama', 'newt', 'dragon', 'dino'];
+    expect(nextUp(p, 0).action).not.toBe('lifebook');
+    p.level = 21;
+    p.chapters = [1, 2];
     const actions = Array.from({ length: 6 }, (_, index) => {
       p.meta.sessions = index + 1;
       return nextUp(p, 0).action;

@@ -151,7 +151,7 @@ describe('interrupted campaign rounds', () => {
 
   it('preserves a mode-tagged Remix round and validates its RX level', () => {
     const p = defaultProfile(0);
-    p.level = 11;
+    p.level = 21;
     const c = checkpoint();
     c.n = 1;
     c.mode = 'remix';

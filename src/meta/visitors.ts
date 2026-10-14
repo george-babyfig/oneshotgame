@@ -1,3 +1,4 @@
+import { lateOpen } from './unlocks';
 import { VISITOR_DUST } from './tuning';
 import { earn } from './wallet';
 // Visitors: while the app is closed, creatures you've discovered drop by your galaxy
@@ -44,6 +45,7 @@ export function mementoName(id: string): string {
 
 /** Work out who visited between lastSeen and now. Deterministic for a given time window. */
 export function rollVisitors(p: Profile, now: number): VisitorGift[] {
+  if (!lateOpen(p) && !Object.keys(p.visits).length && !p.mementos.length) return [];
   const minutes = (now - p.meta.lastSeen) / 60000;
   if (minutes < VISIT_MIN_MINUTES || !p.galaxy.length || !p.seen.length) return [];
   const count = Math.min(MAX_VISITORS, 1 + Math.floor(Math.sqrt(minutes / 30)));

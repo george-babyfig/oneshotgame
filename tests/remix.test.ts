@@ -85,9 +85,13 @@ describe('Remix records', () => {
     p.level = 10;
     expect(remixUnlocked(p, 1)).toBe(false);
     expect(recordRemix(p, 1, 3).improved).toBe(false);
-    p.level = 11;
+    for (let n = 11; n <= 20; n++) {
+      p.level = n;
+      expect(remixUnlocked(p, 1)).toBe(false);
+    }
+    p.level = 21;
     expect(remixUnlocked(p, 1)).toBe(true);
-    expect(remixUnlocked(p, 2)).toBe(false);
+    expect(remixUnlocked(p, 2)).toBe(true);
     expect(recordRemix(p, 1, 0).frame).toBe('outline');
     expect(recordRemix(p, 1, 3).improved).toBe(true);
     expect(recordRemix(p, 1, 1).improved).toBe(false);
@@ -112,7 +116,7 @@ describe('Remix records', () => {
 
   it('cannot feed the campaign economy or progress records', () => {
     const p = defaultProfile();
-    p.level = 11;
+    p.level = 21;
     const before = structuredClone(p);
     recordRemix(p, 1, 3);
     const { remix: _oldRemix, ...oldOther } = before;
@@ -127,5 +131,21 @@ describe('Remix records', () => {
     expect(p.remix).toEqual({});
     expect(remixStars(p, 1)).toEqual(Array(10).fill(0));
     expect(remixFrame(p, 1)).toBe('none');
+  });
+});
+
+describe('Remix noun window preservation', () => {
+  it('keeps played chapters, the existing invitation and legacy access', () => {
+    const p = defaultProfile();
+    p.level = 11;
+    p.remix[1] = { v: REMIX_RULES, best: [], played: [true] };
+    expect(remixUnlocked(p, 1)).toBe(true);
+    p.remix = {};
+    p.mailSeen.push('remix-intro');
+    expect(remixUnlocked(p, 1)).toBe(true);
+    p.mailSeen = [];
+    p.legacyUnlocks.push('noun-window');
+    expect(remixUnlocked(p, 1)).toBe(true);
+    expect(remixUnlocked(p, 2)).toBe(false);
   });
 });

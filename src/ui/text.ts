@@ -1,4 +1,7 @@
 // Localized names for game data (kept out of the pure simulation modules).
+import type { Profile } from '../meta/profile';
+import { remixUnlocked } from '../meta/remix';
+import { unlocked } from '../meta/unlocks';
 import { t } from '../i18n';
 import { BIOMES, KINDS, type BiomeId, type Kind, type SpeciesDef } from '../core/world';
 
@@ -16,3 +19,9 @@ export function speciesHint(sp: SpeciesDef): string {
 
 export const rarityName = (r: SpeciesDef['rarity']) =>
   t({ common: 'Common', uncommon: 'Uncommon', rare: 'Rare', legendary: 'Legendary' }[r]);
+
+/** Mention Campaign only when the player can see another way to play. */
+export const otherModeVisible = (p: Profile): boolean =>
+  remixUnlocked(p, 1) || unlocked(p, 'voyage') || (['daily', 'zen', 'rush', 'challenge'] as const).some((id) => unlocked(p, id));
+export const vaultWinLine = (p: Profile): string =>
+  otherModeVisible(p) ? t('Campaign wins keep your Vault working.') : t('Win a planet to keep your Vault working');

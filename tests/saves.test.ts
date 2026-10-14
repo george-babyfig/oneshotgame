@@ -37,6 +37,7 @@ const DUST_DELTAS: Record<string, number> = {
   'g-pre-m105.v3.json': 14260,
   'h-pre-m11.v3.json': 22980,
   'i-pre-m115.v4.json': 0,
+  'j-pre-noun-budget.v5.json': 0,
 };
 
 type Raw = Record<string, unknown>;
@@ -84,7 +85,18 @@ describe('save goldens', () => {
       'g-pre-m105.v3.json',
       'h-pre-m11.v3.json',
       'i-pre-m115.v4.json',
+      'j-pre-noun-budget.v5.json',
     ]);
+  });
+
+  it('preserves every noun-window screen for a pre-budget player, once', () => {
+    const p = loadSave('j-pre-noun-budget.v5.json');
+    expect(p.nounBudgetMigrated).toBe(true);
+    expect(p.legacyUnlocks).toEqual(
+      expect.arrayContaining(['noun-window', 'star_road', 'passport', 'sticker_album', 'voyage', 'quest_voyage']),
+    );
+    expect(migrate(p as unknown as Raw).legacyUnlocks).toEqual(p.legacyUnlocks);
+    expect(defaultProfile().legacyUnlocks).not.toContain('noun-window');
   });
 
   for (const f of FILES) {

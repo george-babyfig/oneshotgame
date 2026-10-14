@@ -18,7 +18,8 @@ describe('nextUp', () => {
   });
   it('puts a chest ahead of a nearly finished Wish', () => {
     const p = defaultProfile();
-    p.level = 25;
+    p.level = 26;
+    p.meta.sessions = 2;
     p.seen = ['deer'];
     const card = ensureWishes(p, '2026-09-28')[0];
     card.progress = card.goal - 0.1;
@@ -26,7 +27,8 @@ describe('nextUp', () => {
   });
   it('suggests a Wish at eighty percent when no claim is ready', () => {
     const p = defaultProfile();
-    p.level = 25;
+    p.level = 26;
+    p.meta.sessions = 2;
     p.chapters = [1, 2];
     p.seen = ['deer'];
     const card = ensureWishes(p, '2026-09-28')[0];
@@ -35,7 +37,8 @@ describe('nextUp', () => {
   });
   it('puts a finished build ahead of a Wish', () => {
     const p = defaultProfile();
-    p.level = 25;
+    p.level = 26;
+    p.meta.sessions = 2;
     p.chapters = [1, 2];
     p.home.plots[0] = { type: 'den', lv: 1, since: 0, done: 5 };
     expect(nextUp(p, 5)).toMatchObject({ kind: 'claim', action: 'homeworld' });
@@ -65,5 +68,29 @@ describe('nextUp', () => {
     });
     p.mats.leaf = p.mats.stone = p.mats.dew = 50;
     expect(homeworldNextUp(p)).toMatchObject({ homeTarget: 'landmark', subtitle: 'Your Landmark is ready to finish' });
+  });
+});
+
+describe('noun window suggestions', () => {
+  it('requires Inbox visibility even when Wishes were grandfathered', () => {
+    const p = defaultProfile();
+    p.level = 2;
+    p.legacyUnlocks.push('quests');
+    expect(nextUp(p, 0).action).not.toBe('inbox');
+    p.mail.push({ id: 'welcome', kind: 'welcome', at: 0, read: true, claimed: false });
+    expect(nextUp(p, 0).action).toBe('inbox');
+  });
+  it('does not point at unopened Inbox or an incomplete Habitat set', () => {
+    const p = defaultProfile();
+    p.level = 2;
+    p.home.firstHour = 2;
+    expect(nextUp(p, 0).action).not.toBe('inbox');
+    p.level = 19;
+    p.chapters = [1];
+    p.seen = ['llama', 'newt', 'dragon', 'dino'];
+    for (let session = 1; session <= 6; session++) {
+      p.meta.sessions = session;
+      expect(nextUp(p, 0).action).not.toBe('lifebook');
+    }
   });
 });

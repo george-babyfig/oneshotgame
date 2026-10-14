@@ -67,6 +67,17 @@ import { effectiveReduceMotion } from '../motion';
 import { drawGameplayLauncher } from '../art/launchers';
 import type { LauncherId } from '../../core/launchers';
 import { KINDS, type Kind } from '../../core/world';
+import {
+  atmosphereTab,
+  dyeTab,
+  presetsRow,
+  friendOutfitsTab,
+  launcherLooksTab,
+  buddyTab,
+  homeworldSlotRow,
+  sourceOpen,
+} from '../../meta/reveals';
+import { UNLOCKS, type UnlockId } from '../../meta/unlocks';
 import { BUILDINGS, type BuildingType } from '../../meta/homeworld';
 
 type GroupTab = 'objects' | 'effects' | 'homeworld' | 'friends';
@@ -81,7 +92,8 @@ export function slotName(slot: StyleSlot): string {
   if (slot.startsWith('shotTrail:')) return t('Shot trail: {kind}', { kind: t(KINDS[kind].name) });
   if (slot.startsWith('burst:')) return t('Burst: {kind}', { kind: t(KINDS[kind].name) });
   if (slot.startsWith('labSkin:')) return t('Lab: {kind}', { kind: t(KINDS[kind].name) });
-  if (slot.startsWith('decoration:')) return t('Decoration: {name}', { name: t(BUILDINGS[kind as BuildingType].name) });
+  // The decoration's own name is the label; the word 'decoration' is never taught before planet 21.
+  if (slot.startsWith('decoration:')) return t(BUILDINGS[kind as BuildingType].name);
   switch (slot) {
     case 'supernova':
       return t('Supernova style');
@@ -223,7 +235,6 @@ function avatarPanel(app: App, preview: Look, repaint: () => void): HTMLElement 
   return h(
     'div',
     { class: 'avatar-panel' },
-    h('p', { class: 'muted' }, t('Make your Keeper look like you imagine. Every part is yours to try.')),
     groups,
     h(
       'div',
@@ -568,8 +579,33 @@ function presetRow(app: App, slot: Tab) {
 }
 
 export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
-  lastSlot = slot;
   const p = app.p;
+  const tabVisible = (s: Tab) =>
+    s === 'atmosphere'
+      ? atmosphereTab(p)
+      : s === 'dye'
+        ? dyeTab(p)
+        : s === 'friends'
+          ? friendOutfitsTab(p)
+          : s === 'launcher'
+            ? launcherLooksTab(p)
+            : s === 'buddy'
+              ? buddyTab(p)
+              : true;
+  if (!tabVisible(slot)) slot = 'suit';
+  lastSlot = slot;
+  const slotVisible = (s: StyleSlot) => !inGroup(s, 'homeworld') || homeworldSlotRow(p, s);
+  const shownSource = (x: (typeof COSMETICS)[number]): string => {
+    if (sourceOpen(p, x.source)) return sourceText(x);
+    if (x.source === 'habitat') return t('Lifebook');
+    const ids: Partial<Record<(typeof COSMETICS)[number]['source'], UnlockId>> = {
+      wish: 'quests',
+      road: 'star_road',
+      calendar: 'star_calendar',
+      constellation: 'star_atlas',
+    };
+    return t('Opens at planet {n}', { n: UNLOCKS.find((row) => row.id === ids[x.source])!.planet });
+  };
   if (activeDraft && activeDraft.app === app && activeStyleDraft(p) !== activeDraft.selection) activeDraft = null;
   if (!activeDraft || activeDraft.app !== app) activeDraft = { app, selection: beginStyleDraft(p) };
   if (p.settings.hidePaidLooks) {
@@ -645,37 +681,39 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
     });
   else if (isPaidLook(item))
     action = previewing ? btn(t('Done'), 'ghost', completeDraft) : btn(t('Try on'), 'ghost', () => showStyles(app, slot, item.id));
-  else if (item.source === 'road') action = h('div', { class: 'ws-state locked' }, sourceText(item));
-  else action = h('div', { class: 'ws-state locked' }, `🔒 ${sourceText(item)}`);
+  else if (item.source === 'road') action = h('div', { class: 'ws-state locked' }, shownSource(item));
+  else action = h('div', { class: 'ws-state locked' }, `🔒 ${shownSource(item)}`);
 
   const mastery = slot === 'launcher' ? h('p', { class: 'muted' }, t('Looks change colours only. Earn launchers by playing.')) : null;
 
   const tabs = h(
     'div',
     { class: 'tabs' },
-    ...(['you', ...SLOTS, 'objects', 'effects', 'homeworld', 'friends', 'dye', 'buddy', 'atmosphere'] as Tab[]).map((s) =>
-      h(
-        'button',
-        { class: `tab${s === slot ? ' on' : ''}`, onclick: () => (sfx.click(), (inspectedId = ''), showStyles(app, s)) },
-        s === 'you'
-          ? t('You')
-          : s === 'dye'
-            ? t('Dye')
-            : s === 'buddy'
-              ? t('Buddy')
-              : s === 'atmosphere'
-                ? t('Atmosphere')
-                : s === 'objects'
-                  ? t('Objects')
-                  : s === 'effects'
-                    ? t('Effects')
-                    : s === 'homeworld'
-                      ? t('Homeworld looks')
-                      : s === 'friends'
-                        ? t('Friend outfits')
-                        : slotName(s as StyleSlot),
+    ...(['you', ...SLOTS, 'objects', 'effects', 'homeworld', 'friends', 'dye', 'buddy', 'atmosphere'] as Tab[])
+      .filter(tabVisible)
+      .map((s) =>
+        h(
+          'button',
+          { class: `tab${s === slot ? ' on' : ''}`, onclick: () => (sfx.click(), (inspectedId = ''), showStyles(app, s)) },
+          s === 'you'
+            ? t('You')
+            : s === 'dye'
+              ? t('Dye')
+              : s === 'buddy'
+                ? t('Buddy')
+                : s === 'atmosphere'
+                  ? t('Atmosphere')
+                  : s === 'objects'
+                    ? t('Objects')
+                    : s === 'effects'
+                      ? t('Effects')
+                      : s === 'homeworld'
+                        ? t('Homeworld looks')
+                        : s === 'friends'
+                          ? t('Friend outfits')
+                          : slotName(s as StyleSlot),
+        ),
       ),
-    ),
   );
   const grid =
     slot === 'you'
@@ -691,6 +729,7 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
                 { class: 'ws-grid' },
                 ...STYLE_SLOTS.filter(
                   (s) =>
+                    slotVisible(s) &&
                     !SLOTS.includes(s as Slot) &&
                     (slot === s || (['objects', 'effects', 'homeworld', 'friends'].includes(slot) && inGroup(s, slot))),
                 ).map((s) =>
@@ -710,7 +749,7 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
                   ),
                 ),
                 ...visibleCosmetics(p)
-                  .filter((x) => inGroup(x.slot, slot))
+                  .filter((x) => inGroup(x.slot, slot) && slotVisible(x.slot))
                   .map((x) => {
                     const have = owns(p, x.id);
                     const on = worn[x.slot] === x.id;
@@ -722,7 +761,7 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
                       },
                       SLOTS.includes(x.slot as Slot) ? itemCanvas(x.id, worn, 64) : styleTile(x.id),
                       h('b', null, t(x.name)),
-                      h('small', null, on ? t('Equipped') : have ? t('Owned') : isPaidLook(x) ? t('Try on') : sourceText(x)),
+                      h('small', null, on ? t('Equipped') : have ? t('Owned') : isPaidLook(x) ? t('Try on') : shownSource(x)),
                     );
                   }),
               );
@@ -764,7 +803,7 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
             item
               ? t(item.name)
               : slot === 'you'
-                ? t('Your Keeper')
+                ? t('You')
                 : slot === 'buddy' && p.buddy.species
                   ? t(SPECIES_BY_ID[p.buddy.species].name)
                   : '',
@@ -775,7 +814,7 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
       h(
         'div',
         { class: 'scroll' },
-        presetRow(app, slot),
+        presetsRow(p) ? presetRow(app, slot) : null,
         tabs,
         mastery,
         p.meta.sessions <= 1 ? h('p', { class: 'muted' }, t('Earn gems in play')) : null,

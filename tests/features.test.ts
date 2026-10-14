@@ -38,6 +38,7 @@ describe('momentum', () => {
 describe('visitors', () => {
   it('only visit after a while away and pay out once', () => {
     const p = defaultProfile(0);
+    p.level = 21;
     p.meta.lastSeen = 0;
     expect(rollVisitors(p, 3600e3)).toEqual([]); // no galaxy yet
     p.galaxy.push({ n: 1, name: 'a', hue: 0, stars: 1, species: [], life: 1, colors: [] });

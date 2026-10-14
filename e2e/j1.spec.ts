@@ -115,7 +115,7 @@ async function playPlanet(page: Page, info: TestInfo, guard: Guard, loc: LocaleI
   if (n === 1) {
     // the purpose moment on the first win
     await expect(results).toHaveClass(/first-win/);
-    await expect(results).toContainText(tr(loc, 'Campaign wins keep your Vault working.'));
+    await expect(results).toContainText(tr(loc, 'Win a planet to keep your Vault working'));
   }
   await snap(page, info, guard, `results-${n}`);
   await expectKidSafe(page, loc, `results ${n}`);
@@ -163,7 +163,7 @@ async function atHome(page: Page, info: TestInfo, guard: Guard, loc: LocaleId, s
     await page.locator(tabSel('homeworld')).evaluate((b) => b.classList.contains('locked')),
     `Homeworld tab locked before planet 5 (planet ${n})`,
   ).toBe(n < 5);
-  // the Star Calendar is a Home chip from planet 21, Voyage from 20, Festival from 34
+  // the Star Calendar is a Home chip from planet 21, Voyage from 24, Festival from 34
   await expect(page.locator('.calendar-chip, .voyage-btn, .fest-chip')).toHaveCount(0);
   return sheets;
 }
@@ -584,7 +584,7 @@ test.describe('FB shell regressions at 320×568', () => {
   });
   test('short Homeworld has a usable controls scroller and reachable tabs', async ({ page }) => {
     await freshInstall(page);
-    await midGame(page, { level: 16 });
+    await midGame(page, { level: 21 });
     await page.evaluate(() => (window as any).__app.selectTab('homeworld'));
     await settle(page);
     const panel = await page.locator('.hw-panel').evaluate((el) => ({ height: el.clientHeight, content: el.scrollHeight }));

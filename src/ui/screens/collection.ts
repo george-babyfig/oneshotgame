@@ -22,8 +22,12 @@ export function showCollection(app: App) {
         'div',
         { class: 'scroll' },
         entry(t('Lifebook'), () => app.showLifebook(), unlocked(app.p, 'lifebook'), t('Opens at planet {n}', { n: 3 })),
-        entry(t('Sticker Album'), () => app.showAlbum(), unlocked(app.p, 'sticker_album'), t('Opens at planet {n}', { n: 3 })),
-        entry(t('Star Atlas'), () => app.showSky(), unlocked(app.p, 'star_atlas'), t('Opens at planet {n}', { n: 23 })),
+        unlocked(app.p, 'sticker_album')
+          ? entry(t('Sticker Album'), () => app.showAlbum(), unlocked(app.p, 'sticker_album'), t('Opens at planet {n}', { n: 3 }))
+          : null,
+        unlocked(app.p, 'star_atlas')
+          ? entry(t('Star Atlas'), () => app.showSky(), unlocked(app.p, 'star_atlas'), t('Opens at planet {n}', { n: 23 }))
+          : null,
         entry(t('Field Guide'), () => app.showFieldGuide()),
       ),
     ),

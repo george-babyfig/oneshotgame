@@ -1,5 +1,7 @@
 # Launch gap report: Comet Garden (com.pocketplanet.game), 5 Oct 2026
 
+> **Update, 14 October 2026 (launch polish):** a post-M12 audit found 53 issues. All are fixed except the owner items below (first session, first weeks, copy, robustness and code health; see the PR description). The noun budget was re-measured on real screens and brought from 58 to 21 by deferring systems a child doesn't need yet (decisions 56-60). `npm run ios:release` could not read the version import and would have stopped the 1.0 build; that is fixed and tested. The release preflight now also refuses to build while placeholder contact details (YOUR-DOMAIN, YOUR-SITE) remain, so the owner's real support email and site are required before release. **iPad:** first launch and a mid-game Home were checked in the iPad simulator ([docs/qa/ipad-compat.md](../qa/ipad-compat.md)); the gate, purchase, share and Game Center sheets on iPad still need a tap-through (simulator access for Claude, or TestFlight).
+>
 > **Status, 6 October 2026 (after M12): the studio side of the launch candidate is built.** M0-M12 are done, and every BLOCKER, HIGH and MEDIUM studio item below is fixed, except the ones that need hardware:
 >
 > - **Needs a device or Xcode StoreKit testing (studio + owner):**
@@ -10,7 +12,7 @@
 >   - the iPad compatibility pass.
 > - **Store art re-captured on 6 October 2026 (after M12):** `store/screenshots-v2/` (6 languages, every composer gate passes) and the App Preview (25.2 s, within Apple's 15-30 s) now show the current Homeworld. The first set, `store/screenshots/`, is outdated: do not upload it.
 > - **Owner checklist (§6, unchanged):** Apple Developer account, Paid Apps Agreement, App Store Connect record and the 12 products from `store/catalogue-sheet.md`, DSA trader status, trademark search, site hosting and a support mailbox, TestFlight with real devices, T0 kid playtests, legal reads, and native-speaker review of all six languages.
-> - **Owner decisions:** 33-55 are open with defaults applied (ROADMAP-v2 §10).
+> - **Owner decisions:** 33-60 are open with defaults applied (ROADMAP-v2 §10).
 >
 > The rest of this file is the original audit of 5 October, kept for its evidence.
 

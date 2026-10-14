@@ -146,3 +146,53 @@ describe('unlock ladder', () => {
     }
   });
 });
+
+describe('noun window unlocks', () => {
+  it.each([
+    ['star_road', 22],
+    ['sticker_album', 24],
+    ['passport', 21],
+    ['voyage', 24],
+    ['quest_voyage', 24],
+  ] as const)('opens %s at planet %i', (id, planet) => {
+    const p = defaultProfile();
+    p.level = planet - 1;
+    expect(unlocked(p, id)).toBe(false);
+    p.level = planet;
+    expect(unlocked(p, id)).toBe(true);
+  });
+  it('preserves old gates without granting noun-window to a player with no wins', () => {
+    for (const level of [1, 3, 12, 16, 20]) {
+      const p = defaultProfile();
+      p.level = level;
+      const old = migrate({ ...p, nounBudgetMigrated: undefined });
+      expect(old.nounBudgetMigrated).toBe(true);
+      expect(old.legacyUnlocks).not.toContain('noun-window');
+      for (const [id, n] of [
+        ['star_road', 12],
+        ['passport', 16],
+        ['sticker_album', 3],
+        ['voyage', 20],
+        ['quest_voyage', 20],
+      ] as const)
+        expect(old.legacyUnlocks.includes(id)).toBe(level >= n);
+      p.stats.wins = 1;
+      expect(migrate({ ...p, nounBudgetMigrated: undefined }).legacyUnlocks).toContain('noun-window');
+    }
+  });
+  it('retains banners and used scrapbook pages and milestones', () => {
+    for (const flag of ['starter', 'pass'] as const) {
+      const p = defaultProfile();
+      p[flag] = true;
+      expect(unlocked(p, 'passport')).toBe(true);
+    }
+    const p = defaultProfile();
+    p.album.milestones = 1;
+    expect(unlocked(p, 'sticker_album')).toBe(true);
+    p.album.milestones = 0;
+    p.album.pages.push({ items: [] } as unknown as (typeof p.album.pages)[number]);
+    expect(unlocked(p, 'sticker_album')).toBe(false);
+    p.album.pages[0].items.push({} as (typeof p.album.pages)[number]['items'][number]);
+    expect(unlocked(p, 'sticker_album')).toBe(true);
+  });
+});

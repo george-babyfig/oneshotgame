@@ -63,6 +63,8 @@ export function roundIntroCandidates(
 }
 
 export interface SceneOpts {
+  /** UI copy only; never part of round modifiers or fingerprints. */
+  stickersShown?: boolean;
   roundKey?: string;
   /** Seen when the round opened, before arrival callbacks update the profile. */
   knownKindsBefore?: string[];

@@ -103,6 +103,7 @@ import { refreshCreatureGalleryMotion } from './art/critters';
 import { GUSTY_WIND_TIP, debutsAt, unlocked } from '../meta/unlocks';
 import { stylesAccess, stylesLockReason } from '../meta/stylesAccess';
 import { chestsReady } from '../meta/progression';
+import { inboxOpen } from '../meta/reveals';
 import { roadReady } from '../meta/starroad';
 import { letterOf } from '../meta/inbox';
 import { homeBadge } from '../meta/homeworld';
@@ -471,8 +472,10 @@ export class App {
   // ------------------------------------------------------------------ navigation
   private tabBar(active: MainTab) {
     const p = this.p;
-    const mailGifts = p.mail.filter((mail) => !mail.claimed && !!letterOf(mail)?.gift).length;
-    const missionReady = unlocked(p, 'quests') ? wishClaimable(p) + roadReady(p).length + chestsReady(p).length + mailGifts : 0;
+    const mailGifts = inboxOpen(p) ? p.mail.filter((mail) => !mail.claimed && !!letterOf(mail)?.gift).length : 0;
+    const missionReady = unlocked(p, 'quests')
+      ? wishClaimable(p) + (unlocked(p, 'star_road') ? roadReady(p).length : 0) + chestsReady(p).length + mailGifts
+      : 0;
     const tabs: { id: MainTab; label: string; symbol: string; badge: number; reason?: string }[] = [
       { id: 'home', label: t('Play'), symbol: 'planet', badge: 0 },
       {
@@ -951,6 +954,7 @@ export class App {
       ...extra,
       roundKey,
       knownKindsBefore: knownKindsAtStart,
+      stickersShown: unlocked(this.p, 'sticker_album'),
       onEnd: (result) => {
         const scene = this.scene;
         result.labEvents = scene?.roundLog.lab ?? [];
