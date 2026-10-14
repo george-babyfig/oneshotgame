@@ -40,6 +40,9 @@ import { LAB_TEXT } from '../../../meta/labcopy';
 import { createPanel } from './panel';
 import { essenceSheet, firstHourSheet, levelSheet, gotText, landSheet, landmarkSheet, isleDecorationSheet, residentsSheet } from './sheets';
 import type { App } from '../../app';
+import { wishBubbles, wishText, type WishCard } from '../../../meta/wishes';
+import { BIOMES, type BiomeId } from '../../../core/world';
+import { M13_STRINGS as copy } from '../../../meta/m13strings';
 
 const TAU = Math.PI * 2;
 
@@ -70,16 +73,66 @@ function festCostume(p: App['p']) {
   return festivalActive(p) ? ensureFestival(p).acc : '';
 }
 
+export const TRIP_MOMENT_MS = 1600;
+
+/** Motion-kit end states: no travel under Reduce Motion, just a fading wave pose. */
+export function tripMotionPose(kind: 'send' | 'return', progress: number, calm: boolean) {
+  const k = Math.max(0, Math.min(1, progress));
+  return {
+    lift: calm ? 0 : kind === 'return' ? (1 - k) ** 2 : Math.max(0, (k - 0.55) / 0.45) ** 2,
+    alpha: calm ? Math.min(1, k * 5) : 1,
+  };
+}
+
+/** A thought is an invitation to Missions; it never claims a reward. */
+export function openFriendWish(app: App, species: string) {
+  const index = app.p.quests.list.findIndex((card) => 'species' in card && card.species === species && !card.claimed);
+  app.selectTab('missions');
+  const card = document.querySelectorAll<HTMLElement>('.wish-card')[index];
+  card?.scrollIntoView({ block: 'nearest' });
+  card?.setAttribute('tabindex', '-1');
+  card?.focus({ preventScroll: true });
+}
+
+export function drawWishBubble(g: CanvasRenderingContext2D, land: BiomeId, x: number, y: number) {
+  g.save();
+  g.fillStyle = '#fff';
+  g.beginPath();
+  g.roundRect(x - 20, y - 20, 40, 36, 12);
+  g.fill();
+  g.beginPath();
+  g.arc(x - 9, y + 19, 4, 0, TAU);
+  g.fill();
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.font = '22px system-ui';
+  g.fillText(BIOMES[land].deco, x, y - 2);
+  g.restore();
+}
+
 export function showHomeworld(app: App) {
   const p = app.p;
   const home = p.home;
+  const previousReturn = home.tripReturn;
   const done = tickHome(p);
-  if (done.length) app.save();
+  if (done.length || home.tripReturn !== previousReturn) app.save();
   selected = Math.min(selected, home.plots.length - 1);
   moving = -1;
 
   const canvas = h('canvas', { class: 'hw-canvas' }) as HTMLCanvasElement;
   const panel = h('div', { class: 'hw-panel' });
+  const wishButtons = h('nav', { class: 'hw-wish-list', 'aria-label': t('Wishes') });
+  const bubbleHits: { species: string; x: number; y: number }[] = [];
+  const refreshWishButtons = () =>
+    wishButtons.replaceChildren(
+      ...wishBubbles(p)
+        .filter((bubble) => home.expedition?.species !== bubble.species)
+        .map((bubble) => {
+          const card = p.quests.list.find((card) => 'species' in card && card.species === bubble.species && !card.claimed) as
+            WishCard | undefined;
+          return btn(card ? wishText(card) : t('Wishes'), 'ghost', () => openFriendWish(app, bubble.species));
+        }),
+    );
   const levelBadge = btn('', 'hw-level-badge', () => levelSheet(app, () => showHomeworld(app)));
   const pouchHeader = btn('', 'ghost hw-pouch-head', () => essenceSheet(app));
   pouchHeader.setAttribute('aria-label', t(LAB_TEXT.pouch));
@@ -96,6 +149,39 @@ export function showHomeworld(app: App) {
   const calmTimers: number[] = [];
   let waving = -1;
   let waveUntil = 0;
+  let tripMoment: { species: string; kind: 'send' | 'return'; started: number; duration: number } | null = null;
+  let tripShow: ReturnType<typeof celebrate> | null = null;
+  let shownReturn: object | null = null;
+  const beginTripMoment = (species: string, kind: 'send' | 'return') => {
+    tripShow?.skip();
+    tripMoment = { species, kind, started: performance.now(), duration: calm ? 220 : TRIP_MOMENT_MS };
+    canvas.tabIndex = 0;
+    canvas.setAttribute('aria-label', kind === 'send' ? copy.waving() : copy.friendBack());
+    tripShow = celebrate('homeworld', {
+      root: canvas,
+      reduceMotion: calm,
+      duration: TRIP_MOMENT_MS,
+      beats: [],
+      onComplete: () => {
+        tripMoment = null;
+        canvas.tabIndex = -1;
+        canvas.setAttribute('aria-label', t('Homeworld'));
+        schedule();
+      },
+    });
+    schedule();
+  };
+  const onTripMoment = (event: Event) => {
+    const detail = (event as CustomEvent<{ species: string; kind: 'send' | 'return' }>).detail;
+    if (p.level >= 21 && detail) beginTripMoment(detail.species, detail.kind);
+  };
+  document.addEventListener('homeworld-trip-moment', onTripMoment);
+  canvas.addEventListener('keydown', (event) => {
+    if (tripMoment && (event.key === 'Enter' || event.key === ' ')) {
+      event.preventDefault();
+      tripShow?.skip();
+    }
+  });
   const t0 = performance.now();
   let geo = { cx: 0, cy: 0, R: 0, w: 0, h: 0 };
   let skyCache: HTMLCanvasElement | null = null;
@@ -461,6 +547,10 @@ export function showHomeworld(app: App) {
         if (id) drawIsleDecoration(g, id, x, y, size * 0.52);
       });
     }
+    if (p.level >= 21 && home.tripReturn && home.tripReturn !== shownReturn) {
+      shownReturn = home.tripReturn;
+      beginTripMoment(home.tripReturn.species, 'return');
+    }
     // plots
     const n = home.plots.length;
     const s = Math.min(84, R * 0.7);
@@ -481,6 +571,13 @@ export function showHomeworld(app: App) {
       if (b)
         drawStructure(g, b.type, b.type === 'lab' && b.kind ? labLevel(p, b.kind) : b.lv, s, time + i * 0.3, !!b.done && b.done > nowMs, {
           homeLevel: home.level,
+          ...(b.type === 'launch_bay' && p.level >= 21
+            ? {
+                tripRocket: tripMoment
+                  ? tripMotionPose(tripMoment.kind, (performance.now() - tripMoment.started) / tripMoment.duration, calm)
+                  : { lift: 0, alpha: home.expedition ? 0 : 1 },
+              }
+            : {}),
           growth: b.type === 'greenhouse' ? (b.greenhouse?.winsTowardNext ?? 0) : undefined,
           style: structureStyleId(look, b.type, b.kind),
           ...(b.type === 'lab' ? { kind: b.kind, formOn: !!b.kind && formState(p, b.kind).on } : {}),
@@ -523,9 +620,25 @@ export function showHomeworld(app: App) {
       }
       g.textBaseline = 'alphabetic';
     }
+    if (tripMoment) {
+      const pad = home.plots.findIndex((b) => b?.type === 'launch_bay');
+      if (pad >= 0) {
+        const a = plotAngle(pad);
+        const q = surf(a, s * 0.16);
+        const k = Math.min(1, (performance.now() - tripMoment.started) / tripMoment.duration);
+        g.save();
+        const pose = tripMotionPose(tripMoment.kind, k, calm);
+        g.globalAlpha = pose.alpha;
+        const lift = pose.lift * s;
+        drawCreature(g, tripMoment.species, q.x, q.y - lift, a + Math.PI / 2, s * 0.46, calm ? 0 : time, '', false, 'wave', calm);
+        g.restore();
+      }
+    }
+    bubbleHits.length = 0;
+    const wishes = wishBubbles(p);
     // residents wander on the surface between the plots
     home.residents.forEach((r, k) => {
-      if (home.expedition?.species === r.species) return;
+      if (home.expedition?.species === r.species || tripMoment?.species === r.species) return;
       const { routine, pair } = friendScenes[k];
       const base = friendAngle(k, time);
       const q = surf(base);
@@ -561,6 +674,13 @@ export function showHomeworld(app: App) {
         g.rotate(base + Math.PI / 2);
         g.drawImage(sprite, -side / 2, -side / 2, side, side);
         g.restore();
+      }
+      const thought = wishes.find((bubble) => bubble.species === r.species);
+      if (thought) {
+        const x = Math.max(22, Math.min(w - 22, q.x));
+        const y = Math.max(22, q.y - s * 0.6);
+        drawWishBubble(g, thought.land, x, y);
+        bubbleHits.push({ species: r.species, x, y });
       }
       drawFriendOutfit(g, look, q.x, q.y, s * 0.42);
       drawFriendActivity(g, routine.activity, q.x, q.y, s * 0.42);
@@ -629,7 +749,7 @@ export function showHomeworld(app: App) {
       g.fillText(f.text, f.x, f.y - k * 50);
     }
     g.globalAlpha = 1;
-    if (!calm) schedule();
+    if (!calm || tripMoment) schedule();
   };
   const schedule = () => {
     if (!raf && !stopped && !document.hidden) raf = requestAnimationFrame(frame);
@@ -646,7 +766,7 @@ export function showHomeworld(app: App) {
   // drag to spin, tap to select
   canvas.addEventListener('pointerdown', (e) => {
     canvas.setPointerCapture(e.pointerId);
-    drag = { x: e.clientX, rot, moved: false, t: performance.now() };
+    drag = { x: e.clientX, rot, moved: !!tripMoment, t: performance.now() };
     vel = 0;
     schedule();
   });
@@ -673,6 +793,11 @@ export function showHomeworld(app: App) {
     const time = calm ? 0.5 : (performance.now() - t0) / 1000;
     const hit = Math.max(28, Math.min(84, geo.R * 0.7) * 0.46);
     sceneNow();
+    const bubble = bubbleHits.find((hit) => Math.abs(x - hit.x) <= 22 && Math.abs(y - hit.y) <= 22);
+    if (bubble) {
+      openFriendWish(app, bubble.species);
+      return;
+    }
     if (landmarkState(p, 'sky_bridge').stage === 4) {
       const isleSize = Math.min(74, geo.R * 0.8);
       const ix = geo.cx + geo.R * 1.24;
@@ -797,6 +922,7 @@ export function showHomeworld(app: App) {
     const date = new Date();
     scenePairs = friendPairs(home.residents, date, gaps, home);
     refreshFriends(date);
+    refreshWishButtons();
     panelController.renderPanel();
     schedule();
   };
@@ -813,12 +939,15 @@ export function showHomeworld(app: App) {
       app.topBar(),
       h('div', { class: 'page-title' }, t('Homeworld'), levelBadge, pouchHeader),
       canvas,
+      wishButtons,
       h('nav', { class: 'hw-plot-list', 'aria-label': t('Homeworld plots') }, ...plotButtons),
       panel,
     ),
     'homeworld',
     () => {
       stopped = true;
+      tripShow?.skip();
+      document.removeEventListener('homeworld-trip-moment', onTripMoment);
       cancelAnimationFrame(raf);
       calmTimers.forEach(clearTimeout);
       document.removeEventListener('visibilitychange', onVisible);
@@ -826,6 +955,7 @@ export function showHomeworld(app: App) {
       clearInterval(tick);
     },
   );
+  renderPanel();
   // app.mount chooses the default tab theme, then the finished Beacon takes over.
   if (home.landmarks.keepers_beacon.stage === 4) setMusicTheme('beacon');
   if (!home.intro) {
@@ -835,9 +965,9 @@ export function showHomeworld(app: App) {
       renderPanel();
       schedule();
     });
-  } else if (mergeHomeCelebrations(p).length) {
+  } else if (mergeHomeCelebrations(p).some((id) => !id.startsWith('trip:'))) {
     // One sheet acknowledges the latest milestone for every friend and Landmark.
-    const ids = [...home.seen.celebrations];
+    const ids = home.seen.celebrations.filter((id) => !id.startsWith('trip:'));
     const cards = ids.map((id) => {
       const friend = /^friend:([^:]+):level:(\d)$/.exec(id);
       const site = LANDMARKS.find((item) => id.startsWith(`${item.id}:stage:`));

@@ -115,3 +115,33 @@ describe('native iOS release configuration', () => {
     expect(info).toMatch(/<key>SKIncludeConsumableInAppPurchaseHistory<\/key>\s*<true\/>/);
   });
 });
+
+describe('A12 dormant iCloud backup bridge', () => {
+  it('registers the local plugin in the bridge, project group and Sources phase', () => {
+    expect(read(`${app}/MainViewController.swift`)).toContain('registerPluginInstance(CloudBackupPlugin())');
+    expect(project).toContain('path = CloudBackupPlugin.swift;');
+    expect(project.match(/CloudBackupPlugin.swift in Sources/g)).toHaveLength(2);
+    expect(read(`${app}/CloudBackupPlugin.swift`)).toContain('public let jsName = "CloudBackup"');
+  });
+  it('ships the explicit flag false with no iCloud entitlement or capability', () => {
+    expect(info).toMatch(/<key>PPCloudBackup<\/key>\s*<false\/>/);
+    expect(read(`${app}/App.entitlements`)).not.toMatch(/ubiquity|icloud/i);
+    expect(project).not.toContain('com.apple.iCloud');
+    expect([...project.matchAll(/TARGETED_DEVICE_FAMILY = ([^;]+);/g)].map((m) => m[1])).toEqual(['1', '1']);
+  });
+  it('checks flag/account before obtaining the store, compresses with zlib and handles change notifications', () => {
+    const swift = read(`${app}/CloudBackupPlugin.swift`);
+    const store = swift.slice(swift.indexOf('private func store()'), swift.indexOf('private func parts('));
+    expect(store.indexOf('guard enabled, account')).toBeLessThan(store.indexOf('NSUbiquitousKeyValueStore.default'));
+    const status = swift.slice(swift.indexOf('@objc func status'), swift.indexOf('@objc func list'));
+    expect(status).not.toMatch(/store\(|synchronize/);
+    expect(swift).toContain('compressed(using: .zlib)');
+    expect(swift).toContain('decompressed(using: .zlib)');
+    expect(swift).toContain('didChangeExternallyNotification');
+    for (const reason of ['server', 'initial', 'quota', 'account']) expect(swift).toContain(`"${reason}"`);
+    expect(swift).toContain('bound != nonce');
+    expect(swift).toContain('backups.count < 6');
+    expect(swift).toContain('900 * 1024');
+    expect(swift).toContain('96 * 1024');
+  });
+});

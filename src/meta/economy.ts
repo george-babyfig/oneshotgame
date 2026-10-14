@@ -1,3 +1,4 @@
+import { M13_STRINGS } from './m13strings';
 import { encodeSectors } from './galaxyCodec';
 import { WIN_REWARD, GALAXY_RATE } from './tuning';
 import { earn, spend, type SpendSink } from './wallet';
@@ -138,10 +139,12 @@ export function awayCollectables(p: Profile, awayMs: number, now = Date.now()) {
   const home = pendingHomeProduction(p.home, now);
   const visitors = p.visitors.reduce((sum, gift) => sum + gift.dust, 0);
   const vaultFull = vault > 0 && vault >= Math.floor(vaultRate(p) * vaultHours(p));
-  const ready = vaultFull || home.dust > 0 || home.gems > 0 || home.boosters > 0 || p.visitors.length > 0;
+  const trip = p.level >= 21 ? p.home.tripReturn : null;
+  const ready = !!trip || vaultFull || home.dust > 0 || home.gems > 0 || home.boosters > 0 || p.visitors.length > 0;
   return {
     vault,
     home,
+    trip,
     visitors,
     visitorCount: p.visitors.length,
     welcomeGems: welcomeBackGems(p, awayMs, now),
@@ -194,9 +197,11 @@ export function awayRecapLines(p: Profile, awayMs: number, now = Date.now()): [s
         : t('Collect all: ✨{dust} · 💎{gems}', vars);
   return [
     summary,
-    friend
-      ? t('{name} is waiting in your Den', { name: t(SPECIES_BY_ID[friend.species]?.name ?? 'Someone') })
-      : t('Your creatures are safe at home'),
+    pending.trip
+      ? M13_STRINGS.friendBack()
+      : friend
+        ? t('{name} is waiting in your Den', { name: t(SPECIES_BY_ID[friend.species]?.name ?? 'Someone') })
+        : t('Your creatures are safe at home'),
     t("You're on planet {n}", { n: p.level }),
   ];
 }

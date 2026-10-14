@@ -1,0 +1,65 @@
+/* Decision 78: the wide shell is dormant in iPhone compatibility mode. */
+body.wide .screen {
+  max-width: 520px;
+  margin-inline: auto;
+}
+
+body.wide .screen.homeworld {
+  max-width: none;
+  display: grid;
+  grid-template-columns: minmax(0, 58fr) minmax(0, 42fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  gap: 12px;
+}
+
+body.wide .homeworld > .topbar,
+body.wide .homeworld > .page-title,
+body.wide .homeworld > .main-tabs {
+  grid-column: 1 / -1;
+}
+
+body.wide .homeworld > .hw-canvas {
+  grid-column: 1;
+  grid-row: 3;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+body.wide .homeworld > .hw-panel {
+  grid-column: 2;
+  grid-row: 3 / 5;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+}
+
+body.wide .homeworld > .hw-plot-list {
+  grid-column: 1;
+  grid-row: 4;
+  min-width: 0;
+}
+
+body.wide .homeworld > .main-tabs {
+  grid-row: 5;
+  margin-top: 0;
+}
+
+/* Scale the canvas and HUD together; pointer input maps back into logical coordinates. */
+.screen.level.round-frame {
+  /* Centre on the viewport, not on the (taller, offset) host box. */
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: var(--round-width);
+  height: var(--round-height);
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  transform-origin: center;
+  /* Individual properties: the screen-entrance animation owns `transform` and would undo a transform here. */
+  translate: -50% -50%;
+  scale: var(--round-scale);
+  animation: none;
+}

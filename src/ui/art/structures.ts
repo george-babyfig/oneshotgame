@@ -58,7 +58,14 @@ export function drawStructure(
   s: number,
   t: number,
   building = false,
-  opts: { kind?: Kind; formOn?: boolean; homeLevel?: number; growth?: number; style?: string } = {},
+  opts: {
+    kind?: Kind;
+    formOn?: boolean;
+    homeLevel?: number;
+    growth?: number;
+    style?: string;
+    tripRocket?: { lift: number; alpha: number };
+  } = {},
 ) {
   const k = 0.82 + lv * 0.06;
   g.save();
@@ -179,9 +186,10 @@ export function drawStructure(
         rr(g, -s * 0.38, -s * 0.12, s * 0.76, s * 0.025, s * 0.01, '#b9f6ee');
         star(g, s * 0.365, -s * 0.55, s * 0.045, '#fff3b2');
       }
-      // An expedition rocket remains on its pad.
+      // The default is parked; the canvas supplies a short trip lift or landing.
       g.save();
-      g.translate(0, -s * 0.16);
+      g.globalAlpha *= opts.tripRocket?.alpha ?? 1;
+      g.translate(0, -s * (0.16 + (opts.tripRocket?.lift ?? 0)));
       rr(g, -s * 0.07, -s * 0.3, s * 0.14, s * 0.28, s * 0.07, '#ffffff');
       g.fillStyle = '#ff6a7a';
       g.beginPath();

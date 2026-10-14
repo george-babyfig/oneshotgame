@@ -7,6 +7,8 @@ import { prepareInitRecovery, profileLoadNotice, startFreshProfile } from './met
 import { installAudioResume } from './ui/audio';
 import { t } from './i18n';
 import { loadDiagnostics, recordDiagnostic } from './meta/diagnostics';
+import { newBackupLine } from './meta/backup';
+import { parentalGate } from './ui/flows/gate';
 
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 const app = new App(document.getElementById('app')!);
@@ -31,6 +33,8 @@ function showRecovery(message: string) {
   fresh.textContent = t('Start fresh');
   fresh.onclick = async () => {
     try {
+      if (!(await parentalGate('grownups'))) return;
+      await newBackupLine();
       await startFreshProfile();
       location.reload();
     } catch {
@@ -69,6 +73,7 @@ void loadDiagnostics();
 app
   .init()
   .then(() => {
+    app.connectBackup();
     const notice = profileLoadNotice();
     if (notice === 'newer') showRecovery(t('This progress was saved by a newer version. Update Comet Garden, then try again.'));
     else if (notice === 'read-only') showRecovery(t('Your saved progress could not be read. You can try again or start fresh.'));

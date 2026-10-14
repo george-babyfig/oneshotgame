@@ -14,6 +14,8 @@ import {
   dismissSheets,
   expectNoErrors,
   freshInstall,
+  installJourneyClock,
+  tripReady,
   localesToRun,
   midGame,
   passGate,
@@ -130,6 +132,74 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
   test.describe(`J2 M11.5 Homeworld sheets [${loc}]`, () => {
     test.use({ locale: BROWSER_LOCALE[loc] });
 
+    test('M13 Back from picker, preview, Someone else, flight and postcard keeps its Homeworld origin', async ({ page }, info) => {
+      await useJourneyViewport(page);
+      await installJourneyClock(page);
+      const guard = watchErrors(page);
+      await freshInstall(page);
+      await tripReady(page, { reduceMotion: true });
+      const openTrip = () => page.getByRole('button', { name: tr(loc, 'Trip'), exact: true }).click();
+      await sheet(page, info, guard, openTrip, `M13-trip-picker-back-${loc}`);
+      await openTrip();
+      await page.locator(`${OPEN_MODAL}.trip-picker`).last().locator('.trip-planet-row').first().click();
+      await page
+        .locator(`${OPEN_MODAL}.trip-preview`)
+        .last()
+        .getByRole('button', { name: tr(loc, 'Someone else'), exact: true })
+        .click();
+      await page
+        .locator(`${OPEN_MODAL}.trip-friends`)
+        .last()
+        .getByRole('button', { name: tr(loc, 'Back'), exact: true })
+        .click();
+      await expect(page.locator(`${OPEN_MODAL}.trip-preview`)).toHaveCount(1);
+      await page
+        .locator(`${OPEN_MODAL}.trip-preview`)
+        .getByRole('button', { name: tr(loc, 'Back'), exact: true })
+        .click();
+      await expect(page.locator(OPEN_MODAL)).toHaveCount(0);
+      expect(await screenName(page)).toBe('homeworld');
+      await openTrip();
+      await page.locator(`${OPEN_MODAL}.trip-picker`).last().locator('.trip-planet-row').first().click();
+      await page
+        .locator(`${OPEN_MODAL}.trip-preview`)
+        .last()
+        .getByRole('button', { name: tr(loc, 'Send'), exact: true })
+        .click();
+      await page.clock.runFor(250);
+      await sheet(
+        page,
+        info,
+        guard,
+        () =>
+          page
+            .locator('.hw-panel button')
+            .filter({ hasText: tr(loc, 'Trip') })
+            .last()
+            .click(),
+        `M13-trip-flight-back-${loc}`,
+      );
+      const ends = await page.evaluate(() => (window as any).__app.p.home.expedition.ends);
+      await page.clock.setFixedTime(new Date(ends));
+      await page.evaluate(() => (window as any).__app.showHomeworld());
+      await page.clock.runFor(250);
+      await dismissSheets(page);
+      await sheet(
+        page,
+        info,
+        guard,
+        () =>
+          page
+            .locator('.hw-panel button')
+            .filter({ hasText: tr(loc, 'A friend is back from a trip') })
+            .last()
+            .click(),
+        `M13-trip-postcard-back-${loc}`,
+      );
+      expect(await screenName(page)).toBe('homeworld');
+      expectNoErrors(guard);
+    });
+
     test('Back from every Homeworld Life sheet returns to the Homeworld', async ({ page }, info) => {
       test.skip(
         !['chromium-320x568', 'webkit-320x568'].includes(info.project.name),
@@ -211,9 +281,9 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
         () =>
           page
             .locator('.hw-panel')
-            .getByRole('button', { name: tr(loc, 'Expedition') })
+            .getByRole('button', { name: tr(loc, 'Trip') })
             .click(),
-        `life-expedition-${loc}`,
+        `M13-life-trip-${loc}`,
       );
       await sheet(
         page,

@@ -7,6 +7,7 @@ import { CONTINUE_COST, CONTINUE_FROM_PLANET, CONTINUE_MAX, CONTINUE_THROWS, con
 import { rollVisitors } from '../src/meta/visitors';
 import { defaultProfile } from '../src/meta/profile';
 import { SPECIES } from '../src/core/world';
+import { WISH_TEMPLATES } from '../src/meta/wishes';
 
 // ---- Word lists (extend here) ----
 
@@ -32,6 +33,16 @@ export const URGENCY_WORDS: Record<string, string[]> = {
   de: ['beeil', 'letzte chance', 'bester wert', 'beliebt'],
   pt: ['corra', 'última chance', 'melhor valor', 'popular'],
   ja: ['急いで', '最後のチャンス', 'お得', '人気'],
+};
+
+/** Decision 64: no energy-system vocabulary, including translated copy. */
+export const ENERGY_WORDS: Record<string, string[]> = {
+  en: ['fuel', 'energy', 'recharge'],
+  es: ['combustible', 'energía', 'recargar'],
+  fr: ['carburant', 'énergie', 'recharger'],
+  de: ['Treibstoff', 'Energie', 'aufladen'],
+  pt: ['combustível', 'energia', 'recarregar'],
+  ja: ['燃料', 'エネルギー', '充電'],
 };
 
 /** Patterns that are banned outright, e.g. "+25%" bonus claims. */
@@ -159,7 +170,10 @@ function termRegex(term: string): RegExp {
 }
 
 const URGENCY: { label: string; re: RegExp }[] = [
-  ...Object.entries(URGENCY_WORDS).flatMap(([lang, words]) => words.map((w) => ({ label: `${lang}:"${w}"`, re: termRegex(w) }))),
+  ...Object.entries({
+    ...URGENCY_WORDS,
+    ...Object.fromEntries(Object.entries(ENERGY_WORDS).map(([lang, words]) => [lang, [...(URGENCY_WORDS[lang] ?? []), ...words]])),
+  }).flatMap(([lang, words]) => words.map((w) => ({ label: `${lang}:"${w}"`, re: termRegex(w) }))),
   ...URGENCY_PATTERNS.map((re) => ({ label: String(re), re })),
 ];
 
@@ -177,7 +191,7 @@ function sourceStrings(): { file: string; s: string }[] {
     for (const m of src.matchAll(tCall)) out.push({ file, s: m[1] ?? m[2] });
     for (const m of src.matchAll(tpCall)) out.push({ file, s: m[1] ?? m[2] }, { file, s: m[3] ?? m[4] });
   }
-  return out;
+  return [...out, ...WISH_TEMPLATES.map((x) => ({ file: 'src/meta/wishes.ts', s: x.text }))];
 }
 
 // ---- Rules ----
@@ -320,7 +334,12 @@ describe('policy: visitors use no chance (0.4)', () => {
   });
 });
 
-describe('policy: no urgency or countdown words (0.3, 0.6, 6.6)', () => {
+describe('policy: no urgency, energy or countdown words (0.3, 0.6, 6.6)', () => {
+  it('checks energy words without confusing internal tripFuel or wildlife words', () => {
+    for (const word of ['fuel', 'energy', 'recharge']) expect(urgencyHits(word)).not.toEqual([]);
+    expect(urgencyHits('tripFuel, energetic friends and a clock time')).toEqual([]);
+    expect(urgencyHits('Each win brings your friend home 10 minutes sooner')).toEqual([]);
+  });
   it('no locale key or translation contains an urgency word', () => {
     const bad: string[] = [];
     for (const lang of LOCALES) {

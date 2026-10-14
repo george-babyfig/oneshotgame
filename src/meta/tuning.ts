@@ -1329,7 +1329,7 @@ export const WIN_SPEEDUP = 10 * 60e3;
 export const FRIEND_LEVELS = [0, 3, 8, 15, 25];
 export const EXPEDITION_HOURS = [1, 4, 8];
 
-// M13 contract, dormant until package A. Decisions 63-65; legacy tuning above stays frozen in tripsLegacy.
+// M13 trips, decisions 63–65. The separate tripsLegacy formula preserves 1.0 promises.
 export const TRIP_HOURS_BY_BAY: Readonly<Record<number, readonly import('./m13types').TripHours[]>> = Object.freeze({
   2: Object.freeze([1] as const),
   3: Object.freeze([1, 4] as const),

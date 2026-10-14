@@ -5,6 +5,7 @@ import { sfx } from '../audio';
 import { haptic } from '../haptics';
 import { visitorRows } from './visitors';
 import type { App } from '../app';
+import { M13_STRINGS as copy } from '../../meta/m13strings';
 
 export function awayFlow(app: App, awayMs: number) {
   const p = app.p;
@@ -31,10 +32,15 @@ export function awayFlow(app: App, awayMs: number) {
     [
       h('div', { class: 'm-title' }, t('While you were away')),
       longAway
-        ? h('div', { class: 'away-recap' }, ...awayRecapLines(p, awayMs).map((line) => h('p', null, line)))
+        ? h(
+            'div',
+            { class: 'away-recap' },
+            ...awayRecapLines(p, awayMs).map((line, index) => (p.level < 21 && summary.trip && index === 1 ? null : h('p', null, line))),
+          )
         : h(
             'div',
             { class: 'away-summary' },
+            p.level >= 21 && summary.trip ? h('p', { class: 'away-trip' }, copy.friendBack()) : null,
             summary.vault ? h('p', null, t('Your planets made ✨{n}', { n: fmt(summary.vault) })) : null,
             summary.home.dust ? h('p', null, t('Your Homeworld made ✨{n}', { n: fmt(summary.home.dust) })) : null,
             summary.home.gems ? h('p', null, t('Your Homeworld made 💎{n}', { n: fmt(summary.home.gems) })) : null,

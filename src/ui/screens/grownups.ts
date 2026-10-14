@@ -1,3 +1,15 @@
+import {
+  backupStatus,
+  setBackupOn,
+  maybeBackup,
+  listBackups,
+  restoreBackup,
+  undoRestore,
+  canUndoRestore,
+  removeBackup,
+  isThisDeviceBackup,
+  onBackupChanged,
+} from '../../meta/backup';
 import { h, btn, modal, confirmBox, toast } from '../dom';
 import { getLang, t, tp } from '../../i18n';
 import { deviceCurrency, formatCurrency } from '../../meta/currency';
@@ -279,15 +291,21 @@ function renderGrownups(app: App) {
         )
       : null,
   ];
+  const backupHost = h('div');
+  void renderBackup(app, backupHost);
+  const stopBackupRefresh = onBackupChanged(() => {
+    if (backupHost.isConnected) void renderBackup(app, backupHost);
+  });
   app.mount(
     h(
       'div',
       { class: 'screen page grownups' },
       app.topBar(true),
       h('div', { class: 'page-title' }, t('Grown-ups')),
-      h('div', { class: 'scroll' }, ...sections),
+      h('div', { class: 'scroll' }, ...sections, backupHost),
     ),
     'shop',
+    stopBackupRefresh,
   );
 }
 
@@ -350,4 +368,96 @@ function testerConsent() {
     }),
     btn(t('Cancel'), 'ghost wide', () => m.close()),
   ]);
+}
+
+/** Hidden entirely when this build or Apple account has no backup capability. */
+async function renderBackup(app: App, host: HTMLElement): Promise<void> {
+  try {
+    const status = await backupStatus();
+    if (!status.enabled || !status.account) {
+      host.replaceChildren();
+      return;
+    }
+    const section = h(
+      'section',
+      { class: 'grownups-section' },
+      h('h2', null, t('Progress backup')),
+      h('p', null, t("A copy of this progress is kept in your own iCloud account. We can't see it.")),
+    );
+    const toggle = h(
+      'button',
+      { class: `toggle${status.on ? ' on' : ''}`, role: 'switch', 'aria-checked': String(status.on) },
+      t('Back up to iCloud'),
+      h('i'),
+    ) as HTMLButtonElement;
+    toggle.onclick = async () => {
+      toggle.disabled = true;
+      try {
+        const next = await setBackupOn(!status.on);
+        if (next.on) await maybeBackup(app.p, 'pause');
+        await renderBackup(app, host);
+      } finally {
+        toggle.disabled = false;
+      }
+    };
+    section.append(toggle);
+    if (status.lastAt !== null) section.append(h('p', null, t('Last backup: {date}', { date: new Date(status.lastAt).toLocaleString() })));
+    if (status.full) section.append(h('p', { role: 'status' }, t('iCloud backup is full. Remove an old backup to keep backing up.')));
+    if (status.on) {
+      const make = btn(t('Make a backup'), 'ghost wide', async () => {
+        make.setAttribute('disabled', '');
+        await app.saveNow();
+        await maybeBackup(app.p, 'pause');
+        await renderBackup(app, host);
+      });
+      section.append(make, h('h3', null, t('Restore progress')));
+      for (const backup of await listBackups()) {
+        const row = h(
+          'div',
+          { class: 'card' },
+          h(
+            'p',
+            null,
+            t('Planet {n} · {friends} friends · {date}', {
+              n: backup.summary.level,
+              friends: backup.summary.friends,
+              date: new Date(backup.savedAt).toLocaleString(),
+            }),
+          ),
+        );
+        if (isThisDeviceBackup(backup)) row.append(h('small', { class: 'muted' }, t('This device')));
+        row.append(
+          btn(t('Restore'), 'ghost wide', async () => {
+            if (!(await confirmBox(t("Restore this backup? This device's progress is kept so you can undo."), t('Restore')))) return;
+            const result = await restoreBackup(backup.key);
+            if (result === 'ok') {
+              toast(t('Progress restored.'));
+              await enterGrownups(app);
+            } else if (result === 'newer') toast(t('This backup is from a newer version. Update Comet Garden to restore it.'));
+            else if (result === 'purchases')
+              toast(t("This device has purchases that aren't in this backup, so it can't be restored here."));
+            else toast(t('This backup could not be restored. Please try again.'));
+          }),
+          btn(t('Remove backup'), 'danger wide', async () => {
+            if (!(await confirmBox(t('Remove backup'), t('Remove backup')))) return;
+            await removeBackup(backup.key);
+            await renderBackup(app, host);
+          }),
+        );
+        section.append(row);
+      }
+    }
+    if (await canUndoRestore())
+      section.append(
+        btn(t('Undo restore'), 'ghost wide', async () => {
+          if (await undoRestore()) {
+            toast(t('Progress restored.'));
+            await enterGrownups(app);
+          }
+        }),
+      );
+    host.replaceChildren(section);
+  } catch {
+    host.replaceChildren();
+  }
 }

@@ -36,21 +36,35 @@ export default defineConfig({
   },
   projects: [
     {
+      testIgnore: '**/ipad.spec.ts',
       name: 'chromium-320x568',
       use: { ...devices['iPhone SE'], browserName: 'chromium', defaultBrowserType: 'chromium', ...phone(320, 568) },
     },
     {
+      testIgnore: '**/ipad.spec.ts',
       name: 'chromium-390x844',
       use: { ...devices['iPhone 14'], browserName: 'chromium', defaultBrowserType: 'chromium', ...phone(390, 844) },
     },
     {
+      testIgnore: '**/ipad.spec.ts',
       name: 'webkit-320x568',
       use: { ...devices['iPhone SE'], browserName: 'webkit', defaultBrowserType: 'webkit', ...phone(320, 568) },
     },
     {
+      testIgnore: '**/ipad.spec.ts',
       name: 'webkit-390x844',
       use: { ...devices['iPhone 14'], browserName: 'webkit', defaultBrowserType: 'webkit', ...phone(390, 844) },
     },
+    ...(['chromium', 'webkit'] as const).flatMap((browserName) =>
+      [
+        { width: 820, height: 1180 },
+        { width: 1024, height: 1366 },
+      ].map(({ width, height }) => ({
+        name: `${browserName}-${width}x${height}`,
+        testMatch: '**/ipad.spec.ts',
+        use: { browserName, defaultBrowserType: browserName, ...phone(width, height) },
+      })),
+    ),
   ],
   webServer: {
     command: `npx vite --host 127.0.0.1 --port ${PORT} --strictPort`,

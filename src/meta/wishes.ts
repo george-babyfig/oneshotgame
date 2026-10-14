@@ -11,6 +11,8 @@ import { addFriendship } from './homeworld';
 import { grantProfileRoadPoints, previewProfileRoadPoints } from './starroad';
 import { grantWishSampler } from './cosmetics';
 import { checkMail } from './inbox';
+import { homeLandFor } from './friends';
+import { M13_STRINGS } from './m13strings';
 import { REACTIONS, type ReactionId } from '../core/round';
 
 export type WishMode = 'campaign' | 'voyage' | 'zen' | 'daily' | 'rush' | 'challenge' | 'remix';
@@ -19,6 +21,7 @@ interface Template {
   id: string;
   text: string;
   feat: Feat;
+  copy?: (vars: Record<string, string | number>) => string;
   land?: BiomeId;
   near?: BiomeId;
   reaction?: ReactionId;
@@ -122,6 +125,114 @@ export const WISH_TEMPLATES: Template[] = [
   },
   { id: 'creature1', text: '{creature} wishes you would welcome a creature on a planet', feat: 'creature', minLevel: 2, goal: 1 },
   { id: 'creature2', text: '{creature} wishes you would welcome five creatures as you play', feat: 'creature', minLevel: 2, goal: 5 },
+  {
+    id: 'savanna1',
+    text: '{creature} wishes for two Savannas',
+    copy: M13_STRINGS.twoSavannas,
+    feat: 'land',
+    land: 'savanna',
+    minLevel: 4,
+    goal: 2,
+  },
+  {
+    id: 'savanna2',
+    text: '{creature} wishes for a sunny Savanna',
+    copy: M13_STRINGS.sunnySavanna,
+    feat: 'land',
+    land: 'savanna',
+    minLevel: 4,
+    goal: 1,
+  },
+  {
+    id: 'icesheet1',
+    text: '{creature} wishes for two Ice Sheets',
+    copy: M13_STRINGS.twoIceSheets,
+    feat: 'land',
+    land: 'icesheet',
+    minLevel: 1,
+    goal: 2,
+  },
+  {
+    id: 'icesheet2',
+    text: '{creature} wishes for a shiny Ice Sheet',
+    copy: M13_STRINGS.shinyIceSheet,
+    feat: 'land',
+    land: 'icesheet',
+    minLevel: 1,
+    goal: 1,
+  },
+  {
+    id: 'tundra1',
+    text: '{creature} wishes for two Tundras',
+    copy: M13_STRINGS.twoTundras,
+    feat: 'land',
+    land: 'tundra',
+    minLevel: 1,
+    goal: 2,
+  },
+  {
+    id: 'tundra2',
+    text: '{creature} wishes for a quiet Tundra',
+    copy: M13_STRINGS.quietTundra,
+    feat: 'land',
+    land: 'tundra',
+    minLevel: 1,
+    goal: 1,
+  },
+  {
+    id: 'taiga1',
+    text: '{creature} wishes for two Taigas',
+    copy: M13_STRINGS.twoTaigas,
+    feat: 'land',
+    land: 'taiga',
+    minLevel: 2,
+    goal: 2,
+  },
+  {
+    id: 'taiga2',
+    text: '{creature} wishes for a snowy Taiga',
+    copy: M13_STRINGS.snowyTaiga,
+    feat: 'land',
+    land: 'taiga',
+    minLevel: 2,
+    goal: 1,
+  },
+  {
+    id: 'swamp1',
+    text: '{creature} wishes for two Swamps',
+    copy: M13_STRINGS.twoSwamps,
+    feat: 'land',
+    land: 'swamp',
+    minLevel: 1,
+    goal: 2,
+  },
+  {
+    id: 'swamp2',
+    text: '{creature} wishes for a misty Swamp',
+    copy: M13_STRINGS.mistySwamp,
+    feat: 'land',
+    land: 'swamp',
+    minLevel: 1,
+    goal: 1,
+  },
+  {
+    id: 'marsh1',
+    text: '{creature} wishes for two Marshes',
+    copy: M13_STRINGS.twoMarshes,
+    feat: 'land',
+    land: 'marsh',
+    minLevel: 2,
+    goal: 2,
+  },
+  {
+    id: 'marsh2',
+    text: '{creature} wishes for a reedy Marsh',
+    copy: M13_STRINGS.reedyMarsh,
+    feat: 'land',
+    land: 'marsh',
+    minLevel: 2,
+    goal: 1,
+  },
   { id: 'steam', text: '{creature} wishes you would make Steam', feat: 'fusion', reaction: 'steam', minLevel: 8, goal: 1 },
   {
     id: 'rainGarden',
@@ -165,15 +276,43 @@ function payLegacy(p: Profile) {
   }
 }
 
-function makeCard(p: Profile, day: string, slot: number, avoid: Set<string>, serial: number): WishCard {
+/** Missing origins on saved 1.0 cards stay open; existing cards are never rewritten. */
+export function wishOrigin(card: WishCard): WishOrigin {
+  return card.from ?? 'open';
+}
+
+function makeCard(p: Profile, day: string, slot: number, avoid: Set<string>, serial: number, others: WishCard[]): WishCard {
   const rnd = rngFrom(`W-${day}-${slot}-${serial}-${p.level}-${[...p.seen].sort().join(',')}`);
-  const pool = WISH_TEMPLATES.filter(
-    (x) => x.minLevel <= p.level && (!x.reaction || REACTIONS[x.reaction].debut <= p.level) && !avoid.has(x.id),
-  );
-  const template = pool[Math.floor(rnd() * pool.length)] ?? WISH_TEMPLATES[0];
+  const available = WISH_TEMPLATES.filter((x) => x.minLevel <= p.level && (!x.reaction || REACTIONS[x.reaction].debut <= p.level));
+  const pool = available.filter((x) => !avoid.has(x.id));
+  const used = new Set(others.map((q) => q.species));
+  const residents = p.home.residents.filter((r) => SPECIES_BY_ID[r.species]);
+  const rotation = Math.floor(Date.parse(`${day}T00:00:00Z`) / 86_400_000);
+  const ordered = residents.map((_, i) => residents[(rotation + slot + i) % residents.length]);
+  const friend = slot < Math.min(2, residents.length) ? ordered.find((r) => !used.has(r.species)) : undefined;
+  let choices = pool.length ? pool : available;
+  if (friend) {
+    // Both home and near must be reachable with the taught objects (RM §5.1).
+    const home = choices.filter((x) => x.land === homeLandFor(friend.species));
+    const near = choices.filter((x) => x.land === SPECIES_BY_ID[friend.species].home?.[1]);
+    choices = home.length ? home : near.length ? near : choices;
+  }
+  const template = choices[Math.floor(rnd() * choices.length)] ?? WISH_TEMPLATES[0];
   const seen = p.seen.filter((id) => !!SPECIES_BY_ID[id]).sort();
-  const species = seen[Math.floor(rnd() * seen.length)];
-  return { id: `${day}-${slot}-${serial}`, template: template.id, species, goal: template.goal, progress: 0, claimed: false, born: day };
+  const open = seen.filter((id) => !used.has(id) && !residents.some((r) => r.species === id));
+  const remaining = seen.filter((id) => !used.has(id));
+  const wishers = open.length ? open : remaining.length ? remaining : seen;
+  const species = friend?.species ?? wishers[Math.floor(rnd() * wishers.length)];
+  return {
+    id: `${day}-${slot}-${serial}`,
+    from: friend ? 'friend' : 'open',
+    template: template.id,
+    species,
+    goal: template.goal,
+    progress: 0,
+    claimed: false,
+    born: day,
+  };
 }
 
 /** Keep unfinished cards across dates; replace claimed cards on the next date. */
@@ -192,19 +331,30 @@ export function ensureWishes(p: Profile, day: string): WishCard[] {
   const keep = old.filter((q) => !q.claimed);
   const avoid = new Set(keep.map((q) => q.template));
   let serial = s.serial ?? 0;
-  const list = [...keep];
-  while (list.length < 3) {
-    const card = makeCard(p, day, list.length, avoid, serial++);
+  // Preserve positions as well as identities, so replacing the open card cannot become a friend slot.
+  const list = old.slice(0, 3).map((q) => (q.claimed ? undefined : q));
+  for (let slot = 0; slot < 3; slot++) {
+    if (list[slot]) continue;
+    const card = makeCard(
+      p,
+      day,
+      slot,
+      avoid,
+      serial++,
+      list.filter((q): q is WishCard => !!q),
+    );
     avoid.add(card.template);
-    list.push(card);
+    list[slot] = card;
   }
   p.quests = { day, list, bonusClaimed: keep.length ? s.bonusClaimed : false, swapDay: s.swapDay, serial } as Profile['quests'];
-  return list;
+  return list as WishCard[];
 }
 
 export function wishText(card: WishCard): string {
   const template = BY_ID[card.template];
-  return template ? t(template.text, { creature: t(SPECIES_BY_ID[card.species]?.name ?? '') }) : '';
+  if (!template) return '';
+  const vars = { creature: t(SPECIES_BY_ID[card.species]?.name ?? '') };
+  return template.copy ? template.copy(vars) : t(template.text, vars);
 }
 
 export function wishClaimable(p: Profile): number {
@@ -219,7 +369,14 @@ export function swapWish(p: Profile, id: string, day: string): boolean {
   const index = s.list.findIndex((q) => q.id === id && !q.claimed && q.progress === 0);
   if (index < 0) return false;
   const avoid = new Set(s.list.map((q) => q.template));
-  s.list[index] = makeCard(p, day, index, avoid, s.serial ?? 1);
+  s.list[index] = makeCard(
+    p,
+    day,
+    index,
+    avoid,
+    s.serial ?? 1,
+    s.list.filter((_, i) => i !== index),
+  );
   s.serial = (s.serial ?? 1) + 1;
   s.swapDay = day;
   return true;
@@ -325,7 +482,17 @@ export function claimWish(p: Profile, id: string, day?: string): boolean {
   return true;
 }
 
-/** Package B fills these display-only bubbles; tapping one never pays a reward. */
-export function wishBubbles(_p: Profile): { species: string; land: BiomeId }[] {
-  return [];
+/** Display only: no dealing, progress or reward changes when the canvas reads these. */
+export function wishBubbles(p: Profile): { species: string; land: BiomeId }[] {
+  if (!unlocked(p, 'quests')) return [];
+  const shown = new Set<string>();
+  return wishState(p).list.flatMap((card) => {
+    if (!isWish(card) || card.claimed || shown.has(card.species) || !p.home.residents.some((r) => r.species === card.species)) return [];
+    const def = BY_ID[card.template];
+    if (!def) return [];
+    const land = def.land ?? homeLandFor(card.species);
+    if (!land) return [];
+    shown.add(card.species);
+    return [{ species: card.species, land }];
+  });
 }

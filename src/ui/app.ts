@@ -1,3 +1,4 @@
+import { backupStatus, bindBackupProfile, maybeBackup } from '../meta/backup';
 import { waysToEarnGems } from './flows/earn';
 import { ledger, flushLedger, loadLedger, recordPurchase } from '../meta/ledger';
 // App shell: owns the profile, screen mounting, purchases and the level flow.
@@ -249,7 +250,8 @@ export class App {
       CapApp.addListener('pause', () => {
         this.checkpointRound(true);
         this.p.meta.lastSeen = Math.max(this.p.meta.lastSeen, Date.now());
-        saveProfile(this.p);
+        const p = this.p;
+        void saveProfile(p).then(() => maybeBackup(p, 'pause'));
         scheduleReminders(this.p);
         pauseAudio(true);
       });
@@ -271,7 +273,8 @@ export class App {
       if (!document.hidden) return;
       this.checkpointRound(true);
       this.p.meta.lastSeen = Math.max(this.p.meta.lastSeen, Date.now());
-      saveProfile(this.p);
+      const p = this.p;
+      void saveProfile(p).then(() => maybeBackup(p, 'hidden'));
     });
     iapReady
       .then(() => this.iap.prices())
@@ -293,6 +296,40 @@ export class App {
     if (this.p.settings.gameCenter) gcSignIn().then((ok) => ok && this.syncGameCenter());
   }
 
+  /** Called after init so iCloud can never delay the first round. */
+  connectBackup() {
+    let locked = false;
+    bindBackupProfile({
+      current: () => this.p,
+      beforeRestore: async () => {
+        if (this.busy) throw new Error('Purchase in progress');
+        this.busy = true;
+        locked = true;
+        clearTimeout(this.saveTimer);
+        await this.reconcilePurchases();
+        await this.txQueue;
+        await this.saveNow();
+      },
+      finished: () => {
+        if (!locked) return;
+        locked = false;
+        this.busy = false;
+        void this.reconcilePurchases();
+      },
+      applied: (p) => {
+        this.p = p;
+        bindGateProfile(p);
+        this.applySettings();
+        void scheduleReminders(p);
+        this.awayMs = this.lastAbsenceMs = 0;
+        this.showHome();
+        // The restore's adult gate also authorizes Apple's entitlement reconciliation.
+        void this.restore().catch(() => {});
+      },
+    });
+    void backupStatus();
+  }
+
   /** Report achievements and leaderboard scores (iOS Game Center; no-op elsewhere). */
   syncGameCenter() {
     gcSync(this.p, () => this.save());
@@ -312,13 +349,19 @@ export class App {
     // Friend, bundle and constellation actions all save through App.
     refreshLandmarkSnapshots(this.p);
     clearTimeout(this.saveTimer);
-    this.saveTimer = window.setTimeout(() => saveProfile(this.p), 150);
+    this.saveTimer = window.setTimeout(() => {
+      const p = this.p;
+      void saveProfile(p).then(() => maybeBackup(p, 'save'));
+    }, 150);
   }
 
   saveNow() {
     refreshLandmarkSnapshots(this.p);
     clearTimeout(this.saveTimer);
-    return saveProfile(this.p);
+    const p = this.p;
+    return saveProfile(p).then(() => {
+      void maybeBackup(p, 'save');
+    });
   }
 
   private checkpointRound(pause = false) {

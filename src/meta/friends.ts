@@ -1,4 +1,4 @@
-import { BIOMES, SPECIES, SPECIES_BY_ID, traitOf, type BiomeId, type TraitId } from '../core/world';
+import { SPECIES, SPECIES_BY_ID, traitOf, type BiomeId, type TraitId } from '../core/world';
 import type { HomeState, Resident, BuildingType } from './homeworld';
 import type { Season } from './seasons';
 import type { WeatherKind } from './weather';
@@ -109,12 +109,8 @@ export function homeSpotFor(
   home: HomeState,
   gaps: (BiomeId | null)[],
 ): { kind: 'gap'; index: number } | { kind: 'den'; index: number } | { kind: 'sea' } {
-  const species = SPECIES_BY_ID[friend.species];
   if (friend.species === 'leviathan') return { kind: 'sea' };
-  const land =
-    friend.species === 'worldtree'
-      ? gaps.filter((id): id is BiomeId => !!id).sort((a, b) => BIOMES[b].value - BIOMES[a].value)[0]
-      : species?.home?.[0];
+  const land = homeLandFor(friend.species);
   const gap = gaps.findIndex((id) => id === land);
   if (gap >= 0) return { kind: 'gap', index: gap };
   const dens = home.plots.flatMap((b, index) => (b?.type === 'den' ? [{ index, capacity: b.lv + 1 }] : []));
@@ -153,7 +149,7 @@ export function reactionsFor(home: HomeState, event: HomeReactionEvent, date: Da
   const minute = Math.floor(date.getTime() / 60_000);
   return residents.flatMap((friend) => {
     if (event.kind === 'lab_level' && traitOf(friend.species) !== event.trait) return [];
-    if (event.kind === 'land_planted' && SPECIES_BY_ID[friend.species]?.home?.[0] !== event.biome) return [];
+    if (event.kind === 'land_planted' && homeLandFor(friend.species) !== event.biome) return [];
     if (event.kind === 'decoration_placed' && FAVOURITE_DECORATION[traitOf(friend.species) ?? 'calm'] !== event.decoration) return [];
     const pose =
       event.kind === 'friend_moved_in' || event.kind === 'photo' ? 'wave' : friend.fp >= 8 && minute % 3 === 0 ? 'signature' : 'happy';
@@ -190,7 +186,7 @@ export function friendPairs(friends: readonly Resident[], date: Date, gaps: (Bio
   return pairs;
 }
 
-/** Decision 70: one home land for trip matches, Wishes and (in B) the Homeworld spot. */
+/** Decision 70: one home land for trip matches, Wishes and the Homeworld spot. */
 export function homeLandFor(species: string): BiomeId | null {
   if (species === 'leviathan') return 'ocean';
   if (species === 'worldtree') return 'forest';

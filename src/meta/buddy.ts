@@ -12,10 +12,12 @@ export const BUDDY_FREE_ACCS = ['bow', 'flower'];
 
 export function buddyEligible(p: Profile): string[] {
   if (p.level < 18) return [];
-  return [...new Set(p.home.residents.map((resident) => resident.species))].filter((id) => !!SPECIES_BY_ID[id]);
+  return [...new Set(p.home.residents.map((resident) => resident.species))].filter(
+    (id) => !!SPECIES_BY_ID[id] && id !== p.home.expedition?.species,
+  );
 }
 
-const COUNTERS: Record<TroubleId, readonly TraitId[]> = {
+export const COUNTERS: Record<TroubleId, readonly TraitId[]> = {
   vent: ['fireproof', 'swimmer'],
   vine: ['weedproof', 'swimmer'],
   frost: ['frostproof'],

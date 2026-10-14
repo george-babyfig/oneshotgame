@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RecordedNode, recordedDom, visibleText } from './helpers/uiRecording';
 import { defaultProfile } from '../src/meta/profile';
+import { tickHome } from '../src/meta/homeworld';
 import { ensureWishes } from '../src/meta/wishes';
 import { wishesPanel } from '../src/ui/flows/wishes';
 import { confirmGemUse } from '../src/ui/screens/homeworld/gemConfirm';
@@ -170,9 +171,11 @@ describe('FC reward feedback and navigation', () => {
     p.starter = true;
     expect(stylesLockReason(p)).toBeUndefined();
   });
-  it('clears the existing Homeworld tab badge when Collect all collects the returned friend', () => {
+  it('updates the existing Homeworld tab badge in place when a trip return is acknowledged', () => {
     const app = appFor();
-    app.p.home.expedition = { species: 'bunny', hours: 2, ends: 1, planet: -1 };
+    app.p.level = 21;
+    app.p.home.expedition = { species: 'bunny', hours: 4, ends: 1, planet: -1 };
+    tickHome(app.p, 1);
     const panel = recordedDom.h('div');
     const tab = recordedDom.h('button', null, recordedDom.h('span', { class: 'nb' }, '1'));
     const root = recordedDom.h('div');
@@ -199,11 +202,11 @@ describe('FC reward feedback and navigation', () => {
     } as unknown as Parameters<typeof createPanel>[0]);
     view.renderPanel();
     expect(tab.querySelector('.nb')?.textContent).toBe('1');
-    panel
-      .querySelectorAll('button')
-      .find((button) => button.textContent === 'Collect all')!
-      .click();
-    expect(tab.querySelector('.nb')).toBeNull();
     expect(app.p.home.expedition).toBeNull();
+    // The postcard sheet acknowledges the return; the panel then refreshes the tab badge without a remount.
+    app.p.home.tripReturn = null;
+    app.p.home.seen.celebrations = [];
+    view.renderPanel();
+    expect(tab.querySelector('.nb')).toBeNull();
   });
 });

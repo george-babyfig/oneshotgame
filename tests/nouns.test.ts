@@ -14,7 +14,7 @@
 // - Toasts: transient confirmations/hints; closed Lands and banner hints tested separately.
 // - Chapter-chest celebration: transient reward presentation, within counted chapter family.
 // - Home intro and Vault sheet: first-use instruction / resource detail; Homeworld and Vault counted.
-// - Homeworld paint/photo/expedition and Isle/Landmark detail sheets: opt-in details behind
+// - Homeworld paint/photo/trip and Isle/Landmark detail sheets: opt-in details behind
 //   revealed buttons/sites; entry nouns counted, interior content not exhaustively rendered.
 // - Launch Bay screen: opt-in building detail after build/ownership gate; entry noun counted.
 // - Grown-ups and receipts: parent-gated surfaces outside the kid noun budget.
@@ -76,7 +76,7 @@ const UNMEASURED = {
   toasts: 'transient confirmations/hints; closed Lands and banner hints tested separately',
   'Chapter-chest celebration': 'transient reward presentation within counted chapter family',
   'Home intro and Vault sheet': 'first-use instruction / resource detail; destination nouns counted',
-  'Homeworld paint/photo/expedition and Isle/Landmark detail sheets':
+  'Homeworld paint/photo/trip and Isle/Landmark detail sheets':
     'opt-in details behind revealed buttons/sites; interior content not exhaustively rendered',
   'Launch Bay screen': 'opt-in building detail after build/ownership gate; entry noun counted',
   'Grown-ups and receipts': 'behind parent gate; outside kid budget',
@@ -144,7 +144,10 @@ const PART_OF = {
     members: ['Homeworld Level', 'Level {n}', 'plot', 'Homeworld list'],
     reason: 'Attributes and parts of the same destination',
   },
-  friends: { members: ['Den', 'Critter Den', 'friendship level'], reason: 'Den governs the friend cap; friendship belongs to a friend' },
+  friends: {
+    members: ['Den', 'Critter Den', 'friendship level', 'Your friend'],
+    reason: 'Den governs the friend cap; friendship belongs to a friend',
+  },
   chapter: { members: ['chapter chest'], reason: 'The chapter completion reward' },
   Lab: { members: ['Lab Level', 'Lv {n}'], reason: 'Lab attribute' },
   Vault: { members: ['Vault level'], reason: 'Vault attribute' },
@@ -482,7 +485,7 @@ const concepts: { name: string; pattern: string; members?: readonly string[]; re
     ['Sticker Album', 'Sticker Album|stickers?'],
     ['Inbox', 'Inbox|letters?'],
     ['Remix', 'Remix(?:es)?'],
-    ['Expedition', 'Expeditions?'],
+    ['Trip', 'Trips?'],
     ['Paint', 'paints?'],
     ['Photo', 'photos?'],
     ['Dye', 'dyes?'],
@@ -636,6 +639,11 @@ function recordSnapshot(snapshot: Snapshot): Surface[] {
       expect(
         keys.filter((k) => /\bInbox\b/i.test(k)),
         name,
+      ).toEqual([]);
+    if (snapshot.p.level <= 20)
+      expect(
+        keys.filter((key) => /\b(?:trips?|expeditions?)\b/i.test(key)),
+        `${name}: no trip noun before planet 21`,
       ).toEqual([]);
     const checkSignpost = (node: RecordedNode, inside = false) => {
       const allowed = inside || node.className.split(' ').includes('grownups-link');
@@ -839,6 +847,7 @@ describe('M4 meta noun budget measured from real rendered screens', () => {
     expect(nounsInScreenText(marked('Paints are yours forever once unlocked.'))).toEqual(['Paint']);
     for (const [key, concept] of [
       ['Voyages', 'Voyage'],
+      ['Trips', 'Trip'],
       ['Best Buddies', 'Buddy'],
       ['Remixes', 'Remix'],
       ['Photos', 'Photo'],

@@ -4,7 +4,7 @@ import { chapterReward, openChest, rewardText } from '../src/meta/progression';
 import { BOOSTERS, PRODUCTS } from '../src/meta/tuning';
 import { claimWish, ensureWishes, swapWish, wishRoadPoints } from '../src/meta/wishes';
 import { grantProfileRoadPoints, STAR_ROAD } from '../src/meta/starroad';
-import { collectAll, expeditionBack, homeBadge, mergeHomeCelebrations } from '../src/meta/homeworld';
+import { collectAll, homeBadge, mergeHomeCelebrations, tickHome } from '../src/meta/homeworld';
 import { homeworldNextUp, nextUp } from '../src/meta/nextup';
 import { COSMETICS, isPaidLook, owns, visibleCosmetics } from '../src/meta/cosmetics';
 import { unlocked } from '../src/meta/unlocks';
@@ -116,23 +116,28 @@ describe('FC honest chest previews', () => {
 });
 
 describe('FC Homeworld readiness and celebrations', () => {
-  it('routes a returned friend from both Next Up surfaces and collects its rewards once', () => {
+  it('settles a returned friend once on the Homeworld tick and routes both Next Up surfaces to it (M13)', () => {
     const p = wishes();
+    p.level = 21; // trips and their return are shown from planet 21 (noun budget)
     p.home.intro = true;
-    p.home.expedition = { species: 'bunny', hours: 2, ends: 1000, planet: -1 };
-    expect(expeditionBack(p.home, 1000)).toBe(true);
+    p.home.expedition = { species: 'bunny', hours: 4, ends: 1000, planet: -1 };
+    const before = { gems: p.gems, dust: p.dust };
+    tickHome(p, 1000);
+    expect(p.home.expedition).toBeNull();
+    expect(p.home.tripReturn?.species).toBe('bunny');
+    expect(p.gems + p.dust).toBeGreaterThan(before.gems + before.dust);
     expect(homeBadge(p, 1000)).toBe(1);
     expect(nextUp(p, 1000)).toMatchObject({ homeTarget: 'expedition' });
     expect(homeworldNextUp(p, 1000)).toMatchObject({ homeTarget: 'expedition' });
-    const gems = p.gems;
-    const dust = p.dust;
-    const got = collectAll(p, 1000);
-    expect(got.dust).toBeGreaterThan(0);
-    expect(p.gems - gems).toBe(got.gems);
-    expect(p.dust - dust).toBe(got.dust);
-    expect(p.home.expedition).toBeNull();
-    expect(homeBadge(p, 1000)).toBe(0);
+    const paid = { gems: p.gems, dust: p.dust };
+    // Collect all and later ticks never pay the same trip again.
     expect(collectAll(p, 1000)).toEqual({ gems: 0, dust: 0, boosters: {} });
+    tickHome(p, 2000);
+    expect({ gems: p.gems, dust: p.dust }).toEqual(paid);
+    // Seeing the postcard acknowledges the return and clears the badge.
+    p.home.tripReturn = null;
+    p.home.seen.celebrations = [];
+    expect(homeBadge(p, 2000)).toBe(0);
   });
   it('collapses outdated friend and Landmark history to their current milestones', () => {
     const p = wishes();

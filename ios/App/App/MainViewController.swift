@@ -15,5 +15,6 @@ class MainViewController: CAPBridgeViewController {
         }
         bridge?.registerPluginInstance(GameCenterPlugin())
         bridge?.registerPluginInstance(PurchaseJournalPlugin())
+        bridge?.registerPluginInstance(CloudBackupPlugin())
     }
 }

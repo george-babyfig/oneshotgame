@@ -9,6 +9,8 @@ import {
   OPEN_MODAL,
   expectNoErrors,
   freshInstall,
+  installJourneyClock,
+  tripReady,
   holdGate,
   snap,
   tr,
@@ -76,7 +78,55 @@ async function openGateFor(page: Page, lang: NumberWordLang, n: number) {
 
 for (const lang of LANGS) {
   test.describe(`Gate v2 layout at 320×568, Extra-large text [${lang}]`, () => {
-    test.use({ locale: BROWSER_LOCALE[lang], viewport: { width: 320, height: 568 }, screen: { width: 320, height: 568 } });
+    test.use({ locale: BROWSER_LOCALE[lang], viewport: { width: 320, height: 568 } });
+
+    test('M13 Share postcard opens Gate v2 and Cancel leaves the postcard readable', async ({ page }, info) => {
+      const guard = watchErrors(page);
+      await installJourneyClock(page);
+      await freshInstall(page);
+      await tripReady(page, { reduceMotion: true, planets: 1 });
+      // Set a one-hour trip directly (WebKit refuses in-page module imports under the page clock).
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        const now = Date.now();
+        a.p.home.expedition = {
+          species: 'bunny',
+          hours: 1,
+          ends: now + 3_600_000,
+          planet: -1,
+          n: 1,
+          sentAt: now,
+          match: false,
+          yield: { mats: { frost: 1 }, gems: 1, fp: 1 },
+        };
+        a.p.home.tripFuel = false;
+        a.save();
+      });
+      const ends = await page.evaluate(() => (window as any).__app.p.home.expedition.ends);
+      await page.clock.setFixedTime(new Date(ends));
+      await page.evaluate(() => (window as any).__app.showHomeworld());
+      await page.clock.runFor(250);
+      await page
+        .locator('.hw-panel button')
+        .filter({ hasText: tr(lang, 'A friend is back from a trip') })
+        .last()
+        .click();
+      const postcard = page.locator(`${OPEN_MODAL}.trip-return`).last();
+      const downloads: string[] = [];
+      page.on('download', (download) => downloads.push(download.suggestedFilename()));
+      await postcard.getByRole('button', { name: tr(lang, 'Share postcard'), exact: true }).click();
+      await expect(page.locator(GATE)).toBeVisible();
+      expect(downloads).toEqual([]);
+      await snap(page, info, guard, `M13-postcard-gate-${lang}`);
+      await page
+        .locator(GATE)
+        .getByRole('button', { name: tr(lang, 'Cancel'), exact: true })
+        .click();
+      await expect(page.locator(GATE)).toHaveCount(0);
+      await expect(postcard).toBeVisible();
+      expect(downloads).toEqual([]);
+      expectNoErrors(guard);
+    });
 
     test(`number words fully visible, keys ≥ 44 px, nothing clipped [${lang}]`, async ({ page }, info) => {
       test.skip(info.project.name === 'chromium-390x844', 'runs at 320×568 in chromium-320x568 and webkit');
@@ -109,7 +159,7 @@ for (const lang of LANGS) {
         const m = await gate.evaluate((box) => {
           const vw = window.innerWidth;
           const vh = window.innerHeight;
-          const rect = (el: Element) => {
+          const rect = (el: Element | Range) => {
             const r = el.getBoundingClientRect();
             return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height };
           };

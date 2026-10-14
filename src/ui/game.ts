@@ -39,6 +39,22 @@ import { t } from '../i18n';
 import type { LauncherSelection } from '../meta/launcherPick';
 import type { RoundStepEvidence } from '../meta/roundSettlement';
 
+/** Decision 78: native iPad remains dormant; browser/tablet windows get the wide shell. */
+export function isWide(
+  width = typeof window === 'undefined' ? 0 : window.innerWidth,
+  height = typeof window === 'undefined' ? 0 : window.innerHeight,
+): boolean {
+  return width >= 700 && height >= 700;
+}
+
+function syncWide() {
+  document.body?.classList.toggle('wide', isWide());
+}
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  syncWide();
+  window.addEventListener('resize', syncWide);
+}
+
 export function shouldShowRoundIntro(id: string, gentle: boolean): boolean {
   return !gentle || !['vent', 'vine', 'frost', 'traits_intro', 'buddy'].includes(id);
 }

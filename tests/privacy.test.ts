@@ -319,3 +319,21 @@ describe('privacy: the privacy manifest', () => {
     expect(hash, 'PrivacyInfo.xcprivacy changed: review it, then update PRIVACY_MANIFEST_SHA256').toBe(PRIVACY_MANIFEST_SHA256);
   });
 });
+
+describe('A13 native backup privacy', () => {
+  it('uses only Apple key-value storage and local native compression, with no network APIs', () => {
+    const swift = code('ios/App/App/CloudBackupPlugin.swift');
+    expect(swift).toContain('NSUbiquitousKeyValueStore');
+    for (const file of walk('ios/App/App', ['.swift']))
+      expect(code(file), file).not.toMatch(/URLSession|URLRequest|NSURLConnection|NWConnection|Network\b|WebSocket|https?:\/\//);
+    expect(swift).toContain('import CryptoKit');
+    expect(swift).toContain('compressed(using: .zlib)');
+  });
+  it('stages all six languages for every public copy surface without publishing', () => {
+    const draft = readFileSync('docs/ops/icloud-backup.md', 'utf8');
+    for (const lang of ['en', 'es', 'fr', 'de', 'pt-BR', 'ja']) expect(draft).toContain(`### ${lang}`);
+    for (const surface of ['site/privacy.html', 'docs/privacy.html', 'site/support.html', 'site/index.html', 'site/press.html'])
+      expect(draft).toContain(surface);
+    expect(draft).toContain('NOT PUBLISHED');
+  });
+});

@@ -1,3 +1,4 @@
+import { settleTrips } from '../src/meta/trips';
 import { describe, expect, it, vi } from 'vitest';
 import { clearLedger, ledger, ledgerSummary, serializedSize } from '../src/meta/ledger';
 import type { LedgerKpi } from '../src/meta/ledger';
@@ -217,6 +218,34 @@ describe('private ledger', () => {
       expect(p.gems).toBe(before + 6);
     } finally {
       broken.mockRestore();
+    }
+  });
+});
+
+describe('M13 trip wallet accounting', () => {
+  it('records each promised Essence and gem once under expedition and no new dust', async () => {
+    await clearLedger(true);
+    const p = defaultProfile(start);
+    p.home.residents.push({ species: 'bunny', fp: 0, rewarded: 1 });
+    p.home.expedition = {
+      species: 'bunny',
+      hours: 4,
+      ends: start,
+      planet: -1,
+      n: 25,
+      yield: { mats: { frost: 5, ember: 2 }, gems: 2, fp: 1 },
+    };
+    vi.useFakeTimers();
+    vi.setSystemTime(start);
+    try {
+      settleTrips(p, start);
+      settleTrips(p, start);
+      const economy = ledgerSummary(start).economy;
+      expect(economy).toMatchObject({ earn_frost_expedition: 5, earn_ember_expedition: 2, earn_gems_expedition: 2 });
+      expect(economy.earn_dust_expedition).toBeUndefined();
+      expect(Object.keys(economy).filter((key) => key.includes('expedition'))).toHaveLength(3);
+    } finally {
+      vi.useRealTimers();
     }
   });
 });

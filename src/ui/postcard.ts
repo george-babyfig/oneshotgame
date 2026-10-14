@@ -9,12 +9,17 @@ import { shareTextUngated } from './share';
 import { toast } from './dom';
 import { t } from '../i18n';
 import { parentalGate } from './flows/gate';
+import { decodePlanet } from '../meta/galaxyCodec';
+import type { GalaxyPlanet } from '../meta/profile';
+import { planetName } from '../i18n';
+import { M13_STRINGS as copy } from '../meta/m13strings';
 
 export interface PostcardInfo {
   title: string;
   subtitle: string;
   stars: number;
   glow: string;
+  traveller?: string;
 }
 
 export function renderPostcard(planet: Planet, info: PostcardInfo): HTMLCanvasElement {
@@ -55,13 +60,14 @@ export function renderPostcard(planet: Planet, info: PostcardInfo): HTMLCanvasEl
         drawCreature(gg, sp.id, x, y, a + Math.PI / 2, R * (sp.rarity === 'common' ? 0.2 : sp.rarity === 'uncommon' ? 0.24 : 0.3), 0.5 + i);
     },
   });
+  if (info.traveller) drawCreature(g, info.traveller, W * 0.32, H * 0.73, 0, W * 0.23, 0.5, '', false, 'wave', true);
   g.textAlign = 'center';
   g.fillStyle = '#ffffff';
   g.font = '700 76px Fredoka, ui-rounded, system-ui, sans-serif';
-  g.fillText(info.title, W / 2, 150);
+  g.fillText(info.title, W / 2, 150, W * 0.9);
   g.font = '500 40px Fredoka, ui-rounded, system-ui, sans-serif';
   g.fillStyle = '#c9c2ff';
-  g.fillText(info.subtitle, W / 2, 210);
+  g.fillText(info.subtitle, W / 2, 210, W * 0.9);
   g.font = '700 70px Fredoka, ui-rounded, system-ui, sans-serif';
   for (let i = 0; i < 3; i++) {
     g.fillStyle = i < info.stars ? '#ffb13d' : '#3b3766';
@@ -71,6 +77,17 @@ export function renderPostcard(planet: Planet, info: PostcardInfo): HTMLCanvasEl
   g.fillStyle = '#5ef2b0';
   g.fillText('Comet Garden', W / 2, 1270);
   return c;
+}
+
+/** The saved sectors, rather than a colour-only sphere, are the postcard's world. */
+export function renderTripPostcard(entry: GalaxyPlanet, species: string): HTMLCanvasElement {
+  return renderPostcard(decodePlanet(entry), {
+    title: copy.postcard({ planet: planetName(entry.name) }),
+    subtitle: t(SPECIES_BY_ID[species].name),
+    stars: entry.stars,
+    glow: '#c9c2ff',
+    traveller: species,
+  });
 }
 
 export async function sharePostcard(planet: Planet, info: PostcardInfo, text: string) {

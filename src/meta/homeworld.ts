@@ -1,6 +1,8 @@
+import { tripOptions, tripPlanets, startTrip, settleTrips, speedUpTrip } from './trips';
+import { legacyExpeditionLoot } from './tripsLegacy';
 import type { Trip, TripReturn } from './m13types';
-import { RING_PLOTS, WIN_SPEEDUP, FRIEND_LEVELS, EXPEDITION_HOURS, HOME_LEVEL_REQUIREMENTS, HOMEWORLD_MAX_LEVEL } from './tuning';
-import { FRIENDSHIP_REWARD_GEMS_PER_LEVEL, EXPEDITION_REWARD, EXPEDITION_MULTIPLIER } from './tuning';
+import { RING_PLOTS, WIN_SPEEDUP, FRIEND_LEVELS, HOME_LEVEL_REQUIREMENTS, HOMEWORLD_MAX_LEVEL } from './tuning';
+import { FRIENDSHIP_REWARD_GEMS_PER_LEVEL } from './tuning';
 import { ledger } from './ledger';
 import { COST_K } from './tuning';
 import { PAINTS } from './tuning';
@@ -10,18 +12,17 @@ import { BUILDINGS } from './tuning';
 import type { GreenhouseState, HomeworldLevel, WonRoundEvent } from './homeworldTypes';
 import { earn, spend } from './wallet';
 // Homeworld: a planet that grows through five levels. Build on its plots,
-// invite Lifebook creatures and send them on expeditions.
+// invite Lifebook creatures and send them on trips.
 //
 // Design rules (kid-safe, waiting-room friendly):
 // - Timers are short and can never be skipped with gems. Winning a campaign
 //   level speeds every active build up instead.
 // - Greenhouses grow a chosen booster from wins and pause when full.
-// - Expedition destinations are free and deterministic from the clock.
+// - Trips keep the chosen planet and send-time reward promise.
 import type { Profile } from './profile';
 import type { BoosterId } from './config';
 import { BIOMES, SPECIES, SPECIES_BY_ID, type BiomeId, type Kind, type Planet } from '../core/world';
 import type { LandmarkId, LandmarkState } from './homeworldLife';
-import { rngFrom } from '../core/levels';
 import { LEVELS_PER_CHAPTER } from './progression';
 import { unlocked } from './unlocks';
 
@@ -655,10 +656,16 @@ export function recordHomeworldWin(
   p.home.lastWonRound = key;
   recordGrownSectors(p, event);
   recordGreenhouseWin(p, event);
-  if (event.mode === 'campaign') speedUpBuilds(p.home, WIN_SPEEDUP, event.at);
-  if (!['campaign', 'voyage', 'zen'].includes(event.mode) || !event.buddySpecies) return;
-  const friend = p.home.residents.find((r) => r.species === event.buddySpecies);
-  if (friend) addFriendship(p, friend, 1);
+  if (event.mode === 'campaign') {
+    speedUpBuilds(p.home, WIN_SPEEDUP, event.at);
+    speedUpTrip(p.home, WIN_SPEEDUP, event.at);
+  }
+  if (['campaign', 'voyage', 'zen', 'daily'].includes(event.mode) && event.at >= (p.home.lastTick ?? 0)) p.home.tripFuel = true;
+  if (['campaign', 'voyage', 'zen'].includes(event.mode) && event.buddySpecies !== p.home.expedition?.species) {
+    const friend = p.home.residents.find((r) => r.species === event.buddySpecies);
+    if (friend) addFriendship(p, friend, 1);
+  }
+  settleTrips(p, event.at);
 }
 
 /** Whole units ready to collect from a plot. */
@@ -815,34 +822,19 @@ export function bayLevel(h: HomeState, now = Date.now()) {
   return t ? Math.max(0, effLevel(t, now)) : 0;
 }
 
-export function expeditionOptions(h: HomeState) {
-  const lv = bayLevel(h);
-  return EXPEDITION_HOURS.filter((_, i) => lv >= [1, 2, 3][i]);
+/** Compatibility names for old callers; all new sends use the M13 engine. */
+export function expeditionOptions(h: HomeState, now = Date.now()) {
+  return tripOptions(h, now);
 }
 
 export function expeditionLoot(hours: number, towerLv: number, species: string) {
-  const rare = SPECIES_BY_ID[species]?.rarity;
-  const bonus = rare === 'legendary' ? EXPEDITION_MULTIPLIER.legendary : rare === 'rare' ? EXPEDITION_MULTIPLIER.rare : 1;
-  return {
-    dust: Math.round(hours * EXPEDITION_REWARD.dustPerHour * (1 + towerLv * EXPEDITION_MULTIPLIER.perTowerLevel) * bonus),
-    gems:
-      hours >= EXPEDITION_REWARD.eightHourThreshold
-        ? EXPEDITION_REWARD.eightHourGems
-        : hours >= EXPEDITION_REWARD.fourHourThreshold
-          ? EXPEDITION_REWARD.fourHourGems
-          : 0,
-    boosters: hours >= 8 ? ({ shower: 1, spark: 1, scope: 1 } as Partial<Record<BoosterId, number>>) : hours >= 4 ? { spark: 1 } : {},
-  };
+  return legacyExpeditionLoot(hours, towerLv, species);
 }
 
 export function startExpedition(p: Profile, species: string, hours: number, now = Date.now()): boolean {
-  const h = p.home;
-  if (now < (h.lastTick ?? 0) || h.expedition || !expeditionOptions(h).includes(hours)) return false;
-  if (!h.residents.some((r) => r.species === species)) return false;
-  const planet = p.galaxy.length ? Math.floor(rngFrom(`EXP-${species}-${now}`)() * p.galaxy.length) : -1;
-  ledger.homeworldAction();
-  h.expedition = { species, hours, ends: now + hours * H, planet };
-  return true;
+  if (hours !== 1 && hours !== 4 && hours !== 8) return false;
+  const n = tripPlanets(p)[0]?.n;
+  return n !== undefined && startTrip(p, n, hours, species, now) === 'ok';
 }
 
 export function expeditionBack(h: HomeState, now = Date.now()) {
@@ -850,16 +842,11 @@ export function expeditionBack(h: HomeState, now = Date.now()) {
 }
 
 export function finishExpedition(p: Profile, now = Date.now()) {
-  const h = p.home;
-  const e = h.expedition;
-  if (!e || e.ends > now || now < (h.lastTick ?? 0)) return null;
-  const loot = expeditionLoot(e.hours, bayLevel(h), e.species);
-  earn(p, 'dust', loot.dust, 'expedition');
-  earn(p, 'gems', loot.gems, 'expedition');
-  for (const [k, v] of Object.entries(loot.boosters)) p.boosters[k as BoosterId] += v ?? 0;
-  h.expedition = null;
-  h.lastTick = Math.max(h.lastTick ?? 0, now); // A forward clock claim becomes the new rollback high-water mark.
-  return { ...loot, species: e.species, planet: e.planet, hours: e.hours };
+  const trip = p.home.expedition;
+  const returned = settleTrips(p, now);
+  if (!returned || !trip) return null;
+  const loot = returned.legacyLoot ?? { dust: 0, gems: returned.yield?.gems ?? 0, boosters: {} };
+  return { ...loot, species: returned.species, planet: trip.planet, hours: returned.hours };
 }
 
 // ------------------------------------------------------------------ summary
@@ -870,7 +857,6 @@ export function homeBadge(p: Profile, now = Date.now()) {
   let n = 0;
   if (h.plots.some((_, i) => ready(h, i, now) > 0)) n++;
   if (now >= (h.lastTick ?? 0) && h.plots.some((b) => b?.done && b.done <= now)) n++;
-  if (expeditionBack(h, now)) n++;
   if (h.seen.celebrations.length) n++;
   return n;
 }
@@ -883,6 +869,7 @@ export function tickHome(p: Profile, now = Date.now()) {
   while (h.plots.length < RING_PLOTS[h.level]) h.plots.push(null);
   if (now < (h.lastTick ?? 0)) return [];
   const done = tickBuilds(h, now);
+  settleTrips(p, now);
   h.lastTick = now;
   return done;
 }

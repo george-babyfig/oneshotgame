@@ -1,3 +1,4 @@
+import { tickHome } from '../src/meta/homeworld';
 import { describe, expect, it } from 'vitest';
 import { defaultProfile } from '../src/meta/profile';
 import { awayCollectables, awayRecapLines, collectAway, creditVaultWin } from '../src/meta/economy';
@@ -96,5 +97,35 @@ describe('noun-window pending visitor gifts', () => {
     collectAway(p, 5 * HOUR);
     expect(p.dust).toBeGreaterThanOrEqual(before + 30);
     expect(p.visitors).toEqual([]);
+  });
+});
+
+describe('M13 away trip data', () => {
+  it('includes an already paid return and never pays it a second time on Collect all', () => {
+    const p = defaultProfile(0);
+    p.level = 30;
+    p.tutorial = true;
+    p.home.residents.push({ species: 'bunny', fp: 0, rewarded: 1 });
+    p.home.expedition = {
+      species: 'bunny',
+      hours: 4,
+      ends: HOUR,
+      planet: -1,
+      n: 25,
+      match: false,
+      yield: { mats: { leaf: 2 }, gems: 2, fp: 1 },
+    };
+    tickHome(p, 8 * HOUR);
+    const gems = p.gems,
+      leaf = p.mats.leaf;
+    expect(awayCollectables(p, 8 * HOUR, 8 * HOUR).trip).toEqual(p.home.tripReturn);
+    expect(awayRecapLines(p, 8 * HOUR, 8 * HOUR)[1]).toBe('A friend is back from a trip');
+    collectAway(p, 8 * HOUR, 8 * HOUR);
+    expect(p.gems).toBe(gems);
+    expect(p.mats.leaf).toBe(leaf);
+    expect(p.home.residents[0].fp).toBe(1);
+    p.level = 20;
+    expect(awayCollectables(p, 8 * HOUR, 8 * HOUR).trip).toBeNull();
+    expect(awayRecapLines(p, 8 * HOUR, 8 * HOUR)[1]).not.toContain('trip');
   });
 });

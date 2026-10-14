@@ -1,5 +1,5 @@
 import type { Profile } from '../../../meta/profile';
-import { launchBayBuildable, dyeTab, landsSection } from '../../../meta/reveals';
+import { expeditionButton, launchBayBuildable, dyeTab, landsSection } from '../../../meta/reveals';
 import { structIcon } from './panel';
 import { HOMEWORLD_MAX_LEVEL } from '../../../meta/tuning';
 import { h, btn, fmt, modal, toast } from '../../dom';
@@ -23,14 +23,9 @@ import {
   chaptersDone,
   denCapacity,
   expand,
-  expeditionBack,
-  expeditionLoot,
-  expeditionOptions,
-  finishExpedition,
   friendLevel,
   invite,
   sendHome,
-  startExpedition,
   RESIDENT_ACCS,
   accAvailable,
   wearAcc,
@@ -41,7 +36,6 @@ import {
   applyPaint,
   ownsPaint,
   PAINTS,
-  bayLevel,
   availableLands,
   GROWABLE_LANDS,
   resolvedGaps,
@@ -53,7 +47,13 @@ import {
 } from '../../../meta/homeworld';
 import { BIOMES, SPECIES_BY_ID } from '../../../core/world';
 import { drawCreature, critterCanvas } from '../../art/critters';
-import { shareCanvas } from '../../postcard';
+import { renderTripPostcard, shareCanvas } from '../../postcard';
+import { callHome, previewTrip, settleTrips, startTrip, tripPlanets, tripStatus } from '../../../meta/trips';
+import { M13_STRINGS as copy } from '../../../meta/m13strings';
+import type { TripBlock, TripYield } from '../../../meta/m13types';
+import type { Mat } from '../../../meta/constellations';
+import { decodePlanet } from '../../../meta/galaxyCodec';
+import { renderPlanet } from '../../art/planet';
 import { SEASON_EMOJI, SEASON_NAMES, seasonOf } from '../../../meta/seasons';
 import { drawSeason } from '../../art/seasons';
 import { passportName } from '../../../meta/passport';
@@ -538,10 +538,10 @@ export function residentsSheet(app: App, after: () => void) {
   const rows = home.residents.map((r) => {
     const sp = SPECIES_BY_ID[r.species];
     const lv = friendLevel(r.fp);
-    const away = home.expedition?.species === r.species;
+    const away = p.level >= 21 && home.expedition?.species === r.species;
     const next = FRIEND_LEVELS[lv] ?? null;
     const friendNote = away
-      ? t('On an expedition')
+      ? `${copy.onTrip({ friend: r.nick ?? t(sp.name) })} · ${t('Back at {time}', { time: whenText(home.expedition!.ends, Date.now(), getLang()) })}`
       : unlocked(p, 'buddy')
         ? t('Wins with this Buddy and Wishes grow friendship')
         : unlocked(p, 'quests')
@@ -654,165 +654,305 @@ export function residentsSheet(app: App, after: () => void) {
   ]);
 }
 
-export function expeditionSheet(app: App, after: () => void) {
+/** Even a migrated Bay must not introduce the Trip noun before planet 21. */
+export function tripVisible(p: Profile, now = Date.now()): boolean {
+  return p.level >= 21 && expeditionButton(p, now);
+}
+
+export function tripBlockText(block: TripBlock | null): string {
+  switch (block) {
+    case 'bay_level':
+      return copy.bayUnlock();
+    case 'no_friend':
+    case 'only_buddy':
+      return copy.inviteFriend();
+    case 'no_planets':
+      return copy.winPlanet();
+    case 'needs_win':
+      return copy.needsWin();
+    case 'clock':
+      return t('Check your device clock to send a trip');
+    default:
+      return copy.tripEssences();
+  }
+}
+
+export function tripLabel(p: Profile): string {
+  if (p.home.tripReturn) return `${t('Collect')} · ${copy.friendBack()}`;
+  if (p.home.expedition)
+    return `${copy.trip()} · ${t('Back at {time}', { time: whenText(p.home.expedition.ends, Date.now(), getLang()) })}`;
+  return copy.trip();
+}
+
+function friendName(p: Profile, species: string): string {
+  return p.home.residents.find((r) => r.species === species)?.nick ?? t(SPECIES_BY_ID[species].name);
+}
+
+function essenceText(mats: TripYield['mats'], spoken = false): string {
+  return MATS.filter((mat) => (mats[mat] ?? 0) > 0)
+    .map((mat) => `${spoken ? t(ESSENCE_NAME[mat]) : MAT_EMOJI[mat]} ${fmt(mats[mat]!)}`)
+    .join(' · ');
+}
+
+function tripRewards(yielded: TripYield): HTMLElement {
+  return h(
+    'div',
+    { class: 'trip-rewards' },
+    h('span', { 'aria-label': essenceText(yielded.mats, true) }, essenceText(yielded.mats)),
+    h('span', null, `💎 ${fmt(yielded.gems)}`),
+    h('span', null, copy.friendshipPoints(yielded.fp)),
+  );
+}
+
+function tripPlanetPicture(entry: Profile['galaxy'][number]): HTMLCanvasElement {
+  const c = h('canvas', { class: 'trip-planet', role: 'img', 'aria-label': planetName(entry.name) });
+  const dpr = canvasDpr();
+  c.width = c.height = Math.round(144 * dpr);
+  const g = c.getContext('2d')!;
+  g.scale(dpr, dpr);
+  const planet = decodePlanet(entry);
+  renderPlanet(g, planet, {
+    cx: 72,
+    cy: 72,
+    R: 55,
+    rot: -Math.PI / 2,
+    time: 0.5,
+    glow: '#c9c2ff',
+    lifeK: 0.9,
+    creature: (gg, i, x, y, a) => {
+      const species = planet.sectors[i].species;
+      if (species) drawCreature(gg, species, x, y, a + Math.PI / 2, 14, 0.5);
+    },
+  });
+  return c;
+}
+
+export interface TripSheetOptions {
+  after?: () => void;
+}
+
+/** All rewards have already settled; opening or dismissing a postcard never pays. */
+export function tripSheet(app: App, opts: TripSheetOptions = {}) {
   const p = app.p;
-  const home = p.home;
-  const e = home.expedition;
-  if (e && expeditionBack(home)) {
-    const got = finishExpedition(p)!;
+  const after = opts.after ?? (() => app.refresh());
+  if (!tripVisible(p)) return;
+  if (settleTrips(p)) {
     app.save();
+    after();
+  }
+  const status = tripStatus(p);
+  const returned = status.returned;
+  if (returned) {
+    const entry = p.galaxy.find((row) => row.n === returned.n);
+    const title = entry ? copy.postcard({ planet: planetName(entry.name) }) : copy.friendBack();
+    const card = entry ? renderTripPostcard(entry, returned.species) : critterCanvas(returned.species, 144);
+    card.classList.add('trip-postcard');
+    card.setAttribute('role', 'img');
+    card.setAttribute('aria-label', title);
+    const acknowledge = () => {
+      if (p.home.tripReturn === returned) p.home.tripReturn = null;
+      p.home.seen.celebrations = p.home.seen.celebrations.filter((id) => id !== `trip:${returned.n}`);
+      app.save();
+      after();
+    };
+    const m = modal(
+      [
+        h(
+          'div',
+          { class: 'm-title' },
+          entry ? copy.returned({ friend: friendName(p, returned.species), planet: planetName(entry.name) }) : copy.friendBack(),
+        ),
+        card,
+        returned.yield
+          ? tripRewards(returned.yield)
+          : returned.legacyLoot
+            ? h('div', { class: 'reward-list' }, gotText(returned.legacyLoot))
+            : null,
+        entry
+          ? btn(copy.sharePostcard(), 'ghost wide', () => {
+              void shareCanvas(renderTripPostcard(entry, returned.species), title, 'trip-postcard');
+            })
+          : null,
+        btn(t('Back'), 'primary wide', () => m.close()),
+      ],
+      { cls: 'trip-sheet trip-return', onClose: acknowledge, onAbort: acknowledge },
+    );
     sfx.chest();
     haptic.success();
-    const sp = SPECIES_BY_ID[got.species];
-    const planet = got.planet >= 0 ? p.galaxy[got.planet] : null;
-    const card = expeditionCard(got.species, planet ? planetName(planet.name) : t('deep space'), planet?.colors ?? [], passportName(p));
-    card.classList.add('hw-card');
-    const m = modal([
-      h('div', { class: 'm-title' }, t('{name} is back!', { name: t(sp.name) })),
-      card,
-      h('div', { class: 'reward-list' }, h('span', null, gotText({ dust: got.dust, gems: got.gems, boosters: got.boosters }))),
-      h(
-        'div',
-        { class: 'row' },
-        btn(t('📮 Share postcard'), 'ghost', () =>
-          shareCanvas(
-            expeditionCard(got.species, planet ? planetName(planet.name) : t('deep space'), planet?.colors ?? [], passportName(p), 1080),
-            t('{name} sent a postcard from {planet} 🪐 #CometGarden', {
-              name: t(sp.name),
-              planet: planet ? planetName(planet.name) : t('deep space'),
-            }),
-            'expedition-postcard',
-          ),
-        ),
-        btn(t('Nice!'), 'primary', () => m.close()),
-      ),
-      // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
-      btn(t('Back'), 'ghost wide', () => m.close()),
-    ]);
-    after();
     return;
   }
-  if (e) {
-    const sp = SPECIES_BY_ID[e.species];
-    const box = modal([
-      h('div', { class: 'm-title' }, t('Expedition')),
-      critterCanvas(e.species, 90),
-      h(
-        'p',
-        null,
-        t('{name} is exploring your galaxy. Back at {time}.', { name: t(sp.name), time: whenText(e.ends, Date.now(), getLang()) }),
-      ),
-      // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
-      btn(t('Back'), 'ghost wide', () => box.close()),
-    ]);
-    return;
-  }
-  const opts = expeditionOptions(home);
-  if (!opts.length) {
-    const box = modal([
-      h('div', { class: 'm-title' }, t('Expedition')),
-      h('p', { class: 'muted' }, t('Build a Launch Bay at Level 2 to send friends on expeditions.')),
-      // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
-      btn(t('Back'), 'ghost wide', () => box.close()),
-    ]);
-    return;
-  }
-  if (!home.residents.length) {
-    const box = modal([
-      h('div', { class: 'm-title' }, t('Expedition')),
-      h('p', { class: 'muted' }, t('Invite a friend first — they love to explore.')),
-      // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
-      btn(t('Back'), 'ghost wide', () => box.close()),
-    ]);
-    return;
-  }
-  let who = home.residents[0].species;
-  const pick = h(
-    'div',
-    { class: 'hw-invite' },
-    ...home.residents.map((r) => {
-      const el = h(
-        'button',
-        {
-          class: `lb${r.species === who ? ' on' : ''}`,
-          onclick: () => {
-            who = r.species;
-            pick.querySelectorAll('.lb').forEach((x) => x.classList.remove('on'));
-            el.classList.add('on');
-          },
-        },
-        critterCanvas(r.species, 44),
-        h('small', null, t(SPECIES_BY_ID[r.species].name)),
-      );
-      return el;
-    }),
-  );
-  const m = modal([
-    h('div', { class: 'm-title' }, t('Send on an expedition')),
-    h('p', { class: 'muted' }, t('Who goes? They come back with stardust, gifts and a postcard.')),
-    pick,
-    ...opts.map((hours) => {
-      const loot = expeditionLoot(hours, bayLevel(home), who);
-      return btn(
-        h('span', { class: 'stack' }, h('b', null, t('{h} hours', { h: hours })), h('small', null, gotText(loot))),
-        'ghost wide',
-        () => {
-          if (!startExpedition(p, who, hours)) return;
-          sfx.launch();
-          haptic.medium();
+  if (status.trip) {
+    const trip = status.trip;
+    const friend = friendName(p, trip.species);
+    const m = modal(
+      [
+        h('div', { class: 'm-title' }, copy.trips()),
+        critterCanvas(trip.species, 90),
+        h('p', null, copy.onTrip({ friend })),
+        h('p', null, t('Back at {time}', { time: whenText(trip.ends, Date.now(), getLang()) })),
+        h('p', { class: 'muted' }, copy.winSpeedup()),
+        btn(copy.callHome({ friend }), 'primary wide', () => {
+          if (!callHome(p)) return;
           app.save();
           m.close();
           after();
-        },
-      );
-    }),
-    // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
-    btn(t('Back'), 'ghost wide', () => m.close()),
-  ]);
-}
-
-/** A postcard from the expedition: the resident in front of a galaxy planet. */
-function expeditionCard(species: string, planetName: string, colors: string[], from: string, W = 300): HTMLCanvasElement {
-  const H = Math.round(W * 1.25);
-  const c = document.createElement('canvas');
-  const dpr = W < 600 ? canvasDpr() : 1;
-  c.width = W * dpr;
-  c.height = H * dpr;
-  c.style.width = `${W}px`;
-  const g = c.getContext('2d')!;
-  g.scale(dpr, dpr);
-  const bg = g.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, '#2a1a6e');
-  bg.addColorStop(1, '#0b0a24');
-  g.fillStyle = bg;
-  g.fillRect(0, 0, W, H);
-  for (let i = 0; i < 60; i++) {
-    g.fillStyle = `rgba(255,255,255,${0.3 + ((i * 37) % 10) / 15})`;
-    g.beginPath();
-    g.arc(((i * 97) % 100) * W * 0.01, ((i * 53) % 100) * H * 0.01, W * 0.004, 0, TAU);
-    g.fill();
+          document.dispatchEvent(new CustomEvent('homeworld-trip-moment', { detail: { species: trip.species, kind: 'return' } }));
+        }),
+        btn(t('Back'), 'ghost wide', () => m.close()),
+      ],
+      { cls: 'trip-sheet trip-flight' },
+    );
+    return;
   }
-  const pr = W * 0.34;
-  const pg = g.createRadialGradient(W * 0.62 - pr * 0.3, H * 0.4 - pr * 0.3, pr * 0.1, W * 0.62, H * 0.4, pr);
-  pg.addColorStop(0, colors[0] ?? '#6ee29a');
-  pg.addColorStop(0.6, colors[1] ?? '#2a7fd0');
-  pg.addColorStop(1, colors[2] ?? '#1a3a6e');
-  g.fillStyle = pg;
-  g.beginPath();
-  g.arc(W * 0.62, H * 0.4, pr, 0, TAU);
-  g.fill();
-  drawCreature(g, species, W * 0.3, H * 0.78, 0, W * 0.34, 0.4);
-  g.strokeStyle = 'rgba(255,255,255,0.6)';
-  g.lineWidth = W * 0.012;
-  g.strokeRect(W * 0.03, W * 0.03, W - W * 0.06, H - W * 0.06);
-  g.textAlign = 'center';
-  g.fillStyle = '#fff';
-  g.font = `700 ${Math.round(W * 0.075)}px Fredoka, ui-rounded, system-ui, sans-serif`;
-  g.fillText(t('Greetings from {planet}!', { planet: planetName }), W / 2, H * 0.1, W * 0.9);
-  g.fillStyle = '#c9c2ff';
-  g.font = `500 ${Math.round(W * 0.05)}px Fredoka, ui-rounded, system-ui, sans-serif`;
-  g.fillText(t('to {name} · Comet Garden', { name: from }), W / 2, H * 0.95, W * 0.9);
-  return c;
+  if (status.block) {
+    const m = modal(
+      [
+        h('div', { class: 'm-title' }, copy.trips()),
+        h('p', null, tripBlockText(status.block)),
+        status.block === 'only_buddy' ? h('p', { class: 'muted' }, copy.buddyHome()) : null,
+        btn(t('Back'), 'ghost wide', () => m.close()),
+      ],
+      { cls: 'trip-sheet' },
+    );
+    return;
+  }
+
+  let hours = status.options[status.options.length - 1];
+  let filter: Mat | null = null;
+  const rows = tripPlanets(p);
+  const list = h('div', { class: 'trip-planets', role: 'list', 'aria-label': copy.pickPlanet() });
+  const filters = h('div', { class: 'trip-filters', role: 'group', 'aria-label': copy.tripEssences() });
+  const drawRows = () => {
+    list.replaceChildren(
+      ...rows
+        .map((row) => ({ row, promise: previewTrip(p, row.n, hours) }))
+        .filter((item) => item.promise && (!filter || (item.promise.yield.mats[filter] ?? 0) > 0))
+        .map(({ row, promise }) => {
+          const label = copy.planetLabel({
+            planet: planetName(row.entry.name),
+            stars: row.entry.stars,
+            list: essenceText(promise!.yield.mats, true),
+          });
+          const button = btn(
+            h(
+              'span',
+              { class: 'stack' },
+              h('b', null, planetName(row.entry.name)),
+              h('small', null, `${'★'.repeat(row.entry.stars)} · ${essenceText(promise!.yield.mats)}`),
+            ),
+            'ghost wide trip-planet-row',
+            () => preview(row.n),
+          );
+          button.setAttribute('aria-label', label);
+          button.setAttribute('data-planet', String(row.n));
+          return h('div', { role: 'listitem' }, button);
+        }),
+    );
+    filters.replaceChildren(
+      ...([null, ...MATS] as (Mat | null)[]).map((mat) => {
+        const button = btn(mat ? `${MAT_EMOJI[mat]} ${t(ESSENCE_NAME[mat])}` : copy.all(), 'ghost small', () => {
+          filter = mat;
+          drawRows();
+        });
+        button.setAttribute('aria-pressed', String(filter === mat));
+        return button;
+      }),
+    );
+  };
+  const durations = h('div', { class: 'trip-hours', role: 'group', 'aria-label': copy.trips() });
+  const drawHours = () =>
+    durations.replaceChildren(
+      ...status.options.map((option) => {
+        const button = btn(copy.tripHours(option), 'ghost', () => {
+          hours = option;
+          drawHours();
+          drawRows();
+        });
+        button.setAttribute('aria-pressed', String(hours === option));
+        return button;
+      }),
+    );
+  const picker = modal(
+    [
+      h('div', { class: 'm-title' }, copy.pickPlanet()),
+      h('p', { class: 'muted trip-intro' }, copy.tripEssences()),
+      durations,
+      filters,
+      list,
+      status.options.length < 3 ? h('small', { class: 'muted' }, copy.longerTrips({ n: status.options.length === 1 ? 3 : 4 })) : null,
+      btn(t('Back'), 'ghost wide trip-back', () => picker.close()),
+    ],
+    { cls: 'trip-sheet trip-picker' },
+  );
+  drawRows();
+  drawHours();
+
+  function preview(n: number, species?: string) {
+    const chosen = previewTrip(p, n, hours, species);
+    if (!chosen) return;
+    picker.close();
+    const friend = friendName(p, chosen.species);
+    const m = modal(
+      [
+        h('div', { class: 'm-title' }, copy.sendFriend()),
+        h('div', { class: 'trip-preview-art' }, tripPlanetPicture(chosen.entry), critterCanvas(chosen.species, 72)),
+        h('b', null, planetName(chosen.entry.name)),
+        h('p', { class: 'trip-friend' }, copy.friendGoing({ friend })),
+        chosen.match ? h('p', { class: 'trip-match' }, copy.homeMatch({ friend })) : null,
+        h('b', null, copy.bringsBack()),
+        tripRewards(chosen.yield),
+        h('p', null, t('Back at {time}', { time: whenText(chosen.ends, Date.now(), getLang()) })),
+        h(
+          'div',
+          { class: 'trip-actions' },
+          btn(t('Send'), 'primary wide', () => {
+            const result = startTrip(p, n, hours, chosen.species);
+            if (result !== 'ok') {
+              toast(tripBlockText(result));
+              return;
+            }
+            app.save();
+            m.close();
+            after();
+            if (!document.querySelector('.hw-canvas')) app.showHomeworld();
+            document.dispatchEvent(new CustomEvent('homeworld-trip-moment', { detail: { species: chosen.species, kind: 'send' } }));
+            sfx.launch();
+            haptic.medium();
+          }),
+          btn(copy.someoneElse(), 'ghost wide', () => {
+            const alternatives = p.home.residents.filter((r) => r.species !== chosen.species && previewTrip(p, n, hours, r.species));
+            m.close();
+            const friends = modal(
+              [
+                h('div', { class: 'm-title' }, copy.someoneElse()),
+                ...alternatives.map((r) =>
+                  btn(
+                    h('span', { class: 'trip-friend-choice' }, critterCanvas(r.species, 44), friendName(p, r.species)),
+                    'ghost wide',
+                    () => {
+                      friends.close();
+                      preview(n, r.species);
+                    },
+                  ),
+                ),
+                btn(t('Back'), 'ghost wide', () => {
+                  friends.close();
+                  preview(n, chosen.species);
+                }),
+              ],
+              { cls: 'trip-sheet trip-friends' },
+            );
+          }),
+          btn(t('Cancel'), 'ghost wide', () => {
+            m.close();
+            tripSheet(app, opts);
+          }),
+          btn(t('Back'), 'ghost wide', () => m.close()),
+        ),
+      ],
+      { cls: 'trip-sheet trip-preview' },
+    );
+  }
 }
 
 function levelOpening(p: Profile, level: HomeworldLevel): string {

@@ -1,3 +1,5 @@
+import { tripOptions, tripPlanets, startTrip } from '../../../src/meta/trips';
+import type { TripReturn } from '../../../src/meta/m13types';
 import { makeLevel, rngFrom, starsFor, type LevelDef } from '../../../src/core/levels';
 import { KINDS, SPECIES, type Kind } from '../../../src/core/world';
 import { modifiersFor } from '../../../src/core/modifiers';
@@ -38,9 +40,7 @@ import {
   expand,
   homeUnlocked,
   invite,
-  expeditionOptions,
-  finishExpedition,
-  startExpedition,
+  tickHome,
   tickBuilds,
   upgrade,
   wearAcc,
@@ -123,6 +123,10 @@ export interface DayRow {
   homeLevel: number;
   bayLevel: number;
   landmarkStages: Record<LandmarkId, number>;
+  tripSends: number;
+  tripReturns: TripReturn[];
+  friendship: number;
+  tripFriendship: number;
 }
 export interface Career {
   profile: Profile;
@@ -501,12 +505,12 @@ function visit(
   if (p.meta.lastSeen < now) addVisitors(p, now);
   while (openVisitor(p)) {}
   p.meta.lastSeen = now;
-  tickBuilds(p.home, now);
-  const trip = finishExpedition(p, now);
+  const previousReturn = p.home.tripReturn;
+  tickHome(p, now);
   collectDust(p, now);
   const greenhouse = collectAll(p, now);
   const greenhouseBoosters = Object.values(greenhouse.boosters).reduce((sum, count) => sum + (count ?? 0), 0);
-  const tripBoosters = trip ? Object.values(trip.boosters).reduce((n, count) => n + (count ?? 0), 0) : 0;
+  const tripBoosters = 0;
   const boosterSources = { greenhouse: greenhouseBoosters, trip: tripBoosters, rewards: 0, momentum: 0 };
   let freeBoosters = greenhouseBoosters + tripBoosters;
   // The real Calendar cannot be visited before its entry point opens.
@@ -785,13 +789,17 @@ function visit(
   freeBoosters += lastRewards;
   boosterSources.rewards += lastRewards;
   const labBlocks = spendPolicy(p, type, day, now);
-  const hours = expeditionOptions(p.home).at(-1);
+  const hours = tripOptions(p.home, now).at(-1);
+  const planet = tripPlanets(p)[0];
+  let tripSends = 0;
   const lastVisit = type === 'Weekender' ? 0 : 2;
   // Regular/Payer remember one trip at the last visit, before the 16-hour gap.
-  if (hours && p.home.residents[0] && (!['Regular', 'Payer'].includes(type) || visitNo === lastVisit))
-    startExpedition(p, p.home.residents[0].species, hours, now);
+  if (hours && planet && (!['Regular', 'Payer'].includes(type) || visitNo === lastVisit))
+    tripSends = Number(startTrip(p, planet.n, hours, undefined, Math.max(now, p.home.lastTick ?? 0)) === 'ok');
   return {
     wins,
+    tripSends,
+    tripReturns: p.home.tripReturn && p.home.tripReturn !== previousReturn ? [structuredClone(p.home.tripReturn)] : [],
     labBlocks,
     replayEssenceWhileLeveling,
     firstEssenceWhileLeveling,
@@ -850,6 +858,9 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: S
       const budget = attemptsFor(type, day);
       const visits = budget ? (type === 'Weekender' ? 1 : 3) : 0;
       let wins = 0;
+      let tripSends = 0;
+      const tripReturns: TripReturn[] = [];
+      const friendshipBefore = friendshipTotal(p);
       let labBlocks: DayRow['labBlocks'] = {};
       const before = { ...ledgerSummary(START + (day - 1) * DAY).economy };
       vi.setSystemTime(START + (day - 1) * DAY);
@@ -875,6 +886,8 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: S
           opts,
         );
         wins += visitResult.wins;
+        tripSends += visitResult.tripSends;
+        tripReturns.push(...visitResult.tripReturns);
         replayEssenceWhileLeveling += visitResult.replayEssenceWhileLeveling;
         firstEssenceWhileLeveling += visitResult.firstEssenceWhileLeveling;
         replayDropsWhileLeveling += visitResult.replayDropsWhileLeveling;
@@ -934,6 +947,10 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: S
         visits,
         attempts: budget,
         wins,
+        tripSends,
+        tripReturns,
+        friendship: friendshipTotal(p) - friendshipBefore,
+        tripFriendship: tripReturns.reduce((sum, trip) => sum + (trip.yield?.fp ?? 0), 0),
         level: p.level,
         balance: balances(p),
         earned,
@@ -1064,4 +1081,10 @@ export function exchangeRates() {
     ],
     note: `${purchasableLooks} previewable looks; no current stardust-for-gems channel or dust alternative for gem-only sinks.`,
   };
+}
+
+function friendshipTotal(p: Profile): number {
+  const points = new Map(Object.entries(p.home.friends).map(([species, friend]) => [species, friend.fp]));
+  for (const friend of p.home.residents) points.set(friend.species, friend.fp);
+  return [...points.values()].reduce((sum, fp) => sum + fp, 0);
 }

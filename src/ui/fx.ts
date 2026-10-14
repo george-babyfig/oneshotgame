@@ -215,6 +215,17 @@ export function popup(scene: LevelScene, x: number, y: number, text: string, col
 }
 
 export function draw(scene: LevelScene) {
+  const framed = scene.el.classList.contains('round-frame');
+  if (framed) {
+    const hudEl = scene.el.querySelector('.hud');
+    const banners = scene.discoverEl.parentElement;
+    if (hudEl && banners) {
+      const rect = hudEl.getBoundingClientRect();
+      const bottom = (el: Element | null) => (el ? ((el.getBoundingClientRect().bottom - rect.top) * scene.h) / rect.height : 0);
+      banners.style.top = `${hud.bannerTopFor(0, Math.max(bottom(scene.goalsEl), bottom(scene.el.querySelector('.life'))) + 8, bottom(scene.forecastEl), bottom(scene.el.querySelector('.twist')))}px`;
+    }
+  }
+
   const g = scene.g;
   const { w, h: H } = scene;
   g.save();
@@ -361,13 +372,20 @@ export function draw(scene: LevelScene) {
   g.textBaseline = 'middle';
   const placed: { x: number; y: number; width: number; height: number }[] = [];
   const canvas = scene.canvas.getBoundingClientRect();
+  const sx = framed ? scene.w / canvas.width : 1;
+  const sy = framed ? scene.h / canvas.height : 1;
   const reserved = [
     ...document.querySelectorAll(
       '.level .hud-top, .level .life, .level .goals, .level .trouble-forecast, .level .twist, .level .hint, .level .banners .show, .level .coach.show, .level .coach.reading, .level .finish:not(.hidden), .level .hud-bottom, .life-fly',
     ),
   ]
     .map((el) => el.getBoundingClientRect())
-    .map((r) => ({ x: r.left - canvas.left, y: r.top - canvas.top, width: r.width, height: r.height }));
+    .map((r) => ({
+      x: (r.left - canvas.left) * sx,
+      y: (r.top - canvas.top) * sy,
+      width: r.width * sx,
+      height: r.height * sy,
+    }));
   if (scene.aimFrom && scene.pull().len >= 18 && scene.aimTagPosition && scene.predictCache)
     reserved.push({ ...scene.aimTagPosition, ...aimTagSize(scene.predictCache.facts, scene.w) });
   if (scene.novaOn && scene.nova.charge >= scene.nova.threshold && !scene.suppressNovaLabel && !scene.aimFrom)
@@ -1106,9 +1124,27 @@ export function moons(scene: LevelScene): { x: number; y: number; r: number }[] 
   return out;
 }
 
+/** Phones keep their exact geometry; larger windows never enter the physics model. */
+export function logicalViewport(width: number, height: number): { w: number; h: number } {
+  return { w: Math.min(width, 430), h: Math.min(height, 932) };
+}
+
 export function resize(scene: LevelScene) {
-  scene.w = scene.el.clientWidth;
-  scene.h = scene.el.clientHeight;
+  const host = scene.el.parentElement ?? scene.el;
+  const width = host.clientWidth;
+  const height = host.clientHeight;
+  const logical = logicalViewport(width, height);
+  scene.w = logical.w;
+  scene.h = logical.h;
+  const capped = width !== scene.w || height !== scene.h;
+  scene.el.classList.toggle('round-frame', capped);
+  if (capped) {
+    scene.el.style.setProperty('--round-width', `${scene.w}px`);
+    scene.el.style.setProperty('--round-height', `${scene.h}px`);
+    scene.el.style.setProperty('--round-scale', String(Math.min(width / scene.w, height / scene.h)));
+  } else {
+    for (const key of ['--round-width', '--round-height', '--round-scale']) scene.el.style.removeProperty(key);
+  }
   const dpr = canvasDpr();
   scene.canvas.width = Math.round(scene.w * dpr);
   scene.canvas.height = Math.round(scene.h * dpr);

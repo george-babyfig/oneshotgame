@@ -13,6 +13,9 @@ import { btn, fmt, h, toast } from '../dom';
 import { haptic } from '../haptics';
 import { sfx } from '../audio';
 import type { App } from '../app';
+import { tripSheet, tripVisible, tripLabel, tripBlockText } from './homeworld/sheets';
+import { tripStatus } from '../../meta/trips';
+import { M13_STRINGS as copy } from '../../meta/m13strings';
 
 const EFFECT: Record<Exclude<LauncherId, 'sling'>, readonly [() => string, () => string, () => string]> = {
   swoop: [() => t('Flies a little quicker'), () => t('Flies quicker again'), () => t('Flies almost as quickly as Star Sling')],
@@ -282,6 +285,17 @@ export function showLaunchBay(app: App, focusId?: LauncherId, focusKind: 'select
         'div',
         { class: 'scroll' },
         h('p', { class: 'bay-intro' }, t('Choose a launcher for your next adventure. Switching and practice are free.')),
+        tripVisible(app.p)
+          ? h(
+              'section',
+              { class: 'bay-trips', 'aria-label': copy.trips() },
+              h('h2', null, copy.trips()),
+              h('p', { class: 'muted' }, tripBlockText(tripStatus(app.p).block)),
+              btn(tripLabel(app.p), app.p.home.tripReturn ? 'gem wide' : 'ghost wide', () =>
+                tripSheet(app, { after: () => showLaunchBay(app) }),
+              ),
+            )
+          : null,
         h('div', { class: 'bay-grid' }, ...LAUNCH_ROSTER.map((id) => card(app, id))),
       ),
     ),

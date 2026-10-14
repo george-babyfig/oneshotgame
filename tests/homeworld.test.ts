@@ -151,7 +151,7 @@ describe('retirements and preservation', () => {
     expect(collectAll(p, T0 + 3 * H)).toEqual({ dust: 0, gems: 0, boosters: {} });
   });
 
-  it('keeps the existing Bay expedition and residents', () => {
+  it('delegates Bay trips to the frozen M13 payout and friendship engine', () => {
     const p = rich();
     p.seen = ['otter'];
     expand(p);
@@ -159,14 +159,18 @@ describe('retirements and preservation', () => {
     build(p, 1, 'launch_bay', T0);
     tickBuilds(p.home, T0 + H);
     expect(invite(p, 'otter')).toBe(true);
+    p.home.plots[1]!.lv = 2;
+    p.galaxy.push({ n: 21, name: 'Water', hue: 0, stars: 1, life: 10, species: [], colors: ['#3f91d5'] });
+    // Use a saved real ocean so the new trip contains a non-zero yield.
+    p.galaxy[0].sec = '1030-'.repeat(24);
     expect(startExpedition(p, 'otter', 1, T0 + H)).toBe(true);
     expect(finishExpedition(p, T0 + H + 30 * 60e3)).toBeNull();
     const fp = p.home.residents[0].fp;
-    expect(finishExpedition(p, T0 + 2 * H)?.dust).toBeGreaterThan(0);
+    expect(finishExpedition(p, T0 + 2 * H)?.dust).toBe(0);
     expect(p.home.lastTick).toBe(T0 + 2 * H);
     expect(startExpedition(p, 'otter', 1, T0 + H)).toBe(false);
     expect(finishExpedition(p, T0 + 2 * H)).toBeNull();
-    expect(p.home.residents[0].fp).toBe(fp);
+    expect(p.home.residents[0].fp).toBe(fp + 1);
   });
 });
 

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { friendlyTime, inQuietHours, planReminders, QUIET_FROM, QUIET_UNTIL } from '../src/meta/reminders';
 
@@ -39,5 +40,14 @@ describe('reminder planning', () => {
 
   it('skips a vault time already in the past', () => {
     expect(planReminders({ now: local(28, 12), vaultFullAt: local(28, 8) })).toEqual([{ id: 102, at: local(29, 18, 30), kind: 'daily' }]);
+  });
+});
+
+describe('M13 trips never notify', () => {
+  it('has no reminder or notification dependency in the trip engine', () => {
+    const engine = readFileSync('src/meta/trips.ts', 'utf8');
+    expect(engine).not.toMatch(/from\s+['"][^'"]*(?:reminder|notification)[^'"]*['"]/i);
+    expect(engine).not.toMatch(/LocalNotifications|scheduleReminder|planReminders/);
+    expect(planReminders({ now: local(28, 12), vaultFullAt: null }).every((notice) => ['daily', 'vault'].includes(notice.kind))).toBe(true);
   });
 });

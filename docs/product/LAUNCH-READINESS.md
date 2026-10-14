@@ -346,3 +346,7 @@ Nominal remaining work is about 14-15 team-weeks. At the observed pace (about 30
 16. **Submit** with manual release and phased release on.
 17. **Housekeeping:** make the repo private and switch the default branch to `main` (after the site moves), and merge PR #2.
 18. **After launch:** check Xcode Organizer every week, answer the support mailbox within the agreed time, and add the App Store link to the site.
+
+## M13 Package D — B4 / H3 follow-up (14 October 2026)
+
+The existing offline Grown-ups privacy text and published device-backup policy remain the launch copy. iCloud progress backup is implemented dormant: `PPCloudBackup = false`, no entitlement, section hidden, opt-in off and zero store calls before opt-in. B4/H3's iCloud additions for privacy, retention, reset/removal, shared Apple accounts and support are staged in six languages in [docs/ops/icloud-backup.md](../ops/icloud-backup.md), including the matching `docs/privacy.html` copy. Publish them with the owner-approved enabling build. Developer portal/signing capability, App Privacy re-check, counsel's decision-77 answer, native build/device QA and public publication remain owner/lead release checks; this work does not close those human launch gates.

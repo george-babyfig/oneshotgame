@@ -6,6 +6,10 @@ import { seasonOf } from '../src/meta/seasons';
 import {
   BROWSER_LOCALE,
   OPEN_MODAL,
+  GATE,
+  gateAnswer,
+  typeGate,
+  tripReady,
   dismissSheets,
   expectKidSafe,
   expectNoErrors,
@@ -122,6 +126,125 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
       await dismissSheets(page);
       expectNoErrors(guard);
     });
+
+    for (const reduceMotion of [false, true]) {
+      test(`M13 trip: send, win, return, postcard, gated share and Call home; Reduce Motion ${reduceMotion}`, async ({ page }, info) => {
+        await useJourneyViewport(page);
+        await installJourneyClock(page);
+        await page.emulateMedia({ reducedMotion: reduceMotion ? 'reduce' : 'no-preference' });
+        const guard = watchErrors(page);
+        await freshInstall(page);
+        await tripReady(page, { reduceMotion });
+        await page.getByRole('button', { name: tr(loc, 'Trip'), exact: true }).click();
+        const picker = page.locator(`${OPEN_MODAL}.trip-picker`).last();
+        await expect(picker).toBeVisible();
+        const offered = await picker.locator('.trip-planet-row').count();
+        expect(offered).toBeGreaterThanOrEqual(120);
+        await expect(picker.locator('.trip-planet-row').first()).toHaveAttribute('aria-label', /.+/);
+        await picker.getByRole('button', { name: tr(loc, 'All'), exact: true }).click();
+        await snap(page, info, guard, 'M13-trip-picker');
+        await expectKidSafe(page, loc);
+        await picker.locator('.trip-planet-row').first().click();
+        const preview = page.locator(`${OPEN_MODAL}.trip-preview`).last();
+        await expect(preview.locator('.trip-planet')).toHaveAttribute('aria-label', /.+/);
+        await expect(preview).toContainText(tr(loc, '{friend} feels at home here', { friend: tr(loc, 'Hopper Bunny') }));
+        await snap(page, info, guard, 'M13-trip-preview');
+        await expectKidSafe(page, loc);
+        await preview.getByRole('button', { name: tr(loc, 'Send'), exact: true }).click();
+        const sent = (await state(page)).home.expedition;
+        expect(sent.species).toBe('bunny');
+        await expect(page.locator('.hw-canvas')).toHaveAttribute('data-celebration', 'homeworld');
+        if (reduceMotion) await expect(page.locator('.hw-canvas')).toHaveClass(/celebrate-still/);
+        // A tap skips the wave without collecting or changing the trip promise.
+        await page.locator('.hw-canvas').dispatchEvent('celebration-skip');
+        await expect(page.locator('.hw-canvas')).toHaveClass(/celebrate-done/);
+        await page.evaluate(() => {
+          const a = (window as any).__app;
+          a.startLevel(45);
+          a.scene.finish(3);
+        });
+        await page.clock.runFor(2500);
+        const won = (await state(page)).home.expedition;
+        expect(won.ends).toBe(sent.ends - 600000);
+        await page.evaluate(() => (window as any).__app.selectTab('homeworld'));
+        await dismissSheets(page);
+        // Read the stored promise; advancing wall time rather than editing ends exercises settlement.
+        await page.clock.setFixedTime(new Date(won.ends));
+        await page.evaluate(() => (window as any).__app.showHomeworld());
+        await expect(page.locator('.hw-canvas')).toHaveAttribute('data-celebration', 'homeworld');
+        await page.clock.runFor(1700);
+        await dismissSheets(page);
+        const paid = await state(page);
+        expect(paid.home.expedition).toBeNull();
+        expect(paid.home.tripReturn.yield).toEqual(sent.yield);
+        expect(paid.home.seen.celebrations.filter((id: string) => id.startsWith('trip:'))).toHaveLength(1);
+        const collect = page
+          .locator('.hw-panel button')
+          .filter({ hasText: tr(loc, 'A friend is back from a trip') })
+          .last();
+        await collect.click();
+        const postcard = page.locator(`${OPEN_MODAL}.trip-return`).last();
+        await expect(postcard.locator('canvas')).toHaveAttribute('aria-label', /.+/);
+        await snap(page, info, guard, 'M13-trip-postcard');
+        const exported: string[] = [];
+        page.on('download', (download) => exported.push(download.suggestedFilename()));
+        await postcard.getByRole('button', { name: tr(loc, 'Share postcard'), exact: true }).click();
+        await expect(page.locator(GATE)).toBeVisible();
+        expect(exported).toEqual([]);
+        await page
+          .locator(GATE)
+          .getByRole('button', { name: tr(loc, 'Cancel'), exact: true })
+          .click();
+        await expect(page.locator(GATE)).toHaveCount(0);
+        expect(exported).toEqual([]);
+        // Force the browser download path after the same parental gate, on both engines.
+        await page.evaluate(() => Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => false }));
+        await postcard.getByRole('button', { name: tr(loc, 'Share postcard'), exact: true }).click();
+        await typeGate(page, await gateAnswer(page));
+        const confirm = page.locator(GATE).locator('.gate-v2-confirm');
+        await confirm.scrollIntoViewIfNeeded();
+        const box = (await confirm.boundingBox())!;
+        const downloaded = page.waitForEvent('download');
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await page.mouse.down();
+        await page.clock.runFor(1700);
+        await page.mouse.up();
+        expect((await downloaded).suggestedFilename()).toMatch(/^comet-garden.*\.png$/);
+        await expect(page.locator(GATE)).toHaveCount(0);
+        await postcard.getByRole('button', { name: tr(loc, 'Back'), exact: true }).click();
+        expect((await state(page)).home.tripReturn).toBeNull();
+        // The campaign win lets another trip go. Calling it home returns the friend with no payout.
+        await page.getByRole('button', { name: tr(loc, 'Trip'), exact: true }).click();
+        await page.locator(`${OPEN_MODAL}.trip-picker`).last().locator('.trip-planet-row').first().click();
+        await page
+          .locator(`${OPEN_MODAL}.trip-preview`)
+          .last()
+          .getByRole('button', { name: tr(loc, 'Send'), exact: true })
+          .click();
+        await page.locator('.hw-canvas').dispatchEvent('celebration-skip');
+        const beforeCall = await state(page);
+        await page
+          .locator('.hw-panel button')
+          .filter({ hasText: tr(loc, 'Trip') })
+          .last()
+          .click();
+        const flight = page.locator(`${OPEN_MODAL}.trip-flight`).last();
+        await expect(flight).toContainText(tr(loc, 'Each win brings your friend home 10 minutes sooner'));
+        await flight.getByRole('button', { name: tr(loc, 'Call {friend} home', { friend: tr(loc, 'Hopper Bunny') }), exact: true }).click();
+        const called = await state(page);
+        expect(called.home.expedition).toBeNull();
+        expect(called.home.tripFuel).toBe(true);
+        expect({ mats: called.mats, gems: called.gems, friends: called.home.residents }).toEqual({
+          mats: beforeCall.mats,
+          gems: beforeCall.gems,
+          friends: beforeCall.home.residents,
+        });
+        await page.clock.runFor(1700);
+        await snap(page, info, guard, 'M13-trip-call-home');
+        await expectKidSafe(page, loc);
+        expectNoErrors(guard);
+      });
+    }
 
     test('noun window keeps Lands taps consistent and hides an empty Homeworld looks tab', async ({ page }, info) => {
       test.skip(info.project.name !== 'chromium-320x568', 'J5 locale matrix runs at 320×568');
@@ -534,31 +657,42 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
 for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
   test.describe(`FC Homeworld readiness [${loc}]`, () => {
     test.use({ locale: BROWSER_LOCALE[loc] });
-    test(`FC ${loc}: returned Expedition collects through Next Up or Collect all and clears its tab badge`, async ({ page }) => {
+    test(`FC ${loc}: a returned trip pays on arrival, Next Up names it and its postcard clears the tab badge (M13)`, async ({ page }) => {
       await freshInstall(page);
-      await midGame(page, { level: 45 });
+      await tripReady(page, { reduceMotion: true, planets: 1 });
+      const before = await state(page);
       await page.evaluate(() => {
         const a = (window as any).__app;
-        a.p.home.intro = true;
-        a.p.home.firstHour = 2;
-        a.p.home.seen.celebrations = [];
-        a.p.home.plots = Array.from({ length: 6 }, () => null);
-        a.p.home.expedition = { species: 'bunny', hours: 2, ends: Date.now() - 1, planet: -1 };
-        a.selectTab('homeworld');
-      });
-      await expect(page.locator('.hw-next-up')).toContainText(tr(loc, 'Collect your Expedition gifts'));
-      await expect(page.locator('[data-tab="homeworld"] .nb')).toHaveText('1');
-      await page.getByRole('button', { name: tr(loc, 'Collect all'), exact: true }).click();
-      expect((await state(page)).home.expedition).toBeNull();
-      await expect(page.locator('[data-tab="homeworld"] .nb')).toHaveCount(0);
-      await page.evaluate(() => {
-        const a = (window as any).__app;
-        a.p.home.expedition = { species: 'bunny', hours: 2, ends: Date.now() - 1, planet: -1 };
+        const now = Date.now();
+        a.p.home.expedition = {
+          species: 'bunny',
+          hours: 1,
+          ends: now - 1,
+          planet: -1,
+          n: 1,
+          sentAt: now - 3_600_001,
+          match: false,
+          yield: { mats: { frost: 1 }, gems: 1, fp: 1 },
+        };
+        a.p.home.tripFuel = false;
         a.showHomeworld();
       });
-      await page.locator('.hw-next-up').click();
-      await expect(page.locator(OPEN_MODAL)).toContainText(tr(loc, '{name} is back!', { name: tr(loc, 'Hopper Bunny') }));
+      await dismissSheets(page);
+      const paid = await state(page);
+      expect(paid.home.expedition).toBeNull();
+      expect(paid.gems).toBe(before.gems + 1);
+      await expect(page.locator('.hw-next-up')).toContainText(tr(loc, 'A friend is back from a trip'));
+      await expect(page.locator('[data-tab="homeworld"] .nb')).toHaveText('1');
+      await page
+        .locator('.hw-panel button')
+        .filter({ hasText: tr(loc, 'A friend is back from a trip') })
+        .last()
+        .click();
+      const postcard = page.locator(`${OPEN_MODAL}.trip-return`).last();
+      await expect(postcard).toBeVisible();
+      await postcard.getByRole('button', { name: tr(loc, 'Back'), exact: true }).click();
       await expect(page.locator('[data-tab="homeworld"] .nb')).toHaveCount(0);
+      expect((await state(page)).gems).toBe(paid.gems);
     });
 
     test(`FC ${loc}: early Atlas gate agrees with Collection and queued milestones merge`, async ({ page }) => {

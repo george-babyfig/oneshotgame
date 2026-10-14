@@ -4,6 +4,7 @@ import { practiceHelp, pendingIntroAfterWin } from '../src/meta/coach';
 import { continueAllowed } from '../src/meta/continues';
 import { choosePopup } from '../src/meta/governor';
 import { defaultProfile } from '../src/meta/profile';
+import { backupPointerEligible } from '../src/meta/backup';
 import { unlocked } from '../src/meta/unlocks';
 import { POLICIES, runPlanet } from './sim/harness';
 
@@ -28,4 +29,17 @@ describe('first session gates', () => {
     expect(p.chapters).toEqual([]);
     expect(choosePopup({ homeSeen: false, shownThisOpen: false, awayMs: Infinity }, ['away', 'intro'])).toBeNull();
   });
+});
+
+it('A12 only offers the backup pointer after session 1 on a fresh progress line', () => {
+  const p = defaultProfile();
+  p.meta.sessions = 1;
+  expect(backupPointerEligible(p)).toBe(false);
+  p.meta.sessions = 2;
+  expect(backupPointerEligible(p)).toBe(true);
+  p.stars[4] = 1;
+  expect(backupPointerEligible(p)).toBe(false);
+  delete p.stars[4];
+  p.processedTx.push('paid');
+  expect(backupPointerEligible(p)).toBe(false);
 });

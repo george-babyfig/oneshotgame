@@ -3,6 +3,8 @@
 import { expect, type Page, type TestInfo } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { newPlanet } from '../src/core/world';
+import { encodeSectors } from '../src/meta/galaxyCodec';
 import { earlierRoundIntroIds } from '../src/meta/coach';
 
 // ------------------------------------------------------------------ locales
@@ -581,6 +583,55 @@ export async function launcherBayReady(page: Page) {
     a.showHomeworld();
   });
   await waitScreen(page, 'homeworld');
+}
+
+/** A real saved-sector galaxy and two residents for M13's trip journey. */
+export async function tripReady(page: Page, opts: { reduceMotion?: boolean; planets?: number } = {}) {
+  await midGame(page, { level: 45 });
+  // Encode the planet in Node: WebKit refuses in-page module imports once the page clock is installed.
+  const planet = newPlanet();
+  planet.sectors.forEach((sector, i) => {
+    sector.biome = i < 6 ? 'icesheet' : 'meadow';
+    sector.life = i < 6 ? 0 : 2;
+  });
+  const sec = encodeSectors(planet);
+  await page.evaluate(
+    async ({ reduceMotion, planets, sec }) => {
+      const a = (window as any).__app;
+      a.p.galaxy = Array.from({ length: planets }, (_, i) => ({
+        n: i + 1,
+        name: 'Sprout',
+        hue: 0,
+        stars: 3,
+        species: [],
+        colors: [],
+        life: 36,
+        sec,
+      }));
+      a.p.home.level = 3;
+      a.p.home.plots = Array(10).fill(null);
+      a.p.home.gaps = Array(10).fill(null);
+      a.p.home.plots[0] = { type: 'launch_bay', lv: 4, since: Date.now() };
+      a.p.home.plots[1] = { type: 'den', lv: 3, since: Date.now() };
+      a.p.home.residents = [
+        { species: 'bunny', fp: 0, rewarded: 1 },
+        { species: 'otter', fp: 2, rewarded: 1 },
+      ];
+      a.p.buddy.species = null;
+      a.p.home.firstHour = 2;
+      a.p.home.intro = true;
+      a.p.home.tripFuel = true;
+      a.p.home.tripReturn = null;
+      a.p.home.expedition = null;
+      a.p.home.seen.celebrations = [];
+      a.p.settings.reduceMotion = reduceMotion;
+      a.save();
+      a.selectTab('homeworld');
+    },
+    { reduceMotion: !!opts.reduceMotion, planets: opts.planets ?? 121, sec },
+  );
+  await waitScreen(page, 'homeworld');
+  await settle(page);
 }
 
 export const screenName = (page: Page) => page.evaluate(() => (window as any).__app.screen as string);

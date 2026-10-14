@@ -5879,3 +5879,143 @@ button.lb {
   align-items: stretch;
   gap: 6px;
 }
+
+/* Trips keep the planet list bounded even when the galaxy has 121 entries. */
+.bay-trips {
+  border: 2px solid #9f8dd6;
+  border-radius: 18px;
+  padding: 12px;
+  margin: 0 0 16px;
+}
+.bay-trips h2 {
+  margin: 0 0 8px;
+}
+.trip-sheet {
+  width: min(100%, 420px);
+  overflow-wrap: anywhere;
+}
+.trip-sheet .btn {
+  min-height: 44px;
+  white-space: normal;
+  line-height: 1.25;
+}
+.trip-sheet p {
+  margin: 8px 0;
+}
+.trip-picker {
+  height: min(600px, 88dvh);
+  gap: 6px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.trip-picker .m-title,
+.trip-picker .trip-intro,
+.trip-picker .trip-hours,
+.trip-picker .trip-filters,
+.trip-picker > small,
+.trip-back {
+  flex: none;
+}
+.trip-hours,
+.trip-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.trip-hours .btn {
+  flex: 1 1 70px;
+  padding: 6px;
+  font-size: max(12px, calc(13px * var(--text-scale)));
+}
+.trip-filters .btn {
+  flex: 1 1 72px;
+  min-width: 44px;
+  padding: 5px;
+  font-size: max(12px, calc(12px * var(--text-scale)));
+}
+.trip-filters [aria-pressed='true'],
+.trip-hours [aria-pressed='true'] {
+  background: #5b438e;
+  box-shadow: inset 0 0 0 2px #ffe8a4;
+}
+.trip-planets {
+  flex: 1 1 auto;
+  min-height: 44px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.trip-planet-row {
+  text-align: left;
+  margin: 0 0 5px;
+}
+.trip-planet-row .stack {
+  align-items: flex-start;
+}
+.trip-back {
+  position: sticky;
+  bottom: 0;
+  margin-top: 6px;
+}
+.trip-preview-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.trip-planet {
+  width: 144px;
+  height: 144px;
+  max-width: 60%;
+  object-fit: contain;
+}
+.trip-rewards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 8px 0;
+}
+.trip-match {
+  color: #9bffc4;
+}
+.trip-actions {
+  display: grid;
+  gap: 5px;
+}
+.trip-friend-choice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.trip-postcard {
+  display: block;
+  width: min(100%, 230px);
+  height: auto;
+  margin: 8px auto;
+  border-radius: 12px;
+}
+.hw-wish-list:empty {
+  display: none;
+}
+.hw-wish-list {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  flex: none;
+  padding: 0 8px;
+}
+.hw-wish-list .btn {
+  min-height: 44px;
+  min-width: 44px;
+  white-space: normal;
+  flex: 1 0 140px;
+  font-size: 12px;
+}
+
+.trip-preview > *,
+.trip-return > *,
+.trip-flight > * {
+  flex-shrink: 0;
+}

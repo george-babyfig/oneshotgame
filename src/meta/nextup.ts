@@ -10,7 +10,7 @@ import { habitatProgress, habitatsReady, HABITATS } from './habitats';
 import { firstHourStep } from './firsthour';
 import { LAB_TEXT } from './labcopy';
 import { HOME_LEVEL_REQUIREMENTS } from './tuning';
-import { canExpand, chaptersDone, expeditionBack, anyReady } from './homeworld';
+import { canExpand, chaptersDone, anyReady } from './homeworld';
 import type { HomeworldLevel } from './homeworldTypes';
 import { activeLandmark, landmarkFinishStatus } from './landmarks';
 import { canLevelLab, labLevel } from './labs';
@@ -18,6 +18,9 @@ import { LAB_NAME } from './labcopy';
 import { KINDS, SPECIES_BY_ID, type Kind } from '../core/world';
 import { LAUNCHER_ESSENCE, TUNE_COST, launcherBay } from './launchbay';
 import { bayLevel } from './homeworld';
+import { M13_STRINGS } from './m13strings';
+import type { Mat } from './constellations';
+import { LAB_ESSENCE, labCost, labPlot } from './labs';
 
 import { inboxOpen, habitatSetsVisible } from './reveals';
 
@@ -85,9 +88,9 @@ const TARGETS: Record<string, NextUp['action']> = {
 
 /** One gentle suggestion, with actions understood by the Play tab. */
 export function nextUp(p: Profile, _now: number): NextUp {
+  if (p.level >= 21 && p.home.tripReturn) return expeditionNextUp(p);
   if (chestsReady(p).length)
     return { kind: 'claim', title: t('A chapter chest is ready'), subtitle: t('Open your chapter chest'), action: 'starmap' };
-  if (unlocked(p, 'homeworld') && expeditionBack(p.home, _now)) return expeditionNextUp(p);
   const intro = UNLOCKS.find(
     (x) =>
       x.planet === p.level - 1 &&
@@ -154,8 +157,8 @@ export function nextUp(p: Profile, _now: number): NextUp {
 function expeditionNextUp(p: Profile): NextUp {
   return {
     kind: 'claim',
-    title: t('{name} is back!', { name: t(SPECIES_BY_ID[p.home.expedition!.species].name) }),
-    subtitle: t('Collect your Expedition gifts'),
+    title: M13_STRINGS.friendBack(),
+    subtitle: t('Visit your Homeworld'),
     action: 'homeworld',
     homeTarget: 'expedition',
   };
@@ -163,7 +166,7 @@ function expeditionNextUp(p: Profile): NextUp {
 
 /** One specific, actionable suggestion in the Homeworld overview. */
 export function homeworldNextUp(p: Profile, now = Date.now()): NextUp {
-  if (expeditionBack(p.home, now)) return expeditionNextUp(p);
+  if (p.level >= 21 && p.home.tripReturn) return expeditionNextUp(p);
   if (p.home.seen.celebrations.length)
     return {
       kind: 'claim',
@@ -197,7 +200,10 @@ export function homeworldNextUp(p: Profile, now = Date.now()): NextUp {
       action: 'homeworld',
       homeTarget: 'level',
     };
-  const lab = (Object.keys(KINDS) as Kind[]).find((kind) => canLevelLab(p, kind) === 'ok');
+  const needed = nextEssenceNeeded(p);
+  const lab = (Object.keys(KINDS) as Kind[])
+    .sort((a, b) => Number(LAB_ESSENCE[b] === needed) - Number(LAB_ESSENCE[a] === needed))
+    .find((kind) => canLevelLab(p, kind) === 'ok');
   if (lab)
     return {
       kind: 'goal',
@@ -279,4 +285,27 @@ export function homeworldNextUp(p: Profile, now = Date.now()): NextUp {
     action: 'play',
     homeTarget: 'planet',
   };
+}
+
+/** The closest unfinished Essence checklist, shared by trip sorting and Next Up. */
+export function nextEssenceNeeded(p: Profile): Mat | undefined {
+  const checklists: Partial<Record<Mat, number>>[] = [];
+  if (p.home.level < HOMEWORLD_MAX_LEVEL) checklists.push(HOME_LEVEL_REQUIREMENTS[(p.home.level + 1) as HomeworldLevel].essence);
+  for (const kind of Object.keys(KINDS) as Kind[]) {
+    const level = labLevel(p, kind);
+    if (labPlot(p, kind) >= 0 && level < 5) checklists.push({ [LAB_ESSENCE[kind]]: labCost(kind, (level + 1) as 2 | 3 | 4 | 5).amount });
+  }
+  const site = activeLandmark(p);
+  if (site) checklists.push(site.delivery);
+  const pending = checklists
+    .map((need) => {
+      const gaps = (Object.entries(need) as [Mat, number][]).map(([mat, amount]) => ({
+        mat,
+        gap: Math.max(0, amount - (p.mats[mat] ?? 0)),
+      }));
+      return { gaps, missing: gaps.reduce((sum, row) => sum + row.gap, 0) };
+    })
+    .filter((item) => item.missing > 0)
+    .sort((a, b) => a.missing - b.missing);
+  return pending[0]?.gaps.sort((a, b) => b.gap - a.gap)[0]?.mat;
 }

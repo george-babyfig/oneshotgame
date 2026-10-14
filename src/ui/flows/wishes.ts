@@ -2,13 +2,14 @@ import { drawCreature } from '../art/critters';
 import { h, btn, modal } from '../dom';
 import type { App } from '../app';
 import { today } from '../../meta/profile';
-import { claimWish, ensureWishes, swapWish, wishText, wishRoadPoints, type WishCard } from '../../meta/wishes';
+import { claimWish, ensureWishes, swapWish, wishText, wishRoadPoints, wishOrigin, type WishCard } from '../../meta/wishes';
 import { WISH_REWARD } from '../../meta/tuning';
 import { COSMETIC_BY_ID } from '../../meta/cosmetics';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
 import { unlocked } from '../../meta/unlocks';
 import { t } from '../../i18n';
+import { M13_STRINGS } from '../../meta/m13strings';
 
 function portrait(card: WishCard): HTMLCanvasElement {
   const canvas = h('canvas', { width: 64, height: 64, 'aria-label': wishText(card) });
@@ -38,6 +39,7 @@ export function wishesPanel(app: App): HTMLElement {
           h(
             'div',
             { class: 'q-body' },
+            wishOrigin(card) === 'friend' ? h('small', { class: 'wish-origin' }, M13_STRINGS.yourFriend()) : null,
             h('b', null, wishText(card)),
             h(
               'div',

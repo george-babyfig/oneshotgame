@@ -10,6 +10,7 @@ const mean = (rows: PlayResult[], value: (row: PlayResult) => number) => rows.re
 if (process.env.SIM === '1') {
   it('measures reaction and Combo bands', () => {
     const runs = Number(process.env.RUNS ?? 8);
+    if (!Number.isInteger(runs) || runs < 8) throw new Error('A4 frost gate requires RUNS ≥8');
     const rows = {
       aware: [] as PlayResult[],
       blind: [] as PlayResult[],
@@ -140,6 +141,7 @@ if (process.env.SIM === '1') {
     const gate = (name: string, value: number, min: number, max: number) => {
       if (value < min || value > max) failures.push(`${name}: ${value.toFixed(3)} outside ${min.toFixed(3)}–${max.toFixed(3)}`);
     };
+    gate('A4 frostPerTen (aware, planets ≥25)', bands.frostPerTen, 17.8, 21.8);
     gate('aware 3★ lead (points)', bands.threeStarGapPoints, 10, Infinity);
     // M8's chapter gate owns the 3★ rate after Troubles and the new fractions.
     gate('best-sector difference', bands.bestSectorDiff, 0.1, Infinity);

@@ -10,6 +10,7 @@ import { join, relative, sep } from 'node:path';
 import { BIOMES, KINDS, SPECIES } from '../src/core/world';
 import { TWISTS } from '../src/core/levels';
 import { BOOSTERS } from '../src/meta/config';
+import { WISH_TEMPLATES } from '../src/meta/wishes';
 
 // ---- Milestones ----
 
@@ -546,6 +547,15 @@ export const GLOSSARY: Noun[] = [
   ...KEPT_ROUND,
   ...dataNouns(),
   ...KEPT_META,
+  {
+    en: 'Trip',
+    aliases: ['Trips'],
+    area: 'meta',
+    since: 'M13',
+    strict: true,
+    tr: { es: ['Paseo'], fr: ['Balade'], de: ['Ausflug', 'Ausflüg'], pt: ['Passeio'], ja: ja('おでかけ') },
+    note: 'Decision 71: a new noun from planet 21; not a budget swap for Expedition.',
+  },
   ...NEW.map(([en, area, since]): Noun => ({ en, area, since })),
 ];
 
@@ -571,6 +581,13 @@ const trs = (m: Partial<Record<Lang, string>>): Partial<Record<Lang, RegExp>> =>
   Object.fromEntries(Object.entries(m).map(([l, s]) => [l, l === 'ja' ? new RegExp(escapeRe(s!), 'u') : w(s!)]));
 
 export const RETIRED: Retired[] = [
+  {
+    word: 'Expedition',
+    match: /\bexpeditions?\b/iu,
+    retiredIn: 'M13',
+    note: 'Save keys and ledger sources remain internal. Lead removes stale locale keys after A/C replace active calls.',
+  },
+  { word: 'Take a trip home', retiredIn: 'M13' },
   // M8 carries this M8.1 rendering rename because the milestone list has no M8.1 entry.
   {
     word: 'landing card',
@@ -829,12 +846,15 @@ function sourceStrings(): { where: string; s: string }[] {
 
 /** Data tables pass their descriptions through t(variable), so literal-call scanning misses them. */
 function dataTableStrings(): { where: string; s: string }[] {
-  return walk('src/meta', '.ts').flatMap((file) =>
-    [...readFileSync(file, 'utf8').matchAll(/\b(?:desc|name|title|body):\s*'((?:[^'\\]|\\.)*)'/g)].map((m) => ({
-      where: rel(file),
-      s: m[1],
-    })),
-  );
+  return [
+    ...WISH_TEMPLATES.map((x) => ({ where: 'src/meta/wishes.ts', s: x.text })),
+    ...walk('src/meta', '.ts').flatMap((file) =>
+      [...readFileSync(file, 'utf8').matchAll(/\b(?:desc|name|title|body):\s*'((?:[^'\\]|\\.)*)'/g)].map((m) => ({
+        where: rel(file),
+        s: m[1],
+      })),
+    ),
+  ];
 }
 
 /** Every English player-facing string: the key list, every locale's keys, and t()/tp() literals. */
@@ -926,7 +946,7 @@ describe('glossary: the table', () => {
   it('every noun that is in the game today has a translation in each language', () => {
     const missing: string[] = [];
     for (const n of GLOSSARY) {
-      if (n.since !== 'today' || n.unnamed) continue;
+      if ((n.since !== 'today' && n.since !== 'M13') || n.unnamed) continue;
       const tr = resolveTr(n);
       for (const l of LANGS) if (!tr[l]?.length) missing.push(`${n.en}: no ${l} translation`);
     }
@@ -1029,7 +1049,7 @@ describe('glossary: each noun is translated the same way everywhere', () => {
     return out;
   };
 
-  const today = GLOSSARY.filter((n) => n.since === 'today' || built(n.since as Milestone));
+  const today = GLOSSARY.filter((n) => n.since === 'today' || n.since === 'M13' || built(n.since as Milestone));
 
   it('strict nouns are consistent in all five translations', () => {
     const bad = today.filter((n) => n.strict).flatMap(mismatches);
@@ -1049,8 +1069,8 @@ describe('glossary: each noun is translated the same way everywhere', () => {
 });
 
 describe('glossary: retired words', () => {
-  it('M11 retired wording has no active calls or data-table strings', () => {
-    const bad = RETIRED.filter((r) => r.retiredIn === 'M11').flatMap((r) =>
+  it('M11 and M13 retired wording has no active calls or data-table strings', () => {
+    const bad = RETIRED.filter((r) => ['M11', 'M13'].includes(r.retiredIn)).flatMap((r) =>
       [...sourceStrings(), ...dataTableStrings()]
         .filter(({ s }) => hitsBanned(r, s))
         .map(({ where, s }) => `${r.word} → ${where}: ${JSON.stringify(s)}`),

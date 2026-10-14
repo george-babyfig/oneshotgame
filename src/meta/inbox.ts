@@ -85,7 +85,7 @@ const RULES: Rule[] = [
     letter: () => ({
       from: MC,
       title: 'Welcome, Keeper!',
-      body: 'Your job is simple: fling, grow, and bring planets to life. We packed a little something for the trip.',
+      body: 'Your job is simple: fling, grow, and bring planets to life. We packed a little something for your adventure.',
       gift: INBOX_GIFTS.welcome,
     }),
   },

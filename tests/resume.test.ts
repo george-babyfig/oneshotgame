@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { NO_MODIFIERS } from '../src/core/modifiers';
 import { makeLevel } from '../src/core/levels';
@@ -279,4 +280,13 @@ describe('interrupted campaign rounds', () => {
     p.savedRound = JSON.stringify(saved);
     expect(readInterruptedRound(p)).toBeNull();
   });
+});
+
+it('M13 settles trips on init and native resume before reading the absence and away recap', () => {
+  const app = readFileSync('src/ui/app.ts', 'utf8');
+  const init = app.slice(app.indexOf('async init()'), app.indexOf('connectBackup()'));
+  const resume = init.slice(init.indexOf("CapApp.addListener('resume'"));
+  expect(init.indexOf('tickHome(this.p)')).toBeLessThan(init.indexOf('this.lastAbsenceMs ='));
+  expect(resume.indexOf('tickHome(this.p)')).toBeLessThan(resume.indexOf('this.lastAbsenceMs ='));
+  expect(resume.indexOf('tickHome(this.p)')).toBeLessThan(resume.indexOf('this.showHome()'));
 });

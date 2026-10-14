@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import { WISH_TEMPLATES } from '../src/meta/wishes';
 
 // ---- Banned terms (extend here) ----
 
@@ -111,7 +112,7 @@ function sourceStrings(): { file: string; s: string }[] {
     for (const m of src.matchAll(tCall)) out.push({ file, s: m[1] ?? m[2] ?? m[3] });
     for (const m of src.matchAll(tpCall)) out.push({ file, s: m[1] ?? m[2] ?? m[3] }, { file, s: m[4] ?? m[5] ?? m[6] });
   }
-  return out;
+  return [...out, ...WISH_TEMPLATES.map((x) => ({ file: 'src/meta/wishes.ts', s: x.text }))];
 }
 
 // ---- Rules ----
@@ -153,6 +154,13 @@ describe('terms: no hit names in player-facing strings', () => {
       return h.length ? [`${file}: ${JSON.stringify(s)} → ${h.join(', ')}`] : [];
     });
     expect(bad, bad.join('\n')).toEqual([]);
+  });
+});
+
+describe('terms: M13 trip naming', () => {
+  it('retires Expedition from active player copy while internal identifiers stay valid', () => {
+    const bad = sourceStrings().filter(({ s }) => /\bexpeditions?\b/iu.test(s));
+    expect(bad).toEqual([]);
   });
 });
 

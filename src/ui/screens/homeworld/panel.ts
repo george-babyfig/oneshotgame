@@ -1,4 +1,4 @@
-import { expeditionButton, launchBayBuildable, paintButton, photoButton, dronesNamed, landsSection } from '../../../meta/reveals';
+import { launchBayBuildable, paintButton, photoButton, dronesNamed, landsSection } from '../../../meta/reveals';
 import { HOMEWORLD_MAX_LEVEL } from '../../../meta/tuning';
 import { h, btn, fmt, toast } from '../../dom';
 import { confirmGemUse } from './gemConfirm';
@@ -19,8 +19,6 @@ import {
   denCapacity,
   drones,
   effLevel,
-  expeditionBack,
-  expeditionOptions,
   isFull,
   ready,
   tickHome,
@@ -49,7 +47,9 @@ import { unlocked } from '../../../meta/unlocks';
 import {
   firstHourSheet,
   residentsSheet,
-  expeditionSheet,
+  tripSheet,
+  tripLabel,
+  tripVisible,
   levelSheet,
   levelChecklist,
   paintSheet,
@@ -64,6 +64,8 @@ import {
   isleDecorationName,
 } from './sheets';
 import type { App } from '../../app';
+import { tripOptions } from '../../../meta/trips';
+import { M13_STRINGS as copy } from '../../../meta/m13strings';
 import type { HomeworldLevel } from '../../../meta/homeworldTypes';
 
 export function fmtTime(ms: number) {
@@ -143,12 +145,15 @@ export function createPanel(ctx: HomeworldPanelContext) {
       home.level,
       home.residents.length,
       !!home.expedition,
-      expeditionBack(home, now),
+      home.tripReturn,
+      home.tripFuel,
       home.plots.map((b, i) => (b ? [b.type, b.lv, !!b.done && b.done > now, ready(home, i, now)] : 0)),
     ]);
   };
   const tickPanel = () => {
+    const previousReturn = home.tripReturn;
     tickHome(p);
+    if (home.tripReturn !== previousReturn) app.save();
     if (signature() !== lastSig) {
       renderPanel();
       schedule();
@@ -162,7 +167,9 @@ export function createPanel(ctx: HomeworldPanelContext) {
   function renderPanel() {
     schedule();
     const now = Date.now();
+    const previousReturn = home.tripReturn;
     tickHome(p, now);
+    if (home.tripReturn !== previousReturn) app.save();
     live = [];
     lastSig = signature();
     // keep the top bar's stardust/gems in step with what the panel just did
@@ -173,7 +180,11 @@ export function createPanel(ctx: HomeworldPanelContext) {
     if (tab) {
       tab.querySelector('.nb')?.remove();
       const count = homeBadge(p, now);
-      if (count) tab.append(h('span', { class: 'nb' }, String(count)));
+      if (count)
+        tab.append(
+          h('span', { class: 'nb', 'aria-label': tripVisible(p, now) && home.tripReturn ? copy.friendBack() : undefined }, String(count)),
+        );
+      tab.setAttribute('aria-description', tripVisible(p, now) && home.tripReturn ? copy.friendBack() : '');
     }
     levelBadge.textContent = t('Level {n}', { n: home.level });
     levelBadge.setAttribute(
@@ -292,7 +303,7 @@ export function createPanel(ctx: HomeworldPanelContext) {
         h('span', { class: 'stack' }, h('b', null, next.title), h('small', null, next.subtitle)),
         'ghost wide hw-next-up',
         () => {
-          if (next.homeTarget === 'expedition') expeditionSheet(app, renderPanel);
+          if (next.homeTarget === 'expedition' && tripVisible(p)) tripSheet(app, { after: renderPanel });
           else if (firstHourStep(p) !== 'done') firstHourSheet(app, renderPanel);
           else if (next.homeTarget === 'landmark') {
             const site = activeLandmark(p);
@@ -377,10 +388,10 @@ export function createPanel(ctx: HomeworldPanelContext) {
         h(
           'div',
           { class: 'row' },
-          expeditionButton(p, now)
+          tripVisible(p, now)
             ? liveText(
-                btn(expeditionLabel(), expeditionBack(home, now) ? 'gem' : 'ghost', () => expeditionSheet(app, renderPanel)),
-                expeditionLabel,
+                btn(tripLabel(p), !!home.tripReturn ? 'gem' : 'ghost', () => tripSheet(app, { after: renderPanel })),
+                () => tripLabel(p),
               )
             : null,
           btn(home.level >= HOMEWORLD_MAX_LEVEL ? t('Fully grown') : t('Next Level'), 'ghost', () => levelSheet(app, ctx.reopen)),
@@ -576,16 +587,18 @@ export function createPanel(ctx: HomeworldPanelContext) {
           ),
         );
       } else if (b.type === 'den') kids.push(h('div', { class: 'hw-prod' }, t('Room for {n} friends', { n: b.lv + 1 })));
-      else if (b.type === 'launch_bay')
+      else if (b.type === 'launch_bay' && tripVisible(p, now))
         kids.push(
           h(
             'div',
             { class: 'hw-prod' },
-            t('Expeditions: {list}', {
-              list: expeditionOptions(home)
-                .map((x) => t('{h}h', { h: x }))
-                .join(' · '),
-            }),
+            copy.trips(),
+            ' · ',
+            tripOptions(home, now).length
+              ? tripOptions(home, now)
+                  .map((x) => copy.tripHours(x))
+                  .join(' · ')
+              : copy.bayUnlock(),
           ),
         );
 
@@ -620,11 +633,11 @@ export function createPanel(ctx: HomeworldPanelContext) {
       if (b.type === 'den') row.push(btn(t('Friends'), 'ghost', () => residentsSheet(app, renderPanel)));
       if (b.type === 'launch_bay') {
         row.push(btn(t('Launch Bay'), 'primary', () => showLaunchBay(app)));
-        if (!building)
+        if (tripVisible(p, now))
           row.push(
             liveText(
-              btn(expeditionLabel(), 'ghost', () => expeditionSheet(app, renderPanel)),
-              expeditionLabel,
+              btn(tripLabel(p), 'ghost', () => tripSheet(app, { after: renderPanel })),
+              () => tripLabel(p),
             ),
           );
       }
@@ -648,13 +661,6 @@ export function createPanel(ctx: HomeworldPanelContext) {
       renderPanel();
     }
     return res;
-  }
-
-  function expeditionLabel() {
-    const e = home.expedition;
-    if (!e) return t('Expedition');
-    if (expeditionBack(home)) return t('🎒 Back home!');
-    return t('Back at {time}', { time: whenText(e.ends, Date.now(), getLang()) });
   }
 
   return { renderPanel, tickPanel };

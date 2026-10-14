@@ -72,3 +72,13 @@ describe('Grown-ups boundary', () => {
     expect(purchaseHistory()).toHaveLength(1);
   });
 });
+
+it('A12 hides unavailable backup, gates reset and starts a new progress line before clearing', () => {
+  const grownups = readFileSync('src/ui/screens/grownups.ts', 'utf8');
+  expect(grownups).toContain('if (!status.enabled || !status.account)');
+  expect(grownups).toContain("role: 'switch'");
+  const settings = readFileSync('src/ui/flows/settings.ts', 'utf8');
+  const reset = settings.slice(settings.indexOf("btn(t('Reset progress')"), settings.indexOf('// An explicit way out'));
+  expect(reset.indexOf("parentalGate('grownups')")).toBeLessThan(reset.indexOf('confirmBox('));
+  expect(reset.indexOf('newBackupLine()')).toBeLessThan(reset.indexOf('resetProfileKeepingPurchases('));
+});
