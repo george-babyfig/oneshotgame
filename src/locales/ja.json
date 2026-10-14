@@ -2120,5 +2120,14 @@
   "Send": "送りだす",
   "Check your device clock to send a trip": "時計が ずれているみたい。たしかめてから おでかけに 送りだしてね",
   "This backup could not be restored. Please try again.": "このバックアップを復元できませんでした。もう一度お試しください。",
-  "Erase all progress? This cannot be undone.": "すべての進みぐあいをけしますか？もとにはもどせません。"
+  "Erase all progress? This cannot be undone.": "すべての進みぐあいをけしますか？もとにはもどせません。",
+  "Opens {date}": "{date}に開始",
+  "Road Landmarks": "ロードランドマーク",
+  "What's new in {version}": "バージョン{version}の新着情報",
+  "You can build {landmark} on the Floating Isle. Its steps stay open.": "うかぶ小島に {landmark}を つくれるよ。ステップは ずっと ひらいた ままだよ。",
+  "Your Road is in Missions": "きみの ロードは ミッションに あるよ",
+  "Your {road} looks": "きみの {road}の コーデ",
+  "{landmark} is complete!": "{landmark}が できたよ！",
+  "{landmark} is complete. Your {decoration} and {title} are ready.": "{landmark}が できたよ。{decoration}と、「{title}」の 称号も きみの ものに なったよ。",
+  "{landmark} is ready to build": "{landmark}を つくれるよ"
 }

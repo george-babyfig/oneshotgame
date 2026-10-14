@@ -2120,5 +2120,14 @@
   "Send": "Enviar",
   "Check your device clock to send a trip": "Revisa la hora de tu dispositivo para que un amigo pueda ir de paseo",
   "This backup could not be restored. Please try again.": "No se pudo restaurar este respaldo. Inténtalo de nuevo.",
-  "Erase all progress? This cannot be undone.": "¿Borrar todo el progreso? No se puede deshacer."
+  "Erase all progress? This cannot be undone.": "¿Borrar todo el progreso? No se puede deshacer.",
+  "Opens {date}": "Se abre el {date}",
+  "Road Landmarks": "Grandes Obras del Camino",
+  "What's new in {version}": "Novedades de la versión {version}",
+  "You can build {landmark} on the Floating Isle. Its steps stay open.": "Puedes construir la Gran Obra {landmark} en la Isla Flotante. Sus pasos siguen abiertos.",
+  "Your Road is in Missions": "Tu Camino está en Misiones",
+  "Your {road} looks": "Tus looks del {road}",
+  "{landmark} is complete!": "¡La Gran Obra {landmark} está completa!",
+  "{landmark} is complete. Your {decoration} and {title} are ready.": "La Gran Obra {landmark} está completa. Tu decoración {decoration} y tu título {title} ya están listos.",
+  "{landmark} is ready to build": "Ya puedes construir la Gran Obra {landmark}"
 }

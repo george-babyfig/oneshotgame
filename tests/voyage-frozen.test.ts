@@ -10,8 +10,13 @@ const file = 'tests/fixtures/voyage/frozen-weeks.json';
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 it('preserves every 1.0 Voyage stop across the 1.1 calendar runway', () => {
   const rows = [];
-  for (let at = Date.UTC(2026, 10, 2); at <= Date.UTC(2027, 0, 20); at += 7 * 86400000) {
-    const week = isoWeek(new Date(at));
+  // Local noon each Sunday: isoWeek reads local time, so midnight UTC would shift a week by time zone.
+  for (
+    let d = new Date(2026, 10, 1, 12);
+    d <= new Date(2027, 0, 17, 12);
+    d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7, 12)
+  ) {
+    const week = isoWeek(d);
     for (const hemisphere of ['north', 'south'] as const)
       for (const taught of [16, 28, 36, 60, 120])
         rows.push({

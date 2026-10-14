@@ -2120,5 +2120,14 @@
   "Send": "Envoyer",
   "Check your device clock to send a trip": "Vérifie l'heure de ton appareil pour qu'un ami puisse partir en balade",
   "This backup could not be restored. Please try again.": "Impossible de restaurer cette sauvegarde. Réessaie.",
-  "Erase all progress? This cannot be undone.": "Effacer toute la progression ? C'est irréversible."
+  "Erase all progress? This cannot be undone.": "Effacer toute la progression ? C'est irréversible.",
+  "Opens {date}": "S'ouvre le {date}",
+  "Road Landmarks": "Lieux magiques des Routes",
+  "What's new in {version}": "Quoi de neuf dans la version {version}",
+  "You can build {landmark} on the Floating Isle. Its steps stay open.": "Tu peux construire le Lieu magique {landmark} sur l'Île volante. Ses étapes restent ouvertes.",
+  "Your Road is in Missions": "Ta Route est dans Missions",
+  "Your {road} looks": "Tes looks de la {road}",
+  "{landmark} is complete!": "Le Lieu magique {landmark} est terminé !",
+  "{landmark} is complete. Your {decoration} and {title} are ready.": "Le Lieu magique {landmark} est terminé. Ta décoration {decoration} et ton titre {title} sont prêts.",
+  "{landmark} is ready to build": "Tu peux construire le Lieu magique {landmark}"
 }

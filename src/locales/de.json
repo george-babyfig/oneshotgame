@@ -2120,5 +2120,14 @@
   "Send": "Losschicken",
   "Check your device clock to send a trip": "Prüf die Uhrzeit deines Geräts, dann kann ein Freund einen Ausflug machen",
   "This backup could not be restored. Please try again.": "Dieses Backup konnte nicht wiederhergestellt werden. Bitte versuch es noch einmal.",
-  "Erase all progress? This cannot be undone.": "Gesamten Fortschritt löschen? Das kann nicht rückgängig gemacht werden."
+  "Erase all progress? This cannot be undone.": "Gesamten Fortschritt löschen? Das kann nicht rückgängig gemacht werden.",
+  "Opens {date}": "Öffnet sich am {date}",
+  "Road Landmarks": "Straßen-Wahrzeichen",
+  "What's new in {version}": "Was ist neu in Version {version}",
+  "You can build {landmark} on the Floating Isle. Its steps stay open.": "Du kannst das Wahrzeichen {landmark} auf der Schwebeinsel bauen. Die Schritte bleiben für dich offen.",
+  "Your Road is in Missions": "Deine Straße findest du in den Missionen",
+  "Your {road} looks": "{road}: deine Looks",
+  "{landmark} is complete!": "Das Wahrzeichen {landmark} ist fertig!",
+  "{landmark} is complete. Your {decoration} and {title} are ready.": "Das Wahrzeichen {landmark} ist fertig. Jetzt gehören dir: {decoration} und {title}.",
+  "{landmark} is ready to build": "Jetzt kannst du das Wahrzeichen {landmark} bauen"
 }
