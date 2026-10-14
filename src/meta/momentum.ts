@@ -29,7 +29,7 @@ export function momentumPerkText(tier: number): string {
   const k = MOMENTUM_PERKS[tier];
   const parts: string[] = [];
   if (k.throws) parts.push(tp(k.throws, '+{n} throw', '+{n} throws'));
-  if (k.spark) parts.push(`✨ ${t('Life Spark')}`);
+  if (k.spark) parts.push(`🌱 ${t('Life Spark')}`);
   if (k.scope) parts.push(`🔭 ${t('Star Scope')}`);
   return parts.join(' · ');
 }

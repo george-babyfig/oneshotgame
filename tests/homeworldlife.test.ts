@@ -96,7 +96,7 @@ describe('Homeworld Life invariants', () => {
   it('derives the same routine and pair action from the same local minute', () => {
     const p = defaultProfile(Date.UTC(2026, 9, 6));
     const date = new Date(2026, 9, 6, 12, 34);
-    const friend = { species: 'owl', fp: 8, lastReq: -1, rewarded: 3 };
+    const friend = { species: 'owl', fp: 8, rewarded: 3 };
     p.home.residents.push(friend);
     expect(routineFor(friend, date, 'clear', 'autumn')).toEqual(routineFor(friend, new Date(date), 'clear', 'autumn'));
     expect(friendPairs(p.home.residents, date, p.home.gaps, p.home)).toEqual(
@@ -171,7 +171,7 @@ describe('Homeworld Life invariants', () => {
 
   it('credits friendship value when earned, before its celebration or letter is opened', () => {
     const p = defaultProfile(Date.UTC(2026, 9, 6));
-    const friend = { species: 'mossbun', fp: 0, lastReq: -1, rewarded: 1 };
+    const friend = { species: 'mossbun', fp: 0, rewarded: 1 };
     p.home.residents.push(friend);
     const before = p.gems;
 

@@ -1,8 +1,20 @@
+import { HOMEWORLD_MAX_LEVEL } from '../../../meta/tuning';
 import { h, btn, modal, toast } from '../../dom';
 import { sfx, setMusicTheme } from '../../audio';
 import { haptic } from '../../haptics';
 import { effectiveReduceMotion } from '../../motion';
-import { busyDrones, collect, drones, isFull, moveBuilding, ready, tickHome, currentPaint, resolvedGaps } from '../../../meta/homeworld';
+import {
+  busyDrones,
+  mergeHomeCelebrations,
+  collect,
+  drones,
+  isFull,
+  moveBuilding,
+  ready,
+  tickHome,
+  currentPaint,
+  resolvedGaps,
+} from '../../../meta/homeworld';
 import { previewLook } from '../../../meta/cosmetics';
 import { drawFriendOutfit, homeworldStyleColors, structureStyleId } from '../../art/styleRender';
 import { critterCanvas, drawCreature } from '../../art/critters';
@@ -400,7 +412,7 @@ export function showHomeworld(app: App) {
       g.closePath();
       g.fill();
     }
-    if (home.level === 5) {
+    if (home.level === HOMEWORLD_MAX_LEVEL) {
       g.strokeStyle = '#e5f9ff';
       g.lineWidth = 3;
       g.beginPath();
@@ -822,77 +834,64 @@ export function showHomeworld(app: App) {
       renderPanel();
       schedule();
     });
-  } else if (home.seen.celebrations.length) {
-    // Rewards were credited by the meta operation; this consumes presentation IDs only.
-    const id = home.seen.celebrations[0];
-    const friend = /^friend:([^:]+):level:(\d)$/.exec(id);
-    const site = LANDMARKS.find((item) => id.startsWith(`${item.id}:stage:`));
-    const stage = site ? Number(id.slice(id.lastIndexOf(':') + 1)) : 0;
-    const beacon = id === 'keepers_beacon:stage:4';
-    const title = friend ? t('Friendship Level {n}!', { n: Number(friend[2]) }) : site ? t(site.name) : t('Homeworld celebration');
-    const friendLevel = friend ? Number(friend[2]) : 0;
-    const reward = site && stage >= 1 && stage <= 3 ? site.stages[(stage - 1) as 0 | 1 | 2].reward : null;
-    const friendGift =
-      friendLevel === 2
-        ? t('Your friend earned the Bow!')
-        : friendLevel === 3
-          ? t('Your friend earned the Flower and a signature move!')
-          : friendLevel === 4
-            ? t('Your friend earned the Scarf and waves from anywhere!')
-            : t('Your best friend earned the Tiny Crown and a keepsake!');
-    const parade = beacon
-      ? h(
-          'div',
-          {
-            class: 'hw-beacon-parade',
-            'aria-hidden': 'true',
-            style: 'display:flex;flex-wrap:wrap;justify-content:center;gap:2px;overflow:visible;max-width:100%',
-          },
-          ...home.residents.slice(0, 6).map((resident) => critterCanvas(resident.species, 36, 0)),
-        )
-      : null;
-    const card = h(
-      'div',
-      { class: 'hw-earned-card' },
-      h('div', { class: 'm-title' }, title),
-      friend ? critterCanvas(friend[1], 92, 0, '', Number(friend[2]) >= 3 ? 'signature' : 'happy') : null,
-      parade,
-      h(
-        'p',
-        null,
-        friend
-          ? friendGift
-          : site && stage === 4
-            ? t('{name} is finished! {gift}', { name: t(site.name), gift: t(site.finish) })
-            : site && stage < 4
-              ? t('Stage {n} is complete!', { n: stage })
-              : t('Something lovely grew on your Homeworld!'),
-      ),
-      friendLevel >= 2 ? h('p', { class: 'hw-reward-earned' }, t('+{n} gems', { n: friendLevel === 5 ? 50 : friendLevel * 5 })) : null,
-      reward?.dust ? h('p', { class: 'hw-reward-earned' }, t('+{n} stardust', { n: reward.dust })) : null,
-      reward?.gems ? h('p', { class: 'hw-reward-earned' }, t('+{n} gems', { n: reward.gems })) : null,
-    );
-    const m = modal(
+  } else if (mergeHomeCelebrations(p).length) {
+    // One sheet acknowledges the latest milestone for every friend and Landmark.
+    const ids = [...home.seen.celebrations];
+    const cards = ids.map((id) => {
+      const friend = /^friend:([^:]+):level:(\d)$/.exec(id);
+      const site = LANDMARKS.find((item) => id.startsWith(`${item.id}:stage:`));
+      const stage = site ? Number(id.slice(id.lastIndexOf(':') + 1)) : 0;
+      const level = friend ? Number(friend[2]) : 0;
+      const title = friend ? t('Friendship Level {n}!', { n: level }) : site ? t(site.name) : t('Homeworld celebration');
+      const gift =
+        level === 2
+          ? t('Your friend earned the Bow!')
+          : level === 3
+            ? t('Your friend earned the Flower and a signature move!')
+            : level === 4
+              ? t('Your friend earned the Scarf and waves from anywhere!')
+              : t('Your best friend earned the Tiny Crown and a keepsake!');
+      return h(
+        'div',
+        { class: 'hw-earned-card' },
+        h('div', { class: 'm-title' }, title),
+        friend ? critterCanvas(friend[1], 92, 0, '', level >= 3 ? 'signature' : 'happy') : null,
+        h(
+          'p',
+          null,
+          friend
+            ? gift
+            : site && stage === 4
+              ? t('{name} is finished! {gift}', { name: t(site.name), gift: t(site.finish) })
+              : site
+                ? t('Stage {n} is complete!', { n: stage })
+                : t('Something lovely grew on your Homeworld!'),
+        ),
+      );
+    });
+    const beacon = ids.includes('keepers_beacon:stage:4');
+    const sheet = modal(
       [
-        card,
+        ...cards,
         btn(t('Wonderful!'), 'primary wide', () => {
           show.skip();
-          m.close();
+          sheet.close();
         }),
       ],
       {
         cls: 'hw-earned',
         onClose: () => {
-          home.seen.celebrations = home.seen.celebrations.filter((item) => item !== id);
+          home.seen.celebrations = home.seen.celebrations.filter((id) => !ids.includes(id));
           app.save();
+          renderPanel();
         },
       },
     );
     const show = celebrate('homeworld', {
-      root: m.el,
+      root: sheet.el,
       reduceMotion: calm,
       firstEver: beacon,
-      duration: id.includes('keepers_beacon') ? 4000 : 1700,
+      duration: beacon ? 4000 : 1700,
       beats: [
         {
           at: 100,
@@ -902,17 +901,10 @@ export function showHomeworld(app: App) {
               if (!beacon) sfx.levelUp();
               haptic.success();
             }
-            card.classList.add('shown');
+            cards.forEach((card) => card.classList.add('shown'));
           },
         },
       ],
-    });
-    void show.done.then(() => {
-      parade?.querySelectorAll('canvas').forEach((portrait) => {
-        portrait.style.animation = 'none';
-        portrait.style.opacity = '1';
-        portrait.style.transform = 'none';
-      });
     });
   }
 }

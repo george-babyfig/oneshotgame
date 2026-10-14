@@ -1,4 +1,4 @@
-import { RING_PLOTS, WIN_SPEEDUP, FRIEND_LEVELS, EXPEDITION_HOURS, HOME_LEVEL_REQUIREMENTS } from './tuning';
+import { RING_PLOTS, WIN_SPEEDUP, FRIEND_LEVELS, EXPEDITION_HOURS, HOME_LEVEL_REQUIREMENTS, HOMEWORLD_MAX_LEVEL } from './tuning';
 import { FRIENDSHIP_REWARD_GEMS_PER_LEVEL, EXPEDITION_REWARD, EXPEDITION_MULTIPLIER } from './tuning';
 import { ledger } from './ledger';
 import { COST_K } from './tuning';
@@ -41,7 +41,6 @@ export interface BuildingDef {
   decor?: boolean;
   /** Gems instead of stardust (decor only; a direct purchase, never random). */
   gems?: number;
-  charm?: number;
   /** At most this many of the type. */
   max: number;
 }
@@ -51,16 +50,14 @@ export { BUILDINGS } from './tuning';
 const activeBuilding = (type: BuildingType): boolean => type !== 'mill' && type !== 'grove' && type !== 'observatory';
 export const BUILDING_TYPES: BuildingType[] = (Object.keys(BUILDINGS) as BuildingType[]).filter(activeBuilding);
 
-export const MAX_LEVEL = 5;
+// Ordinary building tiers stay independent of Homeworld expansion.
+const BUILDING_MAX_LEVEL = 5;
 /** Build time for reaching each level (index = target level). */
 export { BUILD_TIME } from './tuning';
 
 /** Plot and chapter compatibility tables for existing callers. */
 export { RING_PLOTS } from './tuning';
-export { RING_CHAPTER } from './tuning';
-export { RING_COST } from './tuning';
 
-export const MAX_RING = 5;
 /** Winning a campaign level takes this much off every active build. */
 export { WIN_SPEEDUP } from './tuning';
 export { HOME_UNLOCK_LEVEL } from './unlocks';
@@ -80,8 +77,6 @@ export interface Resident {
   species: string;
   /** Friendship points. */
   fp: number;
-  /** Old request marker retained for existing friendship saves. */
-  lastReq: number;
   /** Friendship levels already rewarded. */
   rewarded: number;
   /** Nickname (from NICKNAMES; kid-safe, no free text). */
@@ -192,10 +187,6 @@ export interface HomeState {
   grownRoundKeys: string[];
   residents: Resident[];
   expedition: Expedition | null;
-  /** Plots with meteor debris waiting to be cleared. */
-  debris: number[];
-  /** Last debris check (a meteor may fall every few hours). */
-  lastDebris: number;
   /** Latest observed clock time; a rollback cannot finish work early. */
   lastTick?: number;
   /** Last handled win event, so a repeated callback cannot award it twice. */
@@ -272,8 +263,6 @@ export function defaultHome(now = Date.now()): HomeState {
     grownRoundKeys: [],
     residents: [],
     expedition: null,
-    debris: [],
-    lastDebris: now,
     lastTick: now,
     intro: false,
     paint: { ground: 'meadow', sea: 'blue' },
@@ -315,13 +304,12 @@ export function retireBuildings(p: Profile): number {
     p.home.plots[i] = null;
   });
   if (refund) earn(p, 'dust', refund, 'migration_refund');
-  p.home.debris = [];
   return refund;
 }
 
 export function drones(p: Profile) {
   // Sole M11 grandfathering: legacy Pass included a paid third drone, so 11.6 preserves that value.
-  const legacyPassDrone = p.pass && !(p.meta as Profile['meta'] & { passLooksOnly?: boolean }).passLooksOnly;
+  const legacyPassDrone = p.pass && !p.meta.passLooksOnly;
   return p.home.level >= 3 || legacyPassDrone ? 3 : 2;
 }
 
@@ -333,7 +321,7 @@ export function countOf(h: HomeState, type: BuildingType) {
   return h.plots.filter((b) => b?.type === type).length;
 }
 
-export type BuildCheck = 'ok' | 'ring' | 'max' | 'drones' | 'dust' | 'gems' | 'busy' | 'debris' | 'occupied' | 'maxlv';
+export type BuildCheck = 'ok' | 'ring' | 'max' | 'drones' | 'dust' | 'gems' | 'busy' | 'occupied' | 'maxlv';
 
 export function canBuild(p: Profile, plot: number, type: BuildingType, now = Date.now()): BuildCheck {
   const h = p.home;
@@ -369,7 +357,7 @@ export function canUpgrade(p: Profile, plot: number, now = Date.now()): BuildChe
   if (!b) return 'occupied';
   if (b.type === 'lab' || b.type === 'mill' || b.type === 'grove' || b.type === 'observatory') return 'maxlv';
   if (b.type === 'greenhouse' && b.lv >= 3) return 'maxlv';
-  if (BUILDINGS[b.type].decor || b.lv >= MAX_LEVEL) return 'maxlv';
+  if (BUILDINGS[b.type].decor || b.lv >= BUILDING_MAX_LEVEL) return 'maxlv';
   if (b.done && b.done > now) return 'busy';
   if (b.lv + 1 > p.home.level) return 'ring';
   if (busyDrones(p.home, now) >= drones(p)) return 'drones';
@@ -439,7 +427,7 @@ export function chaptersDone(p: Profile) {
 
 export function canExpand(p: Profile): RingCheck {
   const r = p.home.level + 1;
-  if (r > MAX_RING) return 'max';
+  if (r > HOMEWORLD_MAX_LEVEL) return 'max';
   const need = HOME_LEVEL_REQUIREMENTS[r as HomeworldLevel];
   if (chaptersDone(p) < need.chapter) return 'chapter';
   if (p.dust < need.dust) return 'dust';
@@ -519,6 +507,27 @@ export function queueHomeCelebration(p: Profile, id: string): void {
   if (!p.home.seen.celebrations.includes(id)) p.home.seen.celebrations.push(id);
 }
 
+/** Merge presentation history into current milestones; old stages are never announced. */
+export function mergeHomeCelebrations(p: Profile): string[] {
+  const merged = new Map<string, string>();
+  for (const id of p.home.seen.celebrations) {
+    const friend = /^friend:([^:]+):level:(\d)$/.exec(id);
+    if (friend) {
+      const resident = p.home.residents.find((r) => r.species === friend[1]);
+      if (resident && friendLevel(resident.fp) >= Number(friend[2]))
+        merged.set(`friend:${friend[1]}`, `friend:${friend[1]}:level:${friendLevel(resident.fp)}`);
+      continue;
+    }
+    const site = /^([^:]+):stage:(\d)$/.exec(id);
+    if (site) {
+      const stage = site[1] === 'comet_pier' ? p.cometPier.stage : p.home.landmarks[site[1] as keyof typeof p.home.landmarks]?.stage;
+      if (stage) merged.set(site[1], `${site[1]}:stage:${stage}`);
+    } else merged.set(id, id);
+  }
+  p.home.seen.celebrations = [...merged.values()];
+  return p.home.seen.celebrations;
+}
+
 export function takeHomeCelebrations(p: Profile): string[] {
   return p.home.seen.celebrations.splice(0);
 }
@@ -552,19 +561,6 @@ export function recordGrownSectors(
 // ------------------------------------------------------------------ production
 export type Produce = 'dust' | 'booster' | 'gem';
 export const PRODUCES: Partial<Record<BuildingType, Produce>> = { greenhouse: 'booster' };
-
-/** Units per hour at each level. */
-
-export function capHours(h: HomeState, now = Date.now()) {
-  void h;
-  void now;
-  return 0;
-}
-
-export function rateOf(b: Building) {
-  void b;
-  return 0;
-}
 
 export const defaultGreenhouse = (): GreenhouseState => ({
   choice: 'shower',
@@ -710,11 +706,19 @@ export function collectAll(p: Profile, now = Date.now()): Collected {
     total.gems += c.gems;
     for (const [k, v] of Object.entries(c.boosters)) total.boosters[k as BoosterId] = (total.boosters[k as BoosterId] ?? 0) + (v ?? 0);
   });
+  // A returned friend is collectable wherever the shared readiness badge points.
+  const expedition = finishExpedition(p, now);
+  if (expedition) {
+    total.dust += expedition.dust;
+    total.gems += expedition.gems;
+    for (const [id, count] of Object.entries(expedition.boosters))
+      total.boosters[id as BoosterId] = (total.boosters[id as BoosterId] ?? 0) + (count ?? 0);
+  }
   return total;
 }
 
 export function anyReady(h: HomeState, now = Date.now()) {
-  return h.plots.some((_, i) => ready(h, i, now) > 0);
+  return expeditionBack(h, now) || h.plots.some((_, i) => ready(h, i, now) > 0);
 }
 
 /** Read-only totals for a single collect card. */
@@ -755,10 +759,10 @@ export function invite(p: Profile, species: string): boolean {
   const h = p.home;
   if (!p.seen.includes(species) || h.residents.some((r) => r.species === species)) return false;
   if (h.residents.length >= denCapacity(h)) return false;
-  // a creature that lived here before remembers you (and its friendship, rewards and today's request)
+  // a creature that lived here before remembers you (and its friendship and rewards)
   const old = h.friends?.[species];
   ledger.homeworldAction();
-  h.residents.push(old ? { ...old, species } : { species, fp: 0, lastReq: -1, rewarded: 1 });
+  h.residents.push(old ? { ...old, species } : { species, fp: 0, rewarded: 1 });
   return true;
 }
 
@@ -802,28 +806,6 @@ export function addFriendship(p: Profile, r: Resident, pts: number): { levelUp?:
   return { levelUp: lv, gems };
 }
 
-// Legacy request entry points stay inert until screen readers retire them.
-export type RequestKind = 'treat' | 'pat' | 'decor';
-export interface Request {
-  kind: RequestKind;
-  dust?: number;
-  decor?: BuildingType;
-}
-export { REQ_PERIOD } from './tuning';
-export function period(now = Date.now()) {
-  return Math.floor(now / (6 * H));
-}
-export function requestOf(_r: Resident, _now = Date.now(), _level = MAX_LEVEL): Request | null {
-  return null;
-}
-export type FulfilCheck = 'ok' | 'none' | 'dust' | 'decor' | 'away';
-export function fulfil(_p: Profile, _species: string, _now = Date.now()): { result: FulfilCheck; levelUp?: number; gems?: number } {
-  return { result: 'none' };
-}
-export function requestsWaiting(_h: HomeState, _now = Date.now()) {
-  return 0;
-}
-
 // ------------------------------------------------------------------ expeditions
 export { EXPEDITION_HOURS } from './tuning';
 
@@ -831,9 +813,6 @@ export function bayLevel(h: HomeState, now = Date.now()) {
   const t = h.plots.find((b) => b?.type === 'launch_bay');
   return t ? Math.max(0, effLevel(t, now)) : 0;
 }
-
-/** Legacy name retained for callers of the existing expedition flow. */
-export const towerLevel = bayLevel;
 
 export function expeditionOptions(h: HomeState) {
   const lv = bayLevel(h);
@@ -882,43 +861,27 @@ export function finishExpedition(p: Profile, now = Date.now()) {
   return { ...loot, species: e.species, planet: e.planet, hours: e.hours };
 }
 
-// ------------------------------------------------------------------ meteor debris
-export { DEBRIS_EVERY } from './tuning';
-export { DEBRIS_MAX } from './tuning';
-export { DEBRIS_DUST } from './tuning';
-
-/** Legacy debris is cleared on load without creating a new payout. */
-export function tickDebris(_h: HomeState, _now = Date.now()): number {
-  return 0;
-}
-export function clearDebris(p: Profile, plot: number): number {
-  p.home.debris = p.home.debris.filter((i) => i !== plot);
-  return 0;
-}
-
 // ------------------------------------------------------------------ summary
 /** Things waiting on the Homeworld (for the home-screen badge). */
 export function homeBadge(p: Profile, now = Date.now()) {
   if (!homeUnlocked(p)) return 0;
   const h = p.home;
   let n = 0;
-  if (anyReady(h, now)) n++;
+  if (h.plots.some((_, i) => ready(h, i, now) > 0)) n++;
   if (now >= (h.lastTick ?? 0) && h.plots.some((b) => b?.done && b.done <= now)) n++;
   if (expeditionBack(h, now)) n++;
   if (h.seen.celebrations.length) n++;
   return n;
 }
 
-/** Keep state consistent on load (builds finishing while away, debris). */
+/** Keep state consistent on load (builds finishing while away). */
 export function tickHome(p: Profile, now = Date.now()) {
   const h = p.home;
   migrateGreenhouses(p, now);
   retireBuildings(p);
   while (h.plots.length < RING_PLOTS[h.level]) h.plots.push(null);
-  h.debris = [];
   if (now < (h.lastTick ?? 0)) return [];
   const done = tickBuilds(h, now);
-  tickDebris(h, now);
   h.lastTick = now;
   return done;
 }

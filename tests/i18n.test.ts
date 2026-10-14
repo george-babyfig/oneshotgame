@@ -9,13 +9,13 @@ import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { BIOMES, KINDS, SPECIES, TRAITS } from '../src/core/world';
 import { TROUBLES } from '../src/core/troubles';
+import { LAUNCHERS, LAUNCHER_COPY } from '../src/core/launchers';
 import { TWISTS } from '../src/core/levels';
 import { OBSTACLES } from '../src/core/sky';
-import { BOOSTERS, SKINS, UPGRADES } from '../src/meta/config';
+import { BOOSTERS, SKINS } from '../src/meta/config';
 import { LANDMARKS, PRODUCT_TEXT_KEYS } from '../src/meta/tuning';
 import { HABITATS } from '../src/meta/habitats';
 import { EVENTS } from '../src/meta/events';
-import { RANK_TITLES, RANK_UNLOCKS } from '../src/meta/rank';
 import { CHAPTER_NAMES } from '../src/meta/progression';
 import { ITEMS } from '../src/meta/visitors';
 import { COACH, COACH_EVENTS, PRACTICE_GIFT_LINE } from '../src/meta/coach';
@@ -64,6 +64,8 @@ export function allKeys(): string[] {
   const add = (s?: string) => s && keys.add(s);
   Object.values(BIOMES).forEach((b) => (add(b.name), add(b.recipe)));
   Object.values(KINDS).forEach((k) => (add(k.name), add(k.desc)));
+  Object.values(LAUNCHERS).forEach((launcher) => (add(launcher.name), add(launcher.job)));
+  Object.values(LAUNCHER_COPY).forEach((copy) => (add(copy.description), add(copy.goodHereReason), add(copy.unlockStep)));
   Object.values(TWISTS).forEach((x) => (add(x.name), add(x.desc)));
   Object.values(OBSTACLES).forEach((x) => (add(x.name), add(x.rule), add(x.counter), add(x.intro)));
   Object.values(TROUBLES).forEach((x) => (add(x.name), add(x.rule), add(x.counter)));
@@ -74,7 +76,6 @@ export function allKeys(): string[] {
   UNLOCKS.forEach((x) => (add(x.intro?.title), add(x.intro?.body)));
   SPECIES.forEach((s) => (add(s.name), !s.home && add(s.hint)));
   Object.values(BOOSTERS).forEach((b) => (add(b.name), add(b.desc)));
-  Object.values(UPGRADES).forEach((u) => add(u.name));
   SKINS.forEach((s) => add(s.name));
   PRODUCT_TEXT_KEYS.forEach(add);
   [
@@ -91,9 +92,7 @@ export function allKeys(): string[] {
     'To open Grown-ups, please answer:',
   ].forEach(add);
   HABITATS.forEach((h) => add(h.name));
-  EVENTS.forEach((e) => (add(e.name), add(e.desc)));
-  RANK_TITLES.forEach(add);
-  Object.values(RANK_UNLOCKS).forEach(add);
+  EVENTS.forEach((e) => add(e.name));
   CHAPTER_NAMES.forEach(add);
   Object.values(COACH).forEach((tips) => Object.values(tips).forEach(add));
   Object.values(COACH_EVENTS).forEach(add);

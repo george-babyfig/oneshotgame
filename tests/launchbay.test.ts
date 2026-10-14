@@ -147,7 +147,7 @@ describe('Launch Bay tunes', () => {
   it('does not convert cosmetic look mastery into gameplay tune eligibility', () => {
     const raw = rich();
     raw.chapters.push(3);
-    raw.mastery.l_pad = 5000;
+    Object.assign(raw, { mastery: { l_pad: 5000 } });
     const p = migrate(raw as unknown as Record<string, unknown>);
     expect(p.launcher.flings.swoop ?? 0).toBe(0);
     expect(launcherBay.tuneUp(p, 'swoop')).toBe('mastery');

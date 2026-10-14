@@ -18,7 +18,7 @@ const at = (month: number, day: number, hour: number, minute = 0) => new Date(20
 
 describe('Homeworld Life routines and weather', () => {
   it('derives fixed routines from an injected clock and keeps sleeping friends responsive', () => {
-    const otter = { species: 'otter', fp: 8, lastReq: -1, rewarded: 3 };
+    const otter = { species: 'otter', fp: 8, rewarded: 3 };
     const morning = routineFor(otter, at(5, 2, 8), 'clear', 'summer');
     expect(morning).toEqual(routineFor(otter, at(5, 2, 8), 'clear', 'summer'));
     expect(morning).toMatchObject({ block: 'morning', awake: true, activity: 'walk_home', signatureId: 'signature:otter' });
@@ -39,8 +39,8 @@ describe('Homeworld Life routines and weather', () => {
   it('selects neighbouring friend reactions from IDs and the minute', () => {
     const p = defaultProfile(0);
     p.home.residents = [
-      { species: 'otter', fp: 0, lastReq: -1, rewarded: 1 },
-      { species: 'deer', fp: 0, lastReq: -1, rewarded: 1 },
+      { species: 'otter', fp: 0, rewarded: 1 },
+      { species: 'deer', fp: 0, rewarded: 1 },
     ];
     p.home.gaps[0] = 'forest';
     p.home.gaps[1] = 'forest';
@@ -133,7 +133,7 @@ describe('grown lands and celebrations', () => {
 
   it('pays every friendship gift immediately and queues only the visit presentation', () => {
     const p = defaultProfile(0);
-    const friend = { species: 'otter', fp: 7, lastReq: -1, rewarded: 2 };
+    const friend = { species: 'otter', fp: 7, rewarded: 2 };
     p.home.residents.push(friend);
     const before = p.gems;
     expect(addFriendship(p, friend, 1)).toMatchObject({ levelUp: 3, gems: 15 });

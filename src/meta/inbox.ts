@@ -168,8 +168,8 @@ const RULES: Rule[] = [
     vars: (_p, now) => ({ e: skyEventOn(now)?.name ?? '' }),
     letter: () => ({
       from: MC,
-      title: 'Look up tonight!',
-      body: 'The {e} is happening for real, right now. If your sky is clear, go outside and look up. In the game, Supernovas charge twice as fast.',
+      title: 'Look up together',
+      body: 'The {e} is happening in the sky. On a clear evening before bedtime, you and a grown-up could look up together. In the game, Supernovas charge twice as fast.',
     }),
   },
   {

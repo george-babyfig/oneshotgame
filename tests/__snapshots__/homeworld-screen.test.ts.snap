@@ -455,16 +455,6 @@ exports[`Homeworld screen structure > keeps overview and VoiceOver plot list sta
         ],
         "tag": "div",
       },
-      {
-        "attrs": {
-          "class": "btn ghost wide",
-          "type": "button",
-        },
-        "children": [
-          "✨ Star Atlas",
-        ],
-        "tag": "button",
-      },
     ],
     "tag": "div",
   },

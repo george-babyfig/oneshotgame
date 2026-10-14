@@ -1,5 +1,5 @@
 /** One interrupting Home card per open, after time away. */
-export type PopupKind = 'away' | 'intro' | 'inbox' | 'festival' | 'starter';
+export type PopupKind = 'away' | 'intro';
 
 export interface PopupState {
   homeSeen: boolean;
@@ -7,7 +7,7 @@ export interface PopupState {
   awayMs: number;
 }
 
-const PRIORITY: PopupKind[] = ['away', 'intro', 'inbox', 'festival', 'starter'];
+const PRIORITY: PopupKind[] = ['away', 'intro'];
 export const POPUP_COOLDOWN_MS = 30 * 60_000;
 
 export function choosePopup(state: PopupState, ready: readonly PopupKind[]): PopupKind | null {

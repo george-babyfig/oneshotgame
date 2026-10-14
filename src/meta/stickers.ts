@@ -1,3 +1,4 @@
+import { HOMEWORLD_MAX_LEVEL } from './tuning';
 import { MILESTONE_REWARD } from './tuning';
 import { ALBUM_PAGES } from './tuning';
 // Sticker Album: every sticker is earned by doing something specific
@@ -56,7 +57,13 @@ const FEATS: Feat[] = [
   { id: 'atlas', name: 'Stargazer', hint: 'Light a constellation', earned: (p) => p.constellations.length > 0 },
   { id: 'crown', name: 'Crown of Stars', hint: 'Light all six constellations', earned: (p) => p.constellations.length >= 6 },
   { id: 'calendar', name: 'Full Calendar', hint: 'Collect {n} calendar stamps', n: 28, earned: (p) => p.daily.streak >= 28 },
-  { id: 'home', name: 'Worldbuilder', hint: 'Grow your Homeworld to Level {n}', n: 5, earned: (p) => p.home.level >= 5 },
+  {
+    id: 'home',
+    name: 'Worldbuilder',
+    hint: 'Grow your Homeworld to Level {n}',
+    n: HOMEWORLD_MAX_LEVEL,
+    earned: (p) => p.home.level >= HOMEWORLD_MAX_LEVEL,
+  },
   { id: 'passport', name: 'Named Explorer', hint: 'Set up your Planet Passport', earned: (p) => p.passport.set },
   {
     id: 'scholar',

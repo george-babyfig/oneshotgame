@@ -255,7 +255,7 @@ export const PRODUCTS: ProductDef[] = [
     description: 'Keeper set, six trails and bursts, Fusion',
     contents: [
       'Crystal Frost Keeper suit',
-      'Crystal Frost Keeper hat',
+      'Crystal Frost crown',
       'Six Crystal Frost object trails',
       'Six Crystal Frost object bursts',
       'Crystal Frost Fusion style',
@@ -310,19 +310,8 @@ export const PRODUCT_TEXT_KEYS = PRODUCTS.flatMap((p) => [p.title, p.description
 export type BoosterId = 'shower' | 'spark' | 'scope';
 export const BOOSTERS: Record<BoosterId, { name: string; emoji: string; desc: string; dust: number; gems: number }> = {
   shower: { name: 'Comet Shower', emoji: '🌠', desc: '+3 throws this level', dust: 180, gems: 25 },
-  spark: { name: 'Life Spark', emoji: '✨', desc: 'Start with three meadows already growing', dust: 150, gems: 20 },
+  spark: { name: 'Life Spark', emoji: '🌱', desc: 'Start with three meadows already growing', dust: 150, gems: 20 },
   scope: { name: 'Star Scope', emoji: '🔭', desc: 'See the next 5 objects and a longer aim line this round', dust: 120, gems: 15 },
-};
-
-// Legacy upgrade ids stay in saves until the one-time refund migration runs.
-export type UpgradeId = 'scope' | 'throws' | 'splash' | 'vault';
-export const UPGRADES: Record<'vault', { name: string; emoji: string; desc: (lv: number) => string; costs: number[] }> = {
-  vault: {
-    name: 'Stardust Vault',
-    emoji: '🏦',
-    desc: () => t('Wins keep the Vault working. One campaign win adds two hours.'),
-    costs: [1000, 3000, 8000, 20000],
-  },
 };
 
 // Atmosphere skins (cosmetic glow around every planet).
@@ -357,7 +346,6 @@ export const CONTINUE_COST = 50;
 export const LAB_COST = [0, 0, 400, 1200, 3000, 4500];
 export const LAB_ESSENCE_COST = [0, 0, 10, 25, 50, 180];
 export const LAB_BUILD_COST = 300;
-export const LAB_FEATS = { fusion: 10, guard: 5 };
 export const FIRST_HOUR_REWARD = { dust: 100 };
 export const WELCOME_BACK_GEMS = 30;
 
@@ -478,7 +466,6 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     ring: 1,
     cost: 300,
     decor: true,
-    charm: 2,
     max: 2,
   },
   lantern: {
@@ -488,7 +475,6 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     ring: 1,
     cost: 200,
     decor: true,
-    charm: 1,
     max: 3,
   },
   flowers: {
@@ -498,7 +484,6 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     ring: 2,
     cost: 400,
     decor: true,
-    charm: 2,
     max: 3,
   },
   statue: {
@@ -509,28 +494,23 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     cost: 5000,
     gems: 0,
     decor: true,
-    charm: 4,
     max: 1,
   },
 };
 
 export const BUILD_TIME = [0, 30e3, 5 * 60e3, 30 * 60e3, 2 * 3600e3, 4 * 3600e3];
 
-export const RING_COST = [0, 0, 1500, 5000, 12000, 30000];
-export const HOME_LEVEL_REQUIREMENTS: Record<
-  1 | 2 | 3 | 4 | 5,
-  {
-    chapter: number;
-    dust: number;
-    essence: Partial<Record<'stone' | 'dew' | 'leaf' | 'ember' | 'frost', number>>;
-  }
-> = {
+export const HOME_LEVEL_REQUIREMENTS = {
   1: { chapter: 0, dust: 0, essence: {} },
   2: { chapter: 1, dust: 1500, essence: { leaf: 20, dew: 20 } },
   3: { chapter: 3, dust: 5000, essence: { stone: 40, ember: 30 } },
   4: { chapter: 5, dust: 12000, essence: { frost: 40, dew: 40, leaf: 40 } },
   5: { chapter: 8, dust: 30000, essence: { stone: 60, dew: 60, leaf: 60, ember: 60, frost: 60 } },
-};
+} satisfies Record<
+  number,
+  { chapter: number; dust: number; essence: Partial<Record<'stone' | 'dew' | 'leaf' | 'ember' | 'frost', number>> }
+>;
+export const HOMEWORLD_MAX_LEVEL = Math.max(...Object.keys(HOME_LEVEL_REQUIREMENTS).map(Number));
 
 export const DYES: Dye[] = [
   { id: 'snow', name: 'Snow', color: '#f4f6ff' },
@@ -762,7 +742,7 @@ export interface LandmarkStageDef {
 export interface LandmarkDef {
   id: LandmarkId;
   name: string;
-  level: 1 | 2 | 3 | 4 | 5;
+  level: import('./homeworldTypes').HomeworldLevel;
   stages: readonly [LandmarkStageDef, LandmarkStageDef, LandmarkStageDef];
   delivery: Partial<Record<'leaf' | 'dew' | 'stone', number>>;
   finish: string;
@@ -955,7 +935,7 @@ import type { AlbumPage } from './stickers';
 import type { Paint } from './homeworld';
 const c = (x: Cosmetic) => x;
 
-export const COSMETICS: Cosmetic[] = [
+export const BASE_LOOKS: Cosmetic[] = [
   // suits
   c({ id: 'suit_sky', slot: 'suit', name: 'Sky Scout', source: 'free', tier: 'basic', colors: ['#6ec8ff', '#ffffff', '#1d2a5e'] }),
   c({ id: 'suit_mint', slot: 'suit', name: 'Mint Ranger', source: 'free', tier: 'basic', colors: ['#5ef2b0', '#ffffff', '#123f38'] }),
@@ -1311,8 +1291,6 @@ export const PAINTS: Paint[] = [
   { id: 'nebula', name: 'Nebula', channel: 'sea', colors: ['#e0c8ff', '#9a6bff', '#3a1a8a'], gems: 60 },
 ];
 
-export const DEBRIS_DUST = 60;
-
 export const BOSS_REWARD: Reward = { gems: 30, dust: 500 };
 
 export const COST_K = [0, 1, 2.5, 6, 14, 30];
@@ -1329,7 +1307,6 @@ export const FINISH_DUST_PER_THROW = 15;
 // Three short visits can yield many gifts; each gift stays a small keepsake.
 export const VISITOR_DUST = { common: 2, uncommon: 3, rare: 5, legendary: 7 };
 export const FRIENDSHIP_REWARD_GEMS_PER_LEVEL = 5;
-export const FRIENDSHIP_TREAT = { baseDust: 40, dustPerLevel: 30 };
 // M11 career including live trips exceeded idle ≤1.5×; reduce only trip stardust (120 → 5) until M13 redesign.
 export const EXPEDITION_REWARD = { dustPerHour: 5, eightHourGems: 6, fourHourGems: 2, eightHourThreshold: 8, fourHourThreshold: 4 };
 export const GALAXY_RATE = { base: 6, perStar: 3, perSpecies: 2 };
@@ -1343,16 +1320,11 @@ export const INBOX_GIFTS: Record<string, Reward> = {
   voyage: { dust: 200 },
 };
 
-export const STARTER_BOOSTERS = 5;
 export const MATERIAL_DROP = { regionsPerDrop: 2, threeStarBonus: 1, frostPerRegion: 1 };
 export const EXPEDITION_MULTIPLIER = { perTowerLevel: 0.1, legendary: 1.5, rare: 1.25 };
 
 // Homeworld pacing and unlock tables.
 export const RING_PLOTS = [0, 6, 8, 10, 12, 14];
-export const RING_CHAPTER = [0, 0, 1, 3, 5, 8];
 export const WIN_SPEEDUP = 10 * 60e3;
 export const FRIEND_LEVELS = [0, 3, 8, 15, 25];
-export const REQ_PERIOD = 6 * 3600e3;
 export const EXPEDITION_HOURS = [1, 4, 8];
-export const DEBRIS_EVERY = 3 * 3600e3;
-export const DEBRIS_MAX = 3;

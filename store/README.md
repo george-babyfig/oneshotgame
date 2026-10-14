@@ -22,13 +22,17 @@ Everything needed to put Comet Garden on the App Store. Start with **`APP_STORE_
 | `../docs/product/store-research.md`                                                                                 | The research behind the choices (Apple rules, Kids Category, how family games present their pages), with sources                                                             |
 | `gamecenter.md`                                                                                                     | Game Center achievements only for 1.0 (optional)                                                                                                                             |
 
+The current twelve-product source sheet is [`catalogue-sheet.md`](catalogue-sheet.md); use it for IDs, prices, contents and Family Sharing. Weekly Event tokens, Explorer Rank, producer buildings and the old Upgrades screen are retired. The Cosmic Road paid lane and all seven non-consumables grant cosmetics.
+
+Re-capture the v2 screenshots and preview after UI polish before submission; the dated assets are evidence of the earlier capture, not a substitute for release QA.
+
 The support/marketing site lives in `../site/` (see `site/README.md`).
 
 Rules we followed: no other games' names, no "#1"/"best", no prices, "free" or pressure words in screenshots or copy, and no "for kids" wording (the app launches in Games → Casual at 4+; the Kids Category stays an option for later).
 
 The App Store Connect checklist also uses `accessibility.md` and `in-app-event.md` as drafts. Product metadata in `compliance.md` is checked by `tests/storedocs.test.ts`.
 
-## Refresh the M11.5 Homeworld store art
+## Refresh current Homeworld store art
 
 Run from the repository root with the existing local dependencies. The capture scripts start and stop their own Vite server. Capture English first so the other languages can replay its planet plan. The Homeworld frame uses a fixed clear spring afternoon and the same Level 4 save in the scrapbook still and App Preview.
 

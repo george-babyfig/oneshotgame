@@ -77,7 +77,7 @@ describe('native journal replay', () => {
       const before = purchaseHistory().length;
       const { app, reconcile } = harness([tx], [product.id]);
       await reconcile();
-      expect((app.p.meta as { productEntitlements?: string[] }).productEntitlements).toContain(product.id);
+      expect(app.p.meta.productEntitlements).toContain(product.id);
       expect(purchaseHistory()).toHaveLength(before);
       expect((app as unknown as { lastReceipt?: unknown }).lastReceipt).toBeNull();
     });

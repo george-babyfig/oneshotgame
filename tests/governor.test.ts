@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { choosePopup, POPUP_COOLDOWN_MS } from '../src/meta/governor';
 
-const ready = ['starter', 'festival', 'inbox', 'away'] as const;
+const ready = ['intro', 'away'] as const;
 const state = { homeSeen: true, shownThisOpen: false, awayMs: POPUP_COOLDOWN_MS };
 
 describe('automatic pop-up governor', () => {
@@ -17,8 +17,7 @@ describe('automatic pop-up governor', () => {
 
   it('chooses one card in priority order', () => {
     expect(choosePopup(state, ready)).toBe('away');
-    expect(choosePopup(state, ['intro', 'inbox'])).toBe('intro');
-    expect(choosePopup(state, ['starter', 'inbox'])).toBe('inbox');
+    expect(choosePopup(state, ['intro'])).toBe('intro');
     expect(choosePopup(state, [])).toBeNull();
   });
 });

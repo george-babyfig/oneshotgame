@@ -1,4 +1,6 @@
+import { HOMEWORLD_MAX_LEVEL } from '../../../meta/tuning';
 import { h, btn, fmt, toast } from '../../dom';
+import { confirmGemUse } from './gemConfirm';
 import { sfx } from '../../audio';
 import { haptic } from '../../haptics';
 import {
@@ -22,6 +24,7 @@ import {
   ready,
   tickHome,
   upgrade,
+  homeBadge,
   type BuildingType,
 } from '../../../meta/homeworld';
 import { drawStructure } from '../../art/structures';
@@ -164,10 +167,19 @@ export function createPanel(ctx: HomeworldPanelContext) {
     // keep the top bar's stardust/gems in step with what the panel just did
     const bar = canvas.parentElement?.querySelector('.topbar');
     if (bar) bar.replaceWith(app.topBar(app.canGoBack()));
+    // Update the existing tab without remounting the canvas or interrupting an open sheet.
+    const tab = canvas.parentElement?.querySelector('[data-tab="homeworld"]');
+    if (tab) {
+      tab.querySelector('.nb')?.remove();
+      const count = homeBadge(p, now);
+      if (count) tab.append(h('span', { class: 'nb' }, String(count)));
+    }
     levelBadge.textContent = t('Level {n}', { n: home.level });
     levelBadge.setAttribute(
       'aria-label',
-      home.level >= 5 ? t('Homeworld Level 5, fully grown') : t('Homeworld Level {n}. See the next level', { n: home.level }),
+      home.level >= HOMEWORLD_MAX_LEVEL
+        ? t('Homeworld Level 5, fully grown')
+        : t('Homeworld Level {n}. See the next level', { n: home.level }),
     );
     pouchHeader.textContent = MATS.map((mat) => `${MAT_EMOJI[mat]}${fmt(p.mats[mat] ?? 0)}`).join(' ');
     plotButtons.forEach((button, index) => {
@@ -200,7 +212,7 @@ export function createPanel(ctx: HomeworldPanelContext) {
           'div',
           { class: 'row hw-primary-actions' },
           btn(t('Collect all'), `primary${anyReady(home, now) ? '' : ' dim'}`, () => {
-            const c = collectAll(p, now);
+            const c = collectAll(p, Date.now());
             if (!c.dust && !c.gems && !Object.keys(c.boosters).length) return toast(t('Nothing to collect yet'));
             burst(ctx.geo.cx, ctx.geo.cy - ctx.geo.R, '#ffd76a');
             sfx.coin();
@@ -278,7 +290,8 @@ export function createPanel(ctx: HomeworldPanelContext) {
         h('span', { class: 'stack' }, h('b', null, t('Next Up')), h('small', null, next.title), h('small', null, next.subtitle)),
         'ghost wide hw-next-up',
         () => {
-          if (firstHourStep(p) !== 'done') firstHourSheet(app, renderPanel);
+          if (next.homeTarget === 'expedition') expeditionSheet(app, renderPanel);
+          else if (firstHourStep(p) !== 'done') firstHourSheet(app, renderPanel);
           else if (next.homeTarget === 'landmark') {
             const site = activeLandmark(p);
             if (site) landmarkSheet(app, site.id, renderPanel);
@@ -305,7 +318,7 @@ export function createPanel(ctx: HomeworldPanelContext) {
           'div',
           { class: 'hw-overview' },
           h('div', { class: 'sec-title' }, t('Overview')),
-          home.level < 5
+          home.level < HOMEWORLD_MAX_LEVEL
             ? h('div', null, h('p', { class: 'muted' }, t('Next Level checklist')), levelChecklist(app, (home.level + 1) as HomeworldLevel))
             : null,
           h('p', { class: 'muted' }, t('For your next throw')),
@@ -363,7 +376,7 @@ export function createPanel(ctx: HomeworldPanelContext) {
             btn(expeditionLabel(), expeditionBack(home, now) ? 'gem' : 'ghost', () => expeditionSheet(app, renderPanel)),
             expeditionLabel,
           ),
-          btn(home.level >= 5 ? t('Fully grown') : t('Next Level'), 'ghost', () => levelSheet(app, ctx.reopen)),
+          btn(home.level >= HOMEWORLD_MAX_LEVEL ? t('Fully grown') : t('Next Level'), 'ghost', () => levelSheet(app, ctx.reopen)),
         ),
       );
       kids.push(
@@ -374,7 +387,8 @@ export function createPanel(ctx: HomeworldPanelContext) {
           btn(t('📷 Photo'), 'ghost', () => photoMode(app, canvas)),
         ),
       );
-      kids.push(btn(`✨ ${t('Star Atlas')}${constellationsReady(p) ? ' •' : ''}`, 'ghost wide', () => app.showSky()));
+      if (unlocked(p, 'star_atlas'))
+        kids.push(btn(`✨ ${t('Star Atlas')}${constellationsReady(p) ? ' •' : ''}`, 'ghost wide', () => app.showSky()));
     } else if (!b) {
       kids.push(h('div', { class: 'hw-title' }, t('Empty plot')));
       kids.push(
@@ -416,7 +430,7 @@ export function createPanel(ctx: HomeworldPanelContext) {
               type !== 'mill' &&
               type !== 'grove' &&
               type !== 'observatory' &&
-              (p.chapters.length >= 1 || !BUILDINGS[type].gems),
+              (!BUILDINGS[type].gems || (p.chapters.length >= 1 && p.meta.sessions > 1)),
           ).map((type) => {
             const d = BUILDINGS[type];
             const check = canBuild(p, i, type, now);
@@ -425,7 +439,8 @@ export function createPanel(ctx: HomeworldPanelContext) {
               'button',
               {
                 class: `hw-opt${check === 'ok' ? '' : ' no'}${locked ? ' locked' : ''}`,
-                onclick: () => {
+                onclick: async () => {
+                  if (d.gems && !(await confirmGemUse(t(d.name), d.gems, structIcon(type, 1, 96)))) return;
                   const r = build(p, i, type);
                   if (r !== 'ok') {
                     if (r === 'gems') return app.needGems();

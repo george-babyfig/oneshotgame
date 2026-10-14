@@ -1,10 +1,10 @@
-# Playtesting Pocket Planet with kids at home
+# Playtesting Comet Garden with kids at home
 
 This is a guide for the owner (a parent, not a researcher) to run short, friendly playtests with children ages 6-10. No special skills needed, no recording, no personal data. Just watching a kid play for a few minutes and jotting down what you see.
 
 ## 1. Why we do this, and what we measure
 
-Pocket Planet is built for kids 6+. We want each planet to feel like a good challenge: not so easy a child gets bored, not so hard they get frustrated and want to quit. Our game bots (little simulated players) already check the numbers, but bots aren't children — a bot can't tell us if a kid understood what just happened, or whether they enjoyed it.
+Comet Garden is built for kids 6+. We want each planet to feel like a good challenge: not so easy a child gets bored, not so hard they get frustrated and want to quit. Our game bots (little simulated players) already check the numbers, but bots aren't children — a bot can't tell us if a kid understood what just happened, or whether they enjoyed it.
 
 So a handful of times during development, we sit a real child down for about 15 minutes and watch. We're checking two simple things:
 
@@ -59,7 +59,7 @@ While the child plays, watch quietly. Don't coach, don't point at the screen, do
 
 - **Taps that miss.** Did they try to tap something and miss it? How many times?
 - **Confusion.** Did they pause, frown, ask "what do I do?", or look at you for help?
-- **Did they read the landing card / red badge?** Before throwing, did they seem to look at the warning card or badge, or just fling right away?
+- **Did they read the on-planet aim tag / red badge?** Before throwing, did they seem to look at the warning card or badge, or just fling right away?
 - **Did they wait for a gap?** On planets with moving obstacles, did they pause and time their throw, or throw regardless of what was moving?
 - **Did they use a creature on purpose?** Did they seem to pick a throw _because_ a particular creature could handle a Trouble (e.g. "the fire one goes here"), or was it random?
 - **Can they say what it does, in their own words?** After the planet, ask simply: _"What did the [rock / vent / whatever they just saw] do?"_ Write down roughly what they say — you're checking whether they have any working idea, not grading their vocabulary.

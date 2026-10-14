@@ -17,7 +17,7 @@ The Tidepool Theme includes the separately Wish-earned `sampler_tidepool`, Comet
 | com.pocketplanet.game.road00            | NonConsumable |  $3.99 | On             | Cosmic atmosphere; Golden Orbit launcher look; Halo Ring hat; Comet Tail trail; Star Captain suit; Gilded Homeworld ground paint; Liquid Gold Homeworld sea paint; Starfield photo frame; Gilded Passport banner; Star Captain title; Star Captain pose; Cosmic burst |
 | com.pocketplanet.game.theme.tidepool    | NonConsumable |  $2.99 | On             | Six Tidepool Lab skins; Tidepool Den skin; Tidepool Greenhouse skin; Tidepool Launch Bay skin; Tidepool ground paint; Tidepool sea paint; Three Tidepool decoration skins; Two Tidepool friend outfits                                                                |
 | com.pocketplanet.game.theme.cometcandy  | NonConsumable |  $2.99 | On             | Six Comet Candy Lab skins; Comet Candy Den skin; Comet Candy Greenhouse skin; Comet Candy Launch Bay skin; Comet Candy ground paint; Comet Candy sea paint; Three Comet Candy decoration skins; Two Comet Candy friend outfits                                        |
-| com.pocketplanet.game.pack.crystalfrost | NonConsumable |  $2.99 | On             | Crystal Frost Keeper suit; Crystal Frost Keeper hat; Six Crystal Frost object trails; Six Crystal Frost object bursts; Crystal Frost Fusion style                                                                                                                     |
+| com.pocketplanet.game.pack.crystalfrost | NonConsumable |  $2.99 | On             | Crystal Frost Keeper suit; Crystal Frost crown; Six Crystal Frost object trails; Six Crystal Frost object bursts; Crystal Frost Fusion style                                                                                                                          |
 | com.pocketplanet.game.style.nebula      | NonConsumable |  $1.99 | On             | Nebula Swirl Supernova style; Nebula Swirl trail                                                                                                                                                                                                                      |
 | com.pocketplanet.game.style.firefly     | NonConsumable |  $1.99 | On             | Firefly Sparks Supernova style; Firefly Sparks trail                                                                                                                                                                                                                  |
 
@@ -96,14 +96,14 @@ The names and descriptions below are the exact targets for the locale owner in `
 | com.pocketplanet.game.road00            | pt_BR  | Passe Cósmico: Estrada Cósmica           | 12 visuais na pista paga da Estrada Cósmica                  |
 | com.pocketplanet.game.road00            | ja_JP  | コズミックパス：コズミックロード         | コズミックロードの有料レーンで手に入るコーデ12点             |
 | com.pocketplanet.game.theme.tidepool    | en_US  | Homeworld Theme: Tidepool                | Homeworld paints, building skins and outfits                 |
-| com.pocketplanet.game.theme.tidepool    | es_MX  | Tema de Hogar: Poza Marina               | Pinturas, edificios y trajes: Planeta Hogar                  |
-| com.pocketplanet.game.theme.tidepool    | fr_FR  | Thème : Marée                            | Peintures, bâtiments, tenues: Planète Mère                   |
+| com.pocketplanet.game.theme.tidepool    | es_MX  | Planeta Hogar: Poza Marina               | Pinturas, edificios y trajes: Planeta Hogar                  |
+| com.pocketplanet.game.theme.tidepool    | fr_FR  | Planète Mère : Marée                     | Peintures, bâtiments, tenues: Planète Mère                   |
 | com.pocketplanet.game.theme.tidepool    | de_DE  | Heimatwelt: Gezeitenbecken               | Heimatwelt-Farben, Gebäude-Looks und Outfits                 |
 | com.pocketplanet.game.theme.tidepool    | pt_BR  | Tema do Mundo-Lar: Maré                  | Tintas, visuais de construções e roupas                      |
 | com.pocketplanet.game.theme.tidepool    | ja_JP  | ホームワールドテーマ：タイドプール       | ホームワールドのペイント、建物スキン、友だちコーデ           |
 | com.pocketplanet.game.theme.cometcandy  | en_US  | Homeworld Theme: Comet Candy             | Homeworld paints, building skins and outfits                 |
-| com.pocketplanet.game.theme.cometcandy  | es_MX  | Tema de Hogar: Dulce Cometa              | Pinturas, edificios y trajes: Planeta Hogar                  |
-| com.pocketplanet.game.theme.cometcandy  | fr_FR  | Thème : Bonbon Comète                    | Peintures, bâtiments, tenues: Planète Mère                   |
+| com.pocketplanet.game.theme.cometcandy  | es_MX  | Planeta Hogar: Dulce Cometa              | Pinturas, edificios y trajes: Planeta Hogar                  |
+| com.pocketplanet.game.theme.cometcandy  | fr_FR  | Planète Mère : Bonbon Comète             | Peintures, bâtiments, tenues: Planète Mère                   |
 | com.pocketplanet.game.theme.cometcandy  | de_DE  | Heimatwelt: Kometenbonbon                | Heimatwelt-Farben, Gebäude-Looks und Outfits                 |
 | com.pocketplanet.game.theme.cometcandy  | pt_BR  | Tema do Mundo-Lar: Doce Cometa           | Tintas, visuais de construções e roupas                      |
 | com.pocketplanet.game.theme.cometcandy  | ja_JP  | ホームワールドテーマ：すいせいキャンディ | ホームワールドのペイント、建物スキン、友だちコーデ           |

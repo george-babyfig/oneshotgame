@@ -26,7 +26,6 @@ import {
   titlesOwned,
   toggleBadge,
 } from '../../meta/passport';
-import { rankTitle } from '../../meta/rank';
 import { SPECIES } from '../../core/world';
 import { drawKeeper, keeperCanvas } from '../art/keeper';
 import { critterCanvas, drawCreature } from '../art/critters';
@@ -315,7 +314,7 @@ export function editPassport(app: App, first = false) {
     first ? null : h('div', { class: 'sec-title' }, t('Portrait frame')),
     first ? null : frameChoices,
     btn(first ? t('Looks good!') : t('Save'), 'primary wide', () => {
-      // the first-time sheet has no title picker: keep following the rank title automatically
+      // the first-time sheet has no title picker: choose an earned title when one is available
       p.passport = { ...p.passport, first: a, second: b, set: true, title: first ? p.passport.title : title, banner, frame };
       sfx.chest();
       haptic.success();
@@ -377,7 +376,7 @@ function renderPassportImage(app: App): HTMLCanvasElement {
   const title = currentTitle(p);
   g.fillStyle = '#e8e4ff';
   g.font = font(500, 46);
-  g.fillText(`${title ? t(title.text) : rankTitle(p.rank)} · ${explorerId(p)}`, W / 2, 840);
+  g.fillText(title ? `${t(title.text)} · ${explorerId(p)}` : explorerId(p), W / 2, 840);
   const cells = [
     [String(p.chapters.length), t('Chapters')],
     [`${totalStars(p)}★`, t('Stars')],

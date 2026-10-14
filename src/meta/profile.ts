@@ -1,5 +1,6 @@
+import { HOMEWORLD_MAX_LEVEL } from './tuning';
 import { loadKey, saveKey, saveKeyChecked, removeKey } from './storage';
-import type { BoosterId, UpgradeId } from './config';
+import type { BoosterId } from './config';
 import { BIOMES, type BiomeId, type Kind, type Planet } from '../core/world';
 import type { ObstacleId, SkyState } from '../core/sky';
 import {
@@ -297,7 +298,7 @@ export interface Profile {
   galaxy: GalaxyPlanet[];
   lastCollect: number;
   vault: VaultState;
-  upgrades: Record<UpgradeId, number>;
+  upgrades: { vault: number };
   /** One-time preserving M11 conversion and paid-value refunds. */
   m11Migrated: boolean;
   /** M11.5 Homeworld Life state has been validated once. */
@@ -335,7 +336,11 @@ export interface Profile {
     lastSeen: number;
     sessions: number;
     rated: boolean;
-    starterOffered: boolean;
+    /** Durable store state; absent markers keep legacy Pass grandfathering. */
+    passLooksOnly?: boolean;
+    productEntitlements?: string[];
+    revokedProducts?: Record<string, number>;
+    refundQuietUntil?: number;
     notifAsked: boolean;
     lastWelcomeAt: number;
   };
@@ -349,6 +354,8 @@ export interface Profile {
   rank: number;
   /** Highest retired rank payout already accounted for by chapter chests. */
   m4RankPaidThrough: number;
+  /** Individually paid ranks while chests are opened out of order. */
+  m4RankPaidRanks?: number[];
   habitats: string[];
   /** Personal best per mode and challenge history. */
   challengeLog: { code: string; score: number; stars: number; vs: number }[];
@@ -364,8 +371,6 @@ export interface Profile {
   wardrobe: string[];
   favourites: string[];
   stylesNewSeen: string;
-  /** Legacy flings per cosmetic look; gameplay mastery lives in launcher.flings. */
-  mastery: Record<string, number>;
   /** Gameplay launchers are independent of cosmetic look mastery. */
   launcher: LauncherProgress;
   /** The Pier feat persists before its M11.5 site is built. */
@@ -458,8 +463,8 @@ export function defaultProfile(now = Date.now()): Profile {
     combo: { best: 0, stamps: 0 },
     galaxy: [],
     lastCollect: now,
-    vault: { tier: 1, bankedProductionMs: 0, storedDust: 0, lastTick: now },
-    upgrades: { scope: 0, throws: 0, splash: 0, vault: 0 },
+    vault: { bankedProductionMs: 0, storedDust: 0, lastTick: now },
+    upgrades: { vault: 0 },
     m11Migrated: true,
     m115Migrated: true,
     boosters: { shower: 1, spark: 1, scope: 1 },
@@ -501,7 +506,7 @@ export function defaultProfile(now = Date.now()): Profile {
     },
     tutorial: false,
     savedRound: undefined,
-    meta: { installed: now, lastSeen: now, sessions: 0, rated: false, starterOffered: false, notifAsked: false, lastWelcomeAt: 0 },
+    meta: { installed: now, lastSeen: now, sessions: 0, rated: false, notifAsked: false, lastWelcomeAt: 0 },
     stats: {
       grown: {},
       throws: 0,
@@ -523,6 +528,7 @@ export function defaultProfile(now = Date.now()): Profile {
     mementos: [],
     rank: 1,
     m4RankPaidThrough: 0,
+    m4RankPaidRanks: [],
     habitats: [],
     challengeLog: [],
     zen: null,
@@ -533,7 +539,6 @@ export function defaultProfile(now = Date.now()): Profile {
     wardrobe: [],
     favourites: [],
     stylesNewSeen: '',
-    mastery: {},
     launcher: { selected: 'sling', tunes: {}, flings: {}, completedRounds: {}, comboThreePlanets: [] },
     cometPier: defaultCometPier(),
     m105Migrated: true,
@@ -593,6 +598,27 @@ function merge<T>(base: T, saved: unknown): T {
 export function migrate(raw: Record<string, unknown>): Profile {
   if (typeof raw.v === 'number' && raw.v > PROFILE_VERSION) throw new NewerProfileError();
   const p = merge(defaultProfile(), raw);
+  const savedMeta = raw.meta && typeof raw.meta === 'object' && !Array.isArray(raw.meta) ? (raw.meta as Record<string, unknown>) : {};
+  const productIds = (value: unknown): string[] =>
+    Array.isArray(value) ? [...new Set(value.filter((id): id is string => typeof id === 'string'))] : [];
+  if ('productEntitlements' in savedMeta) p.meta.productEntitlements = productIds(savedMeta.productEntitlements);
+  if ('passLooksOnly' in savedMeta) p.meta.passLooksOnly = savedMeta.passLooksOnly === true;
+  if ('refundQuietUntil' in savedMeta)
+    p.meta.refundQuietUntil =
+      typeof savedMeta.refundQuietUntil === 'number' && Number.isFinite(savedMeta.refundQuietUntil)
+        ? Math.max(0, savedMeta.refundQuietUntil)
+        : 0;
+  if ('revokedProducts' in savedMeta) {
+    const revoked = savedMeta.revokedProducts;
+    p.meta.revokedProducts =
+      revoked && typeof revoked === 'object' && !Array.isArray(revoked)
+        ? Object.fromEntries(
+            Object.entries(revoked).filter(
+              (entry): entry is [string, number] => typeof entry[1] === 'number' && Number.isFinite(entry[1]) && entry[1] >= 0,
+            ),
+          )
+        : {};
+  }
   // Saved art choices are advisory; malformed IDs and counts never unlock lands or sites.
   const savedHome = raw.home && typeof raw.home === 'object' && !Array.isArray(raw.home) ? (raw.home as Record<string, unknown>) : {};
   const savedStats = raw.stats && typeof raw.stats === 'object' && !Array.isArray(raw.stats) ? (raw.stats as Record<string, unknown>) : {};
@@ -670,14 +696,13 @@ export function migrate(raw: Record<string, unknown>): Profile {
     const oldHome = raw.home as Record<string, unknown> | undefined;
     const oldRing = oldHome?.ring;
     if (typeof oldRing === 'number' && Number.isFinite(oldRing))
-      p.home.level = Math.max(1, Math.min(5, Math.floor(oldRing))) as HomeState['level'];
+      p.home.level = Math.max(1, Math.min(HOMEWORLD_MAX_LEVEL, Math.floor(oldRing))) as HomeState['level'];
     const historicalCosts = { scope: [250, 700, 1600], throws: [400, 1200, 3000], splash: [5000] } as const;
     const paid = raw.upgrades && typeof raw.upgrades === 'object' ? (raw.upgrades as Record<string, unknown>) : {};
     let refund = 0;
     for (const id of ['scope', 'throws', 'splash'] as const) {
       const n = typeof paid[id] === 'number' && Number.isFinite(paid[id]) ? Math.max(0, Math.floor(paid[id])) : 0;
       refund += historicalCosts[id].slice(0, n).reduce((sum, cost) => sum + cost, 0);
-      p.upgrades[id] = 0;
     }
     // HEAD's capped producer accrual belongs to the player even when the building retires.
     const observedNow = Math.max(migrationNow, p.home.lastTick ?? migrationNow);
@@ -705,7 +730,6 @@ export function migrate(raw: Record<string, unknown>): Profile {
       refund += retiredBuildingRefund(building.type, building.lv);
       return null;
     });
-    p.home.debris = [];
     const vaultCount = typeof paid.vault === 'number' && Number.isFinite(paid.vault) ? Math.max(0, Math.min(3, Math.floor(paid.vault))) : 0;
     p.upgrades.vault = vaultCount;
     const legacyHours = [4, 8, 12, 24][vaultCount];
@@ -713,7 +737,6 @@ export function migrate(raw: Record<string, unknown>): Profile {
     const last = Number.isFinite(p.lastCollect) ? p.lastCollect : migrationNow;
     const accrued = Math.floor(oldRate * Math.min(legacyHours, Math.max(0, migrationNow - last) / 3_600_000));
     p.vault = {
-      tier: (vaultCount + 1) as VaultState['tier'],
       bankedProductionMs: 0,
       storedDust: accrued,
       lastTick: Math.max(migrationNow, last),
@@ -723,7 +746,6 @@ export function migrate(raw: Record<string, unknown>): Profile {
     p.m11Migrated = true;
   }
   p.upgrades.vault = Number.isFinite(p.upgrades.vault) ? Math.max(0, Math.min(4, Math.floor(p.upgrades.vault))) : 0;
-  p.vault.tier = (p.upgrades.vault + 1) as VaultState['tier'];
   p.vault.bankedProductionMs = Number.isFinite(p.vault.bankedProductionMs)
     ? Math.max(0, Math.min(12 * 3_600_000, p.vault.bankedProductionMs))
     : 0;
@@ -827,6 +849,9 @@ export function migrate(raw: Record<string, unknown>): Profile {
   const oldHome = raw.home as Partial<HomeState> | undefined;
   if (oldHome && !Object.hasOwn(oldHome, 'firstHour') && (p.home.intro || p.home.plots.some(Boolean))) p.home.firstHour = 2;
   if (!p.remix || typeof p.remix !== 'object' || Array.isArray(p.remix)) p.remix = {};
+  p.m4RankPaidRanks = Array.isArray(p.m4RankPaidRanks)
+    ? [...new Set(p.m4RankPaidRanks.filter((rank) => Number.isInteger(rank) && rank >= 1 && rank <= 7))]
+    : [];
   if (!Object.hasOwn(raw, 'm4RankPaidThrough')) p.m4RankPaidThrough = Math.min(7, Math.max(0, p.rank - 1));
   if (!Object.hasOwn(raw, 'roadPoints'))
     p.roadPoints = Object.entries(p.stars).reduce((sum, [n, stars]) => sum + (+n > 0 ? stars : 0), 0) + (p.stars[0] ?? 0);
@@ -993,7 +1018,7 @@ export function migrate(raw: Record<string, unknown>): Profile {
     // v2 → v3: the daily streak became Star Calendar stamps; start the calendar fresh
     p.daily.streak = 0;
   }
-  p.home.level = Math.max(1, Math.min(5, Math.floor(p.home.level || 1))) as HomeState['level'];
+  p.home.level = Math.max(1, Math.min(HOMEWORLD_MAX_LEVEL, Math.floor(p.home.level || 1))) as HomeState['level'];
   p.home.gaps = Array.from({ length: RING_PLOTS[p.home.level] }, (_, i) => p.home.gaps[i] ?? null);
   const isle = Array.isArray(savedHome.isleDecor) ? savedHome.isleDecor : [];
   const ownedIsle = ownedIsleDecorations(p);
@@ -1004,6 +1029,15 @@ export function migrate(raw: Record<string, unknown>): Profile {
       : null;
   });
   retireEventProgress(p);
+  // Consume legacy refund inputs above, then stop carrying unread fields into new saves.
+  delete (p as Profile & { mastery?: unknown }).mastery;
+  delete (p.meta as Profile['meta'] & { starterOffered?: unknown }).starterOffered;
+  for (const id of ['scope', 'throws', 'splash'] as const)
+    delete (p.upgrades as Profile['upgrades'] & Partial<Record<typeof id, unknown>>)[id];
+  delete (p.vault as VaultState & { tier?: unknown }).tier;
+  delete (p.home as HomeState & { debris?: unknown }).debris;
+  delete (p.home as HomeState & { lastDebris?: unknown }).lastDebris;
+  for (const friend of [...p.home.residents, ...Object.values(p.home.friends)]) delete (friend as { lastReq?: unknown }).lastReq;
   p.v = PROFILE_VERSION;
   return p;
 }

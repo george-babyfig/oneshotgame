@@ -1,4 +1,4 @@
-import { t } from '../../i18n';
+import { getLang, t } from '../../i18n';
 import type { ProductDef } from '../../meta/config';
 import { btn, h, modal } from '../dom';
 
@@ -26,7 +26,7 @@ export function receiptText(product: ProductDef, gems: number): string {
   if (product.key === 'style_nebula') return t('Nebula Swirl Supernova is in Styles → Effects. Nebula Swirl trail is in Styles → Trail.');
   if (product.key === 'style_firefly')
     return t('Firefly Sparks Supernova is in Styles → Effects. Firefly Sparks trail is in Styles → Trail.');
-  return t('{n} gems added', { n: gems.toLocaleString() });
+  return t('{n} gems added', { n: gems.toLocaleString(getLang()) });
 }
 
 export function receiptCard(product: ProductDef, gems: number): Promise<void> {

@@ -21,7 +21,7 @@ function round(mode: Parameters<App['sceneOpts']>[0], practice = false, eligible
     since: 0,
     greenhouse: { choice: 'scope', winsTowardNext: 5, stored: 0 },
   };
-  app.p.home.residents.push({ species: 'otter', fp: 0, lastReq: 0, rewarded: 0 });
+  app.p.home.residents.push({ species: 'otter', fp: 0, rewarded: 0 });
   app.p.buddy.species = 'otter';
   app.save = vi.fn();
   const saved = vi.fn((ended: LevelResult) => {

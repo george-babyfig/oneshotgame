@@ -1,4 +1,4 @@
-import { LAUNCHER_IDS, LAUNCH_ROSTER, isLaunchRosterId, type LauncherId, type Tune } from '../core/launchers';
+import { LAUNCHER_COPY, LAUNCHER_IDS, LAUNCH_ROSTER, isLaunchRosterId, type LauncherId, type Tune } from '../core/launchers';
 import type { Profile } from './profile';
 import { completedHabitatCount } from './habitats';
 import { bayLevel } from './homeworld';
@@ -47,19 +47,19 @@ export function isLauncherId(id: unknown): id is LauncherId {
 function channel(p: Profile, id: LauncherId): { label: string; done: number; total: number } {
   switch (id) {
     case 'sling':
-      return { label: 'Starting launcher', done: 1, total: 1 };
+      return { label: LAUNCHER_COPY[id].unlockStep, done: 1, total: 1 };
     case 'swoop':
-      return { label: 'Open chapter 3 chest', done: Number(p.chapters.includes(3)), total: 1 };
+      return { label: LAUNCHER_COPY[id].unlockStep, done: Number(p.chapters.includes(3)), total: 1 };
     case 'sparkler':
-      return { label: 'Combo 3 on three planets', done: Math.min(p.launcher.comboThreePlanets.length, 3), total: 3 };
+      return { label: LAUNCHER_COPY[id].unlockStep, done: Math.min(p.launcher.comboThreePlanets.length, 3), total: 3 };
     case 'zip':
-      return { label: 'Complete the Comet Pier', done: p.cometPier.stage, total: 4 };
+      return { label: LAUNCHER_COPY[id].unlockStep, done: p.cometPier.stage, total: 4 };
     case 'thumper':
-      return { label: 'Complete three habitat sets', done: Math.min(completedHabitatCount(p), 3), total: 3 };
+      return { label: LAUNCHER_COPY[id].unlockStep, done: Math.min(completedHabitatCount(p), 3), total: 3 };
     case 'pinpoint':
-      return { label: 'Open chapter 5 chest', done: Number(p.chapters.includes(5)), total: 1 };
+      return { label: LAUNCHER_COPY[id].unlockStep, done: Number(p.chapters.includes(5)), total: 1 };
     case 'skipper':
-      return { label: 'Open chapter 6 chest', done: Number(p.chapters.includes(6)), total: 1 };
+      return { label: LAUNCHER_COPY[id].unlockStep, done: Number(p.chapters.includes(6)), total: 1 };
   }
 }
 

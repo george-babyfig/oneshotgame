@@ -9,9 +9,10 @@ import { sfx } from './audio';
 import { haptic } from './haptics';
 import { planetName, t, tp } from '../i18n';
 import { OBSTACLES } from '../core/sky';
-import { rarityName } from './text';
+import { rarityName, speciesHint } from './text';
 import { toast } from './dom';
 import { CONTINUE_COST, CONTINUE_THROWS } from '../meta/continues';
+import { confirmGemUse } from './screens/homeworld/gemConfirm';
 import { waysToEarnGems } from './flows/earn';
 import { COACH_EVENTS, introAlreadySeen, practiceHelp, type CoachEvent } from '../meta/coach';
 import type { Unlock } from '../meta/unlocks';
@@ -24,6 +25,25 @@ import { forecastTroubles, TROUBLES } from '../core/troubles';
 import { marketingMode } from './devcapture';
 
 const roundDiscoveries = new WeakMap<LevelScene, string[]>();
+// Coach messages and the existing discovery queues share one banner lane.
+const coachQueue = new WeakMap<LevelScene, (() => void)[]>();
+const coachTimers = new WeakMap<LevelScene, ReturnType<typeof setTimeout>>();
+const bannerTransition = new WeakSet<LevelScene>();
+const coachBusy = (scene: LevelScene) => scene.coachEl.classList.contains('reading') || bannerTransition.has(scene);
+function queueCoach(scene: LevelScene, show: () => void) {
+  if (scene.destroyed || scene.ended) return;
+  if (coachBusy(scene) || scene.discoverBusy) {
+    const waiting = coachQueue.get(scene) ?? [];
+    waiting.push(show);
+    coachQueue.set(scene, waiting);
+  } else show();
+}
+function drainBanners(scene: LevelScene) {
+  if (scene.destroyed || scene.ended || scene.discoverBusy || coachBusy(scene)) return;
+  const next = coachQueue.get(scene)?.shift();
+  if (next) next();
+  else scene.showDiscover();
+}
 
 /** Narrow phones: long names start smaller, so no font timing can push them past the edge. */
 function nameSize(name: string): string {
@@ -334,15 +354,7 @@ export function showGoalRecipe(scene: LevelScene, goal: Goal) {
   const biome = goal.type === 'biome' ? BIOMES[goal.id as BiomeId] : null;
   const name = t(species?.name ?? biome!.name);
   const home = species?.home ?? [];
-  const a = home[0] && t(BIOMES[home[0]].name);
-  const b = home[1] && t(BIOMES[home[1]].name);
-  const c = home[2] && t(BIOMES[home[2]].name);
-  const recipe =
-    c && a && b
-      ? t('{a} between {b} and {c}', { a, b, c })
-      : a && b
-        ? t('{a} next to {b}', { a, b })
-        : t(species?.hint ?? biome?.recipe ?? '');
+  const recipe = species ? speciesHint(species) : t(biome?.recipe ?? '');
   const note = h('p', { class: 'muted' });
   const sheet = modal([
     h('div', { class: 'm-title' }, name),
@@ -576,7 +588,7 @@ function placeBanners(scene: LevelScene) {
 
 export function showDiscover(scene: LevelScene) {
   if (scene.fusionDiscoverQueue.length) return showFusionDiscovery(scene);
-  if (scene.discoverBusy || scene.ended || scene.aimFrom) return;
+  if (scene.destroyed || scene.discoverBusy || scene.ended || scene.aimFrom || coachBusy(scene)) return;
   const id = scene.discoverQueue.shift();
   if (!id) return;
   const sp = SPECIES_BY_ID[id];
@@ -601,14 +613,14 @@ export function showDiscover(scene: LevelScene) {
     scene.discoverEl.classList.remove('show');
     setTimeout(() => {
       scene.discoverBusy = false;
-      scene.showDiscover();
+      drainBanners(scene);
     }, 300);
   }, 1100);
 }
 
 export function showFusionDiscovery(scene: LevelScene, id?: ReactionId) {
   if (id) scene.fusionDiscoverQueue.push(id);
-  if (scene.discoverBusy || scene.ended || scene.aimFrom) return;
+  if (scene.destroyed || scene.discoverBusy || scene.ended || scene.aimFrom || coachBusy(scene)) return;
   const next = scene.fusionDiscoverQueue.shift();
   if (!next) return;
   scene.discoverBusy = true;
@@ -653,8 +665,7 @@ export function showFusionDiscovery(scene: LevelScene, id?: ReactionId) {
     scene.discoverEl.classList.remove('show');
     window.setTimeout(() => {
       scene.discoverBusy = false;
-      if (scene.fusionDiscoverQueue.length) showFusionDiscovery(scene);
-      else showDiscover(scene);
+      drainBanners(scene);
     }, 250);
   });
 }
@@ -662,11 +673,13 @@ export function showFusionDiscovery(scene: LevelScene, id?: ReactionId) {
 export function showCoach(scene: LevelScene, k: number) {
   const text = scene.o.coach?.[k];
   if (!text) return;
-  scene.coachEl.replaceChildren(h('span', { class: 'coach-ic' }, k === 0 && scene.L.n === 1 ? '↑' : '💡'), h('span', null, t(text)));
-  scene.coachEl.classList.toggle('star-tip', k === 0 && scene.L.n === 1);
-  scene.coachEl.classList.remove('show');
-  void scene.coachEl.offsetWidth;
-  revealCoach(scene);
+  queueCoach(scene, () => {
+    scene.coachEl.replaceChildren(h('span', { class: 'coach-ic' }, k === 0 && scene.L.n === 1 ? '↑' : '💡'), h('span', null, t(text)));
+    scene.coachEl.classList.toggle('star-tip', k === 0 && scene.L.n === 1);
+    scene.coachEl.classList.remove('show');
+    void scene.coachEl.offsetWidth;
+    revealCoach(scene);
+  });
 }
 
 export function showNovaHoldTip(scene: LevelScene) {
@@ -677,15 +690,31 @@ export function showNovaHoldTip(scene: LevelScene) {
   } catch {
     // A private session can still show the tip.
   }
-  scene.coachEl.replaceChildren(h('span', { class: 'coach-ic' }, '✨'), h('span', null, t('Tap the glowing ring to save your Supernova.')));
-  revealCoach(scene);
+  queueCoach(scene, () => {
+    scene.coachEl.replaceChildren(
+      h('span', { class: 'coach-ic' }, '✨'),
+      h('span', null, t('Tap the glowing ring to save your Supernova.')),
+    );
+    revealCoach(scene);
+  });
 }
 
 function revealCoach(scene: LevelScene) {
   placeBanners(scene);
-  scene.coachEl.classList.add('show');
-  clearTimeout(scene.coachTimer);
-  scene.coachTimer = window.setTimeout(() => scene.coachEl.classList.remove('show'), 4000);
+  scene.coachEl.classList.add('show', 'reading');
+  // Fling/aim code may hide transient banners and clear coachTimer. Reading has its own lifetime.
+  clearTimeout(coachTimers.get(scene));
+  coachTimers.set(
+    scene,
+    setTimeout(() => {
+      scene.coachEl.classList.remove('show', 'reading');
+      bannerTransition.add(scene);
+      window.setTimeout(() => {
+        bannerTransition.delete(scene);
+        drainBanners(scene);
+      }, 300);
+    }, 4000),
+  );
 }
 
 const shownEvents = new Set<CoachEvent>();
@@ -701,9 +730,11 @@ export function showCoachEvent(scene: LevelScene, event: CoachEvent) {
   }
   scene.coachEvents.add(event);
   shownEvents.add(event);
-  scene.coachEl.classList.remove('star-tip');
-  scene.coachEl.replaceChildren(h('span', { class: 'coach-ic' }, '💡'), h('span', null, t(COACH_EVENTS[event])));
-  revealCoach(scene);
+  queueCoach(scene, () => {
+    scene.coachEl.classList.remove('star-tip');
+    scene.coachEl.replaceChildren(h('span', { class: 'coach-ic' }, '💡'), h('span', null, t(COACH_EVENTS[event])));
+    revealCoach(scene);
+  });
 }
 
 const shownIntros = new Set<string>();
@@ -779,7 +810,9 @@ export function endModal(scene: LevelScene, stars: number) {
     scene.modalOpen = null;
     scene.finish(stars);
   };
-  const cont = () => {
+  const cont = async () => {
+    if (!scene.o.continueOk?.(won)) return;
+    if (!(await confirmGemUse(t('+5 throws'), CONTINUE_COST))) return;
     if (!scene.o.continueOk?.(won)) return;
     if (!scene.o.spendGems(CONTINUE_COST)) {
       sfx.error();
@@ -976,7 +1009,15 @@ export function afterShot(scene: LevelScene) {
 
 export function checkEnd(scene: LevelScene) {
   if (scene.ended || (scene.modalOpen && !scene.paused) || !scene.over) return;
-  if (scene.shot || scene.paused || scene.discoverBusy || scene.fusionDiscoverQueue.length) {
+  if (
+    scene.shot ||
+    scene.paused ||
+    scene.discoverBusy ||
+    scene.fusionDiscoverQueue.length ||
+    scene.discoverQueue.length ||
+    coachBusy(scene) ||
+    coachQueue.get(scene)?.length
+  ) {
     scene.endTimer = window.setTimeout(() => scene.checkEnd(), 300);
     return;
   }

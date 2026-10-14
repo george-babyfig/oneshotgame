@@ -141,13 +141,11 @@ describe('retirements and preservation', () => {
     p.home.plots[0] = { type: 'mill', lv: 2, since: T0, done: T0 + H };
     p.home.plots[1] = { type: 'grove', lv: 1, since: T0 };
     p.home.plots[2] = { type: 'observatory', lv: 3, since: T0 };
-    p.home.debris = [3];
     const expected = 150 + 380 + 2000 + 2500 + 6250 + 15000;
     const before = p.dust;
     expect(retireBuildings(p)).toBe(expected);
     expect(p.dust).toBe(before + expected);
     expect(p.home.plots.slice(0, 3)).toEqual([null, null, null]);
-    expect(p.home.debris).toEqual([]);
     expect(retireBuildings(p)).toBe(0);
     tickHome(p, T0 + 3 * H);
     expect(collectAll(p, T0 + 3 * H)).toEqual({ dust: 0, gems: 0, boosters: {} });

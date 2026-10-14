@@ -11,7 +11,7 @@ describe('buddy', () => {
     const p = defaultProfile();
     expect(buddyEligible(p)).toEqual([]);
     expect(setBuddy(p, 'bunny')).toBe(false);
-    p.home.residents.push({ species: 'bunny', fp: 0, lastReq: 0, rewarded: 0 });
+    p.home.residents.push({ species: 'bunny', fp: 0, rewarded: 0 });
     expect(buddyEligible(p)).toEqual([]);
     p.level = 18;
     expect(buddyEligible(p)).toEqual(['bunny']);
@@ -45,7 +45,7 @@ describe('round 6 tie-ins', () => {
     const p = defaultProfile();
     p.tutorial = true;
     p.level = FESTIVAL_UNLOCK_LEVEL;
-    p.home.residents.push({ species: 'otter', fp: 0, lastReq: 0, rewarded: 0 });
+    p.home.residents.push({ species: 'otter', fp: 0, rewarded: 0 });
     const now = new Date(2026, 9, 3);
     checkMail(p, now);
     const kinds = p.mail.map((m) => m.kind);

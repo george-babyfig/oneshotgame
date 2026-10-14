@@ -142,7 +142,7 @@ describe('planet passport', () => {
 
   it('titles and banners are earned', () => {
     const p = defaultProfile();
-    expect(titlesOwned(p).map((x) => x.text)).toEqual(['Stargazer']);
+    expect(titlesOwned(p).map((x) => x.text)).toEqual([]);
     p.pass = true;
     expect(titlesOwned(p).some((x) => x.id === 'pass')).toBe(false);
     p.roadPass = [roadTierOf('title_star_captain')!.i];

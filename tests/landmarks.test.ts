@@ -174,8 +174,8 @@ describe('Landmark content and ledger', () => {
     for (const id of ['sprout_garden', 'skyglass', 'sky_bridge'] as const) p.home.landmarks[id].stage = 4;
     p.cometPier.stage = 4;
     p.home.landmarks.keepers_beacon.stage = 1;
-    p.home.friends.otter = { fp: 100, lastReq: 0, rewarded: 0 };
-    p.home.friends.owl = { fp: 8, lastReq: 0, rewarded: 0 };
+    p.home.friends.otter = { fp: 100, rewarded: 0 };
+    p.home.friends.owl = { fp: 8, rewarded: 0 };
     refreshLandmarkSnapshots(p);
     expect(p.home.landmarks.keepers_beacon.progress[2]).toBe(1);
     expect(p.home.landmarks.keepers_beacon.progress[3]).toBe(2);
@@ -189,7 +189,7 @@ describe('Landmark content and ledger', () => {
     for (const id of ['sprout_garden', 'skyglass', 'sky_bridge', 'comet_pier'] as const) p.home.landmarks[id].stage = 4;
     p.cometPier.stage = 4;
     p.home.landmarks.keepers_beacon.stage = 1;
-    p.home.residents.push({ species: 'otter', fp: 100, lastReq: 0, rewarded: 0 });
+    p.home.residents.push({ species: 'otter', fp: 100, rewarded: 0 });
     const before = p.gems;
     expect(landmarkStageProgress(p, 'keepers_beacon').stage).toBe(1);
     expect(p.gems).toBe(before);

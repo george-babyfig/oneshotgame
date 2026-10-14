@@ -1,4 +1,7 @@
+import { HOMEWORLD_MAX_LEVEL } from '../../../meta/tuning';
 import { h, btn, fmt, modal, toast } from '../../dom';
+import { confirmGemUse } from './gemConfirm';
+import { BOOSTERS } from '../../../meta/tuning';
 import { sfx } from '../../audio';
 import { haptic } from '../../haptics';
 import { burst, effectiveReduceMotion } from '../../motion';
@@ -35,7 +38,7 @@ import {
   applyPaint,
   ownsPaint,
   PAINTS,
-  towerLevel,
+  bayLevel,
   availableLands,
   GROWABLE_LANDS,
   resolvedGaps,
@@ -398,7 +401,6 @@ export const REASON: Record<BuildCheck | 'locked', string> = {
   dust: 'Not enough stardust',
   gems: 'Not enough gems',
   busy: 'Already being built',
-  debris: 'This plot is taken',
   occupied: 'This plot is taken',
   maxlv: 'Fully upgraded',
   locked: 'Unlock this object first',
@@ -408,7 +410,7 @@ export function gotText(c: Collected) {
   const parts: string[] = [];
   if (c.dust) parts.push(`✨${fmt(c.dust)}`);
   if (c.gems) parts.push(`💎${c.gems}`);
-  const e: Record<string, string> = { shower: '🌠', spark: '✨', scope: '🔭' };
+  const e = Object.fromEntries(Object.entries(BOOSTERS).map(([id, def]) => [id, def.emoji]));
   for (const [k, v] of Object.entries(c.boosters)) if (v) parts.push(`${e[k]}×${v}`);
   return parts.join('  ');
 }
@@ -744,7 +746,7 @@ export function expeditionSheet(app: App, after: () => void) {
     h('p', { class: 'muted' }, t('Who goes? They come back with stardust, gifts and a postcard.')),
     pick,
     ...opts.map((hours) => {
-      const loot = expeditionLoot(hours, towerLevel(home), who);
+      const loot = expeditionLoot(hours, bayLevel(home), who);
       return btn(
         h('span', { class: 'stack' }, h('b', null, t('{h} hours', { h: hours })), h('small', null, gotText(loot))),
         'ghost wide',
@@ -847,7 +849,7 @@ export function levelChecklist(app: App, level: HomeworldLevel): HTMLElement {
 export function levelSheet(app: App, after: () => void) {
   const p = app.p;
   const home = p.home;
-  if (home.level >= 5) {
+  if (home.level >= HOMEWORLD_MAX_LEVEL) {
     const done = modal([
       h('div', { class: 'm-title' }, t('Homeworld Level 5')),
       h('p', null, t('Your Homeworld is fully grown. 🌍')),
@@ -938,14 +940,24 @@ export function paintSheet(app: App) {
     h(
       'div',
       { class: 'paint-row' },
-      ...PAINTS.filter((x) => x.channel === channel && (p.chapters.length >= 1 || !x.gems)).map((x) => {
+      ...PAINTS.filter((x) => x.channel === channel && ((p.chapters.length >= 1 && p.meta.sessions > 1) || ownsPaint(p, x.id))).map((x) => {
         const owned = ownsPaint(p, x.id);
         const on = !styled[channel] && cur[channel].id === x.id;
         return h(
           'button',
           {
             class: `paint${on ? ' on' : ''}${owned ? '' : ' locked'}`,
-            onclick: () => {
+            onclick: async () => {
+              if (
+                !owned &&
+                x.gems &&
+                !(await confirmGemUse(
+                  t(x.name),
+                  x.gems,
+                  h('i', { style: `display:block;width:96px;height:96px;border-radius:50%;background:${x.colors[0]}` }),
+                ))
+              )
+                return;
               const r = applyPaint(p, x.id);
               if (r === 'gems') return app.needGems();
               if (r === 'unavailable') return;
@@ -1163,7 +1175,10 @@ function accSheet(app: App, species: string, back: () => void) {
   const p = app.p;
   const r = p.home.residents.find((x) => x.species === species);
   if (!r) return;
-  const pick = (id: string | undefined) => {
+  const pick = async (id: string | undefined) => {
+    const acc = RESIDENT_ACCS.find((a) => a.id === id);
+    if (acc?.gems && !accAvailable(p, r, acc.id) && !(await confirmGemUse(t(acc.name), acc.gems, critterCanvas(species, 96, 0, acc.id))))
+      return;
     const res = wearAcc(p, species, id);
     if (res === 'gems') return app.needGems();
     if (res === 'locked')
@@ -1182,7 +1197,7 @@ function accSheet(app: App, species: string, back: () => void) {
     h(
       'div',
       { class: 'acc-grid' },
-      ...RESIDENT_ACCS.filter((a) => p.chapters.length >= 1 || !a.gems).map((a) => {
+      ...RESIDENT_ACCS.filter((a) => !a.gems || p.home.accs.includes(a.id) || (p.chapters.length >= 1 && p.meta.sessions > 1)).map((a) => {
         const ok = accAvailable(p, r, a.id);
         return h(
           'button',

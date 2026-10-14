@@ -363,7 +363,7 @@ export function draw(scene: LevelScene) {
   const canvas = scene.canvas.getBoundingClientRect();
   const reserved = [
     ...document.querySelectorAll(
-      '.level .hud-top, .level .life, .level .goals, .level .trouble-forecast, .level .twist, .level .hint, .level .banners .show, .level .finish:not(.hidden), .level .hud-bottom, .life-fly',
+      '.level .hud-top, .level .life, .level .goals, .level .trouble-forecast, .level .twist, .level .hint, .level .banners .show, .level .coach.show, .level .coach.reading, .level .finish:not(.hidden), .level .hud-bottom, .life-fly',
     ),
   ]
     .map((el) => el.getBoundingClientRect())

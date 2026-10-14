@@ -1,5 +1,5 @@
 // The Bay presents earned flight choices; payment and ownership live in meta/launchbay.
-import { LAUNCHERS, LAUNCH_ROSTER, isLaunchRosterId, type LauncherId, type Tune } from '../../core/launchers';
+import { LAUNCHERS, LAUNCHER_COPY, LAUNCH_ROSTER, isLaunchRosterId, type LauncherId, type Tune } from '../../core/launchers';
 import { availability, select, tune, tuneUp, TUNE_COST } from '../../meta/launchbay';
 import { MAT_EMOJI } from '../../meta/constellations';
 import { bayLevel } from '../../meta/homeworld';
@@ -33,15 +33,6 @@ const EFFECT: Record<Exclude<LauncherId, 'sling'>, readonly [() => string, () =>
     () => t('First bounce keeps full power'),
     () => t('First two bounces keep full power'),
   ],
-};
-
-const DRAWBACK: Record<Exclude<LauncherId, 'sling'>, () => string> = {
-  swoop: () => t('Its curving flight takes longer.'),
-  sparkler: () => t('Plain throws can dim the Supernova glow.'),
-  zip: () => t('A full pull can fly too far.'),
-  thumper: () => t('Its aim line is short.'),
-  pinpoint: () => t('Some landings reach fewer places.'),
-  skipper: () => t('A bounce can make a landing gentler.'),
 };
 
 function tuneReason(reason: Exclude<ReturnType<typeof tuneUp>, 'ok'>): string {
@@ -219,7 +210,7 @@ function card(app: App, id: LauncherId): HTMLElement {
     ),
     progress,
     have && id !== 'sling' ? h('p', { class: 'bay-state' }, t('Tune {n} of 4', { n: currentTune })) : null,
-    have && id !== 'sling' ? h('p', { class: 'bay-effect' }, DRAWBACK[id]()) : null,
+    have && id !== 'sling' ? h('p', { class: 'bay-effect' }, t(LAUNCHER_COPY[id].description!)) : null,
     needed && have
       ? h('p', { class: 'bay-effect' }, t('Next: {effect}', { effect: EFFECT[id as Exclude<LauncherId, 'sling'>][next - 2]() }))
       : null,
@@ -284,7 +275,7 @@ export function showLaunchBay(app: App, focusId?: LauncherId, focusKind: 'select
         'div',
         { class: 'page-title' },
         building,
-        t('Launch Bay'),
+        h('span', { class: 'bay-heading-name' }, t('Launch Bay')),
         h('small', { class: 'muted' }, ` ${t('Level {n}', { n: bayLevel(app.p.home) })}`),
       ),
       h(

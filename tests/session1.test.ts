@@ -26,6 +26,6 @@ describe('first session gates', () => {
     expect(pendingIntroAfterWin(p)).toBeUndefined();
     expect(unlocked(p, 'star_calendar')).toBe(false);
     expect(p.chapters).toEqual([]);
-    expect(choosePopup({ homeSeen: false, shownThisOpen: false, awayMs: Infinity }, ['away', 'intro', 'starter'])).toBeNull();
+    expect(choosePopup({ homeSeen: false, shownThisOpen: false, awayMs: Infinity }, ['away', 'intro'])).toBeNull();
   });
 });

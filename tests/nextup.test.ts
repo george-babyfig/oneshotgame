@@ -8,6 +8,7 @@ describe('nextUp', () => {
     const p = defaultProfile();
     p.level = 6;
     expect(nextUp(p, 0)).toMatchObject({ kind: 'unlock', action: 'homeworld' });
+    p.chapters = [1, 2];
     p.level = 24;
     expect(nextUp(p, 0)).toMatchObject({ kind: 'unlock', title: 'Star Atlas', action: 'sky' });
   });

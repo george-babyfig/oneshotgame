@@ -11,6 +11,7 @@ import {
   pendingDust,
   vaultFullAt,
   vaultRate,
+  vaultTier,
   VAULT_RATES,
 } from '../src/meta/economy';
 import { CALENDAR_DAYS, stamp } from '../src/meta/calendar';
@@ -158,7 +159,7 @@ describe('economy', () => {
     expect(VAULT_RATES.every((rate, i) => i === 0 || rate > VAULT_RATES[i - 1])).toBe(true);
     for (const [i, rate] of VAULT_RATES.slice(1).entries()) {
       expect(buyVaultTier(p, 0)).toBe(true);
-      expect(p.vault.tier).toBe(i + 2);
+      expect(vaultTier(p)).toBe(i + 2);
       expect(vaultRate(p)).toBe(rate);
     }
     expect(p.dust).toBe(0);

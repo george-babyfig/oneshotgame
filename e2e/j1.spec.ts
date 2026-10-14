@@ -10,6 +10,7 @@ import {
   layoutViolations,
   localesToRun,
   modalsSeen,
+  midGame,
   pageText,
   settle,
   snap,
@@ -468,5 +469,167 @@ test.describe('J1 Home layout at the narrowest width', () => {
     await info.attach('home-after-planet-5', { path: file, contentType: 'image/png' });
     expectNoErrors(guard);
     expect.soft(bad, 'Home layout (no expected failures since M4)').toEqual([]);
+  });
+});
+
+test.describe('FB shell regressions at 320×568', () => {
+  test.use({ locale: 'en-US', viewport: { width: 320, height: 568 } });
+
+  test('first Home keeps PLAY above the tabs, hides locked Styles news and uses returning Vault copy', async ({ page }) => {
+    await freshInstall(page);
+    await page.evaluate(async () => {
+      const app = (window as any).__app;
+      const { makeLevel } = await (window as any).__e2eImport('/src/core/levels.ts');
+      app.p.tutorial = true;
+      app.p.galaxy = [1, 2].map((n) => ({ n, name: makeLevel(n).name, stars: 3, species: [], colors: [], hue: 100, life: 100 }));
+      app.p.stars = { 1: 3, 2: 3 };
+      app.p.level = 3;
+      app.p.stats.wins = 2;
+      app.p.vault.bankedProductionMs = 0;
+      app.showHome(true);
+    });
+    await settle(page);
+    await expect(page.locator('.next-up-card')).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.classList.contains('styles-new'))).toBe(false);
+    await expect(page.locator('.dust-btn')).toContainText('keep your Vault working');
+    const fits = await page.evaluate(() => {
+      const play = document.querySelector('.home .play')!.getBoundingClientRect();
+      const body = document.querySelector('.home-body')!.getBoundingClientRect();
+      const tabs = document.querySelector('.main-tabs')!.getBoundingClientRect();
+      return play.bottom <= body.bottom && play.bottom < tabs.top;
+    });
+    expect(fits).toBe(true);
+    await page.evaluate(() => {
+      const app = (window as any).__app;
+      app.p.chapters = [1];
+      app.showHome(true);
+    });
+    expect(await page.evaluate(() => document.documentElement.classList.contains('styles-new'))).toBe(true);
+    await page.locator(tabSel('styles')).click();
+    await page.evaluate(() => (window as any).__app.showHome(true));
+    expect(await page.evaluate(() => document.documentElement.classList.contains('styles-new'))).toBe(false);
+  });
+
+  test('ready chest is the map landing target and a tall sheet keeps its title visible', async ({ page }) => {
+    await freshInstall(page);
+    await page.evaluate(() => {
+      const app = (window as any).__app;
+      app.p.tutorial = true;
+      app.p.level = 11;
+      app.p.chapters = [];
+      app.p.stars = Object.fromEntries(Array.from({ length: 10 }, (_, i) => [i + 1, 3]));
+      app.showStarMap();
+    });
+    await settle(page);
+    const chest = await page.locator('.chest-btn').first().boundingBox();
+    expect(chest!.y).toBeGreaterThan(0);
+    expect(chest!.y + chest!.height).toBeLessThan(568);
+    await page.evaluate(async () => {
+      const { h, btn, modal } = await (window as any).__e2eImport('/src/ui/dom.ts');
+      modal([
+        h('h2', { class: 'm-title' }, 'Title stays visible'),
+        h(
+          'div',
+          { class: 'rewards' },
+          ...['stardust', '3-star bonus', 'creatures'].map((label) => h('div', null, h('b', null, '10'), h('small', null, label))),
+        ),
+        h('div', { style: 'height:700px;flex:none' }),
+        btn('Bottom action', '', () => {}),
+      ]);
+    });
+    expect(await page.locator(OPEN_MODAL).evaluate((el) => el.scrollTop)).toBe(0);
+    await expect(page.locator(OPEN_MODAL).locator('.m-title')).toBeInViewport();
+    const creatureLines = await page
+      .locator(OPEN_MODAL)
+      .locator('.rewards small')
+      .last()
+      .evaluate((label) => {
+        const range = document.createRange();
+        range.selectNodeContents(label);
+        return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size;
+      });
+    expect(creatureLines).toBe(1);
+  });
+
+  test('second tap after Back cannot open Settings; a same-screen refresh keeps controls live', async ({ page }) => {
+    await freshInstall(page);
+    await page.evaluate(() => {
+      const app = (window as any).__app;
+      app.p.tutorial = true;
+      app.selectTab('collection');
+      app.showLifebook();
+    });
+    await page.waitForFunction(() => !document.documentElement.classList.contains('input-settling'));
+    const back = await page.locator('.topbar button[aria-label="Back"]').boundingBox();
+    const point = { x: back!.x + back!.width / 2, y: back!.y + back!.height / 2 };
+    await page.mouse.click(point.x, point.y);
+    await page.waitForTimeout(120);
+    await page.mouse.click(point.x, point.y);
+    await waitScreen(page, 'collection');
+    await expect(page.locator(OPEN_MODAL)).toHaveCount(0);
+    await page.waitForFunction(() => !document.documentElement.classList.contains('input-settling'));
+    await page.evaluate(() => (window as any).__app.refresh());
+    expect(await page.evaluate(() => document.documentElement.classList.contains('input-settling'))).toBe(false);
+    await page.locator('.topbar button[aria-label="Settings"]').click();
+    await expect(page.locator(OPEN_MODAL)).toContainText('Settings');
+    await page.waitForFunction(() => !document.documentElement.classList.contains('input-settling'));
+    await page.evaluate(async () => {
+      const { h, btn, modal, closeModals } = await (window as any).__e2eImport('/src/ui/dom.ts');
+      closeModals();
+      const m = modal([h('h2', { class: 'm-title' }, 'Fresh sheet'), btn('Close sheet', 'wide', () => m.close())]);
+    });
+    const bottom = await page.locator(OPEN_MODAL).getByRole('button', { name: 'Close sheet' }).boundingBox();
+    await page.mouse.click(bottom!.x + bottom!.width / 2, bottom!.y + bottom!.height / 2);
+    await expect(page.locator(OPEN_MODAL)).toContainText('Fresh sheet');
+  });
+  test('short Homeworld has a usable controls scroller and reachable tabs', async ({ page }) => {
+    await freshInstall(page);
+    await midGame(page, { level: 16 });
+    await page.evaluate(() => (window as any).__app.selectTab('homeworld'));
+    await settle(page);
+    const panel = await page.locator('.hw-panel').evaluate((el) => ({ height: el.clientHeight, content: el.scrollHeight }));
+    expect(panel.height).toBeGreaterThanOrEqual(160);
+    expect(panel.content).toBeGreaterThan(panel.height);
+    await expect(page.locator('.main-tabs')).toBeInViewport();
+    await page.locator('.hw-panel').evaluate((el) => {
+      el.scrollTop = el.scrollHeight;
+    });
+    expect(await page.locator('.hw-panel').evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  });
+  test('Japanese Launch Bay title keeps its words whole and goal chips meet the touch minimum', async ({ page }) => {
+    await freshInstall(page);
+    await page.evaluate(async () => {
+      const app = (window as any).__app;
+      const { setLang } = await (window as any).__e2eImport('/src/i18n.ts');
+      const { showLaunchBay } = await (window as any).__e2eImport('/src/ui/screens/launchbay.ts');
+      setLang('ja');
+      app.p.tutorial = true;
+      showLaunchBay(app);
+    });
+    await settle(page);
+    const heading = await page.locator('.launch-bay .page-title small').evaluate((el) => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size;
+    });
+    expect(heading).toBe(1);
+    await page.evaluate(async () => {
+      const app = (window as any).__app;
+      app.startLevel(6);
+      const { closeModals } = await (window as any).__e2eImport('/src/ui/dom.ts');
+      closeModals();
+    });
+    await settle(page);
+    const targets = await page.locator('button.goal, .hud button.icon').evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const box = button.getBoundingClientRect();
+        return { width: box.width, height: box.height };
+      }),
+    );
+    expect(targets.length).toBeGreaterThan(0);
+    for (const target of targets) {
+      expect(target.width).toBeGreaterThanOrEqual(44);
+      expect(target.height).toBeGreaterThanOrEqual(44);
+    }
   });
 });

@@ -1,3 +1,4 @@
+import { confirmGemUse } from '../screens/homeworld/gemConfirm';
 import { BOSS_REWARD } from '../../meta/tuning';
 // After a won level: record it, celebrate, and point at what's next.
 import { h, btn, fmt, modal } from '../dom';
@@ -64,7 +65,9 @@ export function helpEndModal(scene: LevelScene, rungs: HelpRung[]) {
     scene.modalOpen = null;
     scene.finish(0);
   };
-  const continueRound = () => {
+  const continueRound = async () => {
+    if (!scene.o.continueOk?.(false)) return;
+    if (!(await confirmGemUse(t('+5 throws'), CONTINUE_COST))) return;
     if (!scene.o.continueOk?.(false)) return;
     if (!scene.o.spendGems(CONTINUE_COST)) {
       sfx.error();

@@ -133,6 +133,44 @@ export const LAUNCHERS: Readonly<Record<LauncherId, LauncherDef>> = Object.freez
   }),
 });
 
+export interface LauncherCopy {
+  readonly description?: string;
+  readonly goodHereReason?: string;
+  readonly unlockStep: string;
+}
+
+// English localization keys, collected by tests/i18n.test.ts; translate at render time.
+export const LAUNCHER_COPY: Readonly<Record<LauncherId, LauncherCopy>> = Object.freeze({
+  sling: Object.freeze({ unlockStep: 'Starting launcher' }),
+  swoop: Object.freeze({
+    description: 'Its curving flight takes longer.',
+    goodHereReason: 'Curves around moons and twin planets.',
+    unlockStep: 'Open chapter 3 chest',
+  }),
+  sparkler: Object.freeze({
+    description: 'Plain throws can dim the Supernova glow.',
+    unlockStep: 'Combo 3 on three planets',
+  }),
+  zip: Object.freeze({
+    description: 'A full pull can fly too far.',
+    goodHereReason: 'A quick flight helps with moving planets, wind and mist.',
+    unlockStep: 'Complete the Comet Pier',
+  }),
+  thumper: Object.freeze({
+    description: 'Its aim line is short.',
+    goodHereReason: 'Wide landings help with rocks and rings.',
+    unlockStep: 'Complete three habitat sets',
+  }),
+  pinpoint: Object.freeze({
+    description: 'Some landings reach fewer places.',
+    unlockStep: 'Open chapter 5 chest',
+  }),
+  skipper: Object.freeze({
+    description: 'A bounce can make a landing gentler.',
+    unlockStep: 'Open chapter 6 chest',
+  }),
+});
+
 /** Tuning only eases a drawback; it never improves a launcher's strength. */
 export function launcherAtTune(id: LauncherId, tune: Tune): ResolvedLauncher {
   const base = LAUNCHERS[id];

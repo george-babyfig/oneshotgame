@@ -248,6 +248,17 @@ describe('privacy: dependency allowlist', () => {
     ]);
   });
 
+  it('keeps the third-party StoreKit listener out of source and the iOS package', () => {
+    const bad = SRC.flatMap(({ file, src }) =>
+      bareImports(src)
+        .filter((id) => id === '@capgo/native-purchases' || id.startsWith('@capgo/native-purchases/'))
+        .map((id) => `${file}: ${id}`),
+    );
+    expect(bad).toEqual([]);
+    const swiftPackage = code('ios/App/CapApp-SPM/Package.swift');
+    expect(swiftPackage).not.toMatch(/capgo.*native.?purchases|native.?purchases/i);
+  });
+
   it('src imports only relative modules or allowed runtime dependencies', () => {
     const bad = SRC.flatMap(({ file, src }) =>
       bareImports(src)

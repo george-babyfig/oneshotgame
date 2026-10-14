@@ -27,7 +27,6 @@ import {
   type Planet,
   type Sector,
 } from '../src/core/world';
-import { earnedLandingProgress } from '../src/meta/events';
 
 const DIR = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'rules');
 const UPDATE = process.env.UPDATE_FIXTURES === '1';
@@ -49,7 +48,9 @@ function checkRows(name: string, rows: Row[], frozen = false) {
     return;
   }
   if (!existsSync(file)) throw new Error(`Missing fixture ${file}. Generate it with UPDATE_FIXTURES=1.`);
-  const expected = JSON.parse(readFileSync(file, 'utf8')) as Row[];
+  // Old fixtures retain an `earned` column from the retired Weekly Event counter.
+  // Ignore that non-rule column; keep every gameplay field and fixture byte unchanged.
+  const expected = (JSON.parse(readFileSync(file, 'utf8')) as Row[]).map(({ earned: _retiredTokens, ...row }) => row as Row);
   expect(
     actual.map((r) => r.id),
     `${name}: row ids`,
@@ -128,12 +129,10 @@ const resultRow = (r: ImpactResult) => ({
   lost: r.lost,
 });
 
-/** What the game scene derives from a landing. */
-function landingRow(res: ImpactResult, planet: Planet, regionBests: number[], arrived: Set<string>) {
-  const earned = earnedLandingProgress(res, planet, regionBests, arrived);
+/** Historical regional/arrival state used by the frozen scripted sequences. */
+function trackLandingHistory(res: ImpactResult, planet: Planet, regionBests: number[], arrived: Set<string>) {
   for (const i of res.changed) regionBests[i] = Math.max(regionBests[i] ?? 0, BIOMES[planet.sectors[i].biome].value);
   for (const species of res.spawned) arrived.add(species.id);
-  return { earned: [earned.regions, earned.arrivals, [...earned.firstArrivals]] };
 }
 
 const startBests = (p: Planet) => p.sectors.map((s) => BIOMES[s.biome].value);
@@ -157,7 +156,6 @@ function matrixRows(): Row[] {
             ...resultRow(res),
             diff: sectorDiff(base, p),
             found: p.speciesFound,
-            ...landingRow(res, p, startBests(base), startArrived(base)),
           });
         }
       }
@@ -203,7 +201,7 @@ function sequenceRows(): Row[] {
       const nova = charge >= NOVA_CHARGE;
       const before = clonePlanet(p);
       const res = impact(p, kind, at, cfg.splash, { nova });
-      const landing = landingRow(res, p, regionBests, arrived);
+      trackLandingHistory(res, p, regionBests, arrived);
       if (nova) charge = 0;
       else {
         // Preserve this historical sequence's Supernova timing while removing its flat Lab column.
@@ -218,7 +216,6 @@ function sequenceRows(): Row[] {
         ...resultRow(res),
         diff: sectorDiff(before, p),
         found: p.speciesFound,
-        ...landing,
         charge,
         bests: [...regionBests],
       });

@@ -15,15 +15,10 @@ export function firstHourStep(p: Profile): 'lab' | 'friend' | 'done' {
 export function firstHourLab(
   p: Profile,
   kind: Kind = suggestedFirstLab(p),
-  plot = p.home.plots.findIndex((b, i) => !b && !p.home.debris.includes(i)),
+  plot = p.home.plots.findIndex((b) => !b),
   now = Date.now(),
 ): BuildCheck | 'locked' {
   if (firstHourStep(p) !== 'lab') return 'locked';
-  // Old saves may still carry debris before the migration clears it.
-  if (plot < 0) {
-    plot = p.home.plots.findIndex((b) => !b);
-    if (plot >= 0) p.home.debris = p.home.debris.filter((i) => i !== plot);
-  }
   const check = buildLab(p, plot, kind, now);
   if (check === 'ok') p.home.firstHour = 1;
   return check;
@@ -35,11 +30,7 @@ export function firstHourFriend(p: Profile, now = Date.now()): { species: string
   const species = existing ?? candidates(p)[0]?.id;
   if (!species) return null;
   if (!existing && countOf(p.home, 'den') === 0) {
-    let plot = p.home.plots.findIndex((b, i) => !b && !p.home.debris.includes(i));
-    if (plot < 0) {
-      plot = p.home.plots.findIndex((b) => !b);
-      if (plot >= 0) p.home.debris = p.home.debris.filter((i) => i !== plot);
-    }
+    let plot = p.home.plots.findIndex((b) => !b);
     // An already filled Homeworld keeps its buildings; the welcome Den gets a plot.
     if (plot < 0) plot = p.home.plots.push(null) - 1;
     p.home.plots[plot] = { type: 'den', lv: 1, since: now };

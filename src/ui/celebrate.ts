@@ -36,6 +36,7 @@ export function celebrate(kind: CelebrationKind, opts: CelebrationOptions): { sk
     finished = true;
     pending.forEach(clearTimeout);
     opts.root.removeEventListener('pointerdown', skip);
+    opts.root.removeEventListener('celebration-skip', skip);
     opts.root.classList.add('celebrate-done');
     opts.onComplete?.();
     resolveDone();
@@ -45,6 +46,8 @@ export function celebrate(kind: CelebrationKind, opts: CelebrationOptions): { sk
     finish();
   };
   opts.root.addEventListener('pointerdown', skip);
+  // The input guard (dom.ts) forwards an early tap as this event.
+  opts.root.addEventListener('celebration-skip', skip);
   if (opts.reduceMotion) {
     playThrough(Infinity, true);
     pending.push(window.setTimeout(finish, opts.holdForReading ? duration : Math.min(220, duration)));

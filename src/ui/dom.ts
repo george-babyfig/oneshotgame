@@ -39,6 +39,34 @@ export function btn(label: Child, cls: string, onClick: () => void): HTMLButtonE
   return b;
 }
 
+// Block the follow-up tap across both overlays and screens; keyboard activation stays available.
+let inputGuardTimer: ReturnType<typeof setTimeout> | undefined;
+let inputGuardUntil = 0;
+let guardedDocument: Document | undefined;
+export function guardInput() {
+  inputGuardUntil = performance.now() + 300;
+  if (guardedDocument !== document) {
+    guardedDocument = document;
+    const block = (event: Event) => {
+      if (performance.now() >= inputGuardUntil) return;
+      if (event.type === 'click' && (event as MouseEvent).detail === 0) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      // Skipping a celebration only jumps it to its end state, so an early tap still does that.
+      if (event.type === 'pointerdown')
+        document
+          .querySelectorAll('[data-celebration]:not(.celebrate-done)')
+          .forEach((root) => root.dispatchEvent(new Event('celebration-skip')));
+    };
+    for (const type of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click']) {
+      document.addEventListener(type, block, { capture: true, passive: false });
+    }
+  }
+  document.documentElement.classList.add('input-settling');
+  clearTimeout(inputGuardTimer);
+  inputGuardTimer = setTimeout(() => document.documentElement.classList.remove('input-settling'), 300);
+}
+
 export const fmt = (n: number) => Math.floor(n).toLocaleString(getLang());
 export const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -79,7 +107,7 @@ export function modal(content: Child[], opts: { cls?: string; dismiss?: boolean;
     if (done) return;
     done = true;
     opts.onAbort?.();
-    opener?.focus();
+    opener?.focus({ preventScroll: true });
   };
   if (opts.onAbort) aborts.add(abort);
   const close = () => {
@@ -90,13 +118,16 @@ export function modal(content: Child[], opts: { cls?: string; dismiss?: boolean;
     scrim.classList.add('out');
     scrim.style.pointerEvents = 'none';
     setTimeout(() => scrim.remove(), prefersReducedMotion() ? MOTION.calm : MOTION.popOut);
+    guardInput();
     opts.onClose?.();
-    opener?.focus();
+    opener?.focus({ preventScroll: true });
   };
   if (opts.dismiss !== false) scrim.addEventListener('click', (e) => e.target === scrim && close());
   overlay.append(scrim);
+  guardInput();
   popIn(box);
-  (box.querySelector<HTMLElement>('button:not([disabled]), input, select, [tabindex="0"]') ?? box).focus();
+  (box.querySelector<HTMLElement>('button:not([disabled]), input, select, [tabindex="0"]') ?? box).focus({ preventScroll: true });
+  box.scrollTop = 0;
   return { el: box, close };
 }
 

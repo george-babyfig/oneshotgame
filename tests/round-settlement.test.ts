@@ -40,7 +40,7 @@ describe('completed Homeworld rounds', () => {
   it('credits separate Voyage replays of one stop to friendship and Greenhouse', () => {
     const p = defaultProfile();
     p.level = 30;
-    p.home.residents.push({ species: 'otter', fp: 0, lastReq: 0, rewarded: 0 });
+    p.home.residents.push({ species: 'otter', fp: 0, rewarded: 0 });
     p.home.plots[0] = { type: 'greenhouse', lv: 1, since: 0, greenhouse: { choice: 'scope', winsTowardNext: 0, stored: 0 } };
     const first = round('voyage-1', { mode: 'voyage', planetKey: 'voyage:same-stop', buddySpecies: 'otter', steps: [] });
     settleHomeworldRound(p, first);

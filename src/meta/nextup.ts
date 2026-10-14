@@ -1,3 +1,4 @@
+import { HOMEWORLD_MAX_LEVEL } from './tuning';
 import { t } from '../i18n';
 import type { Profile } from './profile';
 import { UNLOCKS, unlocked } from './unlocks';
@@ -5,16 +6,16 @@ import { chestsReady } from './progression';
 import { roadReady } from './starroad';
 import { wishClaimable, wishText, type WishCard } from './wishes';
 import { CONSTELLATIONS } from './tuning';
-import { habitatProgress, HABITATS } from './habitats';
+import { habitatProgress, habitatsReady, HABITATS } from './habitats';
 import { firstHourStep } from './firsthour';
 import { LAB_TEXT } from './labcopy';
 import { HOME_LEVEL_REQUIREMENTS } from './tuning';
-import { canExpand, chaptersDone } from './homeworld';
+import { canExpand, chaptersDone, expeditionBack, anyReady } from './homeworld';
 import type { HomeworldLevel } from './homeworldTypes';
 import { activeLandmark, landmarkFinishStatus } from './landmarks';
 import { canLevelLab, labLevel } from './labs';
 import { LAB_NAME } from './labcopy';
-import { KINDS, type Kind } from '../core/world';
+import { KINDS, SPECIES_BY_ID, type Kind } from '../core/world';
 import { LAUNCHER_ESSENCE, TUNE_COST, launcherBay } from './launchbay';
 import { bayLevel } from './homeworld';
 
@@ -25,7 +26,7 @@ export interface NextUp {
   kind: 'unlock' | 'claim' | 'wish' | 'goal' | 'play';
   title: string;
   subtitle: string;
-  homeTarget?: 'celebration' | 'landmark' | 'level' | 'lab' | 'launcher' | 'planet';
+  homeTarget?: 'celebration' | 'landmark' | 'level' | 'lab' | 'launcher' | 'planet' | 'expedition';
   action:
     | 'play'
     | 'missions'
@@ -82,6 +83,9 @@ const TARGETS: Record<string, NextUp['action']> = {
 
 /** One gentle suggestion, with actions understood by the Play tab. */
 export function nextUp(p: Profile, _now: number): NextUp {
+  if (chestsReady(p).length)
+    return { kind: 'claim', title: t('A chapter chest is ready'), subtitle: t('Open your chapter chest'), action: 'starmap' };
+  if (unlocked(p, 'homeworld') && expeditionBack(p.home, _now)) return expeditionNextUp(p);
   const intro = UNLOCKS.find(
     (x) =>
       x.planet === p.level - 1 &&
@@ -91,7 +95,7 @@ export function nextUp(p: Profile, _now: number): NextUp {
       (!['quests', 'star_road', 'star_calendar', 'inbox'].includes(x.id) || unlocked(p, 'quests')) &&
       (x.id !== 'workshop' || p.chapters.length >= 1),
   );
-  if (intro)
+  if (intro && Math.max(0, p.meta.sessions - 1) % 2 === 0)
     return {
       kind: 'unlock',
       title: t(intro.intro?.title ?? NEW_FEATURE[intro.id] ?? 'A new place to explore'),
@@ -99,14 +103,15 @@ export function nextUp(p: Profile, _now: number): NextUp {
       action:
         TARGETS[intro.id] ?? (intro.placement === 'collection' ? 'collection' : intro.placement === 'homeworld' ? 'homeworld' : 'play'),
     };
-  if (chestsReady(p).length)
-    return { kind: 'claim', title: t('A chapter chest is ready'), subtitle: t('Open your chapter chest'), action: 'starmap' };
   if (p.home.plots.some((b) => b && b.done && b.done <= _now))
     return { kind: 'claim', title: t('A Homeworld build is ready'), subtitle: t('Visit your Homeworld'), action: 'homeworld' };
   if (unlocked(p, 'quests') && ((unlocked(p, 'star_road') && roadReady(p).length) || wishClaimable(p)))
     return { kind: 'claim', title: t('A reward is ready'), subtitle: t('Visit Missions'), action: 'missions' };
+  if (unlocked(p, 'lifebook') && habitatsReady(p).length)
+    return { kind: 'claim', title: t('A reward is ready'), subtitle: t('Lifebook'), action: 'lifebook' };
   const nearWish = (p.quests.list as WishCard[]).find((q) => q.template && q.species && !q.claimed && q.progress >= q.goal * 0.8);
-  if (unlocked(p, 'quests') && nearWish)
+
+  if (unlocked(p, 'quests') && nearWish && firstHourStep(p) !== 'done')
     return { kind: 'wish', title: t('A Wish is growing'), subtitle: wishText(nearWish), action: 'missions' };
   if (unlocked(p, 'homeworld') && firstHourStep(p) !== 'done')
     return {
@@ -115,22 +120,45 @@ export function nextUp(p: Profile, _now: number): NextUp {
       subtitle: t(LAB_TEXT.firstReward),
       action: 'homeworld',
     };
+  const suggestions: NextUp[] = [];
+  if (unlocked(p, 'quests') && nearWish)
+    suggestions.push({ kind: 'wish', title: t('A Wish is growing'), subtitle: wishText(nearWish), action: 'missions' });
   const constellation = CONSTELLATIONS.find((c) => !p.constellations.includes(c.id) && c.bundles.some((b) => p.bundles.includes(b.id)));
   if (unlocked(p, 'star_atlas') && constellation)
-    return { kind: 'goal', title: t('Grow your Star Atlas'), subtitle: t('A constellation is taking shape'), action: 'sky' };
-  const habitat = HABITATS.find((h) => !p.habitats.includes(h.id) && habitatProgress(p, h) >= h.species.length - 2);
+    suggestions.push({ kind: 'goal', title: t('Grow your Star Atlas'), subtitle: t('A constellation is taking shape'), action: 'sky' });
+  const habitat = HABITATS.find(
+    (h) =>
+      !p.habitats.includes(h.id) &&
+      habitatProgress(p, h) < h.species.length &&
+      habitatProgress(p, h) >= h.species.length - 2 &&
+      h.species.filter((id) => !p.seen.includes(id)).every((id) => ['common', 'uncommon'].includes(SPECIES_BY_ID[id]?.rarity)),
+  );
   if (unlocked(p, 'lifebook') && habitat)
-    return {
+    suggestions.push({
       kind: 'goal',
       title: t('Meet more creatures'),
       subtitle: t('{name} is taking shape', { name: t(habitat.name) }),
       action: 'lifebook',
-    };
-  return { kind: 'play', title: t('Play planet {n}', { n: p.level }), subtitle: t('A new planet is waiting'), action: 'play' };
+    });
+  if (unlocked(p, 'homeworld') && anyReady(p.home, _now)) suggestions.push(homeworldNextUp(p, _now));
+  // Rotate by real session, not by render count: revisiting a screen never changes its task.
+  suggestions.push({ kind: 'play', title: t('Play planet {n}', { n: p.level }), subtitle: t('A new planet is waiting'), action: 'play' });
+  return suggestions[Math.max(0, p.meta.sessions - 1) % suggestions.length];
+}
+
+function expeditionNextUp(p: Profile): NextUp {
+  return {
+    kind: 'claim',
+    title: t('{name} is back!', { name: t(SPECIES_BY_ID[p.home.expedition!.species].name) }),
+    subtitle: t('Collect your Expedition gifts'),
+    action: 'homeworld',
+    homeTarget: 'expedition',
+  };
 }
 
 /** One specific, actionable suggestion in the Homeworld overview. */
 export function homeworldNextUp(p: Profile, now = Date.now()): NextUp {
+  if (expeditionBack(p.home, now)) return expeditionNextUp(p);
   if (p.home.seen.celebrations.length)
     return {
       kind: 'claim',
@@ -156,7 +184,7 @@ export function homeworldNextUp(p: Profile, now = Date.now()): NextUp {
       action: 'homeworld',
       homeTarget: 'landmark',
     };
-  if (p.home.level < 5 && canExpand(p) === 'ok')
+  if (p.home.level < HOMEWORLD_MAX_LEVEL && canExpand(p) === 'ok')
     return {
       kind: 'claim',
       title: t('Homeworld Level {n}', { n: p.home.level + 1 }),
@@ -191,7 +219,7 @@ export function homeworldNextUp(p: Profile, now = Date.now()): NextUp {
     return { kind: 'claim', title: t('A Homeworld build is ready'), subtitle: t('Tap its plot to see what opened'), action: 'homeworld' };
   if (p.home.plots.some((b) => b?.type === 'greenhouse' && (b.greenhouse?.stored ?? 0) > 0))
     return { kind: 'claim', title: t('A booster is ready'), subtitle: t('Collect it from your Greenhouse'), action: 'homeworld' };
-  if (p.home.level >= 5) {
+  if (p.home.level >= HOMEWORLD_MAX_LEVEL) {
     if (site)
       return {
         kind: 'goal',

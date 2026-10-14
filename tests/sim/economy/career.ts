@@ -236,7 +236,7 @@ function routeWitnesses(p: Profile, site: LandmarkDef): boolean[][] {
         copy.home.residents.forEach((resident) => (resident.fp = Math.min(resident.fp, 8)));
         for (const saved of Object.values(copy.home.friends)) saved.fp = Math.min(saved.fp, 8);
         for (const species of p.seen.slice(0, route.metric === 'bestFriends' ? 1 : route.target))
-          copy.home.friends[species] = { fp: route.metric === 'bestFriends' ? 25 : 8, lastReq: 0, rewarded: 0 };
+          copy.home.friends[species] = { fp: route.metric === 'bestFriends' ? 25 : 8, rewarded: 0 };
         refreshLandmarkSnapshots(copy);
         return done();
       }
@@ -374,7 +374,7 @@ function spendPolicy(p: Profile, type: PlayerType, day: number, now: number) {
     while (canExpand(p) === 'ok') expand(p);
     if (firstHourStep(p) === 'lab') {
       const choice = suggestedFirstLab(p);
-      const plot = p.home.plots.findIndex((b, i) => !b && !p.home.debris.includes(i));
+      const plot = p.home.plots.findIndex((b) => !b);
       if (plot >= 0) firstHourLab(p, choice, plot, now);
     }
     tickBuilds(p.home, now + 31_000);
@@ -383,7 +383,7 @@ function spendPolicy(p: Profile, type: PlayerType, day: number, now: number) {
     levelLab(p, suggestedFirstLab(p));
     for (const kind of Object.keys(KINDS) as Kind[]) {
       if (labPlot(p, kind) < 0) {
-        const plot = p.home.plots.findIndex((b, i) => !b && !p.home.debris.includes(i));
+        const plot = p.home.plots.findIndex((b) => !b);
         if (plot < 0) labBlocks[kind] = 'noplot';
         else {
           const result = buildLab(p, plot, kind, now + 31_000);
@@ -419,7 +419,7 @@ function spendPolicy(p: Profile, type: PlayerType, day: number, now: number) {
     for (const type of BUILDING_TYPES) {
       if (type === 'lab') continue;
       if (p.home.plots.some((b) => b?.type === type)) continue;
-      const plot = p.home.plots.findIndex((b, i) => !b && !p.home.debris.includes(i));
+      const plot = p.home.plots.findIndex((b) => !b);
       if (plot >= 0) build(p, plot, type, now + 62_000);
     }
     for (const type of BUILDING_TYPES) {
@@ -428,9 +428,9 @@ function spendPolicy(p: Profile, type: PlayerType, day: number, now: number) {
         const missing = BUILDING_TYPES.filter(
           (id) => id !== 'lab' && !p.home.plots.some((b) => b?.type === id) && BUILDINGS[id].ring <= p.home.level,
         ).length;
-        const empty = p.home.plots.filter((b, i) => !b && !p.home.debris.includes(i)).length;
+        const empty = p.home.plots.filter((b) => !b).length;
         if (empty <= missing) break;
-        const plot = p.home.plots.findIndex((b, i) => !b && !p.home.debris.includes(i));
+        const plot = p.home.plots.findIndex((b) => !b);
         if (plot < 0 || build(p, plot, type, now + 62_000) !== 'ok') break;
       }
     }

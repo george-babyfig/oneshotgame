@@ -1,5 +1,7 @@
 /** Shared M11 Homeworld and economy contracts. */
-export type HomeworldLevel = 1 | 2 | 3 | 4 | 5;
+export type HomeworldLevel = keyof typeof import('./tuning').HOME_LEVEL_REQUIREMENTS;
+/** Vault capacity is independent of the number of Homeworld levels. */
+export type VaultTier = 1 | 2 | 3 | 4 | 5;
 
 export type EconomyMode = 'campaign' | 'voyage' | 'zen' | 'daily' | 'rush' | 'challenge' | 'remix' | 'practice';
 
@@ -12,7 +14,6 @@ export interface GreenhouseState {
 }
 
 export interface VaultState {
-  tier: HomeworldLevel;
   bankedProductionMs: number;
   storedDust: number;
   lastTick: number;

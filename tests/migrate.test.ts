@@ -35,8 +35,8 @@ describe('profile migration', () => {
     expect(p.lab).toEqual(raw.lab);
     expect(p.wardrobe).toEqual(raw.wardrobe);
     expect(p.processedTx).toEqual(raw.processedTx);
-    expect(p.vault).toMatchObject({ tier: 4, bankedProductionMs: 0, storedDust: 9816 });
-    expect(p.home.debris).toEqual([]);
+    expect(p.vault).toMatchObject({ bankedProductionMs: 0, storedDust: 9816 });
+    expect(p.home).not.toHaveProperty('debris');
     const twice = migrate(JSON.parse(JSON.stringify(p)));
     expect(twice.dust).toBe(p.dust);
     expect(twice.home.plots.find((b) => b?.type === 'greenhouse')?.greenhouse?.stored).toBe(2);

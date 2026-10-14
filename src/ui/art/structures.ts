@@ -1,3 +1,4 @@
+import { HOMEWORLD_MAX_LEVEL } from '../../meta/tuning';
 // Homeworld structures, drawn standing on the planet's surface. Local
 // coordinates: the base sits at (0, 0) and "up" is -y. Higher levels grow a
 // little and gain details, so upgrades are visible at a glance.
@@ -108,22 +109,6 @@ export function drawStructure(
       }
       break;
     }
-    case 'mill': {
-      rr(g, -s * 0.16, -s * 0.55, s * 0.32, s * 0.55, s * 0.06, '#e8d6b0');
-      rr(g, -s * 0.2, -s * 0.62, s * 0.4, s * 0.12, s * 0.06, '#b86b4a');
-      rr(g, -s * 0.06, -s * 0.2, s * 0.12, s * 0.2, s * 0.05, '#7a4a30');
-      g.save();
-      g.translate(0, -s * 0.5);
-      g.rotate(t * (building ? 0 : 1.2));
-      for (let i = 0; i < 4; i++) {
-        g.rotate(Math.PI / 2);
-        rr(g, -s * 0.05, -s * 0.46, s * 0.1, s * 0.4, s * 0.04, i % 2 ? '#ffd76a' : '#fff2c0');
-      }
-      circ(g, 0, 0, s * 0.06, '#8a5a36');
-      g.restore();
-      pennant(g, s * 0.12, -s * 0.62, s, lv, t);
-      break;
-    }
     case 'greenhouse': {
       rr(g, -s * 0.34, -s * 0.12, s * 0.68, s * 0.12, s * 0.04, '#8a6a4a');
       g.fillStyle = 'rgba(180,240,255,0.45)';
@@ -148,30 +133,6 @@ export function drawStructure(
       g.ellipse(-s * 0.14, -s * 0.34, s * 0.05, s * 0.1, -0.5, 0, Math.PI * 2);
       g.fill();
       pennant(g, s * 0.2, -s * 0.4, s, lv, t);
-      break;
-    }
-    case 'grove': {
-      const cols = ['#7fdcff', '#b58cff', '#ff8fc8'];
-      for (let i = -1; i <= 1; i++) {
-        const hgt = s * (0.4 + (i === 0 ? 0.2 : 0) + lv * 0.02);
-        g.fillStyle = cols[i + 1];
-        g.beginPath();
-        g.moveTo(i * s * 0.16 - s * 0.08, 0);
-        g.lineTo(i * s * 0.18 - s * 0.02, -hgt);
-        g.lineTo(i * s * 0.16 + s * 0.08, 0);
-        g.fill();
-        g.fillStyle = 'rgba(255,255,255,0.5)';
-        g.beginPath();
-        g.moveTo(i * s * 0.16 - s * 0.03, -s * 0.05);
-        g.lineTo(i * s * 0.18 - s * 0.02, -hgt * 0.9);
-        g.lineTo(i * s * 0.16, -s * 0.05);
-        g.fill();
-      }
-      const tw = 0.5 + Math.sin(t * 5) * 0.5;
-      g.globalAlpha *= tw;
-      star(g, s * 0.2, -s * 0.5, s * 0.05, '#ffffff');
-      g.globalAlpha = building ? 0.55 : 1;
-      pennant(g, -s * 0.3, -s * 0.05, s, lv, t);
       break;
     }
     case 'den': {
@@ -230,21 +191,6 @@ export function drawStructure(
       circ(g, 0, -s * 0.16, s * 0.035, '#6ec8ff');
       g.restore();
       pennant(g, -s * 0.3, -s * 0.67, s * 0.7, lv, t);
-      break;
-    }
-    case 'observatory': {
-      rr(g, -s * 0.26, -s * 0.3, s * 0.52, s * 0.3, s * 0.04, '#d8d0f0');
-      g.fillStyle = '#6e8cff';
-      g.beginPath();
-      g.arc(0, -s * 0.3, s * 0.26, Math.PI, 0);
-      g.fill();
-      g.save();
-      g.translate(s * 0.05, -s * 0.42);
-      g.rotate(-0.6 + Math.sin(t * 0.5) * 0.2);
-      rr(g, -s * 0.04, -s * 0.3, s * 0.08, s * 0.3, s * 0.03, '#3a3a5a');
-      g.restore();
-      rr(g, -s * 0.05, -s * 0.16, s * 0.1, s * 0.16, s * 0.04, '#5a4a8a');
-      pennant(g, -s * 0.22, -s * 0.3, s, lv, t);
       break;
     }
     case 'fountain': {
@@ -315,8 +261,8 @@ export function drawStructure(
       break;
     }
     default: {
-      const unreachable: never = type;
-      throw new Error(`Unknown building: ${unreachable}`);
+      // Retired producers remain valid migration inputs, but never reach rendering.
+      throw new Error(`Unknown or retired building: ${type}`);
     }
   }
   const style = COSMETIC_BY_ID[opts.style ?? ''];
@@ -387,7 +333,7 @@ export function drawStructure(
     g.restore();
   }
   g.restore();
-  if (opts.homeLevel === 5 && !building) {
+  if (opts.homeLevel === HOMEWORLD_MAX_LEVEL && !building) {
     // The crystal tier is shared by every finished structure at Homeworld Level 5.
     g.save();
     g.globalAlpha = 0.9;

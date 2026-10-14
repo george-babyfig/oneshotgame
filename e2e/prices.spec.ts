@@ -297,6 +297,35 @@ for (const loc of LOCALES) {
         `Grown-ups shows prices: ${found}`,
       ).toBe(true);
       for (const name of n.localNames) expect(found, `Grown-ups lists "${name}"`).toContain(`name "${name}"`);
+      const parentText = await readableText(page);
+      expect(parentText).not.toMatch(/YOUR-DOMAIN|YOUR-SITE/);
+      const priceLayout = await page.locator('.buy-real').evaluateAll((buttons) =>
+        buttons.map((button) => {
+          const range = document.createRange();
+          range.selectNodeContents(button);
+          return {
+            lines: new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size,
+            width: button.clientWidth,
+            content: button.scrollWidth,
+          };
+        }),
+      );
+      for (const price of priceLayout) {
+        expect(price.lines).toBe(1);
+        expect(price.content).toBeLessThanOrEqual(price.width);
+      }
+      await page.evaluate(async () => {
+        const app = (window as any).__app;
+        const { setTextSize } = await (window as any).__e2eImport('/src/ui/flows/settings.ts');
+        app.p.settings.textSize = 'extra-large';
+        setTextSize('extra-large');
+        app.refresh();
+      });
+      const columns = await page
+        .locator('.grownups-section label')
+        .evaluateAll((labels) => labels.map((label) => getComputedStyle(label).flexDirection));
+      expect(columns.every((direction) => direction === 'column')).toBe(true);
+      await expect(page.locator('select[aria-label="' + tr(loc, 'Spending reminder') + '"] option').first()).toHaveText(tr(loc, 'None'));
       expectNoErrors(guard);
     });
   });

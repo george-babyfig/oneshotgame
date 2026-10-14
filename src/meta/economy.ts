@@ -7,11 +7,11 @@ import { DIFFICULTY_DUST, type Difficulty } from '../core/levels';
 import { PIGGY_MAX, PIGGY_PER_WIN, PRODUCT_BY_ID, GEMS_PER_NEW_SPECIES } from './config';
 import { BOOSTERS, type BoosterId } from './config';
 import { today, type GalaxyPlanet, type Profile } from './profile';
-import type { HomeworldLevel, WonRoundEvent } from './homeworldTypes';
+import type { VaultTier, WonRoundEvent } from './homeworldTypes';
 import { collectAll, pendingHomeProduction } from './homeworld';
 import { openVisitor } from './visitors';
 import { WELCOME_BACK_GEMS } from './tuning';
-import { t } from '../i18n';
+import { getLang, t } from '../i18n';
 import { grantProfileRoadPoints } from './starroad';
 import { takeWonContinues } from './continues';
 
@@ -32,8 +32,8 @@ export const VAULT_UPGRADE_COSTS = [1000, 3000, 8000, 20000] as const;
 const HOUR = 3_600_000;
 const MAX_FUEL = 12 * HOUR;
 
-export function vaultTier(p: Profile): HomeworldLevel {
-  return Math.min(5, Math.max(1, Math.floor(p.upgrades.vault) + 1)) as HomeworldLevel;
+export function vaultTier(p: Profile): VaultTier {
+  return Math.min(VAULT_RATES.length, Math.max(1, Math.floor(p.upgrades.vault) + 1)) as VaultTier;
 }
 
 /** The galaxy can grow freely; the Vault's tier limits actual income. */
@@ -66,7 +66,6 @@ export function settleVault(p: Profile, now = Date.now()) {
   p.vault.storedDust = next.storedDust;
   p.vault.bankedProductionMs = next.fuel;
   p.vault.lastTick = next.tick;
-  p.vault.tier = vaultTier(p);
   p.lastCollect = next.tick;
 }
 
@@ -107,7 +106,6 @@ export function buyVaultTier(p: Profile, now = Date.now()): boolean {
   if (tier === 5 || !spend(p, 'dust', VAULT_UPGRADE_COSTS[tier - 1], 'upgrade')) return false;
   settleVault(p, now);
   p.upgrades.vault = tier;
-  p.vault.tier = vaultTier(p);
   return true;
 }
 
@@ -180,8 +178,8 @@ export function awayRecapLines(p: Profile, awayMs: number, now = Date.now()): [s
   const pending = awayCollectables(p, awayMs, now);
   return [
     t('Collect all: ✨{dust} · 💎{gems} · {boosters} boosters · {keepsakes} keepsakes', {
-      dust: (pending.vault + pending.home.dust + pending.visitors).toLocaleString('en-US'),
-      gems: (pending.home.gems + pending.welcomeGems).toLocaleString('en-US'),
+      dust: (pending.vault + pending.home.dust + pending.visitors).toLocaleString(getLang()),
+      gems: (pending.home.gems + pending.welcomeGems).toLocaleString(getLang()),
       boosters: pending.home.boosters,
       keepsakes: new Set(p.visitors.map((gift) => gift.memento).filter((id): id is string => !!id && !p.mementos.includes(id))).size,
     }),
@@ -285,27 +283,20 @@ export function discoverSpecies(p: Profile, id: string): boolean {
   return true;
 }
 
-type CheckoutMeta = Profile['meta'] & {
-  passLooksOnly?: boolean;
-  refundQuietUntil?: number;
-  revokedProducts?: Record<string, number>;
-  productEntitlements?: string[];
-};
-
 /** Product IDs, rather than transaction IDs, are the durable look entitlements. */
 export function ownsProduct(p: Profile, productId: string): boolean {
   const def = PRODUCT_BY_ID[productId];
   if (!def || def.consumable) return false;
   if (def.key === 'starter') return p.starter;
   if (def.key === 'pass') return p.pass;
-  return ((p.meta as CheckoutMeta).productEntitlements ?? []).includes(productId);
+  return (p.meta.productEntitlements ?? []).includes(productId);
 }
 
 /** Restore has no receipt and never adds currency. */
 export function restoreProduct(p: Profile, productId: string): boolean {
   const def = PRODUCT_BY_ID[productId];
   if (!def || def.consumable) return false;
-  const meta = p.meta as CheckoutMeta;
+  const meta = p.meta;
   // Repair older saves that kept the Pass bit but lost its looks-only marker.
   if (def.key === 'pass' && p.pass) meta.passLooksOnly = true;
   if (ownsProduct(p, productId)) return false;
@@ -327,11 +318,11 @@ export function restoreProduct(p: Profile, productId: string): boolean {
 }
 
 export function refundQuietUntil(p: Profile): number {
-  return (p.meta as CheckoutMeta).refundQuietUntil ?? 0;
+  return p.meta.refundQuietUntil ?? 0;
 }
 
 export function noteRefund(p: Profile, at: number): void {
-  const meta = p.meta as CheckoutMeta;
+  const meta = p.meta;
   meta.refundQuietUntil = Math.max(meta.refundQuietUntil ?? 0, at + 7 * 86400000);
 }
 
@@ -339,7 +330,7 @@ export function noteRefund(p: Profile, at: number): void {
 export function revokeProduct(p: Profile, productId: string, at = Date.now()): boolean {
   const def = PRODUCT_BY_ID[productId];
   if (!def) return false;
-  const meta = p.meta as CheckoutMeta;
+  const meta = p.meta;
   noteRefund(p, at);
   if (def.consumable) return true; // Refunded currency stays spent; announcements still rest.
   meta.revokedProducts = { ...meta.revokedProducts, [productId]: at };

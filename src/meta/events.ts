@@ -1,6 +1,6 @@
 import { EVENT_TIERS } from './tuning';
 // Weekly Voyage themes are selected from the ISO week and local hemisphere.
-import { BIOMES, type BiomeId, type ImpactResult, type Planet } from '../core/world';
+import type { BiomeId } from '../core/world';
 import type { Profile } from './profile';
 import { applyReward, type Reward } from './progression';
 import { seasonOf, type Hemisphere } from './seasons';
@@ -9,7 +9,6 @@ export interface EventDef {
   id: string;
   name: string;
   emoji: string;
-  desc: string;
   /** Lands preferred by themed Voyage goals. */
   biomes?: BiomeId[];
   /** A creature goal fits this theme. */
@@ -25,7 +24,6 @@ export const EVENTS: EventDef[] = [
     id: 'volcano',
     name: 'Volcano Week',
     emoji: '🌋',
-    desc: 'Build volcanoes and hot springs',
     biomes: ['volcano', 'springs', 'desert', 'savanna'],
     color: '#ff7a3d',
     skin: 'ember',
@@ -34,7 +32,6 @@ export const EVENTS: EventDef[] = [
     id: 'ocean',
     name: 'Ocean Week',
     emoji: '🌊',
-    desc: 'Fill the planet with oceans and reefs',
     biomes: ['ocean', 'reef', 'icesheet'],
     color: '#3fb9ff',
     skin: 'teal',
@@ -43,7 +40,6 @@ export const EVENTS: EventDef[] = [
     id: 'bloom',
     name: 'Blossom Week',
     emoji: '🌸',
-    desc: 'Grow meadows, forests and jungles',
     biomes: ['meadow', 'forest', 'jungle', 'highland', 'marsh'],
     color: '#5ef2b0',
     skin: 'lime',
@@ -52,7 +48,6 @@ export const EVENTS: EventDef[] = [
     id: 'critter',
     name: 'Critter Week',
     emoji: '🦊',
-    desc: 'Welcome as many creatures as you can',
     creatures: true,
     color: '#ffb13d',
     skin: 'gold',
@@ -61,12 +56,11 @@ export const EVENTS: EventDef[] = [
     id: 'frost',
     name: 'Frost Week',
     emoji: '❄️',
-    desc: 'Make tundra, taiga and ice sheets',
     biomes: ['tundra', 'taiga', 'icesheet', 'mountain'],
     color: '#bfe8ff',
     skin: 'violet',
   },
-  { id: 'star', name: 'Starfall Week', emoji: '🌟', desc: 'Earn stars on any planet', stars: true, color: '#ffd84a', skin: 'rose' },
+  { id: 'star', name: 'Starfall Week', emoji: '🌟', stars: true, color: '#ffd84a', skin: 'rose' },
 ];
 
 export interface EventTier {
@@ -158,14 +152,6 @@ export function weekAtMostOneAhead(saved: string, current: string): boolean {
     return Date.UTC(year, 0, 4 - ((jan4.getUTCDay() + 6) % 7) + (week - 1) * 7);
   };
   return start(saved) - start(current) === 7 * 86400000;
-}
-
-/** Count first arrivals and improved regions before the Lab updates their history. */
-export function earnedLandingProgress(result: ImpactResult, planet: Planet, regionBests: number[], arrived: Set<string>) {
-  const firstArrivals = new Set(result.spawned.filter((s) => !arrived.has(s.id)).map((s) => s.id));
-  if (result.after < result.before) return { regions: [] as BiomeId[], arrivals: 0, firstArrivals };
-  const regions = result.changed.filter((i) => BIOMES[planet.sectors[i].biome].value > regionBests[i]).map((i) => planet.sectors[i].biome);
-  return { regions, arrivals: firstArrivals.size, firstArrivals };
 }
 
 type RetiredEvent = Profile['event'] & { retired?: boolean; legacyGems?: number };

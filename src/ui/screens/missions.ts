@@ -2,6 +2,7 @@ import { h, btn } from '../dom';
 import type { App } from '../app';
 import { t } from '../../i18n';
 import { unlocked } from '../../meta/unlocks';
+import { stylesAccess } from '../../meta/stylesAccess';
 import { chestsReady } from '../../meta/progression';
 import { currentRoad, roadReady } from '../../meta/starroad';
 import { today } from '../../meta/profile';
@@ -15,7 +16,10 @@ import { refundQuietUntil } from '../../meta/economy';
 
 export function showMissions(app: App) {
   const p = app.p;
-  document.documentElement.classList.toggle('styles-new', p.stylesNewSeen !== STYLES_RELEASE && refundQuietUntil(p) <= Date.now());
+  document.documentElement.classList.toggle(
+    'styles-new',
+    stylesAccess(p) && p.stylesNewSeen !== STYLES_RELEASE && refundQuietUntil(p) <= Date.now(),
+  );
   const open = unlocked(p, 'quests');
   const entry = (label: string, ready: number, action: () => void, enabled = true, reason = '') => {
     const button = btn(

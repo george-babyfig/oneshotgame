@@ -56,7 +56,7 @@ describe('away collection', () => {
     const p = defaultProfile(now);
     p.tutorial = true;
     p.level = 34;
-    p.home.residents.push({ species: 'otter', fp: 0, lastReq: -1, rewarded: 1 });
+    p.home.residents.push({ species: 'otter', fp: 0, rewarded: 1 });
     p.visitors.push({ species: 'moss_deer', dust: 30, gems: 2, memento: 'moss_deer' });
     expect(awayRecapLines(p, 7 * 24 * HOUR, now)[0]).toContain('1 keepsakes');
     const gift = awayCollectables(p, 7 * 24 * HOUR, now).welcomeGems;

@@ -15,6 +15,7 @@ import {
   localesToRun,
   midGame,
   planetFiveHomeworld,
+  settle,
   snap,
   tr,
   useJourneyViewport,
@@ -65,7 +66,12 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
         await expect(page.locator('.hw-canvas')).toBeVisible();
         await expect(page.locator('.hw-canvas')).toHaveAttribute('data-season', seasonOf(new Date(date), 'north'));
         await expect(page.locator('.hw-canvas')).toHaveAttribute('data-weather', weatherOn(new Date(date), 'north'));
-        expect(await page.locator('.hw-canvas').evaluate((canvas) => canvas.getBoundingClientRect().height)).toBeGreaterThanOrEqual(250);
+        // Short phones give the controls panel the room; the planet keeps at least 160 px (P18).
+        const canvasBox = await page.locator('.hw-canvas').evaluate((canvas) => ({
+          height: canvas.getBoundingClientRect().height,
+          viewport: innerHeight,
+        }));
+        expect(canvasBox.height).toBeGreaterThanOrEqual(canvasBox.viewport > 700 ? 250 : 160);
         await snap(page, info, guard, `j5-life-${name}`);
         await expectKidSafe(page, loc);
       }
@@ -450,11 +456,18 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
       expect((await state(page)).cometPier.stage).toBe(4);
       await expect(zip).not.toHaveClass(/locked/);
       await snap(page, info, guard, 'j5-launch-bay-zip-earned');
-      await zip.evaluate((el) => el.scrollIntoView());
-      const scrollBefore = await page.locator('.launch-bay .scroll').evaluate((el) => el.scrollTop);
-      await zip.getByRole('button', { name: tr(loc, 'Try {name} for free', { name: tr(loc, 'Zip') }) }).click();
+      // Bring the Try button itself into view, so the click below doesn't scroll after the measurement.
+      const tryZip = zip.getByRole('button', { name: tr(loc, 'Try {name} for free', { name: tr(loc, 'Zip') }) });
+      // Let the 300 ms tap guard after the re-render clear, or Playwright re-scrolls while it waits to click.
+      await page.waitForFunction(() => !document.documentElement.classList.contains('input-settling'));
+      await tryZip.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+      // The child comes back to the card they tried, where it was on screen (scroll anchoring may shift scrollTop).
+      const cardTop = () => zip.evaluate((el) => Math.round(el.getBoundingClientRect().top));
+      const topBefore = await cardTop();
+      await tryZip.click();
       await page.locator('.practice-exit').click();
-      expect(await page.locator('.launch-bay .scroll').evaluate((el) => el.scrollTop)).toBe(scrollBefore);
+      await settle(page);
+      expect(Math.abs((await cardTop()) - topBefore)).toBeLessThanOrEqual(2);
       await page.evaluate(() => (window as any).__app.preRemix(31));
       const lockedChip = page.locator('.launcher-chip.locked');
       await expect(lockedChip).toBeVisible();
@@ -476,6 +489,69 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
       for (const id of LAUNCHER_IDS.filter((id) => !LAUNCH_ROSTER.includes(id)))
         await expect(tray).not.toContainText(tr(loc, LAUNCHERS[id].name));
       await expectNoErrors(guard);
+    });
+  });
+}
+
+for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
+  test.describe(`FC Homeworld readiness [${loc}]`, () => {
+    test.use({ locale: BROWSER_LOCALE[loc] });
+    test(`FC ${loc}: returned Expedition collects through Next Up or Collect all and clears its tab badge`, async ({ page }) => {
+      await freshInstall(page);
+      await midGame(page, { level: 45 });
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.intro = true;
+        a.p.home.firstHour = 2;
+        a.p.home.seen.celebrations = [];
+        a.p.home.plots = Array.from({ length: 6 }, () => null);
+        a.p.home.expedition = { species: 'bunny', hours: 2, ends: Date.now() - 1, planet: -1 };
+        a.selectTab('homeworld');
+      });
+      await expect(page.locator('.hw-next-up')).toContainText(tr(loc, 'Collect your Expedition gifts'));
+      await expect(page.locator('[data-tab="homeworld"] .nb')).toHaveText('1');
+      await page.getByRole('button', { name: tr(loc, 'Collect all'), exact: true }).click();
+      expect((await state(page)).home.expedition).toBeNull();
+      await expect(page.locator('[data-tab="homeworld"] .nb')).toHaveCount(0);
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.expedition = { species: 'bunny', hours: 2, ends: Date.now() - 1, planet: -1 };
+        a.showHomeworld();
+      });
+      await page.locator('.hw-next-up').click();
+      await expect(page.locator(OPEN_MODAL)).toContainText(tr(loc, '{name} is back!', { name: tr(loc, 'Hopper Bunny') }));
+      await expect(page.locator('[data-tab="homeworld"] .nb')).toHaveCount(0);
+    });
+
+    test(`FC ${loc}: early Atlas gate agrees with Collection and queued milestones merge`, async ({ page }) => {
+      await freshInstall(page);
+      await midGame(page, { level: 6 });
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.intro = true;
+        a.p.home.firstHour = 2;
+        a.p.bundles = [];
+        a.p.constellations = [];
+        a.p.mats.leaf = a.p.mats.dew = 100;
+        a.selectTab('homeworld');
+      });
+      await expect(page.locator('.hw-panel').getByRole('button', { name: new RegExp(tr(loc, 'Star Atlas')) })).toHaveCount(0);
+      await page.locator('[data-tab="collection"]').click();
+      await expect(page.getByRole('button', { name: new RegExp(tr(loc, 'Star Atlas')) })).toBeDisabled();
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.residents = [{ species: 'bunny', fp: 26, lastReq: 0, rewarded: 5 }];
+        a.p.home.landmarks.sprout_garden.stage = 4;
+        a.p.home.seen.celebrations = ['friend:bunny:level:2', 'friend:bunny:level:3', 'sprout_garden:stage:1', 'sprout_garden:stage:3'];
+        a.selectTab('homeworld');
+      });
+      const reward = page.locator('.hw-earned');
+      await expect(reward.locator('.hw-earned-card')).toHaveCount(2);
+      await expect(reward).toContainText(tr(loc, 'Friendship Level {n}!', { n: 5 }));
+      await expect(reward).not.toContainText(tr(loc, 'Stage {n} is complete!', { n: 1 }));
+      await reward.getByRole('button', { name: tr(loc, 'Wonderful!'), exact: true }).click();
+      expect((await state(page)).home.seen.celebrations).toEqual([]);
+      await expect(page.locator('[data-tab="homeworld"] .nb')).toHaveCount(0);
     });
   });
 }

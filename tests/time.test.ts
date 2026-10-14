@@ -17,7 +17,7 @@ import { friendlyTime, inQuietHours, planReminders } from '../src/meta/reminders
 import { dailyNumber } from '../src/meta/modes';
 import { canStamp, stamp } from '../src/meta/calendar';
 import { collectDust, pendingDust } from '../src/meta/economy';
-import { period, ready, tickHome } from '../src/meta/homeworld';
+import { ready, tickHome } from '../src/meta/homeworld';
 import { checkMail } from '../src/meta/inbox';
 
 const HOUR = 3600000;
@@ -385,7 +385,6 @@ describe('time: the clock moved back or forward', () => {
         const r = ready(p.home, i, t);
         expect(Number.isFinite(r) && r >= 0, `${label} plot ${i}: ${r}`).toBe(true);
       }
-      expect(period(t)).toBeGreaterThanOrEqual(0);
       expect(eventEndsIn(d)).toBeGreaterThan(0);
       expect(festivalDaysLeft(d)).toBeGreaterThanOrEqual(1);
       expect(() => untilText(NOW, t, 'en')).not.toThrow();

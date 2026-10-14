@@ -1,5 +1,6 @@
 // Styles: dress your Keeper and preview looks without changing the saved outfit.
 import { h, btn, fmt, toast } from '../dom';
+import { confirmGemUse } from './homeworld/gemConfirm';
 import { LAB_TEXT } from '../../meta/labcopy';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
@@ -66,7 +67,7 @@ import { effectiveReduceMotion } from '../motion';
 import { drawGameplayLauncher } from '../art/launchers';
 import type { LauncherId } from '../../core/launchers';
 import { KINDS, type Kind } from '../../core/world';
-import type { BuildingType } from '../../meta/homeworld';
+import { BUILDINGS, type BuildingType } from '../../meta/homeworld';
 
 type GroupTab = 'objects' | 'effects' | 'homeworld' | 'friends';
 type Tab = StyleSlot | GroupTab | 'dye' | 'buddy' | 'atmosphere' | 'you';
@@ -74,33 +75,33 @@ let lastSlot: Tab = 'suit';
 let activeDraft: { app: App; selection: StyleDraft; skin?: string } | null = null;
 let inspectedId = '';
 
-function slotName(slot: StyleSlot): string {
-  if (slot in SLOT_NAMES) return SLOT_NAMES[slot as Slot];
-  const kindName: Record<string, string> = {
-    rock: 'Rock',
-    ice: 'Ice Comet',
-    magma: 'Magma',
-    seed: 'Seed Pod',
-    storm: 'Rain Cloud',
-    sun: 'Sunburst',
-  };
-  if (slot.startsWith('shotTrail:')) return `Shot trail: ${kindName[slot.split(':')[1]]}`;
-  if (slot.startsWith('burst:')) return `Burst: ${kindName[slot.split(':')[1]]}`;
-  if (slot.startsWith('labSkin:')) return `Lab: ${kindName[slot.split(':')[1]]}`;
-  return (
-    (
-      {
-        supernova: 'Supernova style',
-        fusion: 'Fusion style',
-        ground: 'Ground paint',
-        sea: 'Sea paint',
-        denSkin: 'Den skin',
-        greenhouseSkin: 'Greenhouse skin',
-        launchBaySkin: 'Launch Bay skin',
-        friendOutfit: 'Friend outfit',
-      } as Record<string, string>
-    )[slot] ?? `Decoration: ${slot.split(':')[1]}`
-  );
+export function slotName(slot: StyleSlot): string {
+  if (slot in SLOT_NAMES) return t(SLOT_NAMES[slot as Slot]);
+  const kind = slot.split(':')[1] as Kind;
+  if (slot.startsWith('shotTrail:')) return t('Shot trail: {kind}', { kind: t(KINDS[kind].name) });
+  if (slot.startsWith('burst:')) return t('Burst: {kind}', { kind: t(KINDS[kind].name) });
+  if (slot.startsWith('labSkin:')) return t('Lab: {kind}', { kind: t(KINDS[kind].name) });
+  if (slot.startsWith('decoration:')) return t('Decoration: {name}', { name: t(BUILDINGS[kind as BuildingType].name) });
+  switch (slot) {
+    case 'supernova':
+      return t('Supernova style');
+    case 'fusion':
+      return t('Fusion style');
+    case 'ground':
+      return t('Ground paint');
+    case 'sea':
+      return t('Sea paint');
+    case 'denSkin':
+      return t('Den skin');
+    case 'greenhouseSkin':
+      return t('Greenhouse skin');
+    case 'launchBaySkin':
+      return t('Launch Bay skin');
+    case 'friendOutfit':
+      return t('Friend outfit');
+    default:
+      return '';
+  }
 }
 
 function inGroup(itemSlot: StyleSlot, tab: Tab): boolean {
@@ -630,18 +631,7 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
       showStyles(app, slot);
     });
   else if (previewing && (item.source === 'gems' || item.source === 'dust')) action = btn(t('Done'), 'ghost', completeDraft);
-  else if (item.source === 'gems')
-    action = btn(`${t('Buy')} 💎${item.gems}`, 'gem', () => {
-      if (p.gems < (item.gems ?? 0)) return app.needGems();
-      buyCosmetic(p, item.id);
-      equip(p, item.id);
-      delete activeDraft?.selection.slots[item.slot];
-      sfx.coin();
-      haptic.success();
-      toast(t('{name} is yours!', { name: t(item.name) }), 'good');
-      app.save();
-      showStyles(app, slot);
-    });
+  else if (item.source === 'gems') action = h('div', { class: 'ws-state' }, t('Earn gems in play'));
   else if (item.source === 'dust')
     action = btn(`${t('Buy')} ✨${fmt(item.dust ?? 0)}`, 'dust-btn', () => {
       if (!buyCosmetic(p, item.id)) return toast(t('Not enough stardust'));
@@ -683,7 +673,7 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
                       ? t('Homeworld looks')
                       : s === 'friends'
                         ? t('Friend outfits')
-                        : t(slotName(s as StyleSlot)),
+                        : slotName(s as StyleSlot),
       ),
     ),
   );
@@ -716,7 +706,7 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
                       },
                     },
                     h('b', null, t('Off')),
-                    h('small', null, t(slotName(s))),
+                    h('small', null, slotName(s)),
                   ),
                 ),
                 ...visibleCosmetics(p)
@@ -788,9 +778,23 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
         presetRow(app, slot),
         tabs,
         mastery,
+        p.meta.sessions <= 1 ? h('p', { class: 'muted' }, t('Earn gems in play')) : null,
         grid,
         previewing && (!item || owns(p, item.id) || (!isPaidLook(item) && item.source !== 'gems' && item.source !== 'dust'))
           ? btn(t('Done'), 'ghost wide', completeDraft)
+          : null,
+        item?.source === 'gems' && !owns(p, item.id) && p.meta.sessions > 1
+          ? btn(t('Get this look'), 'gem wide ws-get-look', async () => {
+              if (!(await confirmGemUse(t(item.name), item.gems ?? 0, itemCanvas(item.id, preview, 96)))) return;
+              if (!buyCosmetic(p, item.id)) return app.needGems();
+              equip(p, item.id);
+              delete activeDraft?.selection.slots[item.slot];
+              sfx.coin();
+              haptic.success();
+              toast(t('{name} is yours!', { name: t(item.name) }), 'good');
+              app.save();
+              showStyles(app, slot);
+            })
           : null,
         item
           ? btn(p.favourites.includes(item.id) ? t('♥ Favourited') : t('♡ Favourite'), 'ghost wide', () => {

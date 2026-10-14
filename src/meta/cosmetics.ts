@@ -1,4 +1,4 @@
-import { COSMETICS as BASE_COSMETICS } from './tuning';
+import { BASE_LOOKS } from './tuning';
 import { spend } from './wallet';
 // The Keeper (your little astronaut), its launcher and its throw trail.
 // Every item is earned or bought directly: no random rolls, no duplicates.
@@ -497,7 +497,7 @@ export const M12_COSMETICS: Cosmetic[] = [
   },
 ];
 export const COSMETICS: Cosmetic[] = [
-  ...BASE_COSMETICS.map((item) => ({ ...item, name: LOOK_NAMES[item.id] ?? item.name })),
+  ...BASE_LOOKS.map((item) => ({ ...item, name: LOOK_NAMES[item.id] ?? item.name })),
   ...SHOWTIME_COSMETICS,
   ...STARDUST_COSMETICS,
   ...M12_STARDUST_COSMETICS,
@@ -522,7 +522,10 @@ export function isPaidLook(x: Cosmetic): boolean {
 
 export function visibleCosmetics(p: Profile, slot?: StyleSlot): Cosmetic[] {
   return COSMETICS.filter(
-    (x) => (!slot || x.slot === slot) && (!p.settings.hidePaidLooks || (!isPaidLook(x) && (x.id !== 'frame_gold' || goldenFrameEarned(p)))),
+    (x) =>
+      (!slot || x.slot === slot) &&
+      (p.meta.sessions > 1 || owns(p, x.id) || (x.source !== 'gems' && !isPaidLook(x))) &&
+      (!p.settings.hidePaidLooks || (!isPaidLook(x) && (x.id !== 'frame_gold' || goldenFrameEarned(p)))),
   );
 }
 
@@ -578,7 +581,7 @@ export function owns(p: Profile, id: string): boolean {
     case 'starter':
       return p.starter;
     case 'product': {
-      const meta = p.meta as Profile['meta'] & { productEntitlements?: string[]; revokedProducts?: Record<string, number> };
+      const meta = p.meta;
       return !!x.productId && !meta.revokedProducts?.[x.productId] && !!meta.productEntitlements?.includes(x.productId);
     }
     case 'calendar':

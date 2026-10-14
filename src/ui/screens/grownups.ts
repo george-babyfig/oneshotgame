@@ -15,6 +15,20 @@ const active = new WeakSet<App>();
 // Fill these together once the owner has a hosted policy and monitored mailbox.
 export const PRIVACY_CONTACT = { email: 'support@YOUR-DOMAIN', policy: 'YOUR-SITE' } as const;
 
+export function privacyContactCopy(
+  contact: { email: string; policy: string } = { email: PRIVACY_CONTACT.email, policy: PRIVACY_CONTACT.policy },
+): string[] {
+  // Until both destinations are real, direct parents to the store's maintained support link.
+  return [
+    !contact.email || /YOUR-(?:DOMAIN|SITE)/i.test(contact.email)
+      ? t("For support, use the support link on Comet Garden's App Store page.")
+      : t('Support email: {email}', { email: contact.email }),
+    !contact.policy || /YOUR-(?:DOMAIN|SITE)/i.test(contact.policy)
+      ? t("For privacy information, use the support link on Comet Garden's App Store page.")
+      : t('Privacy policy: {url}', { url: contact.policy }),
+  ];
+}
+
 export async function guardGrownups(gate: () => Promise<boolean>, show: () => void): Promise<boolean> {
   if (!(await gate())) return false;
   show();
@@ -37,7 +51,7 @@ export function refreshGrownups(app: App) {
 }
 
 function choice(label: string, value: string, selected: string) {
-  return h('option', { value, selected: selected === value }, t(label));
+  return h('option', { value, selected: selected === value }, label);
 }
 
 function renderGrownups(app: App) {
@@ -48,11 +62,11 @@ function renderGrownups(app: App) {
   const currency = app.currencyOf('starter') || deviceCurrency(typeof navigator === 'undefined' ? locale : navigator.language);
   const spent = spentThisMonth(Date.now(), currency);
   const reminder = p.settings.spendingReminder;
-  const quietUntil = (app as App & { refundQuietUntil?: number }).refundQuietUntil ?? 0;
+  const quietUntil = app.refundQuietUntil ?? 0;
   const spending = h(
     'select',
     { class: 'lang-select', 'aria-label': t('Spending reminder') },
-    choice('None', '', reminder === null ? '' : String(reminder.cents)),
+    choice(t('None'), '', reminder === null ? '' : String(reminder.cents)),
     ...([0, 500, 1000, 2000] as const).map((cents) =>
       h(
         'option',
@@ -69,7 +83,7 @@ function renderGrownups(app: App) {
   const breaks = h(
     'select',
     { class: 'lang-select', 'aria-label': t('Suggest a break') },
-    choice('Off', '', p.settings.breakAfterRounds === null ? '' : String(p.settings.breakAfterRounds)),
+    choice(t('Off'), '', p.settings.breakAfterRounds === null ? '' : String(p.settings.breakAfterRounds)),
     ...[3, 5, 10].map((n) => h('option', { value: String(n), selected: p.settings.breakAfterRounds === n }, t('After {n} rounds', { n }))),
   ) as HTMLSelectElement;
   breaks.addEventListener('change', () => {
@@ -246,8 +260,7 @@ function renderGrownups(app: App) {
       h('p', null, t('Progress is stored on your iPhone and may be included in iPhone backups. Reset progress removes it from the game.')),
       h('p', null, t('Sharing opens only after a grown-up passes the gate. Game Center is optional and uses your Apple account.')),
       h('p', null, t('If you email support, we use your message to reply.')),
-      h('p', null, t('Support email: {email}', { email: PRIVACY_CONTACT.email })),
-      h('p', null, t('Privacy policy: {url}', { url: PRIVACY_CONTACT.policy })),
+      ...privacyContactCopy().map((line) => h('p', null, line)),
       diagnosticLine,
       copyDiagnostic,
       h('p', { class: 'muted small' }, t('Nothing is sent. A grown-up may paste this code into a support email.')),

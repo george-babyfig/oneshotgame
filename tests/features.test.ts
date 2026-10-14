@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { defaultProfile } from '../src/meta/profile';
 import { momentumLoss, momentumWin, MOMENTUM_UNLOCK } from '../src/meta/momentum';
 import { addVisitors, openVisitor, rollVisitors } from '../src/meta/visitors';
-import { rankReady } from '../src/meta/rank';
 import { chapterReward } from '../src/meta/progression';
 import { ACHIEVEMENTS } from '../src/meta/achievements';
 import { HABITATS, habitatsReady } from '../src/meta/habitats';
@@ -59,7 +58,6 @@ describe('rank & habitats', () => {
   it('retired ranks never pay more rewards', () => {
     const p = defaultProfile(0);
     p.stats.wins = 100;
-    expect(rankReady(p)).toBe(false);
     expect(chapterReward(1).gems).toBe(60);
     expect(chapterReward(7).gems).toBe(120);
     const rankFive = ACHIEVEMENTS.find((a) => a.id.endsWith('rank_5'))!;

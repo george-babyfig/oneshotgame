@@ -211,7 +211,7 @@ export const UNLOCKS: readonly Unlock[] = [
     intro: { title: 'A garden signpost', body: 'Finish this planet to start your Homeworld garden.', icon: '🌱' },
   },
   { id: 'lifebook', planet: 3, placement: 'home', button: true },
-  { id: 'sticker_album', planet: 13, placement: 'collection' },
+  { id: 'sticker_album', planet: 3, placement: 'collection' },
   {
     id: 'buddy',
     planet: 18,

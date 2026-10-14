@@ -21,7 +21,7 @@ import { protectedWallSectors } from '../src/ui/art/troubles';
 import { recordHomeworldWin } from '../src/meta/homeworld';
 
 function resident(species: string) {
-  return { species, fp: 0, lastReq: 0, rewarded: 0 };
+  return { species, fp: 0, rewarded: 0 };
 }
 
 describe('Buddy help', () => {

@@ -7,7 +7,7 @@ import { QUESTS, QUEST_BONUS, WISH_REWARD } from './tuning';
 import { earn } from './wallet';
 import { unlocked } from './unlocks';
 import { addFriendship } from './homeworld';
-import { grantProfileRoadPoints } from './starroad';
+import { grantProfileRoadPoints, previewProfileRoadPoints } from './starroad';
 import { grantWishSampler } from './cosmetics';
 import { checkMail } from './inbox';
 import { REACTIONS, type ReactionId } from '../core/round';
@@ -184,7 +184,8 @@ export function ensureWishes(p: Profile, day: string): WishCard[] {
     p.quests = { day: '', list: [], bonusClaimed: false };
   }
   const s = wishState(p);
-  if (s.day === day && s.list.length === 3) return s.list;
+  // A calendar high-water mark prevents rollback and revisiting a credited date.
+  if (s.day && day <= s.day && s.list.length === 3) return s.list;
   const old = s.list.filter(isWish);
   const keep = old.filter((q) => !q.claimed);
   const avoid = new Set(keep.map((q) => q.template));
@@ -212,7 +213,7 @@ export function wishClaimable(p: Profile): number {
 export function swapWish(p: Profile, id: string, day: string): boolean {
   ensureWishes(p, day);
   const s = wishState(p);
-  if (s.swapDay === day) return false;
+  if (day < s.day || (s.swapDay && day <= s.swapDay)) return false;
   const index = s.list.findIndex((q) => q.id === id && !q.claimed && q.progress === 0);
   if (index < 0) return false;
   const avoid = new Set(s.list.map((q) => q.template));
@@ -288,6 +289,12 @@ export function recordWishCombo(
     }
   }
   return done;
+}
+
+/** The same grant path powers the preview, including daily room and finished Roads. */
+export function wishRoadPoints(p: Profile, card: WishCard, day = today()): number {
+  if (card.claimed) return 0;
+  return previewProfileRoadPoints(p, { source: 'wish', date: day, earningKey: card.id, delta: WISH_REWARD.roadPoints });
 }
 
 /** Claiming the third card pays the completion bonus exactly once. */

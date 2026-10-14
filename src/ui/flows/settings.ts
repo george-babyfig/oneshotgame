@@ -143,6 +143,14 @@ export function settingsFlow(app: App) {
     app.save();
     app.refresh();
   });
+  // Native selects stay one line; at Extra large, repeat the complete value below them.
+  const selectField = (select: HTMLSelectElement) => {
+    const value = h('small', { class: 'setting-select-value', 'aria-hidden': 'true' });
+    const update = () => (value.textContent = select.selectedOptions[0]?.textContent ?? '');
+    update();
+    select.addEventListener('change', update);
+    return h('span', { class: 'setting-select-field' }, select, value);
+  };
   const version = h(
     'p',
     { class: 'tiny muted' },
@@ -197,10 +205,10 @@ export function settingsFlow(app: App) {
       })(),
       h('small', { class: 'muted' }, t('Shows the whole aim path for every launcher.')),
     ),
-    h('label', { class: 'toggle lang' }, t('Language'), lang),
-    h('label', { class: 'toggle lang' }, t('Text size'), size),
-    h('label', { class: 'toggle lang' }, t('Planet colours'), colours),
-    h('label', { class: 'toggle lang' }, t('Seasons'), hemi),
+    h('label', { class: 'toggle lang' }, t('Language'), selectField(lang)),
+    h('label', { class: 'toggle lang' }, t('Text size'), selectField(size)),
+    h('label', { class: 'toggle lang' }, t('Planet colours'), selectField(colours)),
+    h('label', { class: 'toggle lang' }, t('Seasons'), selectField(hemi)),
     btn(t('Field Guide'), 'ghost wide', () => (m.close(), app.showFieldGuide())),
     btn(t('Grown-ups'), 'ghost wide', () => {
       m.close();
@@ -225,12 +233,7 @@ export function settingsFlow(app: App) {
 
 /** Reset play progress while retaining durable store state and the looks-only Pass marker. */
 export function resetProfileKeepingPurchases(p: Profile): Profile {
-  const sourceMeta = p.meta as Profile['meta'] & {
-    passLooksOnly?: boolean;
-    productEntitlements?: string[];
-    revokedProducts?: Record<string, number>;
-    refundQuietUntil?: number;
-  };
+  const sourceMeta = p.meta;
   const fresh = defaultProfile();
   fresh.processedTx = [...p.processedTx];
   fresh.pendingPiggy = p.pendingPiggy;
@@ -247,7 +250,7 @@ export function resetProfileKeepingPurchases(p: Profile): Profile {
     productEntitlements: [...(sourceMeta.productEntitlements ?? [])],
     revokedProducts: { ...sourceMeta.revokedProducts },
     refundQuietUntil: sourceMeta.refundQuietUntil,
-  } as Profile['meta'];
+  };
   if (fresh.starter) fresh.skins.push('aurora');
   return fresh;
 }

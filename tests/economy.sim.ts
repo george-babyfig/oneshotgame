@@ -1,7 +1,8 @@
+import { COSMETICS } from '../src/meta/cosmetics';
 import { writeFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { exchangeRates, landmarkSummary, simulate, type Career } from './sim/economy/career';
-import { COSMETICS, LANDMARKS, ROAD00_GEM_SINGLE_IDS } from '../src/meta/tuning';
+import { LANDMARKS, ROAD00_GEM_SINGLE_IDS } from '../src/meta/tuning';
 
 const CURRENCIES = ['dust', 'gems', 'stone', 'dew', 'leaf', 'ember', 'frost'] as const;
 const fmt = (n: number | null) => (n === null ? '—' : Number.isFinite(n) ? String(Math.round(n)) : '∞');

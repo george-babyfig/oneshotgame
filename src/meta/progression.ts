@@ -1,4 +1,4 @@
-import { CHAPTER_REWARD, CHAPTER_RANK_REWARD } from './tuning';
+import { BOOSTERS, CHAPTER_REWARD, CHAPTER_RANK_REWARD } from './tuning';
 import { earn, type EarnSource } from './wallet';
 // Chapter rewards and shared reward application. Legacy quests support save migration.
 import type { BoosterId } from './config';
@@ -59,10 +59,18 @@ export function chestLauncher(n: number): LauncherId | null {
   return id && LAUNCH_ROSTER.includes(id) ? id : null;
 }
 
+function rankCatchupChest(p?: Profile): number {
+  let n = 1;
+  while (p?.chapters.includes(n)) n++;
+  return n;
+}
+
 export function chapterReward(n: number, p?: Profile): Reward {
   let rankGems = 0;
   let rankDust = 0;
   for (let rank = (p?.m4RankPaidThrough ?? n - 1) + 1; rank <= Math.min(n, 7); rank++) {
+    // Unopened chests own their rank; legacy catch-up belongs only to the earliest unopened chest.
+    if ((rank !== n && (n !== rankCatchupChest(p) || !p?.chapters.includes(rank))) || p?.m4RankPaidRanks?.includes(rank)) continue;
     rankGems += CHAPTER_RANK_REWARD.gems[rank] ?? 0;
     rankDust += CHAPTER_RANK_REWARD.dust[rank] ?? 0;
   }
@@ -77,8 +85,13 @@ export function chapterReward(n: number, p?: Profile): Reward {
 export function openChest(p: Profile, n: number): Reward | null {
   if (!chestsReady(p).includes(n)) return null;
   const r = chapterReward(n, p);
+  p.m4RankPaidRanks ??= [];
+  for (let rank = p.m4RankPaidThrough + 1; rank <= Math.min(n, 7); rank++)
+    if ((rank === n || (n === rankCatchupChest(p) && p.chapters.includes(rank))) && !p.m4RankPaidRanks.includes(rank))
+      p.m4RankPaidRanks.push(rank);
   p.chapters.push(n);
-  p.m4RankPaidThrough = Math.max(p.m4RankPaidThrough, Math.min(n, 7));
+  // Advance only through opened chests, so opening out of order cannot erase a reward.
+  while (p.m4RankPaidThrough < 7 && p.chapters.includes(p.m4RankPaidThrough + 1)) p.m4RankPaidThrough++;
   applyReward(p, r, 'chest');
   return r;
 }
@@ -121,7 +134,7 @@ export function rewardText(r: Reward): string[] {
   const out: string[] = [];
   if (r.gems) out.push(`💎 ${r.gems}`);
   if (r.dust) out.push(`✨ ${r.dust}`);
-  const bEmoji: Record<string, string> = { shower: '🌠', spark: '✨', scope: '🔭' };
+  const bEmoji = Object.fromEntries(Object.entries(BOOSTERS).map(([id, def]) => [id, def.emoji]));
   for (const [k, v] of Object.entries(r.boosters ?? {})) if (v) out.push(`${bEmoji[k]} ×${v}`);
   if (r.skin) out.push(t('🌈 New atmosphere'));
   if (r.sticker === 'cosmic_road') out.push(t('Cosmic Road sticker'));

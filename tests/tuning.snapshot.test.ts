@@ -2,7 +2,6 @@ import { expect, it } from 'vitest';
 import {
   PRODUCTS,
   BOOSTERS,
-  UPGRADES,
   SKINS,
   QUESTS,
   QUEST_BONUS,
@@ -12,7 +11,7 @@ import {
   EVENT_TIERS,
   BUILDINGS,
   BUILD_TIME,
-  RING_COST,
+  HOME_LEVEL_REQUIREMENTS,
   DYES,
   CONSTELLATIONS,
   WIN_REWARD,
@@ -22,11 +21,9 @@ import {
   LAB_COST,
   LAB_ESSENCE_COST,
   LAB_BUILD_COST,
-  LAB_FEATS,
   FIRST_HOUR_REWARD,
   CONTINUE_COST,
   WELCOME_BACK_GEMS,
-  COSMETICS,
   HABITATS,
   ALBUM_PAGES,
   MILESTONE_REWARD,
@@ -34,7 +31,6 @@ import {
   PAINTS,
   BOSS_REWARD,
   COST_K,
-  DEBRIS_DUST,
   CHAPTER_REWARD,
   CHAPTER_RANK_REWARD,
   WISH_REWARD,
@@ -42,11 +38,11 @@ import {
   FINISH_DUST_PER_THROW,
   VISITOR_DUST,
   FRIENDSHIP_REWARD_GEMS_PER_LEVEL,
-  FRIENDSHIP_TREAT,
   EXPEDITION_REWARD,
   GALAXY_RATE,
   INBOX_GIFTS,
 } from '../src/meta/tuning';
+import { COSMETICS } from '../src/meta/cosmetics';
 import { STAR_ROAD } from '../src/meta/starroad';
 import { VAULT_RATES, VAULT_STORAGE_HOURS, VAULT_UPGRADE_COSTS } from '../src/meta/economy';
 
@@ -62,7 +58,6 @@ it('pins totals of every central balance table', () => {
     Object.entries({
       PRODUCTS,
       BOOSTERS,
-      UPGRADES,
       SKINS,
       STAR_ROAD,
       QUESTS,
@@ -73,7 +68,7 @@ it('pins totals of every central balance table', () => {
       EVENT_TIERS,
       BUILDINGS,
       BUILD_TIME,
-      RING_COST,
+      HOME_LEVEL_REQUIREMENTS,
       DYES,
       CONSTELLATIONS,
       WIN_REWARD,
@@ -83,7 +78,6 @@ it('pins totals of every central balance table', () => {
       LAB_COST,
       LAB_ESSENCE_COST,
       LAB_BUILD_COST,
-      LAB_FEATS,
       FIRST_HOUR_REWARD,
       CONTINUE_COST,
       WELCOME_BACK_GEMS,
@@ -95,7 +89,6 @@ it('pins totals of every central balance table', () => {
       PAINTS,
       BOSS_REWARD,
       COST_K,
-      DEBRIS_DUST,
       CHAPTER_REWARD,
       CHAPTER_RANK_REWARD,
       WISH_REWARD,
@@ -103,7 +96,6 @@ it('pins totals of every central balance table', () => {
       FINISH_DUST_PER_THROW,
       VISITOR_DUST,
       FRIENDSHIP_REWARD_GEMS_PER_LEVEL,
-      FRIENDSHIP_TREAT,
       EXPEDITION_REWARD,
       GALAXY_RATE,
       INBOX_GIFTS,
@@ -113,8 +105,15 @@ it('pins totals of every central balance table', () => {
     }).map(([key, value]) => [key, total(value)]),
   );
   totals.PRODUCT_PRICE_CENTS = PRODUCTS.reduce((sum, product) => sum + Math.round(Number(product.fallbackPrice.slice(1)) * 100), 0);
-  // BUILDINGS: the three retired producers have no active purchase price.
-  // UPGRADES: only the four Vault tiers remain in the shop; old shot perks are refunded by migration.
+  // BUILDINGS: retired producer prices remain zero; unread charm metadata (total 9) is removed.
+  // Removed UPGRADES: its Vault costs duplicated the live VAULT_UPGRADE_COSTS.
+  // Removed RING_COST: HOME_LEVEL_REQUIREMENTS is the live Homeworld level price table.
+  // Removed DEBRIS_DUST: meteor debris retired; no reachable payout remains.
+  // Removed FRIENDSHIP_TREAT: requests retired; friendship now grows through play.
+  // Removed LAB_FEATS: flat Lab bonuses retired; labs use earned Essence and object perks.
+  // RING_CHAPTER, REQ_PERIOD, DEBRIS_EVERY, DEBRIS_MAX and STARTER_BOOSTERS
+  // were also unread retirement remnants (never part of this snapshot).
+  // COSMETICS now pins the public catalogue, after its display-name overrides.
   // LAB_COST: a lower final dust payment lets a player who wins more rounds finish sooner.
   // LAB_ESSENCE_COST: the final step needs more earned Essence to gate it on play.
   // VISITOR_DUST: small gifts remain secondary to active campaign income at three visits/day.
@@ -127,7 +126,7 @@ it('pins totals of every central balance table', () => {
       "ALBUM_PAGES": 300,
       "BOOSTERS": 510,
       "BOSS_REWARD": 530,
-      "BUILDINGS": 7897,
+      "BUILDINGS": 7888,
       "BUILD_TIME": 23730000,
       "CALENDAR": 4950,
       "CALENDAR_REPEAT_ITEM_GEMS": 40,
@@ -136,10 +135,9 @@ it('pins totals of every central balance table', () => {
       "CHAPTER_REWARD": 230,
       "CONSTELLATIONS": 939.13,
       "CONTINUE_COST": 50,
-      "COSMETICS": 6767,
+      "COSMETICS": 275836,
       "COST_K": 53.5,
       "DAILY_REWARD": 10,
-      "DEBRIS_DUST": 60,
       "DYES": 84,
       "EVENT_TIERS": 1679,
       "EXPEDITION_REWARD": 25,
@@ -147,14 +145,13 @@ it('pins totals of every central balance table', () => {
       "FINISH_DUST_PER_THROW": 15,
       "FIRST_HOUR_REWARD": 100,
       "FRIENDSHIP_REWARD_GEMS_PER_LEVEL": 5,
-      "FRIENDSHIP_TREAT": 70,
       "GALAXY_RATE": 11,
       "HABITATS": 4515,
+      "HOME_LEVEL_REQUIREMENTS": 49047,
       "INBOX_GIFTS": 412,
       "LAB_BUILD_COST": 300,
       "LAB_COST": 9100,
       "LAB_ESSENCE_COST": 265,
-      "LAB_FEATS": 15,
       "MILESTONE_REWARD": 10,
       "PAINTS": 510,
       "PRODUCTS": 4580,
@@ -162,11 +159,9 @@ it('pins totals of every central balance table', () => {
       "QUESTS": 175,
       "QUEST_BONUS": 21,
       "RESIDENT_ACCS": 94,
-      "RING_COST": 48500,
       "RUSH_REWARD": 5.6,
       "SKINS": 450,
       "STAR_ROAD": 15117,
-      "UPGRADES": 32000,
       "VAULT_RATES": 100,
       "VAULT_STORAGE_HOURS": 40,
       "VAULT_UPGRADE_COSTS": 32000,

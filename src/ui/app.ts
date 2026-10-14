@@ -5,7 +5,7 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { icon } from './icons';
-import { h, btn, modal, fmt, mountOverlays, closeModals, toast } from './dom';
+import { h, btn, modal, fmt, mountOverlays, closeModals, toast, guardInput } from './dom';
 import { sfx, setAudio, unlockAudio, pauseAudio, setMusicTheme, chapterTheme } from './audio';
 import { haptic, setHaptics } from './haptics';
 import { LevelScene, type LevelResult, type SceneOpts } from './game';
@@ -29,7 +29,7 @@ import { setPlanetPalette } from './art/planet';
 import type { SkyState } from '../core/sky';
 import { restoredSkyState } from './feel';
 import { createIap, shouldRevoke, type IapEvent, type StorePrice } from '../meta/iap';
-import { PRODUCT_BY_ID, PRODUCT_BY_KEY, PRODUCTS, SKINS, type BoosterId } from '../meta/config';
+import { PRODUCT_BY_ID, PRODUCT_BY_KEY, SKINS, type BoosterId } from '../meta/config';
 import { clearFails, continueAllowed, countsAsFail, recordFail } from '../meta/continues';
 import { firstTargets, helpAtFailCount, helpFor, helpThrowsForAttempt } from '../meta/help';
 import {
@@ -47,7 +47,6 @@ import { chapterOf } from '../meta/progression';
 import { ensureWishes } from '../meta/wishes';
 import { MOMENTUM_PERKS, momentumActive, momentumLoss, momentumRoundPerk, momentumWin } from '../meta/momentum';
 import { addVisitors } from '../meta/visitors';
-import { rankFlow } from './flows/rank';
 import { visitorsFlow } from './flows/visitors';
 import { modesFlow } from './flows/modes';
 import { awayFlow } from './flows/away';
@@ -66,7 +65,6 @@ import { remixResult } from './flows/remixResult';
 import { recordRemix, remixFrame, remixLevel, remixUnlocked } from '../meta/remix';
 import { levelResults } from './flows/results';
 import { settingsFlow, setTextSize } from './flows/settings';
-import { questsFlow } from './flows/quests';
 import { getLang, setLang, t, type Lang } from '../i18n';
 import { COACH, pendingIntroAfterWin } from '../meta/coach';
 import { addIntroLetter } from '../meta/inbox';
@@ -103,6 +101,7 @@ import { seasonOf, skyEventOn } from '../meta/seasons';
 import { keeperHead } from './art/keeper';
 import { refreshCreatureGalleryMotion } from './art/critters';
 import { GUSTY_WIND_TIP, debutsAt, unlocked } from '../meta/unlocks';
+import { stylesAccess, stylesLockReason } from '../meta/stylesAccess';
 import { chestsReady } from '../meta/progression';
 import { roadReady } from '../meta/starroad';
 import { letterOf } from '../meta/inbox';
@@ -237,7 +236,7 @@ export class App {
     tickHome(this.p);
     this.lastAbsenceMs = this.p.meta.sessions === 1 ? Infinity : Math.max(0, Date.now() - this.p.meta.lastSeen);
     this.awayMs = this.lastAbsenceMs === Infinity ? 0 : this.lastAbsenceMs;
-    this.p.meta.lastSeen = Date.now();
+    this.p.meta.lastSeen = Math.max(this.p.meta.lastSeen, Date.now());
     const unlock = () => {
       unlockAudio();
       removeEventListener('pointerdown', unlock);
@@ -247,7 +246,7 @@ export class App {
       StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
       CapApp.addListener('pause', () => {
         this.checkpointRound(true);
-        this.p.meta.lastSeen = Date.now();
+        this.p.meta.lastSeen = Math.max(this.p.meta.lastSeen, Date.now());
         saveProfile(this.p);
         scheduleReminders(this.p);
         pauseAudio(true);
@@ -261,7 +260,7 @@ export class App {
         this.lastAbsenceMs = Math.max(0, Date.now() - this.p.meta.lastSeen);
         this.awayMs = Math.max(this.awayMs, this.lastAbsenceMs);
         if (this.lastAbsenceMs >= 30 * 60_000) this.popupShownThisOpen = false;
-        this.p.meta.lastSeen = Date.now();
+        this.p.meta.lastSeen = Math.max(this.p.meta.lastSeen, Date.now());
         if (this.screen === 'home') this.showHome();
         void this.reconcilePurchases();
       });
@@ -269,7 +268,7 @@ export class App {
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) return;
       this.checkpointRound(true);
-      this.p.meta.lastSeen = Date.now();
+      this.p.meta.lastSeen = Math.max(this.p.meta.lastSeen, Date.now());
       saveProfile(this.p);
     });
     iapReady
@@ -414,6 +413,8 @@ export class App {
     const scrollTop = same ? (this.host.querySelector('.scroll')?.scrollTop ?? 0) : 0;
     if (MAIN_TABS.includes(name as MainTab)) el.append(this.tabBar(name as MainTab));
     this.host.replaceChildren(el);
+    // Internal view changes (e.g. Done → Buy in Styles) also replace controls under the finger.
+    if (!same || !this.refreshing) guardInput();
     if (!same) {
       const fromTab = MAIN_TABS.indexOf(previousScreen as MainTab);
       const toTab = MAIN_TABS.indexOf(name as MainTab);
@@ -489,7 +490,7 @@ export class App {
         reason: unlocked(p, 'homeworld') ? undefined : t('Opens at planet {n}', { n: 5 }),
       },
       { id: 'collection', label: t('Collection'), symbol: 'book', badge: 0 },
-      { id: 'styles', label: t('Styles'), symbol: 'paint', badge: 0, reason: p.chapters.length ? undefined : t('Opens after chapter 1') },
+      { id: 'styles', label: t('Styles'), symbol: 'paint', badge: 0, reason: stylesLockReason(p) },
     ];
     // Keep one numeric badge style and limit simultaneous badges.
     let shown = 0;
@@ -572,14 +573,15 @@ export class App {
     showCollection(this);
   }
   showStyles() {
-    if (!this.p.chapters.length && !PRODUCTS.some((product) => !product.consumable && ownsProduct(this.p, product.id))) {
+    if (!stylesAccess(this.p)) {
       this.mount(
         h(
           'div',
           { class: 'screen page tab-page' },
           this.topBar(),
           h('div', { class: 'page-title' }, t('Styles')),
-          h('p', { class: 'locked-note' }, t('Opens after chapter 1')),
+          h('p', { class: 'locked-note' }, stylesLockReason(this.p)),
+          this.p.level > 10 ? btn(t('Open your chapter chest'), 'primary wide', () => this.showStarMap()) : null,
         ),
         'styles',
       );
@@ -670,9 +672,6 @@ export class App {
     ledger.discover('star_road', this.p.level);
     showRoad(this);
   }
-  showWorkshop() {
-    this.showStyles();
-  }
   showPassport() {
     ledger.discover('passport', this.p.level);
     showPassport(this);
@@ -716,12 +715,6 @@ export class App {
   }
   settings() {
     settingsFlow(this);
-  }
-  quests() {
-    questsFlow(this);
-  }
-  rank() {
-    rankFlow(this);
   }
   visitors() {
     visitorsFlow(this);

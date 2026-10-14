@@ -142,7 +142,7 @@ describe('save goldens', () => {
           else if (b?.type === 'greenhouse') expect(p.home.plots[i]).toMatchObject(b);
           else expect(p.home.plots[i]).toEqual(b);
         }
-        expect(p.home.residents).toEqual((raw.home as Raw).residents);
+        expect(p.home.residents).toEqual(((raw.home as Raw).residents as Raw[]).map(({ lastReq: _retired, ...friend }) => friend));
       });
 
       it('is stable: saving and loading again changes nothing', () => {
@@ -237,7 +237,7 @@ describe('save goldens: specific migrations', () => {
     const bay = p.home.plots.find((b) => b?.type === 'launch_bay')!;
     expect(bay).toEqual({ ...tower, type: 'launch_bay' });
     expect(p.home.expedition).toEqual((raw.home as Raw).expedition);
-    expect(p.mastery.l_pad).toBe(2800);
+    expect(p).not.toHaveProperty('mastery'); // Cosmetic fling counts never drive gameplay launchers.
     expect(p.launcher.flings).toEqual({});
     expect(p.m105Migrated).toBe(true);
     expect(migrate(JSON.parse(JSON.stringify(p)) as Raw)).toEqual(p);
@@ -290,7 +290,7 @@ describe('save goldens: specific migrations', () => {
     expect(p.home.plots.some((b) => b === null)).toBe(true);
     for (const [type, def] of Object.entries(BUILDINGS))
       expect(p.home.plots.filter((b) => b?.type === type).length, type).toBeLessThanOrEqual(def.max);
-    expect(p.home.debris.every((i) => !p.home.plots[i])).toBe(true);
+    expect(p.home).not.toHaveProperty('debris');
     expect(labCap(p)).toBe(4);
     expect(labLevel(p, 'seed')).toBe(5);
     for (const kind of ['rock', 'ice', 'seed', 'magma'] as const) expect(labBuildCost(p, kind)).toBe(0);

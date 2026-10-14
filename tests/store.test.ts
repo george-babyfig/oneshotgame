@@ -1,6 +1,7 @@
+import { COSMETICS } from '../src/meta/cosmetics';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { COSMETICS, FREE_SAMPLERS, PRODUCTS, PRODUCT_TEXT_KEYS, ROAD00_GEM_SINGLE_IDS } from '../src/meta/tuning';
+import { FREE_SAMPLERS, PRODUCTS, PRODUCT_TEXT_KEYS, ROAD00_GEM_SINGLE_IDS } from '../src/meta/tuning';
 import { STAR_ROAD } from '../src/meta/starroad';
 import { defaultProfile } from '../src/meta/profile';
 import { grantProduct, ownsProduct, refundQuietUntil, restoreProduct, revokeProduct } from '../src/meta/economy';

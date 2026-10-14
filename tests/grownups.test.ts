@@ -29,6 +29,7 @@ describe('Grown-ups boundary', () => {
 
   it('hides paid looks but keeps earned looks', () => {
     const p = defaultProfile();
+    p.meta.sessions = 2;
     const paid = COSMETICS.filter(isPaidLook);
     expect(paid.length).toBeGreaterThan(0);
     expect(visibleCosmetics(p)).toEqual(COSMETICS);

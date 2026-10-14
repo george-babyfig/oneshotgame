@@ -92,7 +92,7 @@ export function aimTagReserved(scene: LevelScene, path?: ReturnType<typeof flyFu
   const sx = scene.w / canvas.width;
   const sy = scene.h / canvas.height;
   const selectors =
-    '.level .hud-top, .level .life, .level .goals, .level .forecast, .level .twist, .level .hint, .level .banners .show, .level .finish:not(.hidden), .level .hud-bottom';
+    '.level .hud-top, .level .life, .level .goals, .level .forecast, .level .twist, .level .hint, .level .banners .show, .level .coach.show, .level .coach.reading, .level .finish:not(.hidden), .level .hud-bottom';
   const elements = [...scene.el.querySelectorAll(selectors)];
   if (scene.forecastEl && !elements.includes(scene.forecastEl)) elements.push(scene.forecastEl);
   const zones = elements.map((el) => {

@@ -20,7 +20,8 @@ import { skyIconCanvas } from '../art/sky';
 import { buddyChipAvailable, buddyEligible, buddyShieldFor, nextPlanetBuddy, planetBuddyFor } from '../../meta/buddy';
 import { traitBadge } from '../art/traits';
 import { haptic } from '../haptics';
-import { LAUNCHERS, type LauncherId } from '../../core/launchers';
+import { LAUNCHERS, LAUNCHER_COPY, type LauncherId } from '../../core/launchers';
+import { confirmGemUse } from '../screens/homeworld/gemConfirm';
 import { launcherBay } from '../../meta/launchbay';
 import { goodHere, needsSlingGhost } from '../../meta/launcherPick';
 
@@ -168,8 +169,9 @@ export function preLevel(app: App, n: number) {
             h('div', { class: 'm-title' }, t(b.name)),
             h('p', null, t(b.desc)),
             getButton,
-            canBuyGemBooster(p, id)
-              ? btn(t('Get 1 for 💎{price}', { price: b.gems }), 'ghost wide', () => {
+            p.meta.sessions > 1 && canBuyGemBooster(p, id)
+              ? btn(t('Get 1 for 💎{price}', { price: b.gems }), 'ghost wide', async () => {
+                  if (!(await confirmGemUse(t(b.name), b.gems))) return;
                   if (buyGemBooster(p, id)) {
                     choose(id);
                     app.save();
@@ -305,6 +307,7 @@ function preLevelLauncherChip(app: App, scene: LevelScene, level: LevelDef): HTM
         const row = LAUNCHERS[ownedId];
         const tune = launcherBay.tune(app.p, ownedId);
         const badge = goodHere(ownedId, level);
+        const reason = badge && LAUNCHER_COPY[ownedId].goodHereReason ? t(LAUNCHER_COPY[ownedId].goodHereReason!) : '';
         const labelVars = { name: t(row.name), n: tune, job: t(row.job) };
         return h(
           'button',
@@ -312,7 +315,9 @@ function preLevelLauncherChip(app: App, scene: LevelScene, level: LevelDef): HTM
             class: `launcher-option${ownedId === id ? ' selected' : ''}`,
             type: 'button',
             'aria-pressed': String(ownedId === id),
-            'aria-label': badge ? t('{name}, Tune {n}, {job}. Good here', labelVars) : t('{name}, Tune {n}, {job}', labelVars),
+            'aria-label': badge
+              ? `${t('{name}, Tune {n}, {job}. Good here', labelVars)}${reason ? ` ${reason}` : ''}`
+              : t('{name}, Tune {n}, {job}', labelVars),
             onclick: () => {
               if (!launcherBay.select(app.p, ownedId)) return;
               scene.o.launcher = { id: ownedId, tune };
@@ -332,6 +337,7 @@ function preLevelLauncherChip(app: App, scene: LevelScene, level: LevelDef): HTM
           h('small', null, t(row.job)),
           h('small', null, t('Tune {n}', { n: tune })),
           badge ? h('span', { class: 'launcher-good' }, `🍃 ${t('Good here')}`) : null,
+          reason ? h('small', { class: 'launcher-good-why' }, reason) : null,
         );
       }),
     );

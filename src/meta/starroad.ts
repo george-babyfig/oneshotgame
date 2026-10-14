@@ -192,6 +192,11 @@ export function grantProfileRoadPoints(p: Profile, event: RoadPointEvent, catalo
   return granted;
 }
 
+/** Preview on a copy so read-only UI cannot consume an earning key or reset the day. */
+export function previewProfileRoadPoints(p: Profile, event: RoadPointEvent, catalog: readonly RoadDefinition[] = ROAD_CATALOG): number {
+  return grantProfileRoadPoints(structuredClone(p), event, catalog);
+}
+
 /** Compatibility for existing new-star delta callers; all modes still share the cap. */
 export function addRoadPoints(p: Profile, amount: number, day = today(), source: RoadPointSource = 'campaign'): number {
   if (!Number.isFinite(amount) || amount <= 0) return 0;

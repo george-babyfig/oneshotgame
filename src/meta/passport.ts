@@ -3,7 +3,6 @@
 import type { Profile } from './profile';
 import { totalStars } from './profile';
 import { ACHIEVEMENTS } from './achievements';
-import { RANK_TITLES } from './rank';
 import { recordTitles } from './records';
 import { t } from '../i18n';
 import { FUSION_IDS } from './reactions';
@@ -91,9 +90,9 @@ export interface TitleDef {
   gold?: boolean;
 }
 
-/** Every title the player can choose: rank titles reached, achievements earned, and the pass title. */
+/** Titles come from current achievements, records, landmarks and looks. */
 export function titlesOwned(p: Profile): TitleDef[] {
-  const out: TitleDef[] = RANK_TITLES.slice(0, Math.min(p.rank, RANK_TITLES.length)).map((x) => ({ id: `rank:${x}`, text: x }));
+  const out: TitleDef[] = [];
   for (const a of ACHIEVEMENTS) if (a.done(p)) out.push({ id: `ach:${a.id}`, text: a.title });
   for (const x of recordTitles(p)) out.push({ id: `rec:${x}`, text: x });
   if (FUSION_IDS.every((id) => p.fusionsFound.includes(id))) out.push({ id: 'reactions', text: 'Little Chemist' });
@@ -113,9 +112,9 @@ export function titlesOwned(p: Profile): TitleDef[] {
   return out;
 }
 
-export function currentTitle(p: Profile): TitleDef {
+export function currentTitle(p: Profile): TitleDef | undefined {
   const owned = titlesOwned(p);
-  return owned.find((x) => x.id === p.passport.title) ?? owned[Math.min(p.rank, RANK_TITLES.length) - 1] ?? owned[0];
+  return owned.find((x) => x.id === p.passport.title) ?? owned[0];
 }
 
 // ------------------------------------------------------------------ banners

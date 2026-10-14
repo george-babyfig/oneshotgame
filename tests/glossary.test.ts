@@ -98,7 +98,7 @@ const KEPT_ROUND: Noun[] = [
     aliases: ['planets'],
     area: 'round',
     since: 'today',
-    tr: { es: ['planeta'], fr: ['planète'], de: ['Planet'], pt: ['planeta', 'planetári'], ja: ja('惑星', 'プラネット') },
+    tr: { es: ['planeta'], fr: ['planète'], de: ['Planet'], pt: ['planeta', 'planetári'], ja: ja('わくせい', '惑星', 'プラネット') },
   },
   {
     en: 'throws',
@@ -368,7 +368,7 @@ const KEPT_META: Noun[] = [
       fr: ['Planète du jour'],
       de: ['Planet des Tages', 'Planeten des Tages'],
       pt: ['Planeta do Dia'],
-      ja: ja('今日の惑星'),
+      ja: ja('今日のわくせい'),
     },
   },
   { en: 'Meteor Rush', area: 'meta', since: 'today', strict: true },

@@ -11,7 +11,10 @@ const config: CapacitorConfig = {
     scrollEnabled: false,
     backgroundColor: '#0b0a24',
     // The third-party StoreKit listener finishes updates before a profile grant can be saved.
-    // PurchaseJournalPlugin owns StoreKit on iOS; keep the other Capacitor plugins.
+    // PurchaseJournalPlugin owns StoreKit on iOS. includePlugins excludes the installed
+    // @capgo/native-purchases until the owner decides whether to remove that dependency.
+    // Keep this allowlist when syncing; add any new native plugin here deliberately.
+    // tests/privacy.test.ts guards src imports and the generated iOS Swift package.
     includePlugins: [
       '@capacitor-community/in-app-review',
       '@capacitor/app',

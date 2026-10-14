@@ -32,6 +32,32 @@ async function openGateFor(page: Page, lang: NumberWordLang, n: number) {
   await page.locator(`.topbar button[aria-label="${tr(lang, 'Settings')}"]`).click();
   const settings = page.locator(OPEN_MODAL);
   await expect(settings).toBeVisible();
+  // Measure after the sheet's entrance scale, not mid-animation.
+  await settings.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {}))));
+  const values = await settings.locator('.setting-select-field').evaluateAll((fields) =>
+    fields.map((field) => {
+      const select = field.querySelector('select')!;
+      const value = field.querySelector('.setting-select-value')!;
+      const range = document.createRange();
+      range.selectNodeContents(value);
+      const text = range.getBoundingClientRect();
+      const box = value.getBoundingClientRect();
+      return {
+        label: value.textContent,
+        selected: select.selectedOptions[0]?.textContent,
+        visible: box.height > 0,
+        fits: text.left >= box.left - 1 && text.right <= box.right + 1,
+        height: select.getBoundingClientRect().height,
+      };
+    }),
+  );
+  for (const value of values) {
+    expect(value.label).toBe(value.selected);
+    expect(value.visible).toBe(true);
+    expect(value.fits).toBe(true);
+    expect(value.height).toBeGreaterThanOrEqual(44);
+  }
+
   await page.evaluate(
     (v) => {
       const w = window as any;

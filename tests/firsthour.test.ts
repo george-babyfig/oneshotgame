@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultProfile } from '../src/meta/profile';
+import { defaultProfile, migrate } from '../src/meta/profile';
 import { buildLab, labBuildCost } from '../src/meta/labs';
 import { firstHourFriend, firstHourLab, firstHourStep } from '../src/meta/firsthour';
 import { invite, tickBuilds } from '../src/meta/homeworld';
@@ -25,17 +25,13 @@ describe('first hour paths', () => {
     expect(p.dust).toBe(500);
   });
 
-  it('chooses a plot without a meteor rock, and clears one for free if every empty plot has debris', () => {
-    const p = ready();
-    p.home.debris = [0, 1, 2];
+  it('chooses the first empty plot after old debris is discarded on load', () => {
+    const raw = ready();
+    const p = migrate({ ...raw, home: { ...raw.home, debris: [0, 1, 2] } });
     expect(firstHourLab(p, 'rock', undefined, T0)).toBe('ok');
-    expect(p.home.plots[3]?.type).toBe('lab');
-    const all = ready();
-    all.home.debris = all.home.plots.map((_, i) => i);
-    expect(firstHourLab(all, 'rock', undefined, T0)).toBe('ok');
-    expect(all.home.plots[0]?.type).toBe('lab');
-    expect(all.home.debris).not.toContain(0);
-    expect(all.dust).toBe(500);
+    expect(p.home.plots[0]?.type).toBe('lab');
+    expect(p.home).not.toHaveProperty('debris');
+    expect(p.dust).toBe(500);
   });
 
   it('waits for construction, then grants the friend reward exactly once', () => {

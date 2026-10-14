@@ -249,6 +249,8 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
       }
       await page.evaluate(() => {
         const a = (window as any).__app;
+        // Only milestones that really happened are announced (P49), so finish stage 1 first.
+        a.p.home.landmarks.sprout_garden.stage = Math.max(1, a.p.home.landmarks.sprout_garden.stage);
         a.p.home.seen.celebrations.push('sprout_garden:stage:1');
         a.showHomeworld();
       });
@@ -590,6 +592,47 @@ for (const loc of localesToRun()) {
       await openTab(page, 'home');
       await snap(page, info, guard, `home-again-${loc}`);
       expectNoErrors(guard);
+    });
+  });
+}
+
+for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
+  test.describe(`FC Wish feedback [${loc}]`, () => {
+    test.use({ locale: BROWSER_LOCALE[loc] });
+    test(`FC ${loc}: Wish claim refreshes wallet, badge, bonus and Styles destination`, async ({ page }) => {
+      await freshInstall(page);
+      await midGame(page, { level: 45 });
+      const before = await page.evaluate(async () => {
+        const a = (window as any).__app;
+        const wishes = await (window as any).__e2eImport('/src/meta/wishes.ts');
+        const profile = await (window as any).__e2eImport('/src/meta/profile.ts');
+        const cards = wishes.ensureWishes(a.p, profile.today());
+        a.p.wardrobe = a.p.wardrobe.filter((id: string) => !id.startsWith('sampler_'));
+        a.p.quests.bonusClaimed = false;
+        a.p.mail.forEach((letter: any) => (letter.claimed = true));
+        a.p.home.residents = [];
+        cards.forEach((card: any, index: number) => {
+          card.progress = card.goal;
+          card.claimed = index < 2;
+        });
+        a.p.road = Array.from({ length: 20 }, (_, i) => i);
+        a.p.roadRecords.road00.claimedFreeTierIds = Array.from({ length: 20 }, (_, i) => `road00:tier${String(i).padStart(2, '0')}`);
+        a.selectTab('missions');
+        return { gems: a.p.gems, dust: a.p.dust };
+      });
+      await page
+        .locator('.wishes-panel')
+        .getByRole('button', { name: tr(loc, 'Claim'), exact: true })
+        .click();
+      const reward = page.locator(OPEN_MODAL);
+      await expect(reward).toContainText(tr(loc, 'Wish granted!'));
+      await expect(reward).toContainText(tr(loc, 'All three Wishes: 💎{n} bonus', { n: 15 }));
+      await expect(page.locator('.topbar .gems')).toContainText((before.gems + 27).toLocaleString(BROWSER_LOCALE[loc]));
+      await expect(page.locator('.topbar .dust')).toContainText((before.dust + 50).toLocaleString(BROWSER_LOCALE[loc]));
+      await expect(page.locator('[data-tab="missions"] .nb')).toHaveCount(0);
+      await reward.getByRole('button', { name: tr(loc, 'See it in Styles'), exact: true }).click();
+      await waitScreen(page, 'styles');
+      expect(await page.evaluate(() => (window as any).__app.p.wardrobe.includes('sampler_tidepool'))).toBe(true);
     });
   });
 }

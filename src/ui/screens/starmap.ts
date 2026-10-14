@@ -1,3 +1,4 @@
+import { HOMEWORLD_MAX_LEVEL } from '../../meta/tuning';
 // Star Map: the campaign as chapters of ten planets, each with a chest.
 import { h, btn, modal } from '../dom';
 import { sfx } from '../audio';
@@ -39,12 +40,13 @@ export function showStarMap(app: App, remixChapter = 0, focusChapter = 0) {
       ? h(
           'div',
           {
-            class: `starmap-homeworld-level${p.home.level === 5 ? ' glowing' : ''}`,
-            'aria-label': p.home.level === 5 ? t('Homeworld Level 5, glowing') : t('Homeworld Level {n}', { n: p.home.level }),
+            class: `starmap-homeworld-level${p.home.level === HOMEWORLD_MAX_LEVEL ? ' glowing' : ''}`,
+            'aria-label':
+              p.home.level === HOMEWORLD_MAX_LEVEL ? t('Homeworld Level 5, glowing') : t('Homeworld Level {n}', { n: p.home.level }),
           },
-          p.home.level === 5 ? '✦ ' : '',
+          p.home.level === HOMEWORLD_MAX_LEVEL ? '✦ ' : '',
           t('Homeworld Level {n}', { n: p.home.level }),
-          p.home.level === 5 ? ' ✦' : '',
+          p.home.level === HOMEWORLD_MAX_LEVEL ? ' ✦' : '',
         )
       : null;
   const chapters: HTMLElement[] = [];
@@ -202,7 +204,8 @@ export function showStarMap(app: App, remixChapter = 0, focusChapter = 0) {
     }
     if (!sameMap) {
       if (remixChapter) scroll.querySelector(`[data-chapter="${remixChapter}"]`)?.scrollIntoView({ block: 'center' });
-      else scroll.querySelector('.node.current')?.scrollIntoView({ block: 'center' });
+      // A ready gift is the useful landing point when the map is opened from its chest CTA.
+      else (scroll.querySelector('.chest-btn') ?? scroll.querySelector('.node.current'))?.scrollIntoView({ block: 'center' });
     }
   });
 }

@@ -20,6 +20,7 @@ import { effectiveReduceMotion, flyReward, menuParticles } from '../motion';
 import type { App } from '../app';
 import { planetName, t, tp } from '../../i18n';
 import { unlocked } from '../../meta/unlocks';
+import { stylesAccess } from '../../meta/stylesAccess';
 import { nextUp } from '../../meta/nextup';
 import { STYLES_RELEASE } from '../../meta/cosmetics';
 import { currentLook } from '../../meta/cosmetics';
@@ -27,7 +28,11 @@ import { refundQuietUntil } from '../../meta/economy';
 
 export function showHome(app: App) {
   const p = app.p;
-  document.documentElement.classList.toggle('styles-new', p.stylesNewSeen !== STYLES_RELEASE && refundQuietUntil(p) <= Date.now());
+  const stylesOpen = stylesAccess(p);
+  document.documentElement.classList.toggle(
+    'styles-new',
+    stylesOpen && p.stylesNewSeen !== STYLES_RELEASE && refundQuietUntil(p) <= Date.now(),
+  );
   const now = Date.now();
   const next = levelMeta(p.level);
   const ch = chapterOf(p.level);
@@ -46,7 +51,13 @@ export function showHome(app: App) {
       h(
         'small',
         null,
-        full ? t('Vault full') : !working ? t('Win a campaign planet to start your Vault') : t('Working: ✨ {n} an hour', { n: fmt(rate) }),
+        full
+          ? t('Vault full')
+          : !working
+            ? p.stats.wins > 0
+              ? t('Win a campaign planet to keep your Vault working')
+              : t('Win a campaign planet to start your Vault')
+            : t('Working: ✨ {n} an hour', { n: fmt(rate) }),
       ),
     ),
     `dust-btn${full ? ' full' : ''}`,
@@ -142,11 +153,13 @@ export function showHome(app: App) {
           : null,
       ),
       p.galaxy.length ? h('div', { class: 'collect-row' }, collect) : null,
-      btn(
-        h('span', { class: 'stack' }, h('b', null, t('Next Up')), h('small', null, picked.title), h('small', null, picked.subtitle)),
-        'ghost wide next-up-card',
-        nextAction,
-      ),
+      picked.action !== 'play'
+        ? btn(
+            h('span', { class: 'stack' }, h('b', null, t('Next Up')), h('small', null, picked.title), h('small', null, picked.subtitle)),
+            'ghost wide next-up-card',
+            nextAction,
+          )
+        : null,
       btn(
         h(
           'span',

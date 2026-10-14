@@ -8,7 +8,7 @@ import { homeUnlocked, HOME_UNLOCK_LEVEL } from '../src/meta/homeworld';
 import { letterStrings } from '../src/meta/inbox';
 import { momentumActive, MOMENTUM_UNLOCK } from '../src/meta/momentum';
 import { defaultProfile, migrate } from '../src/meta/profile';
-import { unlocked as rankUnlocked } from '../src/meta/rank';
+import { unlocked as rankUnlocked } from '../src/meta/unlocks';
 import { GUSTY_WIND_TIP, UNLOCKS, debutsAt, unlocked } from '../src/meta/unlocks';
 import { pendingLauncherIntroAfterWin } from '../src/meta/launcherPick';
 import { voyageActive, VOYAGE_UNLOCK_LEVEL } from '../src/meta/voyage';
@@ -139,7 +139,7 @@ describe('unlock ladder', () => {
         p.sightings.bunny = 5;
         expect(unlocked(p, 'buddy')).toBe(false);
         expect(buddyEligible(p).includes('bunny')).toBe(false);
-        p.home.residents.push({ species: 'bunny', fp: 0, lastReq: 0, rewarded: 0 });
+        p.home.residents.push({ species: 'bunny', fp: 0, rewarded: 0 });
         expect(unlocked(p, 'buddy')).toBe(level >= 18);
         expect(buddyEligible(p).includes('bunny')).toBe(level >= 18);
       }

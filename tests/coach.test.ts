@@ -81,7 +81,7 @@ describe('Coach intros', () => {
   it('teaches Buddy help once at planet 18 when a resident can join', () => {
     const profile = defaultProfile();
     profile.mailSeen.push('coach-homeworld', 'coach-festival', 'coach-voyage');
-    profile.home.residents.push({ species: 'bunny', fp: 0, lastReq: 0, rewarded: 0 });
+    profile.home.residents.push({ species: 'bunny', fp: 0, rewarded: 0 });
     profile.level = 17;
     expect(roundIntro(17)?.id).not.toBe('buddy');
     profile.level = 18;

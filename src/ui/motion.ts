@@ -130,7 +130,7 @@ export function countUp(el: HTMLElement, from: number, to: number, prefix = '', 
     }
     if (elapsed < ms) schedule();
     else {
-      el.textContent = `${prefix}${Math.floor(to).toLocaleString('en-US')}`;
+      el.textContent = `${prefix}${Math.floor(to).toLocaleString(getLang())}`;
       stop();
     }
   };

@@ -99,7 +99,7 @@ describe('Wishes', () => {
   it('grows friendship when the wishing creature lives in the Den', () => {
     const p = player();
     const card = ensureWishes(p, day)[0];
-    p.home.residents.push({ species: card.species, fp: 3, lastReq: 0, rewarded: 0 });
+    p.home.residents.push({ species: card.species, fp: 3, rewarded: 0 });
     card.progress = card.goal;
     expect(claimWish(p, card.id)).toBe(true);
     expect(p.home.residents[0].fp).toBe(5);
@@ -108,7 +108,7 @@ describe('Wishes', () => {
   it('delivers the best friend letter when a Wish reaches that friendship level', () => {
     const p = player();
     const card = ensureWishes(p, day)[0];
-    p.home.residents.push({ species: card.species, fp: 24, lastReq: 0, rewarded: 3 });
+    p.home.residents.push({ species: card.species, fp: 24, rewarded: 3 });
     card.progress = card.goal;
     claimWish(p, card.id);
     expect(p.mailSeen).toContain(`best-${card.species}`);
