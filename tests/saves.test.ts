@@ -15,12 +15,18 @@
 //   e-pre-m3.v3.json       v3 before the M3 unlock ladder, with Pass and mode progress
 //   g-pre-m105.v3.json     Tower at level 3, build timer, active expedition and cosmetic mastery
 //   h-pre-m11.v3.json      Ring 3, paid retired structures/perks and a running trip
+//   j-pre-noun-budget.v5.json  Old planet-20 Voyage gate, before its moved debut
+//   k-pre-stats.v1.json    Pre-counter save: wins must backfill before noun migration
+//   l-voyage-seen.v5.json  Old planet-23 player who already saw the Voyage intro
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { defaultProfile, migrate, PROFILE_VERSION, readInterruptedRound, type Profile } from '../src/meta/profile';
 import { labBuildCost, labCap, labLevel } from '../src/meta/labs';
-import { unlocked } from '../src/meta/unlocks';
+import { UNLOCKS, unlocked } from '../src/meta/unlocks';
+import { pendingIntroAfterWin } from '../src/meta/coach';
+import { nextUp } from '../src/meta/nextup';
+import { lateOpen } from '../src/meta/unlocks';
 import { BUILDINGS, canBuild, drones, finishExpedition } from '../src/meta/homeworld';
 
 const DIR = 'tests/fixtures/saves';
@@ -38,6 +44,8 @@ const DUST_DELTAS: Record<string, number> = {
   'h-pre-m11.v3.json': 22980,
   'i-pre-m115.v4.json': 0,
   'j-pre-noun-budget.v5.json': 0,
+  'k-pre-stats.v1.json': 1600,
+  'l-voyage-seen.v5.json': 0,
 };
 
 type Raw = Record<string, unknown>;
@@ -48,6 +56,7 @@ const EVENT_GEM_DELTAS: Record<string, number> = {
   'b-mid-game.v3.json': 3,
   'c-pre-m0.v3.json': 1,
   'd-round4.v2.json': 14,
+  'k-pre-stats.v1.json': 14,
   'f-pre-m10.v3.json': 3,
   'g-pre-m105.v3.json': 3,
   'h-pre-m11.v3.json': 3,
@@ -86,6 +95,8 @@ describe('save goldens', () => {
       'h-pre-m11.v3.json',
       'i-pre-m115.v4.json',
       'j-pre-noun-budget.v5.json',
+      'k-pre-stats.v1.json',
+      'l-voyage-seen.v5.json',
     ]);
   });
 
@@ -97,6 +108,29 @@ describe('save goldens', () => {
     );
     expect(migrate(p as unknown as Raw).legacyUnlocks).toEqual(p.legacyUnlocks);
     expect(defaultProfile().legacyUnlocks).not.toContain('noun-window');
+  });
+
+  it('backfills v1 wins before preserving the noun window, also honoring v3 progress', () => {
+    const p = loadSave('k-pre-stats.v1.json');
+    expect(p.stats.wins).toBe(Object.keys(p.stars).length);
+    expect(lateOpen(p)).toBe(true);
+    expect(lateOpen(loadSave('e-pre-m3.v3.json'))).toBe(true);
+    expect(lateOpen(defaultProfile())).toBe(false);
+  });
+  it.each(['j-pre-noun-budget.v5.json', 'l-voyage-seen.v5.json'])('never gives legacy Voyage a late or repeated debut: %s', (file) => {
+    const p = loadSave(file);
+    expect(p.mailSeen.filter((id) => id === 'coach-voyage')).toHaveLength(1);
+    for (const row of UNLOCKS) if (row.id !== 'voyage') p.mailSeen.push(`coach-${row.id}`);
+    for (const level of [20, 21, 22, 23, 24, 25]) {
+      p.level = level;
+      expect(unlocked(p, 'voyage')).toBe(true);
+      expect(pendingIntroAfterWin(p)?.id).not.toBe('voyage');
+      for (const session of [1, 3]) {
+        p.meta.sessions = session;
+        expect(nextUp(p, 0).title).not.toBe('Set sail on the Weekly Voyage');
+      }
+    }
+    expect(migrate(p as unknown as Raw).mailSeen.filter((id) => id === 'coach-voyage')).toHaveLength(1);
   });
 
   for (const f of FILES) {

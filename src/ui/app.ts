@@ -1,3 +1,4 @@
+import { waysToEarnGems } from './flows/earn';
 import { ledger, flushLedger, loadLedger, recordPurchase } from '../meta/ledger';
 // App shell: owns the profile, screen mounting, purchases and the level flow.
 // Each screen lives in ./screens and each modal flow in ./flows.
@@ -897,6 +898,7 @@ export class App {
       tutorial,
       reduceMotion: effectiveReduceMotion(this.p),
       gems: () => this.p.gems,
+      onEarnGems: () => waysToEarnGems(this.p),
       spendGems: (g) => {
         const ok = spendGems(this.p, g, 'continue');
         if (ok) this.save();

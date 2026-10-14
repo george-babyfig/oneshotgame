@@ -38,7 +38,9 @@ export function awayFlow(app: App, awayMs: number) {
             summary.vault ? h('p', null, t('Your planets made ✨{n}', { n: fmt(summary.vault) })) : null,
             summary.home.dust ? h('p', null, t('Your Homeworld made ✨{n}', { n: fmt(summary.home.dust) })) : null,
             summary.home.gems ? h('p', null, t('Your Homeworld made 💎{n}', { n: fmt(summary.home.gems) })) : null,
-            summary.home.boosters ? h('p', null, t('Your Homeworld made {n} boosters', { n: summary.home.boosters })) : null,
+            p.level >= 4 && summary.home.boosters
+              ? h('p', null, t('Your Homeworld made {n} boosters', { n: summary.home.boosters }))
+              : null,
           ),
       summary.visitorCount ? visitorRows(p.visitors) : null,
       summary.welcomeGems ? h('p', { class: 'away-gift' }, t('💎 {n} welcome gift', { n: summary.welcomeGems })) : null,

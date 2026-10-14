@@ -1,0 +1,324 @@
+{
+  "v": 6,
+  "gems": 30,
+  "dust": 0,
+  "level": 23,
+  "stars": {},
+  "remix": {},
+  "roadPoints": 0,
+  "roadDay": {
+    "day": "",
+    "earned": 0
+  },
+  "roadRecords": {
+    "road00": {
+      "points": 0,
+      "claimedFreeTierIds": [],
+      "claimedPaidTierIds": [],
+      "lastCreditedDay": "",
+      "earnedOnLastCreditedDay": 0,
+      "creditedEarningKeys": [],
+      "legacyGrantIds": []
+    }
+  },
+  "roadCreditedEarningKeys": [],
+  "roadPassEntitlements": [],
+  "roadLegacySerial": 0,
+  "roadStickers": [],
+  "m12RoadMigrated": true,
+  "m12LegacyLooksMigrated": true,
+  "seen": [],
+  "skySeen": [],
+  "gustSeen": false,
+  "fusionsFound": [],
+  "reactionPairsTried": [],
+  "combo": {
+    "best": 0,
+    "stamps": 0
+  },
+  "galaxy": [],
+  "lastCollect": 1791288000000,
+  "vault": {
+    "bankedProductionMs": 0,
+    "storedDust": 0,
+    "lastTick": 1791288000000
+  },
+  "upgrades": {
+    "vault": 0
+  },
+  "m11Migrated": true,
+  "m115Migrated": true,
+  "boosters": {
+    "shower": 1,
+    "spark": 1,
+    "scope": 1
+  },
+  "gemBoosters": {
+    "shower": 0,
+    "spark": 0,
+    "scope": 0
+  },
+  "piggy": 0,
+  "starter": false,
+  "pass": false,
+  "m3Migrated": true,
+  "legacyUnlocks": [],
+  "roadPass": [],
+  "skin": "classic",
+  "skins": ["classic"],
+  "processedTx": [],
+  "pendingPiggy": null,
+  "pendingPurchaseRecords": [],
+  "daily": {
+    "last": "",
+    "streak": 0
+  },
+  "quests": {
+    "day": "",
+    "list": [],
+    "bonusClaimed": false
+  },
+  "road": [],
+  "chapters": [1],
+  "dailyPlanet": {
+    "day": "",
+    "best": 0,
+    "stars": 0,
+    "rewarded": false
+  },
+  "settings": {
+    "sound": true,
+    "music": true,
+    "haptics": true,
+    "reduceMotion": false,
+    "fullAimLine": false,
+    "planetColours": "classic",
+    "notifications": false,
+    "gameCenter": false,
+    "lang": "",
+    "hemi": "north",
+    "textSize": "standard",
+    "hidePaidLooks": false,
+    "spendingReminder": null,
+    "breakAfterRounds": null,
+    "parentPin": null,
+    "gatePausedUntil": 0,
+    "gentle": false
+  },
+  "tutorial": false,
+  "meta": {
+    "installed": 1791288000000,
+    "lastSeen": 1791288000000,
+    "sessions": 0,
+    "rated": false,
+    "notifAsked": false,
+    "lastWelcomeAt": 0
+  },
+  "stats": {
+    "grown": {},
+    "throws": 0,
+    "plays": 0,
+    "wins": 19,
+    "bestLife": 0,
+    "creatures": 0,
+    "threeStars": 0,
+    "dailies": 0,
+    "rushBest": 0,
+    "rushPlays": 0,
+    "zenThrows": 0,
+    "challenges": 0,
+    "hardWins": 0,
+    "bestStreak": 0
+  },
+  "momentum": {
+    "streak": 0,
+    "shieldDay": "",
+    "paused": false,
+    "scopeReady": false,
+    "scopeWins": 0
+  },
+  "visitors": [],
+  "mementos": [],
+  "rank": 1,
+  "m4RankPaidThrough": 0,
+  "m4RankPaidRanks": [],
+  "habitats": [],
+  "challengeLog": [],
+  "zen": null,
+  "event": {
+    "week": "",
+    "tokens": 0,
+    "claimed": [],
+    "retired": false,
+    "legacyGems": 0
+  },
+  "gcReported": [],
+  "look": {
+    "suit": "suit_sky",
+    "hat": "hat_antenna",
+    "launcher": "l_pad",
+    "trail": "tr_dots",
+    "emote": "em_cheer"
+  },
+  "avatar": {
+    "face": 0,
+    "skin": 3,
+    "hair": 0,
+    "hairColor": 0,
+    "eyes": 0,
+    "expression": "happy"
+  },
+  "wardrobe": [],
+  "favourites": [],
+  "stylesNewSeen": "",
+  "launcher": {
+    "selected": "sling",
+    "tunes": {},
+    "flings": {},
+    "completedRounds": {},
+    "comboThreePlanets": []
+  },
+  "cometPier": {
+    "hardWins": 0,
+    "normalThreeStars": 0,
+    "hardPlanets": [],
+    "normalPlanets": [],
+    "troubles": 0,
+    "fusions": 0,
+    "stage": 0
+  },
+  "m105Migrated": true,
+  "passport": {
+    "first": -1,
+    "second": -1,
+    "set": false,
+    "title": "",
+    "banner": 0,
+    "frame": 0,
+    "badges": [],
+    "badgesSet": false
+  },
+  "home": {
+    "level": 1,
+    "ring": 1,
+    "firstHour": 0,
+    "labFreeUsed": false,
+    "plots": [null, null, null, null, null, null],
+    "gaps": [null, null, null, null, null, null],
+    "isleDecor": [null, null, null],
+    "landmarks": {
+      "sprout_garden": {
+        "stage": 0,
+        "progress": [],
+        "rewarded": [],
+        "rounds": [],
+        "arrivals": [],
+        "planets": []
+      },
+      "skyglass": {
+        "stage": 0,
+        "progress": [],
+        "rewarded": [],
+        "rounds": [],
+        "arrivals": [],
+        "planets": []
+      },
+      "sky_bridge": {
+        "stage": 0,
+        "progress": [],
+        "rewarded": [],
+        "rounds": [],
+        "arrivals": [],
+        "planets": []
+      },
+      "comet_pier": {
+        "stage": 0,
+        "progress": [],
+        "rewarded": [],
+        "rounds": [],
+        "arrivals": [],
+        "planets": []
+      },
+      "keepers_beacon": {
+        "stage": 0,
+        "progress": [],
+        "rewarded": [],
+        "rounds": [],
+        "arrivals": [],
+        "planets": []
+      }
+    },
+    "seen": {
+      "celebrations": []
+    },
+    "grownRoundKeys": [],
+    "residents": [],
+    "expedition": null,
+    "lastTick": 1791288000000,
+    "intro": false,
+    "paint": {
+      "ground": "meadow",
+      "sea": "blue"
+    },
+    "paints": [],
+    "friends": {},
+    "accs": []
+  },
+  "lab": {},
+  "feats": {},
+  "forms": {},
+  "formsSeen": [],
+  "flings": {},
+  "sightings": {},
+  "mail": [],
+  "mailSeen": ["coach-voyage"],
+  "bosses": [],
+  "presets": [null, null, null],
+  "mats": {},
+  "bundles": [],
+  "constellations": [],
+  "dyes": [],
+  "dye": {
+    "main": null,
+    "trim": null
+  },
+  "festival": {
+    "key": "",
+    "spotted": 0,
+    "claimed": []
+  },
+  "voyage": {
+    "week": "",
+    "base": 8,
+    "cleared": 0,
+    "stars": [],
+    "hemisphere": "north"
+  },
+  "voyageDone": 0,
+  "fails": {},
+  "continuesUsed": {},
+  "visits": {},
+  "album": {
+    "fest": [],
+    "milestones": 0,
+    "pagesClaimed": [],
+    "pages": [
+      {
+        "bg": 0,
+        "items": []
+      },
+      {
+        "bg": 1,
+        "items": []
+      },
+      {
+        "bg": 0,
+        "items": []
+      }
+    ]
+  },
+  "buddy": {
+    "species": null,
+    "acc": null
+  }
+}

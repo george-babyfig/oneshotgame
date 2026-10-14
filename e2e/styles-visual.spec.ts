@@ -56,9 +56,9 @@ test('session one Styles has earned looks and no gem prices or spending controls
     a.selectTab('styles');
   });
   await expect(page.locator('.workshop')).toContainText('Earn gems in play');
-  for (const tab of ['Launcher looks', 'Friend outfits', 'Dye', 'Atmosphere'])
+  for (const tab of ['Launcher looks', 'Friend outfits', 'Dye', 'Atmosphere', 'Homeworld looks'])
     await expect(page.locator('.tabs').getByRole('button', { name: tab, exact: true })).toHaveCount(0);
-  for (const tab of ['Suit', 'Hat', 'Trail', 'Emote', 'Objects', 'Effects', 'Homeworld looks']) {
+  for (const tab of ['Suit', 'Hat', 'Trail', 'Emote', 'Objects', 'Effects']) {
     await page.locator('.tabs').getByRole('button', { name: tab, exact: true }).click();
     await expect(page.locator('.ws-grid')).not.toContainText('💎');
     await expect(page.locator('.ws-get-look')).toHaveCount(0);

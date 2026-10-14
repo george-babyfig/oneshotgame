@@ -17,6 +17,8 @@ import {
 } from '../../meta/starroad';
 import type { App } from '../app';
 import { getLang, t } from '../../i18n';
+import { unlocked, UNLOCKS } from '../../meta/unlocks';
+import type { Profile } from '../../meta/profile';
 import { today } from '../../meta/profile';
 import { COSMETIC_BY_ID, currentLook, type Look } from '../../meta/cosmetics';
 import { itemCanvas } from '../art/keeper';
@@ -24,13 +26,19 @@ import { showPass } from './pass';
 
 const roadName = (id: RoadId, name: string) => (id === COSMIC_ROAD_ID ? t('Cosmic Road') : t(name));
 
-function cell(r: Reward, state: 'claimed' | 'ready' | 'locked', premium: boolean, look: Look) {
+export function roadRewardText(p: Profile, r: Reward): string[] {
+  if (!r.sticker || unlocked(p, 'sticker_album')) return rewardText(r);
+  const other = rewardText({ ...r, sticker: undefined });
+  return other.length ? other : [t('Opens at planet {n}', { n: UNLOCKS.find((row) => row.id === 'sticker_album')!.planet })];
+}
+
+function cell(p: Profile, r: Reward, state: 'claimed' | 'ready' | 'locked', premium: boolean, look: Look) {
   const keeperSlot = r.item && ['suit', 'hat', 'launcher', 'trail', 'emote'].includes(COSMETIC_BY_ID[r.item]?.slot ?? '');
   return h(
     'div',
     { class: `rc ${state}${premium ? ' prem' : ''}${r.item ? ' has-item' : ''}` },
     keeperSlot && r.item ? itemCanvas(r.item, look, 44) : null,
-    ...rewardText(r).map((text) => h('span', null, text)),
+    ...roadRewardText(p, r).map((text) => h('span', null, text)),
     state === 'claimed' ? h('i', { class: 'tick', 'aria-label': t('Claimed') }, '✓') : null,
     premium && state === 'locked' ? h('i', { class: 'lock', 'aria-label': t('Locked') }, '🔒') : null,
   );
@@ -62,7 +70,7 @@ export function showRoad(app: App, selectedId?: RoadId) {
     return h(
       'div',
       { class: `rrow${reached ? ' reached' : ''}${showPaidLane ? '' : ' no-paid'}` },
-      cell(tier.reward, free, false, look),
+      cell(p, tier.reward, free, false, look),
       h(
         'div',
         { class: 'rmid' },
@@ -78,13 +86,17 @@ export function showRoad(app: App, selectedId?: RoadId) {
               if (!visibleGot.length) return;
               const sheet = modal([
                 h('div', { class: 'm-title' }, t('{n} Road points reward', { n: tier.stars })),
-                h('div', { class: 'reward-list' }, ...visibleGot.flatMap(rewardText).map((text) => h('span', null, text))),
+                h(
+                  'div',
+                  { class: 'reward-list' },
+                  ...visibleGot.flatMap((reward) => roadRewardText(p, reward)).map((text) => h('span', null, text)),
+                ),
                 btn(t('Nice!'), 'primary wide', () => sheet.close()),
               ]);
             })
           : h('b', null, `🛣️${tier.stars}`),
       ),
-      showPaidLane ? cell(tier.pass, prem, true, look) : null,
+      showPaidLane ? cell(p, tier.pass, prem, true, look) : null,
     );
   });
   const pct = nextTier ? Math.min(100, (points / nextTier.stars) * 100) : 100;

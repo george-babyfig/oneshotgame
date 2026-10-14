@@ -13,6 +13,7 @@ import { openVisitor } from './visitors';
 import { WELCOME_BACK_GEMS } from './tuning';
 import { getLang, t } from '../i18n';
 import { grantProfileRoadPoints } from './starroad';
+import { mementosVisible } from './reveals';
 import { takeWonContinues } from './continues';
 
 /** Stardust per hour produced by one galaxy planet. */
@@ -176,13 +177,22 @@ export function collectAway(p: Profile, awayMs: number, now = Date.now()) {
 export function awayRecapLines(p: Profile, awayMs: number, now = Date.now()): [string, string, string] {
   const friend = p.home.residents.find((resident) => resident.species !== p.home.expedition?.species);
   const pending = awayCollectables(p, awayMs, now);
+  const vars = {
+    dust: (pending.vault + pending.home.dust + pending.visitors).toLocaleString(getLang()),
+    gems: (pending.home.gems + pending.welcomeGems).toLocaleString(getLang()),
+    boosters: pending.home.boosters,
+    keepsakes: new Set(p.visitors.map((gift) => gift.memento).filter((id): id is string => !!id && !p.mementos.includes(id))).size,
+  };
+  const summary =
+    p.level >= 4
+      ? mementosVisible(p)
+        ? t('Collect all: ✨{dust} · 💎{gems} · {boosters} boosters · {keepsakes} keepsakes', vars)
+        : t('Collect all: ✨{dust} · 💎{gems} · {boosters} boosters', vars)
+      : mementosVisible(p)
+        ? t('Collect all: ✨{dust} · 💎{gems} · {keepsakes} keepsakes', vars)
+        : t('Collect all: ✨{dust} · 💎{gems}', vars);
   return [
-    t('Collect all: ✨{dust} · 💎{gems} · {boosters} boosters · {keepsakes} keepsakes', {
-      dust: (pending.vault + pending.home.dust + pending.visitors).toLocaleString(getLang()),
-      gems: (pending.home.gems + pending.welcomeGems).toLocaleString(getLang()),
-      boosters: pending.home.boosters,
-      keepsakes: new Set(p.visitors.map((gift) => gift.memento).filter((id): id is string => !!id && !p.mementos.includes(id))).size,
-    }),
+    summary,
     friend
       ? t('{name} is waiting in your Den', { name: t(SPECIES_BY_ID[friend.species]?.name ?? 'Someone') })
       : t('Your creatures are safe at home'),

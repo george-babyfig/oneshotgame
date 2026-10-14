@@ -37,7 +37,6 @@ import { CONTINUE_COST, CONTINUE_THROWS } from '../../meta/continues';
 import { ledger } from '../../meta/ledger';
 import { failureFacts, giftFromBuddy, tipFor, type HelpRung } from '../../meta/help';
 import { goalProgress } from '../../core/levels';
-import { waysToEarnGems } from './earn';
 import { toast } from '../dom';
 import type { LevelScene } from '../game';
 
@@ -114,7 +113,7 @@ export function helpEndModal(scene: LevelScene, rungs: HelpRung[]) {
       ...content,
       btn(t('Try again'), 'primary wide', retry),
       canContinue ? btn(t('+5 throws · 💎{n}', { n: CONTINUE_COST }), 'ghost small', continueRound) : null,
-      canContinue && scene.o.gems() < CONTINUE_COST ? btn(t('Ways to earn gems'), 'ghost small', () => waysToEarnGems()) : null,
+      canContinue && scene.o.gems() < CONTINUE_COST ? btn(t('Ways to earn gems'), 'ghost small', () => scene.o.onEarnGems?.()) : null,
     ],
     { dismiss: false, cls: 'end help-card' },
   );

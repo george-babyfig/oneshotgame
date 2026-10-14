@@ -1782,10 +1782,8 @@
   "Finish to get {reward}": "Al terminar: {reward}",
   "Finish {name} first": "Primero termina el {name}",
   "Fire 6 Supernovas or make 6 Fusions": "Lanza 6 Supernovas o haz 6 Fusiones",
-  "Grow 10 {name} sectors in campaign, Voyage or Zen wins to place it here": "Haz crecer 10 sectores de {name} ganando en la campaña, el Viaje o el Jardín Zen para poner esa tierra aquí",
   "Grow 12 Meadow or Forest sectors, or 12 Marsh, Jungle, or Savanna sectors": "Haz crecer 12 sectores de Pradera o Bosque, o 12 de Marisma, Selva o Sabana",
   "Grow 15 Mountain or Highland sectors, or 15 Tundra, Taiga, or Ice Sheet sectors": "Haz crecer 15 sectores de Montaña o Altiplano, o 15 de Tundra, Taiga o Capa de Hielo",
-  "Grow ten sectors of a land in campaign, Voyage or Zen wins to place it here.": "Haz crecer diez sectores de una tierra ganando en la campaña, el Viaje o el Jardín Zen para ponerla aquí.",
   "Landmark is not open yet": "Esta Gran Obra todavía no está abierta",
   "Landmark {name}: {stage}": "Gran Obra {name}: {stage}",
   "Landmarks open after planet 29": "Las Grandes Obras se abren después del planeta 29",
@@ -2069,5 +2067,10 @@
   "{name} is in Styles.": "{name} está en Estilos.",
   "The {e} is happening in the sky. On a clear evening before bedtime, you and a grown-up could look up together. In the game, Supernovas charge twice as fast.": "La {e} está pasando en el cielo. Una noche despejada, antes de dormir, tú y un adulto pueden mirar el cielo juntos. En el juego, las Supernovas se cargan el doble de rápido.",
   "Win a planet to keep your Vault working": "Gana un planeta para mantener tu Bóveda funcionando",
-  "Two more plots and a Greenhouse": "Dos terrenos más y un Invernadero"
+  "Two more plots and a Greenhouse": "Dos terrenos más y un Invernadero",
+  "Collect all: ✨{dust} · 💎{gems}": "Recoger todo: ✨{dust} · 💎{gems}",
+  "Collect all: ✨{dust} · 💎{gems} · {boosters} boosters": "Recoger todo: ✨{dust} · 💎{gems} · {boosters} potenciadores",
+  "Collect all: ✨{dust} · 💎{gems} · {keepsakes} keepsakes": "Recoger todo: ✨{dust} · 💎{gems} · {keepsakes} recuerdos",
+  "Grow 10 {name} sectors to place it here": "Haz crecer 10 sectores de {name} para poner esa tierra aquí",
+  "Grow ten sectors of a land to place it here.": "Haz crecer diez sectores de una tierra para ponerla aquí."
 }

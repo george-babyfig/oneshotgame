@@ -51,6 +51,17 @@ describe('away collection', () => {
     expect(awayCollectables(p, 0, now).show).toBe(false);
   });
 
+  it('recap teaches boosters from four and keepsakes only once visible', () => {
+    const p = defaultProfile(0);
+    for (const level of [1, 3, 4, 19, 21]) {
+      p.level = level;
+      const line = awayRecapLines(p, 7 * 24 * HOUR, 0)[0];
+      expect(line.includes('boosters')).toBe(level >= 4);
+      expect(line).not.toContain('keepsakes');
+    }
+    p.mementos.push('bunny');
+    expect(awayRecapLines(p, 7 * 24 * HOUR, 0)[0]).toContain('keepsakes');
+  });
   it('keeps the three-day gift and gives a three-line long-away recap', () => {
     const now = 20 * HOUR;
     const p = defaultProfile(now);
@@ -58,6 +69,8 @@ describe('away collection', () => {
     p.level = 34;
     p.home.residents.push({ species: 'otter', fp: 0, rewarded: 1 });
     p.visitors.push({ species: 'moss_deer', dust: 30, gems: 2, memento: 'moss_deer' });
+    expect(awayRecapLines(p, 7 * 24 * HOUR, now)[0]).not.toContain('keepsakes');
+    p.mementos.push('otter');
     expect(awayRecapLines(p, 7 * 24 * HOUR, now)[0]).toContain('1 keepsakes');
     const gift = awayCollectables(p, 7 * 24 * HOUR, now).welcomeGems;
     expect(gift).toBeGreaterThan(0);

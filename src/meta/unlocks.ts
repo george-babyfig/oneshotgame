@@ -264,7 +264,8 @@ export function unlocked(p: Profile, id: UnlockId): boolean {
   if (id === 'star_atlas' && (p.bundles.length > 0 || p.constellations.length > 0)) return true;
   if (
     id === 'sticker_album' &&
-    (p.album.fest.length > 0 ||
+    (p.roadStickers.length > 0 ||
+      p.album.fest.length > 0 ||
       p.album.pagesClaimed.length > 0 ||
       p.album.milestones > 0 ||
       p.album.pages.some((pg) => pg.items.length > 0))

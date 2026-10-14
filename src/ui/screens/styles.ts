@@ -75,9 +75,10 @@ import {
   launcherLooksTab,
   buddyTab,
   homeworldSlotRow,
+  homeworldLooksTab,
   sourceOpen,
 } from '../../meta/reveals';
-import { UNLOCKS, type UnlockId } from '../../meta/unlocks';
+import { unlocked, UNLOCKS, type UnlockId } from '../../meta/unlocks';
 import { BUILDINGS, type BuildingType } from '../../meta/homeworld';
 
 type GroupTab = 'objects' | 'effects' | 'homeworld' | 'friends';
@@ -428,7 +429,7 @@ function buddyPanel(app: App) {
               'button',
               { class: `acc${p.buddy.acc === null ? ' on' : ''}`, onclick: () => wear(null) },
               h('div', { class: 'buddy-none' }, '🎪'),
-              h('small', null, t('Festival costume')),
+              h('small', null, unlocked(p, 'festival') ? t('Festival costume') : t('None')),
             ),
             ...buddyAccs(p).map((a) =>
               h(
@@ -439,7 +440,7 @@ function buddyPanel(app: App) {
               ),
             ),
           ),
-          h('p', { class: 'muted small' }, t('More accessories come from festivals and your Homeworld.')),
+          unlocked(p, 'festival') ? h('p', { class: 'muted small' }, t('More accessories come from festivals and your Homeworld.')) : null,
         )
       : null,
   );
@@ -591,7 +592,9 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
             ? launcherLooksTab(p)
             : s === 'buddy'
               ? buddyTab(p)
-              : true;
+              : s === 'homeworld'
+                ? homeworldLooksTab(p)
+                : true;
   if (!tabVisible(slot)) slot = 'suit';
   lastSlot = slot;
   const slotVisible = (s: StyleSlot) => !inGroup(s, 'homeworld') || homeworldSlotRow(p, s);

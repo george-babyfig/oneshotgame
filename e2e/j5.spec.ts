@@ -123,6 +123,40 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
       expectNoErrors(guard);
     });
 
+    test('noun window keeps Lands taps consistent and hides an empty Homeworld looks tab', async ({ page }, info) => {
+      test.skip(info.project.name !== 'chromium-320x568', 'J5 locale matrix runs at 320×568');
+      const guard = watchErrors(page);
+      await freshInstall(page, { title: 'tap' });
+      await midGame(page, { level: 11 });
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.level = 1;
+        a.p.home.firstHour = 2;
+        a.p.home.intro = true;
+        a.p.home.plots = Array(6).fill(null);
+        a.p.home.gaps = Array(6).fill(null);
+        a.p.home.residents = [];
+        a.p.settings.reduceMotion = true;
+        a.selectTab('homeworld');
+      });
+      await page.getByRole('button', { name: tr(loc, 'Homeworld list'), exact: true }).click();
+      await expect(page.locator(OPEN_MODAL).last()).not.toContainText(tr(loc, 'Land {n}: {name}', { n: 1, name: '' }).trim());
+      await dismissSheets(page);
+      // Halfway between plots 0 and 1 at the same radius used by canvas.ts.
+      const box = await page.locator('.hw-canvas').boundingBox();
+      expect(box).not.toBeNull();
+      const radius = Math.min(box!.width, box!.height) * 0.228;
+      // A raw tap right after a sheet closes would land inside the 300 ms tap guard.
+      await page.waitForFunction(() => !document.documentElement.classList.contains('input-settling'));
+      await page.mouse.click(box!.x + box!.width / 2 + radius * 0.5, box!.y + box!.height * 0.55 - (radius * Math.sqrt(3)) / 2);
+      await expect(page.locator(OPEN_MODAL)).toHaveCount(0);
+      await expect(page.locator('.hw-panel .hw-title')).toContainText(tr(loc, 'Empty plot'));
+      await page.evaluate(() => (window as any).__app.showStyles());
+      await expect(page.locator('.tabs').getByRole('button', { name: tr(loc, 'Homeworld looks'), exact: true })).toHaveCount(0);
+      await expect(page.locator('.ws-grid button').first()).toBeVisible();
+      expectNoErrors(guard);
+    });
+
     for (const reduceMotion of [false, true]) {
       test(`Level 1 to 2, Vault and Greenhouse choice; Reduce Motion ${reduceMotion}`, async ({ page }, info) => {
         test.skip(info.project.name !== 'chromium-320x568', 'M11 locale matrix runs at 320×568');
@@ -149,7 +183,7 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
         await page.locator('.hw-level-badge').click();
         await expect(page.locator(OPEN_MODAL).last()).toContainText(tr(loc, 'Grow your Homeworld to Level {n}', { n: 2 }));
         await expect(page.locator(OPEN_MODAL).last().getByAltText(tr(loc, 'Greenhouse'), { exact: true })).toHaveCount(1);
-        await expect(page.locator(OPEN_MODAL).last().getByAltText(tr(loc, 'Launch Bay'), { exact: true })).toHaveCount(1);
+        await expect(page.locator(OPEN_MODAL).last().getByAltText(tr(loc, 'Launch Bay'), { exact: true })).toHaveCount(0);
         await expect(page.locator(OPEN_MODAL).last()).not.toContainText(tr(loc, 'Two more plots, Greenhouse and Launch Bay'));
         await snap(page, info, guard, 'j5-level-checklist');
         await expectKidSafe(page, loc);

@@ -128,6 +128,7 @@ export interface SceneOpts {
   /** Label for the win button on the end card. */
   endLabel?: string;
   gems: () => number;
+  onEarnGems?: () => void;
   spendGems: (n: number) => boolean;
   continueOk?: (won: boolean) => boolean;
   helpForFail?: (throwsUsed: number, throwsTotal: number) => HelpRung[];

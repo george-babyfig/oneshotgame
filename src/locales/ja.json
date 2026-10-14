@@ -1782,10 +1782,8 @@
   "Finish to get {reward}": "しあげると、{reward}が もらえるよ",
   "Finish {name} first": "まず {name}を しあげよう",
   "Fire 6 Supernovas or make 6 Fusions": "スーパーノヴァを 6回 つかうか、フュージョンを 6つ つくる",
-  "Grow 10 {name} sectors in campaign, Voyage or Zen wins to place it here": "スターマップの わくせい、ボヤージュ、禅の庭を クリアして {name}の くいきを 10こ そだてると、ここに おけるよ",
   "Grow 12 Meadow or Forest sectors, or 12 Marsh, Jungle, or Savanna sectors": "草原か 森の くいきを 12こ そだてるか、湿原か ジャングルか サバンナの くいきを 12こ そだてる",
   "Grow 15 Mountain or Highland sectors, or 15 Tundra, Taiga, or Ice Sheet sectors": "山か 高原の くいきを 15こ そだてるか、ツンドラか タイガか 氷原の くいきを 15こ そだてる",
-  "Grow ten sectors of a land in campaign, Voyage or Zen wins to place it here.": "スターマップの わくせい、ボヤージュ、禅の庭を クリアして ひとつの 土地の くいきを 10こ そだてると、その 土地を ここに おけるよ。",
   "Landmark is not open yet": "ランドマークは まだ ひらいて いないよ",
   "Landmark {name}: {stage}": "ランドマーク {name}：{stage}",
   "Landmarks open after planet 29": "わくせい29を クリアすると、ランドマークが ひらくよ",
@@ -2069,5 +2067,10 @@
   "{name} is in Styles.": "{name}は スタイルズに あるよ。",
   "The {e} is happening in the sky. On a clear evening before bedtime, you and a grown-up could look up together. In the game, Supernovas charge twice as fast.": "{e}が そらで 見られる ころだよ。はれた 夜、ねる 前に、おとなの人と いっしょに そらを 見あげてみてね。ゲームの 中では、スーパーノヴァが 2ばい はやく たまるよ。",
   "Win a planet to keep your Vault working": "わくせいを クリアすると、金庫が うごきつづけるよ",
-  "Two more plots and a Greenhouse": "区画が 2つ ふえて、温室も つくれるよ"
+  "Two more plots and a Greenhouse": "区画が 2つ ふえて、温室も つくれるよ",
+  "Collect all: ✨{dust} · 💎{gems}": "ぜんぶあつめる：✨{dust}・💎{gems}",
+  "Collect all: ✨{dust} · 💎{gems} · {boosters} boosters": "ぜんぶあつめる：✨{dust}・💎{gems}・ブースター{boosters}個",
+  "Collect all: ✨{dust} · 💎{gems} · {keepsakes} keepsakes": "ぜんぶあつめる：✨{dust}・💎{gems}・思い出の品{keepsakes}個",
+  "Grow 10 {name} sectors to place it here": "{name}の くいきを 10こ そだてると、ここに おけるよ",
+  "Grow ten sectors of a land to place it here.": "ひとつの 土地の くいきを 10こ そだてると、その 土地を ここに おけるよ。"
 }

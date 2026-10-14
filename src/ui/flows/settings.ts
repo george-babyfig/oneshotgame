@@ -203,14 +203,14 @@ export function settingsFlow(app: App) {
         });
         return b;
       })(),
-      h('small', { class: 'muted' }, t('Shows the whole aim path for every launcher.')),
+      app.p.level >= 31 ? h('small', { class: 'muted' }, t('Shows the whole aim path for every launcher.')) : null,
     ),
     h('label', { class: 'toggle lang' }, t('Language'), selectField(lang)),
     h('label', { class: 'toggle lang' }, t('Text size'), selectField(size)),
     h('label', { class: 'toggle lang' }, t('Planet colours'), selectField(colours)),
     h('label', { class: 'toggle lang' }, t('Seasons'), selectField(hemi)),
     btn(t('Field Guide'), 'ghost wide', () => (m.close(), app.showFieldGuide())),
-    btn(t('Grown-ups'), 'ghost wide', () => {
+    btn(t('Grown-ups'), 'ghost wide grownups-link', () => {
       m.close();
       void enterGrownups(app);
     }),

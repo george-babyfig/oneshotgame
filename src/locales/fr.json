@@ -1782,10 +1782,8 @@
   "Finish to get {reward}": "Une fois terminé : {reward}",
   "Finish {name} first": "Termine d'abord le Lieu magique {name}",
   "Fire 6 Supernovas or make 6 Fusions": "Lance 6 Supernovas ou crée 6 Fusions",
-  "Grow 10 {name} sectors in campaign, Voyage or Zen wins to place it here": "Pour placer cette terre ici, fais pousser 10 secteurs de type {name} quand tu gagnes dans la campagne, en Voyage ou au Jardin zen",
   "Grow 12 Meadow or Forest sectors, or 12 Marsh, Jungle, or Savanna sectors": "Fais pousser 12 secteurs de Prairie ou de Forêt, ou 12 secteurs de Marécage, de Jungle ou de Savane",
   "Grow 15 Mountain or Highland sectors, or 15 Tundra, Taiga, or Ice Sheet sectors": "Fais pousser 15 secteurs de Montagne ou de Haut plateau, ou 15 secteurs de Toundra, de Taïga ou de Calotte glaciaire",
-  "Grow ten sectors of a land in campaign, Voyage or Zen wins to place it here.": "Pour placer une terre ici, fais pousser dix secteurs de cette terre quand tu gagnes dans la campagne, en Voyage ou au Jardin zen.",
   "Landmark is not open yet": "Ce Lieu magique n'est pas encore ouvert",
   "Landmark {name}: {stage}": "Lieu magique {name} : {stage}",
   "Landmarks open after planet 29": "Les Lieux magiques s'ouvrent après la planète 29",
@@ -2069,5 +2067,10 @@
   "{name} is in Styles.": "{name} est dans Styles.",
   "The {e} is happening in the sky. On a clear evening before bedtime, you and a grown-up could look up together. In the game, Supernovas charge twice as fast.": "La {e} a lieu dans le ciel. Un soir sans nuages, avant d'aller te coucher, un adulte et toi pouvez regarder le ciel ensemble. Dans le jeu, les Supernovas se chargent deux fois plus vite.",
   "Win a planet to keep your Vault working": "Gagne une planète pour faire marcher ta Réserve",
-  "Two more plots and a Greenhouse": "Deux parcelles de plus et une Serre"
+  "Two more plots and a Greenhouse": "Deux parcelles de plus et une Serre",
+  "Collect all: ✨{dust} · 💎{gems}": "Tout récolter : ✨{dust} · 💎{gems}",
+  "Collect all: ✨{dust} · 💎{gems} · {boosters} boosters": "Tout récolter : ✨{dust} · 💎{gems} · {boosters} bonus",
+  "Collect all: ✨{dust} · 💎{gems} · {keepsakes} keepsakes": "Tout récolter : ✨{dust} · 💎{gems} · {keepsakes} souvenirs",
+  "Grow 10 {name} sectors to place it here": "Pour placer cette terre ici, fais pousser 10 secteurs de type {name}",
+  "Grow ten sectors of a land to place it here.": "Pour placer une terre ici, fais pousser dix secteurs de cette terre."
 }

@@ -991,7 +991,7 @@ exports[`Homeworld screen structure > keeps pouch, friends, and level checklist 
         {
           "attrs": {},
           "children": [
-            "What uses it: Rock Lab, Star Atlas, and Dyes",
+            "What uses it: Rock Lab",
           ],
           "tag": "small",
         },
@@ -1009,13 +1009,6 @@ exports[`Homeworld screen structure > keeps pouch, friends, and level checklist 
             "💧 dew · 0",
           ],
           "tag": "b",
-        },
-        {
-          "attrs": {},
-          "children": [
-            "What uses it: Rain Lab, Star Atlas, and Dyes",
-          ],
-          "tag": "small",
         },
       ],
       "tag": "div",
@@ -1035,7 +1028,7 @@ exports[`Homeworld screen structure > keeps pouch, friends, and level checklist 
         {
           "attrs": {},
           "children": [
-            "What uses it: Seed Lab, Sun Lab, Star Atlas, and Dyes",
+            "What uses it: Seed Lab",
           ],
           "tag": "small",
         },
@@ -1057,7 +1050,7 @@ exports[`Homeworld screen structure > keeps pouch, friends, and level checklist 
         {
           "attrs": {},
           "children": [
-            "What uses it: Magma Lab, Star Atlas, and Dyes",
+            "What uses it: Magma Lab",
           ],
           "tag": "small",
         },
@@ -1079,7 +1072,7 @@ exports[`Homeworld screen structure > keeps pouch, friends, and level checklist 
         {
           "attrs": {},
           "children": [
-            "What uses it: Ice Lab, Star Atlas, and Dyes",
+            "What uses it: Ice Lab",
           ],
           "tag": "small",
         },

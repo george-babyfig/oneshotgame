@@ -1782,10 +1782,8 @@
   "Finish to get {reward}": "Wenn alles fertig ist: {reward}",
   "Finish {name} first": "Bau zuerst das Wahrzeichen {name} fertig",
   "Fire 6 Supernovas or make 6 Fusions": "Zünde 6 Supernovas oder mach 6 Fusionen",
-  "Grow 10 {name} sectors in campaign, Voyage or Zen wins to place it here": "Lass bei Siegen in der Kampagne, auf der Reise oder im Zen-Garten {name} auf 10 Abschnitten wachsen, dann kannst du die Landschaft hier wählen",
   "Grow 12 Meadow or Forest sectors, or 12 Marsh, Jungle, or Savanna sectors": "Lass 12 Wiesen- oder Waldabschnitte wachsen oder 12 Moor-, Dschungel- oder Savannenabschnitte",
   "Grow 15 Mountain or Highland sectors, or 15 Tundra, Taiga, or Ice Sheet sectors": "Lass 15 Berg- oder Hochlandabschnitte wachsen oder 15 Tundra-, Taiga- oder Eisschildabschnitte",
-  "Grow ten sectors of a land in campaign, Voyage or Zen wins to place it here.": "Lass bei Siegen in der Kampagne, auf der Reise oder im Zen-Garten zehn Abschnitte einer Landschaft wachsen, dann kannst du sie hier wählen.",
   "Landmark is not open yet": "Das Wahrzeichen ist noch nicht offen",
   "Landmark {name}: {stage}": "Wahrzeichen {name}: {stage}",
   "Landmarks open after planet 29": "Wahrzeichen öffnen sich nach Planet 29",
@@ -2069,5 +2067,10 @@
   "{name} is in Styles.": "{name} ist in Styles.",
   "The {e} is happening in the sky. On a clear evening before bedtime, you and a grown-up could look up together. In the game, Supernovas charge twice as fast.": "In diesen Tagen sind am Himmel die {e} zu sehen. An einem klaren Abend vor dem Schlafengehen kannst du mit einem Erwachsenen zusammen nach oben schauen. Im Spiel laden sich Supernovas doppelt so schnell auf.",
   "Win a planet to keep your Vault working": "Gewinne einen Planeten, um deinen Tresor am Laufen zu halten",
-  "Two more plots and a Greenhouse": "Zwei Felder mehr und ein Gewächshaus"
+  "Two more plots and a Greenhouse": "Zwei Felder mehr und ein Gewächshaus",
+  "Collect all: ✨{dust} · 💎{gems}": "Alle holen: ✨{dust} · 💎{gems}",
+  "Collect all: ✨{dust} · 💎{gems} · {boosters} boosters": "Alle holen: ✨{dust} · 💎{gems} · {boosters} Booster",
+  "Collect all: ✨{dust} · 💎{gems} · {keepsakes} keepsakes": "Alle holen: ✨{dust} · 💎{gems} · {keepsakes} Andenken",
+  "Grow 10 {name} sectors to place it here": "Lass {name} auf 10 Abschnitten wachsen, dann kannst du die Landschaft hier wählen",
+  "Grow ten sectors of a land to place it here.": "Lass zehn Abschnitte einer Landschaft wachsen, dann kannst du sie hier wählen."
 }

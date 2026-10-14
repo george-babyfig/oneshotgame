@@ -994,18 +994,6 @@ export function migrate(raw: Record<string, unknown>): Profile {
     }
     p.m3Migrated = true;
   }
-  if (raw.nounBudgetMigrated !== true) {
-    if (p.stats.wins > 0 && !p.legacyUnlocks.includes('noun-window')) p.legacyUnlocks.push('noun-window');
-    for (const [id, planet] of [
-      ['star_road', 12],
-      ['passport', 16],
-      ['sticker_album', 3],
-      ['voyage', 20],
-      ['quest_voyage', 20],
-    ] as const)
-      if (p.level >= planet && !p.legacyUnlocks.includes(id)) p.legacyUnlocks.push(id);
-    p.nounBudgetMigrated = true;
-  }
   if (!Object.hasOwn(raw, 'skySeen')) {
     for (const row of UNLOCKS) {
       if (['rocks', 'bubble', 'mist', 'ring', 'tug'].includes(row.id) && p.level > row.planet) {
@@ -1027,6 +1015,24 @@ export function migrate(raw: Record<string, unknown>): Profile {
     p.galaxy = p.galaxy.map((g) => ({ ...g, colors: g.colors ?? [] }));
     p.stats.threeStars = Math.max(p.stats.threeStars, Object.values(p.stars).filter((s) => s === 3).length);
     p.stats.wins = Math.max(p.stats.wins, Object.keys(p.stars).length);
+  }
+  if (raw.nounBudgetMigrated !== true) {
+    if (
+      (p.stats.wins > 0 || p.level > 1 || Object.keys(p.stars).length > 0 || p.galaxy.length > 0) &&
+      !p.legacyUnlocks.includes('noun-window')
+    )
+      p.legacyUnlocks.push('noun-window');
+    for (const [id, planet] of [
+      ['star_road', 12],
+      ['passport', 16],
+      ['sticker_album', 3],
+      ['voyage', 20],
+      ['quest_voyage', 20],
+    ] as const)
+      if (p.level >= planet && !p.legacyUnlocks.includes(id)) p.legacyUnlocks.push(id);
+    // Legacy Voyage access is explained by its letter; never announce its moved debut.
+    if (p.level >= 20 && !p.mailSeen.includes('coach-voyage')) p.mailSeen.push('coach-voyage');
+    p.nounBudgetMigrated = true;
   }
   if ((raw.v as number | undefined) !== undefined && (raw.v as number) < 3) {
     // v2 → v3: the daily streak became Star Calendar stamps; start the calendar fresh

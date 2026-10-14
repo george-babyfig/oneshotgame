@@ -36,9 +36,33 @@ import type { App } from '../app';
 import { t } from '../../i18n';
 import { celebrate } from '../celebrate';
 import { effectiveReduceMotion } from '../motion';
-import { remixFrame, remixStars, remixTotal } from '../../meta/remix';
+import { remixFrame, remixStars, remixTotal, remixUnlocked } from '../../meta/remix';
+import { unlocked, UNLOCKS, type UnlockId } from '../../meta/unlocks';
+import { buddyTab, habitatSetsVisible, mementosVisible } from '../../meta/reveals';
 import { LANDMARKS } from '../../meta/tuning';
 import { SPECIES_BY_ID } from '../../core/world';
+
+export function trophyVisible(p: App['p'], a: (typeof ACHIEVEMENTS)[number]): boolean {
+  if (a.done(p)) return true;
+  const id = a.id.split('.').at(-1)!;
+  if (id.startsWith('remix_')) return remixUnlocked(p, 1);
+  if (id.startsWith('habitat_')) return habitatSetsVisible(p);
+  if (id.startsWith('memento_')) return mementosVisible(p);
+  if (id.startsWith('buddy_')) return buddyTab(p);
+  const gates: Record<string, UnlockId> = {
+    rush_300: 'rush',
+    daily_7: 'daily',
+    challenge_win: 'challenge',
+    zen_100: 'zen',
+    voyage_1: 'voyage',
+    voyage_10: 'voyage',
+    festival_1: 'festival',
+    stickers_30: 'sticker_album',
+    momentum_3: 'momentum',
+    hard_10: 'hard',
+  };
+  return !gates[id] || unlocked(p, gates[id]);
+}
 
 const festAcc = (p: App['p']) => (festivalActive(p) ? ensureFestival(p).acc : undefined);
 
@@ -104,6 +128,7 @@ export function passportCard(app: App, compact = false) {
 export function showPassport(app: App) {
   const p = app.p;
   const card = passportCard(app);
+  const homeMemories = mementosVisible(p) || LANDMARKS.some((site) => p.home.landmarks[site.id].stage === 4) || bestFriends(p).length > 0;
   const stats = h(
     'div',
     { class: 'pp-stats' },
@@ -114,6 +139,7 @@ export function showPassport(app: App) {
   const pinned = new Set(pinnedBadges(p).map((a) => a.id));
   const remixFrames = Object.keys(p.remix ?? {})
     .map(Number)
+    .filter((chapter) => remixUnlocked(p, chapter))
     .sort((a, b) => a - b)
     .map((chapter) => {
       const frame = remixFrame(p, chapter);
@@ -129,7 +155,7 @@ export function showPassport(app: App) {
   const trophies = h(
     'div',
     { class: 'trophies' },
-    ...ACHIEVEMENTS.map((a) => {
+    ...ACHIEVEMENTS.filter((a) => trophyVisible(p, a)).map((a) => {
       const done = a.done(p);
       return h(
         'button',
@@ -168,18 +194,20 @@ export function showPassport(app: App) {
         ),
         h('div', { class: 'sec-title' }, t('Stats')),
         stats,
-        h('div', { class: 'sec-title' }, t('Homeworld keepsakes')),
-        h(
-          'div',
-          { class: 'passport-homeworld-list' },
-          ...LANDMARKS.filter((site) => p.home.landmarks[site.id].stage === 4).map((site) => h('p', null, `✦ ${t(site.name)}`)),
-          ...bestFriends(p).map((friend) =>
-            h('p', null, t('Best friend: {name}', { name: friend.nick ?? t(SPECIES_BY_ID[friend.species].name) })),
-          ),
-          LANDMARKS.every((site) => p.home.landmarks[site.id].stage !== 4) && bestFriends(p).length === 0
-            ? h('p', { class: 'muted' }, t('Your Homeworld memories will appear here.'))
-            : null,
-        ),
+        homeMemories ? h('div', { class: 'sec-title' }, mementosVisible(p) ? t('Homeworld keepsakes') : t('Homeworld')) : null,
+        homeMemories
+          ? h(
+              'div',
+              { class: 'passport-homeworld-list' },
+              ...LANDMARKS.filter((site) => p.home.landmarks[site.id].stage === 4).map((site) => h('p', null, `✦ ${t(site.name)}`)),
+              ...bestFriends(p).map((friend) =>
+                h('p', null, t('Best friend: {name}', { name: friend.nick ?? t(SPECIES_BY_ID[friend.species].name) })),
+              ),
+              LANDMARKS.every((site) => p.home.landmarks[site.id].stage !== 4) && bestFriends(p).length === 0
+                ? h('p', { class: 'muted' }, t('Your Homeworld memories will appear here.'))
+                : null,
+            )
+          : null,
         remixFrames.length ? h('div', { class: 'sec-title' }, t('Bonus Remix · {n}★', { n: remixTotal(p) })) : null,
         remixFrames.length ? h('div', { class: 'passport-remix-list' }, ...remixFrames) : null,
         h('div', { class: 'sec-title' }, t('Trophies'), ' ', h('small', { class: 'muted' }, t('tap to pin up to {n}', { n: BADGE_SLOTS }))),
@@ -256,7 +284,10 @@ export function editPassport(app: App, first = false) {
           style: `background:linear-gradient(135deg,${x.colors[0]},${x.colors[1]})`,
           'aria-label': t(x.name),
           onclick: () => {
-            if (!ok) return toast(`🔒 ${t(x.how)}`);
+            if (!ok)
+              return toast(
+                `🔒 ${x.id === 7 && !unlocked(p, 'star_road') ? t('Opens at planet {n}', { n: UNLOCKS.find((row) => row.id === 'star_road')!.planet }) : t(x.how)}`,
+              );
             banner = x.id;
             sfx.click();
             swatches.querySelectorAll('.pe-sw').forEach((s) => s.classList.remove('on'));

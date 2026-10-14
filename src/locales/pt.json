@@ -1782,10 +1782,8 @@
   "Finish to get {reward}": "Ao terminar, você ganha: {reward}",
   "Finish {name} first": "Termine a Grande Obra {name} primeiro",
   "Fire 6 Supernovas or make 6 Fusions": "Lance 6 Supernovas ou faça 6 Fusões",
-  "Grow 10 {name} sectors in campaign, Voyage or Zen wins to place it here": "Cultive 10 setores de {name} vencendo na campanha, na Viagem ou no Jardim Zen para colocar essa terra aqui",
   "Grow 12 Meadow or Forest sectors, or 12 Marsh, Jungle, or Savanna sectors": "Cultive 12 setores de Prado ou Floresta, ou 12 setores de Pântano, Selva ou Savana",
   "Grow 15 Mountain or Highland sectors, or 15 Tundra, Taiga, or Ice Sheet sectors": "Cultive 15 setores de Montanha ou Planalto, ou 15 setores de Tundra, Taiga ou Manto de Gelo",
-  "Grow ten sectors of a land in campaign, Voyage or Zen wins to place it here.": "Cultive dez setores de uma terra vencendo na campanha, na Viagem ou no Jardim Zen para colocá-la aqui.",
   "Landmark is not open yet": "Esta Grande Obra ainda não abriu",
   "Landmark {name}: {stage}": "Grande Obra {name}: {stage}",
   "Landmarks open after planet 29": "As Grandes Obras abrem depois do planeta 29",
@@ -2069,5 +2067,10 @@
   "{name} is in Styles.": "{name} está em Estilos.",
   "The {e} is happening in the sky. On a clear evening before bedtime, you and a grown-up could look up together. In the game, Supernovas charge twice as fast.": "A {e} está acontecendo no céu. Numa noite sem nuvens, antes da hora de dormir, você e um adulto podem olhar para o céu juntos. No jogo, as Supernovas carregam duas vezes mais rápido.",
   "Win a planet to keep your Vault working": "Vença um planeta para manter seu Cofre funcionando",
-  "Two more plots and a Greenhouse": "Mais dois lotes e uma Estufa"
+  "Two more plots and a Greenhouse": "Mais dois lotes e uma Estufa",
+  "Collect all: ✨{dust} · 💎{gems}": "Coletar tudo: ✨{dust} · 💎{gems}",
+  "Collect all: ✨{dust} · 💎{gems} · {boosters} boosters": "Coletar tudo: ✨{dust} · 💎{gems} · {boosters} reforços",
+  "Collect all: ✨{dust} · 💎{gems} · {keepsakes} keepsakes": "Coletar tudo: ✨{dust} · 💎{gems} · {keepsakes} lembranças",
+  "Grow 10 {name} sectors to place it here": "Cultive 10 setores de {name} para colocar essa terra aqui",
+  "Grow ten sectors of a land to place it here.": "Cultive dez setores de uma terra para colocá-la aqui."
 }

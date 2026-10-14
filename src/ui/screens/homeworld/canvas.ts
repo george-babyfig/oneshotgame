@@ -1,3 +1,4 @@
+import { landsSection } from '../../../meta/reveals';
 import { HOMEWORLD_MAX_LEVEL } from '../../../meta/tuning';
 import { h, btn, modal, toast } from '../../dom';
 import { sfx, setMusicTheme } from '../../audio';
@@ -752,7 +753,7 @@ export function showHomeworld(app: App) {
         best = i;
       }
     }
-    if (bd < (TAU / n) * 0.34) tapPlot(best);
+    if (bd < (TAU / n) * 0.34 || !landsSection(p)) tapPlot(best);
     else {
       const signed = ((a - plotAngle(best) + Math.PI * 3) % TAU) - Math.PI;
       landSheet(app, signed >= 0 ? best : (best + n - 1) % n, renderPanel);

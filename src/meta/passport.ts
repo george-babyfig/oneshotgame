@@ -7,9 +7,11 @@ import { recordTitles } from './records';
 import { t } from '../i18n';
 import { FUSION_IDS } from './reactions';
 import { ALL_COMBO_STAMPS } from './reactions';
-import { REMIX_TITLES, remixFrame, remixTotal } from './remix';
+import { REMIX_TITLES, remixFrame, remixTotal, remixUnlocked } from './remix';
 import { LANDMARKS } from './tuning';
 import { friendLevel } from './homeworld';
+import { unlocked } from './unlocks';
+import { mementosVisible } from './reveals';
 import { owns } from './cosmetics';
 
 // Names are proper nouns: they stay the same in every language, like a gamer tag.
@@ -241,18 +243,20 @@ export function passportStats(p: Profile): { label: string; value: number | stri
   const days = Math.max(1, Math.floor((Date.now() - p.meta.installed) / 86400000) + 1);
   return [
     { label: t('Stars'), value: totalStars(p) },
-    { label: t('Remix stars'), value: remixTotal(p) },
+    ...(remixUnlocked(p, 1) ? [{ label: t('Remix stars'), value: remixTotal(p) }] : []),
     { label: t('Planets finished'), value: p.stats.wins },
     { label: t('Three-star planets'), value: p.stats.threeStars },
     { label: t('Creatures found'), value: `${p.seen.length}/36` },
     { label: t('Objects flung'), value: p.stats.throws },
     { label: t('Hard planets beaten'), value: p.stats.hardWins },
     { label: t('Best life score'), value: p.stats.bestLife },
-    { label: t('Meteor Rush best'), value: p.stats.rushBest },
-    { label: t('Daily Planets'), value: p.stats.dailies },
+    ...(unlocked(p, 'rush') ? [{ label: t('Meteor Rush best'), value: p.stats.rushBest }] : []),
+    ...(unlocked(p, 'daily') ? [{ label: t('Daily Planets'), value: p.stats.dailies }] : []),
     { label: t('Best win streak'), value: p.stats.bestStreak },
-    { label: t('Mementos'), value: p.mementos.length },
-    { label: t('Landmarks finished'), value: LANDMARKS.filter((site) => p.home.landmarks[site.id].stage === 4).length },
+    ...(mementosVisible(p) ? [{ label: t('Mementos'), value: p.mementos.length }] : []),
+    ...(unlocked(p, 'landmark_signpost') || LANDMARKS.some((site) => p.home.landmarks[site.id].stage === 4)
+      ? [{ label: t('Landmarks finished'), value: LANDMARKS.filter((site) => p.home.landmarks[site.id].stage === 4).length }]
+      : []),
     { label: t('Best friends'), value: bestFriends(p).length },
     { label: t('Days exploring'), value: days },
   ];

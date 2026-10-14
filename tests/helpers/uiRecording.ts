@@ -5,6 +5,18 @@ export class RecordedNode {
   attrs: Record<string, string> = {};
   style: Record<string, string> = {};
   disabled = false;
+  get alt() {
+    return this.attrs.alt ?? '';
+  }
+  set alt(value: string) {
+    this.attrs.alt = value;
+  }
+  value = '';
+  get selectedOptions() {
+    return this.children.filter(
+      (child): child is RecordedNode => child instanceof RecordedNode && child.tag === 'option' && child.attrs.value === this.value,
+    );
+  }
   parentElement: RecordedNode | null = null;
   classList = { add() {}, remove() {}, toggle() {}, contains: () => false };
   onclick?: () => unknown;

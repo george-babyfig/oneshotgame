@@ -161,13 +161,13 @@ describe('noun window unlocks', () => {
     p.level = planet;
     expect(unlocked(p, id)).toBe(true);
   });
-  it('preserves old gates without granting noun-window to a player with no wins', () => {
+  it('preserves old gates and recognizes progress even without wins counters', () => {
     for (const level of [1, 3, 12, 16, 20]) {
       const p = defaultProfile();
       p.level = level;
       const old = migrate({ ...p, nounBudgetMigrated: undefined });
       expect(old.nounBudgetMigrated).toBe(true);
-      expect(old.legacyUnlocks).not.toContain('noun-window');
+      expect(old.legacyUnlocks.includes('noun-window')).toBe(level > 1);
       for (const [id, n] of [
         ['star_road', 12],
         ['passport', 16],
@@ -179,6 +179,13 @@ describe('noun window unlocks', () => {
       p.stats.wins = 1;
       expect(migrate({ ...p, nounBudgetMigrated: undefined }).legacyUnlocks).toContain('noun-window');
     }
+  });
+  it('opens the Album as soon as a Road sticker is owned', () => {
+    const p = defaultProfile();
+    p.level = 22;
+    expect(unlocked(p, 'sticker_album')).toBe(false);
+    p.roadStickers.push('cosmic_road');
+    expect(unlocked(p, 'sticker_album')).toBe(true);
   });
   it('retains banners and used scrapbook pages and milestones', () => {
     for (const flag of ['starter', 'pass'] as const) {

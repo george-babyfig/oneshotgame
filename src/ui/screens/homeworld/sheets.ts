@@ -1,5 +1,5 @@
 import type { Profile } from '../../../meta/profile';
-import { launchBayBuildable } from '../../../meta/reveals';
+import { launchBayBuildable, dyeTab, landsSection } from '../../../meta/reveals';
 import { structIcon } from './panel';
 import { HOMEWORLD_MAX_LEVEL } from '../../../meta/tuning';
 import { h, btn, fmt, modal, toast } from '../../dom';
@@ -64,7 +64,7 @@ import { whenText } from '../../../meta/dates';
 import { canvasDpr } from '../../devcapture';
 import { KINDS, type Kind } from '../../../core/world';
 import { MATS, MAT_EMOJI } from '../../../meta/constellations';
-import { labBuildCost, labLevel, suggestedFirstLab } from '../../../meta/labs';
+import { labBuildCost, labLevel, labPlot, suggestedFirstLab } from '../../../meta/labs';
 import { firstHourStep, firstHourLab, firstHourFriend } from '../../../meta/firsthour';
 import { LAB_NAME, LAB_TEXT, LAB_FIRST_COPY, ESSENCE_NAME } from '../../../meta/labcopy';
 import { showFirstFriend } from '../../flows/labmoments';
@@ -251,19 +251,16 @@ export function landSheet(app: App, gap: number, after: () => void) {
           current === id ? 'primary wide' : unlocked ? 'ghost wide' : 'ghost wide dim',
           () => {
             if (unlocked) pick(id);
-            else toast(t('Grow 10 {name} sectors in campaign, Voyage or Zen wins to place it here', { name: t(BIOMES[id].name) }));
+            else toast(t('Grow 10 {name} sectors to place it here', { name: t(BIOMES[id].name) }));
           },
         );
         if (!unlocked) {
           button.setAttribute('aria-disabled', 'true');
-          button.setAttribute(
-            'aria-label',
-            t('Grow 10 {name} sectors in campaign, Voyage or Zen wins to place it here', { name: t(BIOMES[id].name) }),
-          );
+          button.setAttribute('aria-label', t('Grow 10 {name} sectors to place it here', { name: t(BIOMES[id].name) }));
         }
         return button;
       }),
-      lands.length ? null : h('p', { class: 'muted' }, t('Grow ten sectors of a land in campaign, Voyage or Zen wins to place it here.')),
+      lands.length ? null : h('p', { class: 'muted' }, t('Grow ten sectors of a land to place it here.')),
     ],
     { cls: 'hw-land-sheet' },
   );
@@ -335,17 +332,19 @@ export function homeworldListSheet(app: App, onPlot: (index: number) => void, af
             onPlot(index);
           },
         ),
-        btn(
-          t('Land {n}: {name}', {
-            n: index + 1,
-            name: p.home.gaps[index] === null ? t('Automatic land') : t(BIOMES[resolvedGaps(p)[index] ?? 'barren'].name),
-          }),
-          'ghost wide',
-          () => {
-            m.close();
-            landSheet(app, index, after);
-          },
-        ),
+        landsSection(p)
+          ? btn(
+              t('Land {n}: {name}', {
+                n: index + 1,
+                name: p.home.gaps[index] === null ? t('Automatic land') : t(BIOMES[resolvedGaps(p)[index] ?? 'barren'].name),
+              }),
+              'ghost wide',
+              () => {
+                m.close();
+                landSheet(app, index, after);
+              },
+            )
+          : null,
       ]),
       h('div', { class: 'sec-title' }, t('Friends')),
       btn(t('Friends ({n})', { n: p.home.residents.length }), 'ghost wide', () => {
@@ -423,30 +422,34 @@ export function essenceSheet(app: App) {
   const m = modal(
     [
       h('div', { class: 'm-title' }, t(LAB_TEXT.pouch)),
-      ...MATS.map((mat) =>
-        h(
+      ...MATS.map((mat) => {
+        const uses = [
+          ...(Object.keys(LAB_NAME) as Kind[])
+            .filter((kind) => unlocked(p, kind) || labPlot(p, kind) >= 0)
+            .filter((kind) =>
+              kind === 'seed' || kind === 'sun'
+                ? mat === 'leaf'
+                : ({ rock: 'stone', ice: 'frost', magma: 'ember', storm: 'dew' } as Partial<Record<Kind, string>>)[kind] === mat,
+            )
+            .map((kind) => t(LAB_NAME[kind])),
+          ...(unlocked(p, 'star_atlas') ? [t('Star Atlas')] : []),
+          ...(dyeTab(p) ? [t('Dyes')] : []),
+        ];
+        return h(
           'div',
           { class: 'essence-row' },
           h('b', null, `${MAT_EMOJI[mat]} ${t(ESSENCE_NAME[mat])} · ${fmt(p.mats[mat] ?? 0)}`),
-          h(
-            'small',
-            null,
-            t('What uses it: {list}', {
-              list: new Intl.ListFormat(getLang(), { style: 'long', type: 'conjunction' }).format([
-                ...(Object.keys(LAB_NAME) as Kind[])
-                  .filter((kind) =>
-                    kind === 'seed' || kind === 'sun'
-                      ? mat === 'leaf'
-                      : ({ rock: 'stone', ice: 'frost', magma: 'ember', storm: 'dew' } as Partial<Record<Kind, string>>)[kind] === mat,
-                  )
-                  .map((kind) => t(LAB_NAME[kind])),
-                t('Star Atlas'),
-                t('Dyes'),
-              ]),
-            }),
-          ),
-        ),
-      ),
+          uses.length
+            ? h(
+                'small',
+                null,
+                t('What uses it: {list}', {
+                  list: new Intl.ListFormat(getLang(), { style: 'long', type: 'conjunction' }).format(uses),
+                }),
+              )
+            : null,
+        );
+      }),
       btn(t('Close'), 'ghost wide', () => m.close()),
     ],
     { cls: 'essence-sheet' },
@@ -862,7 +865,7 @@ export function levelSheet(app: App, after: () => void) {
   }
   const r = (home.level + 1) as HomeworldLevel;
   const check = canExpand(p);
-  const unlocks = BUILDING_TYPES.filter((x) => BUILDINGS[x].ring === r).map((x) => {
+  const unlocks = BUILDING_TYPES.filter((x) => BUILDINGS[x].ring === r && (x !== 'launch_bay' || launchBayBuildable(p))).map((x) => {
     const img = structIcon(x, 1, 48);
     img.alt = t(BUILDINGS[x].name);
     return img;

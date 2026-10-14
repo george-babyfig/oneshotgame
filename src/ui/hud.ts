@@ -13,7 +13,6 @@ import { rarityName, speciesHint } from './text';
 import { toast } from './dom';
 import { CONTINUE_COST, CONTINUE_THROWS } from '../meta/continues';
 import { confirmGemUse } from './screens/homeworld/gemConfirm';
-import { waysToEarnGems } from './flows/earn';
 import { COACH_EVENTS, introAlreadySeen, practiceHelp, type CoachEvent } from '../meta/coach';
 import type { Unlock } from '../meta/unlocks';
 
@@ -873,7 +872,7 @@ export function endModal(scene: LevelScene, stars: number) {
               class: 'btn small',
               type: 'button',
               style: 'background:none;box-shadow:none;color:#bfe8ff;text-decoration:underline',
-              onclick: () => waysToEarnGems(),
+              onclick: () => scene.o.onEarnGems?.(),
             },
             t('Ways to earn gems'),
           )

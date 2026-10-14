@@ -299,7 +299,7 @@ test.describe('J1 M3 acceptance [en]', () => {
   test.use({ locale: 'en-US' });
 
   test('(c) planets 1-3 cannot be failed: every throw wasted, the Keeper helps and the planet still finishes', async ({ page }, info) => {
-    test.setTimeout(120_000);
+    test.setTimeout(240_000); // four whole planets of wasted throws, with each coach tip given its reading time
     const guard = watchErrors(page);
     await freshInstall(page);
 

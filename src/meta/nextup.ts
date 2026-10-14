@@ -93,6 +93,8 @@ export function nextUp(p: Profile, _now: number): NextUp {
       x.planet === p.level - 1 &&
       (x.intro || x.button || x.placement === 'modes') &&
       unlocked(p, x.id) &&
+      !p.legacyUnlocks.includes(x.id) &&
+      !p.mailSeen.includes(`coach-${x.id}`) &&
       (x.id !== 'inbox' || inboxOpen(p)) &&
       (x.id !== 'homeworld' || firstHourStep(p) !== 'done') &&
       (!['quests', 'star_road', 'star_calendar', 'inbox'].includes(x.id) || unlocked(p, 'quests')) &&
