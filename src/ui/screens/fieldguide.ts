@@ -1,3 +1,5 @@
+import { RULES_VERSION, type RulesVersion } from '../../core/rules-version';
+import { RULESETS, ruleReactionForPair } from '../../core/rulesets';
 import { vaultWinLine } from '../text';
 import { h, btn } from '../dom';
 import type { App } from '../app';
@@ -47,6 +49,11 @@ type GuidePage = 'basics' | 'objects' | 'reactions' | 'combos' | 'sky' | 'creatu
 export function reactionForPair(a: Kind, b: Kind): ReactionId | null {
   if (a === b) return null;
   return REACTION_IDS.find((id) => REACTIONS[id].pair.includes(a) && REACTIONS[id].pair.includes(b)) ?? null;
+}
+
+/** A tried pair stays unknown when the play rules can react, until it is discovered. */
+export function pairTriedWithoutReaction(a: Kind, b: Kind, tried: ReadonlySet<string>, play: RulesVersion = RULES_VERSION): boolean {
+  return !ruleReactionForPair(a, b, RULESETS[play].reactions) && tried.has([a, b].sort().join('+'));
 }
 
 export function showFieldGuide(app: App, page: GuidePage = 'basics') {
@@ -137,12 +144,12 @@ export function showFieldGuide(app: App, page: GuidePage = 'basics') {
     if (a === b) return h('span', { class: 'reaction-empty' }, '–');
     const id = reactionForPair(a, b);
     const found = !!id && app.p.fusionsFound.includes(id);
-    const pairKey = [a, b].sort().join('+');
-    const name = found ? t(REACTIONS[id].name) : tried.has(pairKey) ? t('Nothing happens') : '?';
+    const nothing = pairTriedWithoutReaction(a, b, tried);
+    const name = found ? t(REACTIONS[id].name) : nothing ? t('Nothing happens') : '?';
     return h(
       'span',
       { class: `reaction-cell ${found ? REACTIONS[id].kind : ''}`, title: name },
-      found ? reactionCanvas(id, 24) : tried.has(pairKey) ? '·' : '?',
+      found ? reactionCanvas(id, 24) : nothing ? '·' : '?',
     );
   };
   const reactions = h(
@@ -174,7 +181,7 @@ export function showFieldGuide(app: App, page: GuidePage = 'basics') {
                   result:
                     reactionForPair(a, b) && app.p.fusionsFound.includes(reactionForPair(a, b)!)
                       ? t(REACTIONS[reactionForPair(a, b)!].name)
-                      : tried.has([a, b].sort().join('+'))
+                      : pairTriedWithoutReaction(a, b, tried)
                         ? t('Nothing happens')
                         : '?',
                 }),

@@ -235,7 +235,7 @@ describe('M14 step-0 save v8 contract', () => {
     expect(raw.quests.list.some((card: { from?: string }) => card.from === 'friend')).toBe(true);
     expect(raw.voyage.theme).toBeTruthy();
     const p = migrate(raw);
-    expect(p.v).toBe(8);
+    expect(p.v).toBe(9);
     expect(p.m14Migrated).toBe(true);
     for (const key of ['gems', 'dust', 'mats', 'boosters', 'quests', 'road', 'roadPass', 'pass', 'skins', 'roadPassEntitlements'] as const)
       expect(p[key], key).toEqual(raw[key]);

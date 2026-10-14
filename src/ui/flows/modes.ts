@@ -110,7 +110,7 @@ function play(app: App, L: LevelDef, mode: Mode, vs?: { code: string; seed: stri
   const opts = app.sceneOpts(
     mode,
     {
-      rules: rulesForLevel(Math.min(L.n, p.level)),
+      rules: rulesForLevel(L.n, mode, p.level, L.rulesVersion ?? 1),
       label: {
         daily: t('Daily #{n}', { n: dailyNumber(today()) }),
         rush: t('Meteor Rush'),
@@ -252,7 +252,11 @@ function challengeMenu(app: App) {
         return toast(t("That code doesn't look right — check it and try again"), 'bad');
       }
       m.close();
-      play(app, challengeLevel(c.seed, app.p.level), 'challenge', { code: encodeChallenge(c.seed, c.score), seed: c.seed, score: c.score });
+      play(app, challengeLevel(c.seed, app.p.level, c.rulesVersion ?? 1), 'challenge', {
+        code: encodeChallenge(c.seed, c.score),
+        seed: c.seed,
+        score: c.score,
+      });
     }),
   ]);
   setTimeout(() => input.focus(), 250);

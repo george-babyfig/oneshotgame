@@ -101,6 +101,8 @@ describe('round engine', () => {
     expect(restoreRound('broken')).toBeNull();
     const changedRules = JSON.parse(serializeRound(state));
     changedRules.rulesVersion++;
+    expect(restoreRound(JSON.stringify(changedRules))).toEqual(state);
+    changedRules.rulesVersion = 3;
     expect(restoreRound(JSON.stringify(changedRules))).toBeNull();
   });
 

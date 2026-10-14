@@ -8,26 +8,29 @@ import { VOYAGE_LEN, voyageBase, voyageLevel } from '../src/meta/voyage';
 
 const file = 'tests/fixtures/voyage/frozen-weeks.json';
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-it('preserves every M13-frozen Voyage stop byte for byte in M14', () => {
-  const rows = [];
-  // Local noon each Sunday: isoWeek reads local time, so midnight UTC would shift a week by time zone.
-  for (
-    let d = new Date(2026, 10, 1, 12);
-    d <= new Date(2027, 0, 17, 12);
-    d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7, 12)
-  ) {
-    const week = isoWeek(d);
-    for (const hemisphere of ['north', 'south'] as const)
-      for (const taught of [16, 28, 36, 60, 120])
-        rows.push({
-          week,
-          hemisphere,
-          taught,
-          sha256: hash(Array.from({ length: VOYAGE_LEN }, (_, i) => voyageLevel(week, voyageBase(taught), i, taught, hemisphere))),
-        });
-  }
-  expect(rows).toEqual(JSON.parse(readFileSync(file, 'utf8')));
-}, 120000);
+for (const play of [1, 2] as const)
+  it(`preserves frozen Voyage bytes at play ${play}`, () => {
+    const rows = [];
+    // Local noon each Sunday: isoWeek reads local time, so midnight UTC would shift a week by time zone.
+    for (
+      let d = new Date(2026, 10, 1, 12);
+      d <= new Date(2027, 0, 17, 12);
+      d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7, 12)
+    ) {
+      const week = isoWeek(d);
+      for (const hemisphere of ['north', 'south'] as const)
+        for (const taught of [16, 28, 36, 60, 120])
+          rows.push({
+            week,
+            hemisphere,
+            taught,
+            sha256: hash(
+              Array.from({ length: VOYAGE_LEN }, (_, i) => voyageLevel(week, voyageBase(taught), i, taught, hemisphere, undefined, play)),
+            ),
+          });
+    }
+    expect(rows).toEqual(JSON.parse(readFileSync(file, 'utf8')));
+  }, 120000);
 
 it('saves the theme only when a new week opens, leaving a 1.0 open week untouched', async () => {
   const { defaultProfile, migrate } = await import('../src/meta/profile');

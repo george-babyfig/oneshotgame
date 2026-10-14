@@ -17,13 +17,14 @@ import {
 } from './homeworld';
 import type { Mail } from './inbox';
 import { UNLOCKS } from './unlocks';
-import { restoreRound, serializeRound, type RoundState } from '../core/round';
+import { restoreRoundWithVersion, serializeRound, type RoundState } from '../core/round';
 import type { FeatId } from '../core/labperks';
-import { LEVEL_SALT, makeLevel, type GenerationProfile } from '../core/levels';
+import { makeLevel, type GenerationProfile } from '../core/levels';
 import type { RoundModifiers } from '../core/modifiers';
 import { DEFAULT_AVATAR, type AvatarParts } from './cosmetics';
 import type { ReactionId } from '../core/round';
-import { RULES_VERSION } from '../core/rules-version';
+import { RULES_VERSION, type RulesVersion } from '../core/rules-version';
+import { RULESETS, ruleReactionForPair } from '../core/rulesets';
 import { STAR_SLING } from '../core/flight';
 import { rulesForLevel } from '../core/round';
 import { remixLevel, remixUnlocked, type RemixChapter } from './remix';
@@ -87,6 +88,7 @@ export interface Settings {
 }
 
 export interface RoundCheckpoint {
+  rulesVersion?: RulesVersion;
   n: number;
   mode?: 'campaign' | 'remix';
   seedPrefix?: string;
@@ -144,8 +146,9 @@ function roundFingerprint(
   p?: Profile,
   mode: 'campaign' | 'remix' = 'campaign',
   profile?: GenerationProfile,
+  rulesVersion: RulesVersion = 1,
 ): string {
-  const level = mode === 'remix' && p ? remixLevel(n, p) : makeLevel(n, prefix, { salt, profile });
+  const level = mode === 'remix' && p ? remixLevel(n, p, rulesVersion) : makeLevel(n, prefix, { salt, profile, rulesVersion });
   const source = JSON.stringify([
     level.queue,
     level.start,
@@ -155,34 +158,60 @@ function roundFingerprint(
     level.stars,
     level.goals,
     level.troubles,
-    rulesForLevel(n),
+    rulesForLevel(
+      n,
+      rulesVersion === 1 ? 'campaign' : mode,
+      mode === 'remix' && rulesVersion === 2 && p ? Math.max(1, p.level - 1) : n,
+      rulesVersion,
+    ),
     STAR_SLING,
   ]);
   let hash = 2166136261;
   for (let i = 0; i < source.length; i++) hash = Math.imul(hash ^ source.charCodeAt(i), 16777619);
-  return JSON.stringify([n, prefix, salt ?? (prefix === 'PP' ? (LEVEL_SALT[n] ?? null) : null), RULES_VERSION, hash >>> 0]);
+  return JSON.stringify([
+    n,
+    prefix,
+    salt ?? (prefix === 'PP' ? (RULESETS[rulesVersion].salt.level[n] ?? null) : null),
+    rulesVersion,
+    hash >>> 0,
+  ]);
 }
 
 /** The core serializer owns rules compatibility; this wrapper keeps scene position. */
 export function saveInterruptedRound(p: Profile, checkpoint: RoundCheckpoint): void {
   const { state, ...scene } = checkpoint;
+  // A missing stamp is a v1 checkpoint, including a resumed pre-flip round.
+  const version = checkpoint.rulesVersion ?? 1;
   p.savedRound = JSON.stringify({
     format: 1,
-    fingerprint: roundFingerprint(checkpoint.n, checkpoint.seedPrefix, checkpoint.salt, p, checkpoint.mode, checkpoint.generationProfile),
-    round: serializeRound(state),
+    fingerprint: roundFingerprint(
+      checkpoint.n,
+      checkpoint.seedPrefix,
+      checkpoint.salt,
+      p,
+      checkpoint.mode,
+      checkpoint.generationProfile,
+      version,
+    ),
+    round: serializeRound(state, version),
     scene,
   });
 }
 
-export function readInterruptedRound(p: Profile): RoundCheckpoint | null {
+export function readInterruptedRound(p: Profile, play: RulesVersion = RULES_VERSION): RoundCheckpoint | null {
+  // The play version never upgrades an interrupted round.
+  if (!RULESETS[play]) return null;
   if (!p.savedRound) return null;
   try {
     const saved = JSON.parse(p.savedRound) as { format: number; fingerprint: string; round: string; scene: Omit<RoundCheckpoint, 'state'> };
-    const state = saved.format === 1 && typeof saved.round === 'string' ? restoreRound(saved.round) : null;
+    const restored = saved.format === 1 && typeof saved.round === 'string' ? restoreRoundWithVersion(saved.round) : null;
+    const state = restored?.state;
+    const version = restored?.rulesVersion ?? 1;
     const s = saved.scene;
     if (
       !state ||
       !s ||
+      (s.rulesVersion !== undefined && s.rulesVersion !== version) ||
       !Number.isInteger(s.n) ||
       s.n < 1 ||
       s.n > p.level ||
@@ -217,20 +246,21 @@ export function readInterruptedRound(p: Profile): RoundCheckpoint | null {
         (launcherBay.availability(p, selection.id).kind !== 'owned' || launcherBay.tune(p, selection.id) < selection.tune))
     )
       throw new Error('Invalid launcher checkpoint');
-    if (saved.fingerprint !== roundFingerprint(s.n, s.seedPrefix, s.salt, p, s.mode, s.generationProfile)) {
+    if (saved.fingerprint !== roundFingerprint(s.n, s.seedPrefix, s.salt, p, s.mode, s.generationProfile, version)) {
       // Only an unsalted PP61-120 checkpoint can predate the raw-v2 cutover.
       const legacyCampaign =
+        version === 1 &&
         s.generationProfile === undefined &&
         s.mode !== 'remix' &&
         (s.seedPrefix ?? 'PP') === 'PP' &&
         s.salt === undefined &&
         s.n >= 61 &&
         s.n <= 120;
-      if (!legacyCampaign || saved.fingerprint !== roundFingerprint(s.n, s.seedPrefix, s.salt, p, s.mode, 'reviewed-v1'))
+      if (!legacyCampaign || saved.fingerprint !== roundFingerprint(s.n, s.seedPrefix, s.salt, p, s.mode, 'reviewed-v1', version))
         throw new Error('Level changed');
       s.generationProfile = 'reviewed-v1';
     }
-    return { ...s, state };
+    return { ...s, ...(version === 2 ? { rulesVersion: version } : {}), state };
   } catch {
     p.savedRound = undefined;
     return null;
@@ -316,6 +346,10 @@ export interface Profile {
   m115Migrated: boolean;
   m13Migrated: boolean;
   m14Migrated: boolean;
+  m15Migrated: boolean;
+  wonder: number[];
+  wonderSeen: boolean;
+  rulesSeen: RulesVersion;
   boosters: Record<BoosterId, number>;
   /** Subset of inventory bought with gems, kept separate from earned stock. */
   gemBoosters: Record<BoosterId, number>;
@@ -458,7 +492,7 @@ export interface Profile {
 
 const KEY = 'pp.profile';
 const BACKUP_KEY = 'pp.profile.bak';
-export const PROFILE_VERSION = 8;
+export const PROFILE_VERSION = 9;
 
 export function defaultProfile(now = Date.now()): Profile {
   return {
@@ -492,6 +526,10 @@ export function defaultProfile(now = Date.now()): Profile {
     m115Migrated: true,
     m13Migrated: true,
     m14Migrated: true,
+    m15Migrated: true,
+    wonder: [],
+    wonderSeen: false,
+    rulesSeen: 1,
     boosters: { shower: 1, spark: 1, scope: 1 },
     gemBoosters: { shower: 0, spark: 0, scope: 0 },
     piggy: 0,
@@ -690,7 +728,7 @@ function sanitizeTripReturn(value: unknown): TripReturn | null {
 }
 
 /** Upgrade older save formats in place. */
-export function migrate(raw: Record<string, unknown>): Profile {
+export function migrate(raw: Record<string, unknown>, { play = RULES_VERSION }: { play?: RulesVersion } = {}): Profile {
   if (typeof raw.v === 'number' && raw.v > PROFILE_VERSION) throw new NewerProfileError();
   const p = merge(defaultProfile(), raw);
   const savedMeta = raw.meta && typeof raw.meta === 'object' && !Array.isArray(raw.meta) ? (raw.meta as Record<string, unknown>) : {};
@@ -1194,6 +1232,22 @@ export function migrate(raw: Record<string, unknown>): Profile {
   p.home.tripFuel = p.home.tripFuel === true;
   p.home.tripReturn = sanitizeTripReturn(p.home.tripReturn);
   p.m13Migrated = true;
+  p.wonder = Array.isArray(raw.wonder)
+    ? [...new Set(raw.wonder.filter((n): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 120))].sort(
+        (a, b) => a - b,
+      )
+    : [];
+  p.wonderSeen = raw.wonderSeen === true;
+  p.rulesSeen = raw.rulesSeen === 2 ? 2 : 1;
+  p.m15Migrated = true;
+  // Clean tried pairs at the play flip, including pairs recorded after the v9 install.
+  if (play > p.rulesSeen) {
+    p.reactionPairsTried = p.reactionPairsTried.filter((pair) => {
+      const [a, b] = pair.split('+') as Kind[];
+      return !ruleReactionForPair(a, b, RULESETS[play].reactions);
+    });
+    p.rulesSeen = play;
+  }
   p.v = PROFILE_VERSION;
   return p;
 }
@@ -1274,7 +1328,8 @@ export async function loadProfile(): Promise<Profile> {
         (parsed as Record<string, unknown>).m115Migrated !== true ||
         (parsed as Record<string, unknown>).nounBudgetMigrated !== true ||
         (parsed as Record<string, unknown>).m13Migrated !== true ||
-        (parsed as Record<string, unknown>).m14Migrated !== true
+        (parsed as Record<string, unknown>).m14Migrated !== true ||
+        (parsed as Record<string, unknown>).m15Migrated !== true
       ) {
         // Keep first bytes per target migration; an older rescue must not hide the pre-M11 save.
         try {

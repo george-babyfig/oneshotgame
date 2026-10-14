@@ -25,7 +25,7 @@ import { SPECIES_BY_ID } from '../../core/world';
 import { goalChips, twistChip } from '../flows/prelevel';
 import { NO_BOOSTERS, type App } from '../app';
 import { getLang, planetName, t, tp } from '../../i18n';
-import { rulesForLevel } from '../../core/round';
+import { voyageRules } from '../../meta/voyage';
 import { untilText } from '../../meta/dates';
 import { helpedLine } from '../../meta/helped';
 
@@ -214,7 +214,7 @@ function play(app: App, i: number) {
   const opts = app.sceneOpts(
     'voyage',
     {
-      rules: rulesForLevel(Math.min(L.n, p.level)),
+      rules: voyageRules(week, L.n, p.level, L.rulesVersion ?? 1),
       label: t('Voyage · Stop {n}', { n: i + 1 }),
       // A new weekly route can replace this stop while the round is open.
       homeworldWinEligible: () => p.voyage.week === week,

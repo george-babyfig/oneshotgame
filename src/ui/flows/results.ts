@@ -254,10 +254,10 @@ export function levelResults(app: App, r: LevelResult) {
         ? h('p', { class: 'homeworld-helped' }, t('Homeworld helped: {line}', { line: helpedLine(p, app.scene.roundLog, 'campaign')! }))
         : null,
       n >= 6 && Object.keys(drops).length ? h('p', { class: 'drops essence-progress' }, essenceLine(p, drops)) : null,
-      showBestCombo(r.comboBest ?? 0, rulesForLevel(r.level.n))
+      showBestCombo(r.comboBest ?? 0, rulesForLevel(r.level.n, 'campaign', r.level.n, r.level.rulesVersion ?? 1))
         ? h('p', { class: 'end-combo' }, t('Best Combo: {n}', { n: r.comboBest ?? 0 }))
         : null,
-      showBestCombo(r.comboBest ?? 0, rulesForLevel(r.level.n)) && r.comboIcons?.length
+      showBestCombo(r.comboBest ?? 0, rulesForLevel(r.level.n, 'campaign', r.level.n, r.level.rulesVersion ?? 1)) && r.comboIcons?.length
         ? h('div', { class: 'result-combo-chain', 'aria-hidden': 'true' }, ...r.comboIcons.slice(0, 4).map((id) => reactionCanvas(id, 28)))
         : null,
       ...fusionCards,

@@ -290,3 +290,50 @@ it('M13 settles trips on init and native resume before reading the absence and a
   expect(resume.indexOf('tickHome(this.p)')).toBeLessThan(resume.indexOf('this.lastAbsenceMs ='));
   expect(resume.indexOf('tickHome(this.p)')).toBeLessThan(resume.indexOf('this.showHome()'));
 });
+
+for (const play of [1, 2] as const)
+  describe(`checkpoint rules at play ${play}`, () => {
+    it('resumes v1 campaign and Remix goldens with the saved version', () => {
+      for (const file of ['m-release-1.2.v8.json', 'm-remix-checkpoint-1.2.v8.json']) {
+        const p = migrate(JSON.parse(readFileSync(`tests/fixtures/saves/${file}`, 'utf8')), { play });
+        const before = p.savedRound;
+        const saved = readInterruptedRound(p, play)!;
+        expect(saved).not.toBeNull();
+        expect(saved.rulesVersion ?? 1).toBe(1);
+        expect(p.savedRound).toBe(before);
+        saveInterruptedRound(p, saved);
+        expect(JSON.parse(JSON.parse(p.savedRound!).round).rulesVersion).toBe(1);
+        expect(readInterruptedRound(p, play)?.state).toEqual(saved.state);
+      }
+    });
+    it('resumes a v2 round even when the current play rules are v1', () => {
+      const p = defaultProfile(0);
+      p.level = 81;
+      const c = checkpoint();
+      c.n = 67;
+      c.rulesVersion = 2;
+      saveInterruptedRound(p, c);
+      expect(JSON.parse(JSON.parse(p.savedRound!).round).rulesVersion).toBe(2);
+      expect(JSON.parse(JSON.parse(p.savedRound!).fingerprint)[3]).toBe(2);
+      expect(readInterruptedRound(p, play)).toEqual(c);
+    });
+    it('rejects an inconsistent scene version and an unsupported rules version', () => {
+      const p = defaultProfile(0);
+      p.level = 81;
+      const c = checkpoint();
+      c.n = 67;
+      c.rulesVersion = 2;
+      saveInterruptedRound(p, c);
+      const saved = JSON.parse(p.savedRound!);
+      saved.scene.rulesVersion = 1;
+      p.savedRound = JSON.stringify(saved);
+      expect(readInterruptedRound(p, play)).toBeNull();
+      saveInterruptedRound(p, c);
+      const unknown = JSON.parse(p.savedRound!);
+      const round = JSON.parse(unknown.round);
+      round.rulesVersion = 3;
+      unknown.round = JSON.stringify(round);
+      p.savedRound = JSON.stringify(unknown);
+      expect(readInterruptedRound(p, play)).toBeNull();
+    });
+  });

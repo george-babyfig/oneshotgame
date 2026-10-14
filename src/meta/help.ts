@@ -99,7 +99,7 @@ export function giftFromBuddy(hasEligibleBuddy: boolean): boolean {
 /** The same immediate-score choice as solve2, exposed as targets for gentle visual hints. */
 export function firstTargets(level: LevelDef, count = 3): number[] {
   let state = roundState(level.start, level.nova, level.troubles, level.difficulty !== 'normal');
-  const rules = rulesForLevel(level.n);
+  const rules = rulesForLevel(level.n, 'campaign', level.n, level.rulesVersion ?? 1);
   const targets: number[] = [];
   for (let turn = 0; turn < Math.min(count, level.throws); turn++) {
     const kind = level.queue[turn];

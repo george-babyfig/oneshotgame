@@ -1,10 +1,11 @@
 import { makeLevel, type LevelDef } from '../core/levels';
+import { RULES_VERSION, type RulesVersion } from '../core/rules-version';
 import { rulesForLevel } from '../core/round';
 import { t } from '../i18n';
 import type { Profile } from './profile';
 import { NOUN_WINDOW } from './unlocks';
 
-export const REMIX_RULES = 1;
+export const REMIX_RULES: RulesVersion = 1;
 
 export interface RemixChapter {
   v: number;
@@ -21,15 +22,16 @@ export const REMIX_TITLES = [
   { stars: 150, title: 'Comet Gardener' },
 ] as const;
 
-export function remixLevel(n: number, p?: Profile): LevelDef {
+export function remixLevel(n: number, p?: Profile, play: RulesVersion = RULES_VERSION): LevelDef {
   const taught = p ? Math.max(1, p.level - 1) : n;
   const level = makeLevel(n, 'RX', {
+    rulesVersion: play,
     goals: true,
     boss: n % 10 === 0,
     remix: true,
-    rules: rulesForLevel(n, 'remix', taught),
+    rules: rulesForLevel(n, 'remix', taught, play),
   });
-  const classic = makeLevel(n);
+  const classic = makeLevel(n, 'PP', { rulesVersion: play });
   return { ...level, name: classic.name, hue: classic.hue };
 }
 

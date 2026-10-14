@@ -445,7 +445,7 @@ export class LevelScene {
   }
 
   get rules(): RoundRules {
-    return this.o.rules ?? rulesForLevel(this.L.n);
+    return this.o.rules ?? rulesForLevel(this.L.n, this.o.remixPalette ? 'remix' : 'campaign', this.L.n, this.L.rulesVersion ?? 1);
   }
 
   // ---------------------------------------------------------------- HUD

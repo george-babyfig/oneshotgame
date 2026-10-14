@@ -7,6 +7,13 @@ import { calendarSalt } from './almanac';
 import { budgetFor, goalsMet, makeLevel, pressureOf, skyWall, solve0, solve2, starsFor, type LevelDef } from '../core/levels';
 import { lifeScore } from '../core/world';
 import { rulesForLevel } from '../core/round';
+import { RULES_VERSION, type RulesVersion } from '../core/rules-version';
+import { voyagePlay } from '../core/rulesets';
+export { voyagePlay } from '../core/rulesets';
+
+export function voyageRules(week: string, n: number, taught: number, play: RulesVersion = RULES_VERSION) {
+  return rulesForLevel(n, 'voyage', taught, voyagePlay(week, play));
+}
 import { today, type Profile } from './profile';
 import { applyReward, type Reward } from './progression';
 import { eventFor, isoWeek, legacyEventAtmospherePaid, legacyEventGems, retireEventProgress, weekAtMostOneAhead } from './events';
@@ -102,17 +109,22 @@ export function voyageLevel(
   taught = base + i * 2,
   hemisphere: Hemisphere = 'north',
   savedTheme?: string | null,
+  play: RulesVersion = RULES_VERSION,
 ): LevelDef {
-  const key = JSON.stringify([week, base, i, taught, hemisphere, savedTheme, calendarSalt(week, i)]);
+  const key = JSON.stringify([week, base, i, taught, hemisphere, savedTheme, voyagePlay(week, play), calendarSalt(week, i)]);
   const cached = stopCache.get(key);
   if (cached) return structuredClone(cached);
   const n = base + i * 2;
   const options = {
     goals: true,
     boss: i === VOYAGE_LEN - 1,
-    rules: rulesForLevel(Math.min(n, taught)),
+    rulesVersion: voyagePlay(week, play),
+    rules: voyageRules(week, n, taught, play),
     obstacleCap: taught,
   };
+  // Frozen v1 pre-flight historically solved at n, even when the stop's taught cap was lower.
+  // Keep that calendar selection contract; v2 uses the stop's own rules.
+  const preflightRules = options.rules.version === 1 ? rulesForLevel(n, 'voyage', n, 1) : options.rules;
   const theme = week > '2026-W44' ? eventFor(week, hemisphere, savedTheme) : undefined;
   const seed = theme ? `VOY-${week}-${theme.id}-${i}` : `VOY-${week}-${i}`;
   const override = calendarSalt(week, i);
@@ -124,8 +136,8 @@ export function voyageLevel(
     for (let salt = 0; salt <= 256; salt++) {
       if (salt) L = makeLevel(n, seed, { ...options, salt: override + salt });
       if (week > '2026-W44' && (pressureOf(L) > budgetFor(L) || skyWall(L))) continue;
-      const blind = solve0(L);
-      const aware = solve2(L);
+      const blind = solve0(L, preflightRules);
+      const aware = solve2(L, preflightRules);
       if (
         goalsMet(blind, L.goals) &&
         starsFor(lifeScore(blind), L.stars) >= 1 &&
@@ -141,8 +153,8 @@ export function voyageLevel(
     if (!found) L = first;
   }
   if (theme) {
-    const blind = solve0(L);
-    const aware = solve2(L);
+    const blind = solve0(L, preflightRules);
+    const aware = solve2(L, preflightRules);
     const common = theme.biomes?.find(
       (biome) => blind.sectors.some((sector) => sector.biome === biome) && aware.sectors.some((sector) => sector.biome === biome),
     );

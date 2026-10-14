@@ -3,9 +3,10 @@ import { FORM_OF, GUARD_OF, labFusionReach, labGuard, labNovaReach, labPower, ty
 import { NO_MODIFIERS, type RoundMode, type RoundModifiers } from './modifiers';
 import { SECTORS, SPECIES_BY_ID, type BiomeId } from './world';
 import type { LevelDef } from './levels';
-import { TROUBLES, firebreakBy, troubleTarget, type TroubleEvent, type TroubleId, type TroubleState } from './troubles';
+import { firebreakBy, troubleTarget, type TroubleEvent, type TroubleId, type TroubleState } from './troubles';
 import { traitOf } from './world';
-import { RULES_VERSION } from './rules-version';
+import { RULES_VERSION, RULES_SUPPORTED, type RulesVersion } from './rules-version';
+import { RULESETS, REACTION_DEBUT, TROUBLE_DEBUT, effectiveVersion, type RuleReactionId, type RuleTroubleId } from './rulesets';
 import { launcherReach, skipperLosesPower } from './launchers';
 
 export const NOVA_CHARGE = 12;
@@ -26,23 +27,22 @@ export const REACTION_IDS = Object.keys(REACTIONS) as ReactionId[];
 
 export interface RoundRules {
   version: number;
-  reactions: ReactionId[];
-  troubles: TroubleId[];
+  reactions: RuleReactionId[];
+  troubles: RuleTroubleId[];
   combo?: boolean;
 }
 
-export const ROUND_RULES_V0: RoundRules = { version: RULES_VERSION, reactions: [], troubles: [] };
+export const ROUND_RULES_V0: RoundRules = { version: 1, reactions: [], troubles: [] };
 
 /** Every mode teaches the same reactions at the same planet. */
-export function rulesForLevel(n: number, mode: RoundMode = 'campaign', taught = n): RoundRules {
+export function rulesForLevel(n: number, mode: RoundMode = 'campaign', taught = n, play: RulesVersion = RULES_VERSION): RoundRules {
   const cap = mode === 'campaign' ? n : Math.min(n, taught);
+  const version = effectiveVersion(n, mode, taught, play);
+  const set = RULESETS[version];
   return {
-    version: RULES_VERSION,
-    reactions: REACTION_IDS.filter((id) => cap >= REACTIONS[id].debut),
-    troubles:
-      mode === 'zen' || mode === 'rush' || mode === 'remix'
-        ? []
-        : (Object.keys(TROUBLES) as TroubleId[]).filter((id) => cap >= TROUBLES[id].debut),
+    version,
+    reactions: set.reactions.filter((id) => cap >= REACTION_DEBUT[id]),
+    troubles: set.troubles[mode].filter((id) => cap >= TROUBLE_DEBUT[id]),
     combo: cap >= 26,
   };
 }
@@ -621,11 +621,15 @@ export function previewStep(
   return stepRound(state, action, mods, rules);
 }
 
-export function serializeRound(state: RoundState): string {
-  return JSON.stringify({ version: ROUND_SAVE_VERSION, rulesVersion: RULES_VERSION, state });
+export function serializeRound(state: RoundState, rulesVersion: RulesVersion = RULES_VERSION): string {
+  return JSON.stringify({ version: ROUND_SAVE_VERSION, rulesVersion, state });
 }
 
 export function restoreRound(json: string): RoundState | null {
+  return restoreRoundWithVersion(json)?.state ?? null;
+}
+
+export function restoreRoundWithVersion(json: string): { state: RoundState; rulesVersion: RulesVersion } | null {
   try {
     const saved: unknown = JSON.parse(json);
     if (
@@ -636,7 +640,8 @@ export function restoreRound(json: string): RoundState | null {
       !('state' in saved)
     )
       return null;
-    if ('rulesVersion' in saved && saved.rulesVersion !== RULES_VERSION) return null;
+    const rulesVersion = 'rulesVersion' in saved ? (saved.rulesVersion as RulesVersion) : 1;
+    if (!RULES_SUPPORTED.includes(rulesVersion)) return null;
     const state = saved.state as RoundState;
     if (saved.version === 1) {
       state.combo = { links: 0, rest: false, best: 0 };
@@ -656,7 +661,7 @@ export function restoreRound(json: string): RoundState | null {
       !Array.isArray(state.arrived) ||
       !state.nova ||
       !Number.isFinite(state.nova.charge) ||
-      ![NOVA_CHARGE, LATER_NOVA_CHARGE].includes(state.nova.threshold) ||
+      !RULESETS[rulesVersion].novaThresholds.includes(state.nova.threshold) ||
       !Number.isInteger(state.nova.fired) ||
       typeof state.nova.held !== 'boolean' ||
       state.charge !== state.nova.charge ||
@@ -671,7 +676,7 @@ export function restoreRound(json: string): RoundState | null {
       state.comboCharge > 12
     )
       return null;
-    return state;
+    return { state, rulesVersion };
   } catch {
     return null;
   }

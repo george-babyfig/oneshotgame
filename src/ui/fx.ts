@@ -1,5 +1,6 @@
+import { ruleReactionForPair } from '../core/rulesets';
 import { BIOMES, KINDS, SPECIES_BY_ID, TRAITS, traitOf, neededHabitat, settle, wrap, type Planet, type TraitId } from '../core/world';
-import { stepRound, previewStep, novaForThrow, novaReady, REACTIONS, REACTION_IDS, type RoundState, type StepResult } from '../core/round';
+import { stepRound, previewStep, novaForThrow, novaReady, REACTIONS, type RoundState, type StepResult } from '../core/round';
 import { flyWithLauncher, STAR_SLING, type FlightLaunch, type FlightWorld } from '../core/flight';
 import type { RoundModifiers } from '../core/modifiers';
 import { BOSS_HP } from '../core/levels';
@@ -877,11 +878,7 @@ export function land(scene: LevelScene, sh: Shot, i: number) {
   const reaction = res.reactions[0];
   for (const offset of [-1, 0, 1]) {
     const previous = scene.landedKinds[wrap(i + offset)];
-    if (
-      previous &&
-      previous !== sh.kind &&
-      !REACTION_IDS.some((id) => REACTIONS[id].pair.includes(previous) && REACTIONS[id].pair.includes(sh.kind))
-    )
+    if (previous && previous !== sh.kind && !ruleReactionForPair(previous, sh.kind, scene.rules.reactions))
       scene.o.onPairTried?.(previous, sh.kind);
   }
   for (const sector of res.changed) scene.landedKinds[sector] = sh.kind;

@@ -147,44 +147,45 @@ const FAMILIES: { prefix: string; o?: { goals?: boolean; boss?: boolean } }[] = 
 function campaignRows(): Row[] {
   const rows: Row[] = [];
   for (let n = 1; n <= CAMPAIGN_MAX; n++) {
-    const L = makeLevel(n);
+    const L = makeLevel(n, 'PP', { rulesVersion: 1 });
     expectShape(`PP-${n}`, L);
     rows.push(levelRow(`PP-${n}`, L));
   }
   // the reviewed layout substitution and the original it replaced
-  rows.push(levelRow('PP-24/salt0', makeLevel(24, 'PP', { salt: 0 })));
-  rows.push(levelRow('PP-7/salt5', makeLevel(7, 'PP', { salt: 5 })));
+  rows.push(levelRow('PP-24/salt0', makeLevel(24, 'PP', { salt: 0, rulesVersion: 1 })));
+  rows.push(levelRow('PP-7/salt5', makeLevel(7, 'PP', { salt: 5, rulesVersion: 1 })));
   return rows;
 }
 
-function modeRows(): Row[] {
+function modeRows(play: 1 | 2): Row[] {
   const rows: Row[] = [];
   for (const f of FAMILIES) {
     for (let n = 1; n <= MODE_MAX; n++) {
-      const L = f.o ? makeLevel(n, f.prefix, f.o) : makeLevel(n, f.prefix);
+      const L = makeLevel(n, f.prefix, { ...f.o, rulesVersion: 1 });
       expectShape(`${f.prefix}/${n}`, L);
       rows.push(levelRow(`${f.prefix}/${n}`, L));
     }
   }
   // the mode wrappers exactly as the app calls them
   for (const day of ['2026-01-01', '2026-09-28', '2027-02-28', '2028-12-31'])
-    rows.push(levelRow(`dailyLevel(${day})`, day < '2026-10-14' ? dailyLevel(day) : legacyDailyLevel(day)));
+    rows.push(levelRow(`dailyLevel(${day})`, day < '2026-10-14' ? dailyLevel(day, 16, play) : legacyDailyLevel(day)));
   for (const seed of ['K7M2Q', '22222', 'ZZZZZ']) {
-    rows.push(levelRow(`rushLevel(${seed})`, rushLevel(seed)));
-    rows.push(levelRow(`challengeLevel(${seed})`, challengeLevel(seed)));
+    rows.push(levelRow(`rushLevel(${seed})`, rushLevel(seed, 14, play)));
+    rows.push(levelRow(`challengeLevel(${seed})`, challengeLevel(seed, 14, play)));
   }
-  rows.push(levelRow('zenLevel(null)', zenLevel(null)));
+  rows.push(levelRow('zenLevel(null)', zenLevel(null, 20, play)));
   for (const week of ['2026-W01', '2026-W40'])
     for (const level of [1, 30, 80]) {
       const base = voyageBase(level);
-      for (let i = 0; i < VOYAGE_LEN; i++) rows.push(levelRow(`voyageLevel(${week},${base},${i})`, voyageLevel(week, base, i)));
+      for (let i = 0; i < VOYAGE_LEN; i++)
+        rows.push(levelRow(`voyageLevel(${week},${base},${i})`, voyageLevel(week, base, i, base + i * 2, 'north', undefined, play)));
     }
   return rows;
 }
 
 /** Hold the old future-date fixture as a compatibility reference. */
 function legacyDailyLevel(day: string): LevelDef {
-  const L = makeLevel(16, `DAY-${day}`, { rules: rulesForLevel(16), profile: 'reviewed-v1' });
+  const L = makeLevel(16, `DAY-${day}`, { rulesVersion: 1, rules: rulesForLevel(16, 'campaign', 16, 1), profile: 'reviewed-v1' });
   const available = (Object.keys(TROUBLES) as TroubleId[]).filter((id) => TROUBLES[id].debut <= 16);
   if (L.troubles.length && available.length) {
     const first = Math.floor(rngFrom(`DAY-${day}-weather`)() * available.length);
@@ -226,7 +227,7 @@ function greedyMoves(start: Planet, queue: Kind[], throws: number, splash = 0, n
 function greedyRows(): Row[] {
   const rows: Row[] = [];
   for (let n = 1; n <= 60; n++) {
-    const L = makeLevel(n);
+    const L = makeLevel(n, 'PP', { rulesVersion: 1 });
     const plan = greedyPlan(L.start, L.queue, L.throws, 0, L.nova);
     const replay = greedyMoves(L.start, L.queue, L.throws, 0, L.nova);
     expect(replay.planet, `PP-${n}: replayed greedy line matches greedyPlan`).toEqual(plan);
@@ -254,68 +255,69 @@ function constantRows(): Row[] {
 }
 
 // ------------------------------------------------------------------ tests
-describe('level snapshot (M2 guard)', () => {
-  it('Remix planets 1-60 keep their final generated targets and layouts', () => {
-    checkRows(
-      'remix-RX.json',
-      Array.from({ length: 60 }, (_, index) => {
-        const L = remixLevel(index + 1);
-        return {
-          id: `RX-${L.n}`,
-          queue: L.queue.join(' '),
-          start: planetRow(L.start),
-          twist: L.twist,
-          shortKind: L.shortKind ?? null,
-          goals: L.goals.map((g) => [g.type, g.id, g.count]),
-          sky: L.sky,
-          spin: L.spin,
-          throws: L.throws,
-          difficulty: L.difficulty,
-          stars: L.stars,
-        };
-      }),
-    );
-  });
+for (const play of [1, 2] as const)
+  describe(`level snapshot (M2 guard), play ${play}`, () => {
+    it('Remix planets 1-60 keep their final generated targets and layouts', () => {
+      checkRows(
+        'remix-RX.json',
+        Array.from({ length: 60 }, (_, index) => {
+          const L = remixLevel(index + 1, undefined, play);
+          return {
+            id: `RX-${L.n}`,
+            queue: L.queue.join(' '),
+            start: planetRow(L.start),
+            twist: L.twist,
+            shortKind: L.shortKind ?? null,
+            goals: L.goals.map((g) => [g.type, g.id, g.count]),
+            sky: L.sky,
+            spin: L.spin,
+            throws: L.throws,
+            difficulty: L.difficulty,
+            stars: L.stars,
+          };
+        }),
+      );
+    });
 
-  it('reviewed PP 1-60 and reviewed raw-v2 PP 61-120 match their fixtures', () => {
-    checkRows('campaign-PP.json', campaignRows());
-  });
+    it('reviewed PP 1-60 and reviewed raw-v2 PP 61-120 match their fixtures', () => {
+      checkRows('campaign-PP.json', campaignRows());
+    });
 
-  it('legacy generation for interrupted 61-120 rounds stays byte-identical', () => {
-    checkRows(
-      'legacy-PP-61-120.json',
-      Array.from({ length: 60 }, (_, i) => {
-        const n = i + 61;
-        return levelRow(`PP-${n}`, makeLevel(n, 'PP', { profile: 'reviewed-v1' }));
-      }),
-    );
-  });
+    it('legacy generation for interrupted 61-120 rounds stays byte-identical', () => {
+      checkRows(
+        'legacy-PP-61-120.json',
+        Array.from({ length: 60 }, (_, i) => {
+          const n = i + 61;
+          return levelRow(`PP-${n}`, makeLevel(n, 'PP', { profile: 'reviewed-v1', rulesVersion: 1 }));
+        }),
+      );
+    });
 
-  it('every mode seed family (Voyage, Daily, Rush, Zen, Challenge) is unchanged', () => {
-    checkRows('modes.json', modeRows());
-  });
+    it('every mode seed family (Voyage, Daily, Rush, Zen, Challenge) is unchanged', () => {
+      checkRows('modes.json', modeRows(play));
+    });
 
-  it("greedy solver's moves and final planet for planets 1-60 are unchanged", () => {
-    checkRows('greedy-PP.json', greedyRows());
-  });
+    it("greedy solver's moves and final planet for planets 1-60 are unchanged", () => {
+      checkRows('greedy-PP.json', greedyRows());
+    });
 
-  it('generator constants and ladders are unchanged', () => {
-    checkRows('constants.json', constantRows());
-  });
+    it('generator constants and ladders are unchanged', () => {
+      checkRows('constants.json', constantRows());
+    });
 
-  it('is deterministic and hands out independent copies', () => {
-    for (const n of [1, 17, 24, 50, 99]) {
-      const a = makeLevel(n);
-      const json = JSON.stringify(a);
-      a.start.sectors[0].land = 5;
-      a.queue.reverse();
-      a.stars[0] = -1;
-      a.goals.push({ type: 'biome', id: 'ocean', count: 99 });
-      expect(JSON.stringify(makeLevel(n)), `planet ${n}`).toBe(json);
-    }
-    // order of generation does not matter
-    const forward = [3, 4, 5].map((n) => JSON.stringify(makeLevel(n, 'DAY-2026-09-28')));
-    const backward = [5, 4, 3].map((n) => JSON.stringify(makeLevel(n, 'DAY-2026-09-28'))).reverse();
-    expect(backward).toEqual(forward);
+    it('is deterministic and hands out independent copies', () => {
+      for (const n of [1, 17, 24, 50, 99]) {
+        const a = makeLevel(n, 'PP', { rulesVersion: 1 });
+        const json = JSON.stringify(a);
+        a.start.sectors[0].land = 5;
+        a.queue.reverse();
+        a.stars[0] = -1;
+        a.goals.push({ type: 'biome', id: 'ocean', count: 99 });
+        expect(JSON.stringify(makeLevel(n, 'PP', { rulesVersion: 1 })), `planet ${n}`).toBe(json);
+      }
+      // order of generation does not matter
+      const forward = [3, 4, 5].map((n) => JSON.stringify(makeLevel(n, 'DAY-2026-09-28', { rulesVersion: 1 })));
+      const backward = [5, 4, 3].map((n) => JSON.stringify(makeLevel(n, 'DAY-2026-09-28', { rulesVersion: 1 }))).reverse();
+      expect(backward).toEqual(forward);
+    });
   });
-});

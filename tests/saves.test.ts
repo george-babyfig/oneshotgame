@@ -1,3 +1,4 @@
+import { restoreRound } from '../src/core/round';
 // Save goldens (ROADMAP-v2 7.7, M1 item 1.7): a save from every format must load.
 //
 // RULE: every future change to the save format (a new Profile field, a renamed or removed field,
@@ -49,12 +50,14 @@ const DUST_DELTAS: Record<string, number> = {
   'k-pre-stats.v1.json': 1600,
   'k-release-1.1.v7.json': 0,
   'l-voyage-seen.v5.json': 0,
+  'm-release-1.2.v8.json': 0,
+  'm-remix-checkpoint-1.2.v8.json': 0,
 };
 
 type Raw = Record<string, unknown>;
 const load = (f: string): Raw => JSON.parse(readFileSync(join(DIR, f), 'utf8')) as Raw;
 /** Load a fixture the way loadProfile() does: JSON text → migrate(). */
-const loadSave = (f: string): Profile => migrate(JSON.parse(readFileSync(join(DIR, f), 'utf8')) as Raw);
+const loadSave = (f: string, play: 1 | 2 = 1): Profile => migrate(JSON.parse(readFileSync(join(DIR, f), 'utf8')) as Raw, { play });
 const EVENT_GEM_DELTAS: Record<string, number> = {
   'b-mid-game.v3.json': 3,
   'c-pre-m0.v3.json': 1,
@@ -102,6 +105,8 @@ describe('save goldens', () => {
       'k-pre-stats.v1.json',
       'k-release-1.1.v7.json',
       'l-voyage-seen.v5.json',
+      'm-release-1.2.v8.json',
+      'm-remix-checkpoint-1.2.v8.json',
     ]);
   });
 
@@ -468,3 +473,17 @@ it('pays the captured 1.0 in-flight trip once, with frozen loot and no friendshi
     vi.useRealTimers();
   }
 });
+
+for (const play of [1, 2] as const)
+  describe(`all save goldens at play ${play}`, () => {
+    for (const f of FILES)
+      it(`migrates idempotently and retains its checkpoint: ${f}`, () => {
+        const raw = load(f);
+        const once = loadSave(f, play);
+        expect(migrate(JSON.parse(JSON.stringify(once)), { play })).toEqual(once);
+        if (raw.savedRound) {
+          const saved = JSON.parse(raw.savedRound as string);
+          expect(readInterruptedRound(once, play)?.state).toEqual(restoreRound(saved.round));
+        }
+      });
+  });

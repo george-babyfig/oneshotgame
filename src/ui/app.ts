@@ -116,6 +116,7 @@ import { wishClaimable } from '../meta/wishes';
 import { countUp, effectiveReduceMotion, screenTransition } from './motion';
 import { recordCombo, recordReaction } from '../meta/reactions';
 import type { RoundState } from '../core/round';
+import { RULES_VERSION } from '../core/rules-version';
 import { rulesForLevel } from '../core/round';
 
 export function restoreSceneTroubles(scene: Pick<LevelScene, 'troubles' | 'buddyShieldUsed' | 'calmUsed'>, state: RoundState): void {
@@ -392,6 +393,7 @@ export class App {
     saveInterruptedRound(this.p, {
       n: scene.L.n,
       mode: scene.o.remixPalette ? 'remix' : 'campaign',
+      rulesVersion: scene.L.rulesVersion ?? 1,
       seedPrefix: scene.L.seed.match(/^(.*)-(\d+)(?:~-?\d+)?$/)?.[1] ?? 'PP',
       salt: Number(scene.L.seed.match(/~(-?\d+)$/)?.[1]) || undefined,
       generationProfile: scene.o.remixPalette ? undefined : this.roundGenerationProfile,
@@ -821,14 +823,15 @@ export class App {
       clearInterruptedRound(this.p);
       this.save();
     }
-    const level = remixLevel(n, this.p);
+    const remixPlay = resume?.rulesVersion ?? (resume ? 1 : RULES_VERSION);
+    const level = remixLevel(n, this.p, remixPlay);
     const opts = this.sceneOpts(
       'remix',
       {
         label: t('Remix · Bonus'),
         remixPalette: true,
         competitive: true,
-        rules: rulesForLevel(n, 'remix', Math.max(1, this.p.level - 1)),
+        rules: rulesForLevel(n, 'remix', Math.max(1, this.p.level - 1), remixPlay),
         endLabel: t('See remix stars'),
         onQuit: () => {
           clearInterruptedRound(this.p);
@@ -1091,7 +1094,13 @@ export class App {
       clearInterruptedRound(this.p);
       this.save();
     }
-    const L = o.level ?? makeLevel(n, o.resume?.seedPrefix ?? 'PP', { salt: o.resume?.salt, profile: o.resume?.generationProfile });
+    const L =
+      o.level ??
+      makeLevel(n, o.resume?.seedPrefix ?? 'PP', {
+        salt: o.resume?.salt,
+        profile: o.resume?.generationProfile,
+        rulesVersion: o.resume?.rulesVersion ?? (o.resume ? 1 : RULES_VERSION),
+      });
     const warmup = o.resume?.warmup ?? o.warmup;
     this.roundFirstCampaignClear = o.resume?.practiceFirstClear ?? (!warmup && n === this.p.level && !this.p.stars[n]);
     const boosters = o.resume?.modifiers.boosters ?? o.boosters ?? NO_BOOSTERS;
@@ -1579,7 +1588,7 @@ export function startLauncherPractice(app: App, id: LauncherId, tune: Tune): voi
   const opts: SceneOpts = {
     launcher: { id, tune },
     roundMode: 'practice',
-    rules: rulesForLevel(1),
+    rules: rulesForLevel(1, 'campaign', 1, 1),
     scopeLevel: fullAimEnabled(app.p) ? 3 : 2,
     look: currentLook(app.p),
     splash: 0,
