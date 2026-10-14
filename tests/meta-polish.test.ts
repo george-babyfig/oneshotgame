@@ -6,7 +6,7 @@ import { claimWish, ensureWishes, swapWish, wishRoadPoints } from '../src/meta/w
 import { grantProfileRoadPoints, STAR_ROAD } from '../src/meta/starroad';
 import { collectAll, homeBadge, mergeHomeCelebrations, tickHome } from '../src/meta/homeworld';
 import { homeworldNextUp, nextUp } from '../src/meta/nextup';
-import { COSMETICS, isPaidLook, owns, visibleCosmetics } from '../src/meta/cosmetics';
+import { COSMETICS, cosmeticOpen, isPaidLook, owns, visibleCosmetics } from '../src/meta/cosmetics';
 import { unlocked } from '../src/meta/unlocks';
 import { letterStrings } from '../src/meta/inbox';
 
@@ -166,8 +166,9 @@ describe('FC first sessions and consistent collection gates', () => {
     expect(early.length).toBeGreaterThan(0);
     expect(early.every((item) => owns(p, item.id) || (item.source !== 'gems' && !isPaidLook(item)))).toBe(true);
     p.meta.sessions = 2;
+    // Road 1's gem singles stay hidden until their Road opens (decision 86); every open gem look shows.
     expect(visibleCosmetics(p).filter((item) => item.source === 'gems')).toHaveLength(
-      COSMETICS.filter((item) => item.source === 'gems').length,
+      COSMETICS.filter((item) => item.source === 'gems' && cosmeticOpen(p, item)).length,
     );
   });
   it('opens Lifebook at 3, Atlas at 23 and Album at 24', () => {

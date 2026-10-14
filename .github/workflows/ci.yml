@@ -24,6 +24,19 @@ jobs:
       - name: Reject dev tools in production bundle
         run: '! grep -rqE "Balance Report|__app|__i18n|__scene|__gate" dist/'
 
+  # Decision 91: PR content coverage stays pinned to RELEASE.submitOn.
+  runway:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run runway
+
   # The production bundle serves and loads (Playwright journeys run against the dev server).
   preview-smoke:
     runs-on: ubuntu-latest

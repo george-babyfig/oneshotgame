@@ -2129,5 +2129,8 @@
   "Your {road} looks": "Tus looks del {road}",
   "{landmark} is complete!": "¡La Gran Obra {landmark} está completa!",
   "{landmark} is complete. Your {decoration} and {title} are ready.": "La Gran Obra {landmark} está completa. Tu decoración {decoration} y tu título {title} ya están listos.",
-  "{landmark} is ready to build": "Ya puedes construir la Gran Obra {landmark}"
+  "{landmark} is ready to build": "Ya puedes construir la Gran Obra {landmark}",
+  "Build": "Construir",
+  "Make 8 Fusions or 8 Supernovas": "Haz 8 Fusiones o lanza 8 Supernovas",
+  "Reach the end of {road}": "Llega al final del {road}"
 }

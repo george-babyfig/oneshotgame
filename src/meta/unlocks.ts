@@ -3,6 +3,7 @@ import { GOALS_FROM } from '../core/levels';
 import { OBSTACLES, type ObstacleId } from '../core/sky';
 import { KINDS, type Kind } from '../core/world';
 import type { Profile } from './profile';
+import { hasAvailableRoadAccess, hasAvailableRoadPass } from './roadAvailability';
 import { LAB_TEXT } from './labcopy';
 import { LAUNCHERS, LAUNCH_ROSTER, type LauncherId } from '../core/launchers';
 
@@ -247,7 +248,7 @@ export function unlocked(p: Profile, id: UnlockId): boolean {
   // Existing saves keep modes earned through the retired rank ladder.
   const oldModeRank: Partial<Record<UnlockId, number>> = { daily: 2, rush: 3, zen: 4, challenge: 5 };
   if (oldModeRank[id] && p.rank >= oldModeRank[id]!) return true;
-  if (id === 'star_road' && (p.pass || p.road.length > 0 || p.roadPass.length > 0)) return true;
+  if (id === 'star_road' && (p.pass || p.road.length > 0 || p.roadPass.length > 0 || hasAvailableRoadAccess(p))) return true;
   if (
     id === 'quests' &&
     (p.quests.list.some((q) => LEGACY_QUEST_IDS.has(q.id) && (q.progress > 0 || q.claimed)) ||
@@ -271,7 +272,7 @@ export function unlocked(p: Profile, id: UnlockId): boolean {
       p.album.pages.some((pg) => pg.items.length > 0))
   )
     return true;
-  if (id === 'passport' && (p.passport.set || p.starter || p.pass)) return true;
+  if (id === 'passport' && (p.passport.set || p.starter || p.pass || hasAvailableRoadPass(p))) return true;
   if (id === 'object_lab' && Object.values(p.lab).some((level) => level > 1)) return true;
   if (id === 'buddy') return p.level >= 18 && p.home.residents.length > 0;
   if (id === 'passport_setup') return p.stats.wins >= 1;

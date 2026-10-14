@@ -1,3 +1,4 @@
+import { ROAD_CATALOG } from './starroad';
 import { BOOSTERS, CHAPTER_REWARD, CHAPTER_RANK_REWARD } from './tuning';
 import { earn, type EarnSource } from './wallet';
 // Chapter rewards and shared reward application. Legacy quests support save migration.
@@ -138,6 +139,10 @@ export function rewardText(r: Reward): string[] {
   for (const [k, v] of Object.entries(r.boosters ?? {})) if (v) out.push(`${bEmoji[k]} ×${v}`);
   if (r.skin) out.push(t('🌈 New atmosphere'));
   if (r.sticker === 'cosmic_road') out.push(t('Cosmic Road sticker'));
+  else if (r.sticker) {
+    const road = ROAD_CATALOG.find((def) => def.tiers.some((tier) => tier.reward.sticker === r.sticker));
+    if (road) out.push(`${t(road.name)} · ${t('+ sticker')}`);
+  }
   if (r.item) out.push(t('🧑‍🚀 {name}', { name: t(COSMETIC_BY_ID[r.item]?.name ?? '') }));
   if (r.launcher)
     out.push(

@@ -30,3 +30,8 @@ export function whenText(t: number, now: number, locale: string): string {
   if (days === 1) return `${new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(1, 'day')} ${time}`;
   return `${new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(new Date(t))} ${time}`;
 }
+
+/** Local calendar day shared by profile and availability checks. */
+export function today(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}

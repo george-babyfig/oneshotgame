@@ -1,3 +1,5 @@
+import { activeRoadLandmark, ROAD_LANDMARKS, roadLandmarkOpen, roadLandmarkState, roadLandmarkName } from '../../../meta/roadLandmarks';
+import { roadLandmarkSheet } from './sheets';
 import { launchBayBuildable, paintButton, photoButton, dronesNamed, landsSection } from '../../../meta/reveals';
 import { HOMEWORLD_MAX_LEVEL } from '../../../meta/tuning';
 import { h, btn, fmt, toast } from '../../dom';
@@ -283,6 +285,21 @@ export function createPanel(ctx: HomeworldPanelContext) {
             }),
           ),
         );
+      if (ROAD_LANDMARKS.some((site) => roadLandmarkOpen(p, site.id)))
+        kids.push(
+          h(
+            'details',
+            { class: 'hw-landmark-summary hw-road-landmarks' },
+            h('summary', null, t('Road Landmarks')),
+            ...ROAD_LANDMARKS.filter((site) => roadLandmarkOpen(p, site.id)).map((site) =>
+              btn(
+                t('{name} · {stage}', { name: roadLandmarkName(), stage: landmarkStageLabel(roadLandmarkState(p, site.id).stage) }),
+                'ghost wide',
+                () => roadLandmarkSheet(app, site.id, renderPanel),
+              ),
+            ),
+          ),
+        );
       if (landmarkState(p, 'sky_bridge').stage === 4)
         kids.push(
           h(
@@ -308,6 +325,10 @@ export function createPanel(ctx: HomeworldPanelContext) {
           else if (next.homeTarget === 'landmark') {
             const site = activeLandmark(p);
             if (site) landmarkSheet(app, site.id, renderPanel);
+            else {
+              const road = activeRoadLandmark(p);
+              if (road) roadLandmarkSheet(app, road.id, renderPanel);
+            }
           } else if (next.homeTarget === 'level') levelSheet(app, ctx.reopen);
           else if (next.homeTarget === 'lab') {
             const kind = (Object.keys(KINDS) as Kind[]).find((item) => canLevelLab(p, item) === 'ok');

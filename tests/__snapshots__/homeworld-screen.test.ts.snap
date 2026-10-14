@@ -1093,3 +1093,507 @@ exports[`Homeworld screen structure > keeps pouch, friends, and level checklist 
   "tag": "div",
 }
 `;
+
+exports[`M14 adds a separate accessible Road Landmark list without changing the five-site list > m14-road-landmark-list 1`] = `
+{
+  "attrs": {},
+  "children": [
+    {
+      "attrs": {
+        "aria-label": "Next Up: Sky Loom. Grow 12 Meadow, Forest or Savanna sectors, or 12 Marsh, Jungle or Highland sectors",
+        "class": "btn ghost wide hw-next-up",
+        "type": "button",
+      },
+      "children": [
+        {
+          "attrs": {
+            "class": "stack",
+          },
+          "children": [
+            {
+              "attrs": {},
+              "children": [
+                "Sky Loom",
+              ],
+              "tag": "b",
+            },
+            {
+              "attrs": {},
+              "children": [
+                "Grow 12 Meadow, Forest or Savanna sectors, or 12 Marsh, Jungle or Highland sectors",
+              ],
+              "tag": "small",
+            },
+          ],
+          "tag": "span",
+        },
+      ],
+      "tag": "button",
+    },
+    {
+      "attrs": {
+        "class": "row hw-primary-actions",
+      },
+      "children": [
+        {
+          "attrs": {
+            "class": "btn primary dim",
+            "type": "button",
+          },
+          "children": [
+            "Collect all",
+          ],
+          "tag": "button",
+        },
+        {
+          "attrs": {
+            "class": "btn ghost",
+            "type": "button",
+          },
+          "children": [
+            "Friends",
+          ],
+          "tag": "button",
+        },
+      ],
+      "tag": "div",
+    },
+    {
+      "attrs": {
+        "class": "hw-stats",
+      },
+      "children": [
+        {
+          "attrs": {},
+          "children": [
+            "🛸 3/3",
+            {
+              "attrs": {},
+              "children": [
+                "drones free",
+              ],
+              "tag": "small",
+            },
+          ],
+          "tag": "span",
+        },
+        {
+          "attrs": {},
+          "children": [
+            "🏡 0/0",
+            {
+              "attrs": {},
+              "children": [
+                "friends",
+              ],
+              "tag": "small",
+            },
+          ],
+          "tag": "span",
+        },
+      ],
+      "tag": "div",
+    },
+    {
+      "attrs": {
+        "class": "muted hw-hint",
+      },
+      "children": [
+        "Drag to spin your planet. Tap a plot to build.",
+      ],
+      "tag": "p",
+    },
+    {
+      "attrs": {
+        "class": "btn ghost wide",
+        "type": "button",
+      },
+      "children": [
+        "Homeworld list",
+      ],
+      "tag": "button",
+    },
+    {
+      "attrs": {
+        "class": "hw-land-summary",
+      },
+      "children": [
+        {
+          "attrs": {},
+          "children": [
+            "Lands",
+          ],
+          "tag": "b",
+        },
+        {
+          "attrs": {
+            "class": "btn ghost",
+            "type": "button",
+          },
+          "children": [
+            "Choose lands",
+          ],
+          "tag": "button",
+        },
+      ],
+      "tag": "div",
+    },
+    {
+      "attrs": {
+        "class": "hw-landmark-summary",
+      },
+      "children": [
+        {
+          "attrs": {},
+          "children": [
+            "Landmarks",
+          ],
+          "tag": "summary",
+        },
+        {
+          "attrs": {
+            "class": "btn ghost wide",
+            "type": "button",
+          },
+          "children": [
+            "Sprout Garden · Landmark finished",
+          ],
+          "tag": "button",
+        },
+        {
+          "attrs": {
+            "class": "btn ghost wide",
+            "type": "button",
+          },
+          "children": [
+            "Skyglass · Landmark finished",
+          ],
+          "tag": "button",
+        },
+        {
+          "attrs": {
+            "class": "btn ghost wide",
+            "type": "button",
+          },
+          "children": [
+            "Sky Bridge · Landmark finished",
+          ],
+          "tag": "button",
+        },
+        {
+          "attrs": {
+            "class": "btn ghost wide",
+            "type": "button",
+          },
+          "children": [
+            "Comet Pier · Landmark finished",
+          ],
+          "tag": "button",
+        },
+        {
+          "attrs": {
+            "class": "btn ghost wide",
+            "type": "button",
+          },
+          "children": [
+            "Keeper's Beacon · Landmark finished",
+          ],
+          "tag": "button",
+        },
+      ],
+      "tag": "details",
+    },
+    {
+      "attrs": {
+        "class": "hw-landmark-summary hw-road-landmarks",
+      },
+      "children": [
+        {
+          "attrs": {},
+          "children": [
+            "Road Landmarks",
+          ],
+          "tag": "summary",
+        },
+        {
+          "attrs": {
+            "class": "btn ghost wide",
+            "type": "button",
+          },
+          "children": [
+            "Sky Loom · Stage 1 of 4",
+          ],
+          "tag": "button",
+        },
+      ],
+      "tag": "details",
+    },
+    {
+      "attrs": {
+        "class": "hw-landmark-summary",
+      },
+      "children": [
+        {
+          "attrs": {},
+          "children": [
+            "Floating Isle",
+          ],
+          "tag": "summary",
+        },
+        {
+          "attrs": {
+            "class": "btn ghost wide",
+            "type": "button",
+          },
+          "children": [
+            "Isle spot 1: Empty spot",
+          ],
+          "tag": "button",
+        },
+        {
+          "attrs": {
+            "class": "btn ghost wide",
+            "type": "button",
+          },
+          "children": [
+            "Isle spot 2: Empty spot",
+          ],
+          "tag": "button",
+        },
+        {
+          "attrs": {
+            "class": "btn ghost wide",
+            "type": "button",
+          },
+          "children": [
+            "Isle spot 3: Empty spot",
+          ],
+          "tag": "button",
+        },
+      ],
+      "tag": "details",
+    },
+    {
+      "attrs": {
+        "class": "hw-overview",
+      },
+      "children": [
+        {
+          "attrs": {
+            "class": "sec-title",
+          },
+          "children": [
+            "Overview",
+          ],
+          "tag": "div",
+        },
+        {
+          "attrs": {
+            "class": "muted",
+          },
+          "children": [
+            "For your next throw",
+          ],
+          "tag": "p",
+        },
+        {
+          "attrs": {
+            "class": "hw-lab-summary",
+          },
+          "children": [
+            {
+              "attrs": {},
+              "children": [
+                "Rock Lab",
+                "",
+              ],
+              "tag": "b",
+            },
+            {
+              "attrs": {},
+              "children": [
+                "Build this Lab to help your shots",
+              ],
+              "tag": "small",
+            },
+          ],
+          "tag": "div",
+        },
+        {
+          "attrs": {
+            "class": "hw-lab-summary",
+          },
+          "children": [
+            {
+              "attrs": {},
+              "children": [
+                "Ice Lab",
+                "",
+              ],
+              "tag": "b",
+            },
+            {
+              "attrs": {},
+              "children": [
+                "Build this Lab to help your shots",
+              ],
+              "tag": "small",
+            },
+          ],
+          "tag": "div",
+        },
+        {
+          "attrs": {
+            "class": "hw-lab-summary",
+          },
+          "children": [
+            {
+              "attrs": {},
+              "children": [
+                "Seed Lab",
+                "",
+              ],
+              "tag": "b",
+            },
+            {
+              "attrs": {},
+              "children": [
+                "Build this Lab to help your shots",
+              ],
+              "tag": "small",
+            },
+          ],
+          "tag": "div",
+        },
+        {
+          "attrs": {
+            "class": "hw-lab-summary",
+          },
+          "children": [
+            {
+              "attrs": {},
+              "children": [
+                "Magma Lab",
+                "",
+              ],
+              "tag": "b",
+            },
+            {
+              "attrs": {},
+              "children": [
+                "Build this Lab to help your shots",
+              ],
+              "tag": "small",
+            },
+          ],
+          "tag": "div",
+        },
+        {
+          "attrs": {
+            "class": "hw-lab-summary",
+          },
+          "children": [
+            {
+              "attrs": {},
+              "children": [
+                "Rain Lab",
+                "",
+              ],
+              "tag": "b",
+            },
+            {
+              "attrs": {},
+              "children": [
+                "Build this Lab to help your shots",
+              ],
+              "tag": "small",
+            },
+          ],
+          "tag": "div",
+        },
+        {
+          "attrs": {
+            "class": "hw-lab-summary",
+          },
+          "children": [
+            {
+              "attrs": {},
+              "children": [
+                "Sun Lab",
+                "",
+              ],
+              "tag": "b",
+            },
+            {
+              "attrs": {},
+              "children": [
+                "Build this Lab to help your shots",
+              ],
+              "tag": "small",
+            },
+          ],
+          "tag": "div",
+        },
+      ],
+      "tag": "div",
+    },
+    {
+      "attrs": {
+        "class": "row",
+      },
+      "children": [
+        {
+          "attrs": {
+            "class": "btn ghost",
+            "type": "button",
+          },
+          "children": [
+            "Fully grown",
+          ],
+          "tag": "button",
+        },
+      ],
+      "tag": "div",
+    },
+    {
+      "attrs": {
+        "class": "row",
+      },
+      "children": [
+        {
+          "attrs": {
+            "class": "btn ghost",
+            "type": "button",
+          },
+          "children": [
+            "🎨 Paint",
+          ],
+          "tag": "button",
+        },
+        {
+          "attrs": {
+            "class": "btn ghost",
+            "type": "button",
+          },
+          "children": [
+            "📷 Photo",
+          ],
+          "tag": "button",
+        },
+      ],
+      "tag": "div",
+    },
+    {
+      "attrs": {
+        "class": "btn ghost wide",
+        "type": "button",
+      },
+      "children": [
+        "✨ Star Atlas •",
+      ],
+      "tag": "button",
+    },
+  ],
+  "tag": "div",
+}
+`;

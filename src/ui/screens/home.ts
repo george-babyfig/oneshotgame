@@ -1,3 +1,4 @@
+import { today } from '../../meta/profile';
 // Play: one clear next step beside the galaxy.
 import { vaultWinLine, otherModeVisible } from '../text';
 import { h, btn, fmt, modal, toast } from '../dom';
@@ -23,17 +24,13 @@ import { planetName, t, tp } from '../../i18n';
 import { unlocked } from '../../meta/unlocks';
 import { stylesAccess } from '../../meta/stylesAccess';
 import { nextUp } from '../../meta/nextup';
-import { STYLES_RELEASE } from '../../meta/cosmetics';
+import { stylesNewDot } from '../../meta/cosmetics';
 import { currentLook } from '../../meta/cosmetics';
-import { refundQuietUntil } from '../../meta/economy';
 
 export function showHome(app: App) {
   const p = app.p;
   const stylesOpen = stylesAccess(p);
-  document.documentElement.classList.toggle(
-    'styles-new',
-    stylesOpen && p.stylesNewSeen !== STYLES_RELEASE && refundQuietUntil(p) <= Date.now(),
-  );
+  document.documentElement.classList.toggle('styles-new', stylesOpen && stylesNewDot(p, today()));
   const now = Date.now();
   const next = levelMeta(p.level);
   const ch = chapterOf(p.level);

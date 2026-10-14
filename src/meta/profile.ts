@@ -1,3 +1,4 @@
+import { today } from './dates';
 import { HOMEWORLD_MAX_LEVEL } from './tuning';
 import { ROAD_EARNING_KEY_LIMIT, type RoadLandmarkId } from './m14types';
 import { loadKey, saveKey, saveKeyChecked, removeKey } from './storage';
@@ -1335,9 +1336,7 @@ export async function saveProfileChecked(p: Profile) {
   if ((await loadKey(KEY)) !== JSON.stringify(p)) throw new Error('Profile was not saved');
 }
 
-export function today(d = new Date()) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
+export { today } from './dates';
 
 export function dayGap(a: string, b: string) {
   return Math.round((new Date(b + 'T00:00:00').getTime() - new Date(a + 'T00:00:00').getTime()) / 86400000);

@@ -32,6 +32,13 @@ export function assertVersionSource(tuning, version) {
   }
 }
 
+/** Release metadata is major.minor; patch builds reuse the same Road schedule. */
+export function assertReleaseVersion(source, packageVersion) {
+  const releaseVersion = source.match(/version:\s*'([^']+)'/)?.[1];
+  const majorMinor = packageVersion.split('.').slice(0, 2).join('.');
+  if (releaseVersion !== majorMinor) throw new Error(`RELEASE.version must match package.json major.minor ${majorMinor}.`);
+}
+
 function prepareRelease() {
   assertNoReleasePlaceholders();
   const dirty = execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], { encoding: 'utf8' });
@@ -41,6 +48,12 @@ function prepareRelease() {
   const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
   if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('package.json needs a semantic release version.');
   assertVersionSource(readFileSync('src/meta/tuning.ts', 'utf8'), version);
+  assertReleaseVersion(readFileSync('src/meta/release.ts', 'utf8'), version);
+  // Check the run-date runway and owner-supplied Road schedule before any mutation.
+  execFileSync('npm', ['run', 'runway'], {
+    stdio: 'inherit',
+    env: { ...process.env, RELEASE_CHECK: '1', RUNWAY_FROM: new Date().toISOString().slice(0, 10) },
+  });
 
   run('npm', ['ci']);
   run('npm', ['run', 'build']);

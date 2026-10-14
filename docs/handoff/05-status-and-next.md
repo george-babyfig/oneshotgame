@@ -1,4 +1,4 @@
-# 05: Status and next steps (as of 14 October 2026: 1.0 candidate polished, M13 (1.1) built; M14 in progress)
+# 05: Status and next steps (as of 14 October 2026: 1.0 candidate polished, M13 (1.1) and M14 (1.2) built; M15 next)
 
 ## Where things stand
 
@@ -77,7 +77,8 @@ The plan is **[docs/product/ROADMAP-v2.md](../product/ROADMAP-v2.md)**, with [HO
 | M11.5     | Homeworld Life: friends' days, lands and Landmarks (decision 25 default applied)      | L    | ✅ built                                                               |
 | M12       | Star Roads, the Styles catalogue and launch prep                                      | L    | ✅ built                                                               |
 | M13       | Friends and trips (update 1.1)                                                        | M    | ✅ built (`d40c967`; logs in `docs/handoff/m13-step0.md`, `m13-fx.md`) |
-| M14–M17   | Road 1 and live ops, content drop, Collector's Edition, Homeworld Horizons            | —    | M14 in progress (decisions 80-96)                                      |
+| M14       | Road 1 and the live-ops calendar (update 1.2)                                         | M    | ✅ built; Road 1 dormant until the owner sets its date                 |
+| M15–M17   | Content drop, Collector's Edition, Homeworld Horizons                                 | —    | M15 next                                                               |
 
 - **Difficulty, the headline principle:** in the owner's words, "we dont want it too hard at the beginning but also not too easy, as both will cause a user to lose interest". The difficulty program (FLIGHT.md, M8) now has a floor and a ceiling per chapter, with decision 28's "Kid-first" bands: M3's ladder moves were the first step.
 - **Owner decisions** 1–55 are in ROADMAP-v2 section 10. Decisions 1 and 28–32 are answered; 33 (Remix difficulty) and 34–55 (M10, M10.5, M11, M11.5, M12 and launch defaults) are open with defaults applied; the stated defaults apply to the rest unless the owner says otherwise. M11.5 still needs decision 25.

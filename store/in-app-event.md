@@ -1,13 +1,11 @@
-# Cosmic Road — In-App Event draft
+# In-App Events — owner drafts
 
-Draft for owner review. This is an App Store event for the play-earned Cosmic Road, with no paid-lane call to action or limited-time purchase claim.
+One event per new Road, badge **Special Event**, and no festival events (decision 93). Drafts are prepared here; only the owner creates, schedules or submits events in App Store Connect.
 
-- Event type: Special Event (confirm the available type in App Store Connect).
-- Reference name: Cosmic Road launch
-- Short name: Cosmic Road (11/30 characters)
-- Short description: Follow a new road through tiny worlds. (38/50 characters)
-- Long description: Explore the Cosmic Road at your pace. Earn Road points from new stars and Wishes, and pick looks for your journey. (114/120 characters)
-- Event art: capture the free Road lane with Hide paid looks on; show no price, Buy button, countdown, paid lane, or product claim.
-- Deep link: resolve to the shipped Road route and test cold and warm launch before scheduling.
-- Dates: owner selects after the release plan is final. Display plain dates, not urgency copy.
-- Localizations: native review of en-US, es-MX, fr-FR, de-DE, pt-BR and ja before submission.
+- [Road 1 draft](in-app-events/road01.md): six languages, measured 30/50/120-character copy, pending name/date and art capture.
+- Deep link: `cometgarden://road`, with cold `getLaunchUrl` and warm `appUrlOpen` delivery. Session 1 and unlocks are respected; gate and purchase flows stay intact.
+- Art shows the free Road with Hide paid looks on: no paid lane, price, Buy button or countdown.
+- Schedule only after the matching build is available. Events last at most 31 days and may be published at most 14 days early; a Road remains playable after its event ends.
+- Owner uses the [release train](../docs/qa/release-train.md) and approves native-reviewed copy/media before creating store objects.
+
+Limits checked 14 October 2026 against [Apple's App Store Connect help](https://developer.apple.com/help/app-store-connect/offer-in-app-events/offer-in-app-events/). Re-check at scheduling time.

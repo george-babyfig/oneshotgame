@@ -18,12 +18,12 @@ export interface Festival {
 
 /** One per month, January first. No weather themes, so both hemispheres fit. */
 export const FESTIVALS: Festival[] = [
-  { id: 'sparkle', name: 'New Year Sparkle', emoji: '🎉', acc: 'party', color: '#ffd84a' },
+  { id: 'sparkle', name: 'New Year Sparkle', emoji: '🎉', acc: 'sparklefan', color: '#ffd84a' },
   { id: 'friend', name: 'Friendship Fair', emoji: '💗', acc: 'heart', color: '#ff8fc8' },
   { id: 'sprout', name: 'Sprout Day', emoji: '🌱', acc: 'leaf', color: '#7fe07a' },
   { id: 'puddle', name: 'Puddle Parade', emoji: '☔', acc: 'rainhat', color: '#ffd24a' },
   { id: 'crown', name: 'Flower Crown Fest', emoji: '🌼', acc: 'wreath', color: '#ffb3e6' },
-  { id: 'splash', name: 'Sunny Splash', emoji: '😎', acc: 'shades', color: '#3fd0ff' },
+  { id: 'splash', name: 'Sunny Splash', emoji: '😎', acc: 'splashribbon', color: '#3fd0ff' },
   { id: 'picnic', name: 'Star Picnic', emoji: '⭐', acc: 'star', color: '#ffe066' },
   { id: 'lantern', name: 'Lantern Night', emoji: '🏮', acc: 'lantern', color: '#ff9a4a' },
   { id: 'acorn', name: 'Acorn Harvest', emoji: '🌰', acc: 'acorn', color: '#c98a4a' },

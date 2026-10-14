@@ -330,3 +330,66 @@ for (const loc of LOCALES) {
     });
   });
 }
+
+test('M14 Road 1 kid surfaces stay hidden before opening, then remain price-free after clock rollback', async ({ page }) => {
+  const guard = watchErrors(page);
+  await freshInstall(page);
+  await midGame(page, { level: 45 });
+  const names = await page.evaluate(async () => {
+    const { ROAD01 } = await (window as any).__e2eImport('/src/meta/content/road01.ts');
+    const { COSMETICS } = await (window as any).__e2eImport('/src/meta/cosmetics.ts');
+    const app = (window as any).__app;
+    ROAD01.road.opensOn = '2099-01-02';
+    app.p.roadSeenDay = '';
+    app.p.stylesNewSeen = 'm12';
+    app.p.meta.sessions = 2;
+    app.showHome(true);
+    return {
+      road: ROAD01.road.name,
+      products: ROAD01.products.map((x: any) => x.title),
+      looks: COSMETICS.filter(
+        (x: any) =>
+          [...ROAD01.looks, ...ROAD01.singles, ...ROAD01.stardust, ...ROAD01.samplers].some((r: any) => r.id === x.id) ||
+          x.productId === `com.pocketplanet.game.theme.${ROAD01.theme.id}`,
+      ).map((x: any) => x.name),
+    };
+  });
+  for (const screen of ['home', 'missions', 'styles', 'road']) {
+    await page.evaluate((name) => {
+      const app = (window as any).__app;
+      (
+        ({
+          home: () => app.showHome(true),
+          missions: () => app.showMissions(),
+          styles: () => app.showStyles(),
+          road: () => app.showRoad(),
+        }) as any
+      )[name]();
+    }, screen);
+    await settle(page);
+    await expect(page.locator('html')).not.toHaveClass(/styles-new/);
+    for (const name of [names.road, ...names.products, ...names.looks]) await expect(page.locator('.host')).not.toContainText(name);
+    expect(await page.locator('.host').innerText()).not.toMatch(CURRENCY);
+  }
+  await page.evaluate(async () => {
+    const { observeRoadDay } = await (window as any).__e2eImport('/src/meta/starroad.ts');
+    const app = (window as any).__app;
+    observeRoadDay(app.p, '2099-01-02');
+    observeRoadDay(app.p, '2099-01-01');
+    app.showMissions();
+  });
+  await expect(page.locator('html')).toHaveClass(/styles-new/);
+  await expect(page.locator('.host')).toContainText(names.road);
+  for (const screen of ['styles', 'road']) {
+    await page.evaluate((name) => {
+      const app = (window as any).__app;
+      if (name === 'styles') app.showStyles();
+      else app.showRoad();
+    }, screen);
+    await settle(page);
+    expect(await page.locator('.host').innerText()).not.toMatch(CURRENCY);
+    await expect(page.locator('.host .buy-real')).toHaveCount(0);
+    await expect(page.locator('.host .pass-cta')).toHaveCount(0);
+  }
+  expectNoErrors(guard);
+});

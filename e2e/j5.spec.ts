@@ -39,6 +39,74 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
   test.describe(`J5 ${loc}`, () => {
     test.use({ locale: BROWSER_LOCALE[loc], timezoneId: 'UTC' });
 
+    test('M14 Road Landmark on the Floating Isle builds, gifts and Passport', async ({ page }, info) => {
+      await useJourneyViewport(page);
+      await installJourneyClock(page, '2026-02-26T12:00:00.000Z');
+      const guard = watchErrors(page);
+      await freshInstall(page);
+      await midGame(page, { level: 121 });
+      // Inline (not imported): landmarks.ts pulls in tuning.ts/package.json, which Node's loader refuses.
+      const roadSite = { stage: 0, progress: [0, 0, 0, 0, 0, 0], rewarded: [], rounds: [], arrivals: [], planets: [] };
+      roadSite.progress[0] = 12;
+      await page.evaluate((roadSite) => {
+        const a = (window as any).__app;
+        // DEV-only scenario date; production remains dormant awaiting the owner.
+        (window as any).__e2eRoadOpening('2026-02-26');
+        a.p.home.level = 5;
+        a.p.home.firstHour = 2;
+        a.p.home.intro = true;
+        a.p.settings.reduceMotion = true;
+        for (const state of Object.values(a.p.home.landmarks) as any[]) state.stage = 4;
+        a.p.cometPier.stage = 4;
+        a.p.home.roadLandmarks.rl_road01 = roadSite;
+        a.selectTab('homeworld');
+      }, roadSite);
+      // Finishing the other Landmarks above queues their celebration; close it like a child would.
+      await dismissSheets(page);
+      await page.locator('.hw-road-landmarks summary').click();
+      const site = page.locator('.hw-road-landmarks button');
+      await expect(site).toHaveCount(1);
+      expect((await site.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      await site.click();
+      const sheet = page.locator(OPEN_MODAL).and(page.locator('.hw-road-landmark-sheet'));
+      await expect(sheet).toBeVisible();
+      await expect(sheet.getByRole('button', { name: tr(loc, 'Build'), exact: true })).toBeEnabled();
+      await snap(page, info, guard, 'j5-m14-road-landmark-ready');
+      await sheet.getByRole('button', { name: tr(loc, 'Build'), exact: true }).click();
+      expect((await state(page)).home.roadLandmarks.rl_road01.stage).toBe(1);
+      await expect(sheet.getByRole('button', { name: tr(loc, 'Build'), exact: true })).toBeDisabled();
+      await dismissSheets(page);
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        a.p.home.roadLandmarks.rl_road01.stage = 3;
+        a.p.mats.leaf = a.p.mats.dew = a.p.mats.stone = 20;
+        a.showHomeworld();
+      });
+      await dismissSheets(page);
+      await page.locator('.hw-road-landmarks summary').click();
+      await site.click();
+      await sheet.getByRole('button', { name: tr(loc, 'Build'), exact: true }).click();
+      const p = await state(page);
+      expect(p.home.roadLandmarks.rl_road01.stage).toBe(4);
+      expect(p.home.isleDecor).toEqual([null, null, null]);
+      expect(p.wardrobe).toContain('decor_sky_loom');
+      expect(p.wardrobe).toContain('title_sky_weaver');
+      await snap(page, info, guard, 'j5-m14-road-landmark-finished');
+      await expectKidSafe(page, loc);
+      await dismissSheets(page);
+      await page.evaluate(() => {
+        const a = (window as any).__app;
+        if (!a.p.wardrobe.includes('decor_sky_loom')) throw Error('earned decoration unavailable');
+        a.p.home.isleDecor[0] = 'decor_sky_loom';
+        a.p.passport.title = 'title_sky_weaver';
+        a.showPassport();
+      });
+      await expect(page.locator('.pp-stats').getByText(tr(loc, 'Road Landmarks'), { exact: true })).toHaveCount(1);
+      await expect(page.locator('.pp-stats').getByText(tr(loc, 'Road Landmarks'), { exact: true })).toBeVisible();
+      await snap(page, info, guard, 'j5-m14-road-landmark-passport');
+      await expectNoErrors(guard);
+    });
+
     test('M11.5 morning, night, winter and drizzle at an injected date', async ({ page }, info) => {
       test.skip(
         !['chromium-320x568', 'webkit-320x568'].includes(info.project.name),

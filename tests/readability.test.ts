@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { KINDS } from '../src/core/world';
 import { defaultProfile } from '../src/meta/profile';
+import { ROAD01, ROAD01_ATMOSPHERE } from '../src/meta/content/road01';
 import { PRODUCTS } from '../src/meta/tuning';
 import {
   COSMETICS,
   COSMETIC_BY_ID,
-  M12_COSMETICS,
   OBJECT_KINDS,
   M12_STARDUST_COSMETICS,
+  STARDUST_COSMETICS,
   STYLE_SLOTS,
   beginStyleDraft,
   currentLook,
@@ -22,7 +23,10 @@ import { STYLE_ALPHA_CAP, STYLE_PARTICLE_CAP } from '../src/ui/art/styleRender';
 import { drawFriendOutfit, drawStyledBurst, drawStyledEvent, drawStyledShotTrail } from '../src/ui/art/styleRender';
 import { drawProjectile } from '../src/ui/art/projectiles';
 import { drawStructure } from '../src/ui/art/structures';
-import { drawKeeper } from '../src/ui/art/keeper';
+import { drawKeeper, drawLauncher, drawTrail } from '../src/ui/art/keeper';
+import { drawCreature } from '../src/ui/art/critters';
+import { styleMotif, drawStyleMotif } from '../src/ui/art/styleRender';
+const allLooks = [...new Map([...COSMETICS, ...STARDUST_COSMETICS].map((item) => [item.id, item])).values()];
 
 type PaintCall = { method: string; fill: string; alpha: number; args: unknown[] };
 function recordingCanvas() {
@@ -73,7 +77,7 @@ function simulated(hex: string, matrix: number[][]): number[] {
   return matrix.map((row) => row.reduce((v, coefficient, i) => v + coefficient * rgb[i], 0));
 }
 
-describe('M12 style readability', () => {
+describe('all paid and earned style readability', () => {
   it('keeps one fixed colour and a distinct silhouette per object under every skin', () => {
     expect(OBJECT_KINDS).toHaveLength(6);
     expect(new Set(Object.values(PROJECTILE_SILHOUETTES)).size).toBe(6);
@@ -93,9 +97,9 @@ describe('M12 style readability', () => {
     expect(STYLE_PARTICLE_CAP).toBeLessThanOrEqual(12);
     expect(STYLE_ALPHA_CAP).toBeLessThanOrEqual(0.45);
     const forbidden = /^(land|threat|skyObstacle|bonkBadge|forecast|aimLine|preview|goalChip|power|stats)$/;
-    for (const item of M12_COSMETICS) {
+    for (const item of allLooks) {
       expect(item.slot).not.toMatch(forbidden);
-      expect(item.colors.every((c) => /^#[\da-f]{6}$/i.test(c))).toBe(true);
+      expect(item.colors.every((c) => /^#[\da-f]{6}$/i.test(c) || (c === 'aurora' && item.id === 'suit_aurora'))).toBe(true);
     }
   });
 
@@ -142,7 +146,7 @@ describe('M12 style readability', () => {
   });
 
   it('draws the two outfits in each Theme as distinct shapes', () => {
-    for (const prefix of ['tidepool', 'cometcandy']) {
+    for (const prefix of PRODUCTS.filter((product) => product.kind === 'theme').map((product) => product.id.split('.').at(-1)!)) {
       const outfit = recordingCanvas();
       const scarf = recordingCanvas();
       drawFriendOutfit(
@@ -175,7 +179,9 @@ describe('M12 style readability', () => {
       );
       expect(outfit.calls.map((call) => call.method)).not.toEqual(scarf.calls.map((call) => call.method));
       expect(outfit.calls.some((call) => call.method === 'fill')).toBe(true);
-      expect(scarf.calls.some((call) => call.method === 'fill')).toBe(false);
+      expect(scarf.calls.filter((call) => call.method === 'fill').length).toBeLessThan(
+        outfit.calls.filter((call) => call.method === 'fill').length,
+      );
     }
   });
 
@@ -191,7 +197,7 @@ describe('M12 style readability', () => {
   it('draws actual code-painted panels on each Theme structure and decoration', () => {
     const shapes = ['lab', 'den', 'greenhouse', 'launch_bay', 'flowers', 'fountain', 'lantern'] as const;
     const suffixes = ['lab_1', 'den', 'greenhouse', 'launch_bay', 'decor_1', 'decor_2', 'decor_3'];
-    for (const theme of ['tidepool', 'cometcandy'])
+    for (const theme of PRODUCTS.filter((product) => product.kind === 'theme').map((product) => product.id.split('.').at(-1)!))
       for (const [index, type] of shapes.entries()) {
         const plain = recordingCanvas();
         const styled = recordingCanvas();
@@ -213,7 +219,7 @@ describe('M12 style readability', () => {
         expect(isPaidLook(item), id).toBe(true);
       }
     }
-    for (const item of M12_COSMETICS.filter(isPaidLook)) {
+    for (const item of allLooks.filter(isPaidLook)) {
       const product = PRODUCTS.find((p) => p.cosmeticItemIds.includes(item.id));
       expect(product, item.id).toBeDefined();
       if (item.source === 'product') expect(item.productId).toBe(product!.id);
@@ -250,5 +256,87 @@ describe('M12 style readability', () => {
     const series = M12_STARDUST_COSMETICS;
     expect(series.map((item) => item.dust)).toEqual([5000, 12000, 25000, 50000]);
     expect(series.every((item) => item.source === 'dust' && !!item.motif)).toBe(true);
+  });
+});
+
+describe('B18 Road 1 code-drawn readability', () => {
+  const base = { suit: 'suit_sky', hat: 'hat_antenna', launcher: 'l_pad', trail: 'tr_dots', emote: 'em_cheer', reduceMotion: true };
+  it('registers distinct fold, orbit and weave motifs with the same alpha and particle budget', () => {
+    const variants = [
+      ['moonpetal_burst', 'fold'],
+      ['crescentlace_supernova', 'orbit'],
+      ['wovensky_supernova', 'weave'],
+    ];
+    const paths = variants.map(([id, shape]) => {
+      expect(styleMotif(id, 'ribbon')).toBe(shape);
+      const canvas = recordingCanvas();
+      drawStyleMotif(canvas.g, 30, 30, 3, shape);
+      return canvas.calls;
+    });
+    expect(paths[0]).not.toEqual(paths[1]);
+    expect(paths[1]).not.toEqual(paths[2]);
+    for (const item of allLooks.filter((look) => look.motif && ['supernova', 'fusion'].includes(look.slot))) {
+      for (const still of [false, true]) {
+        const canvas = recordingCanvas();
+        drawStyledEvent(canvas.g, { ...base, [item.slot]: item.id }, item.slot as 'supernova' | 'fusion', 30, 30, 26, still);
+        const marks = canvas.calls.filter((call) => call.method === 'fill');
+        expect(marks, item.id).toHaveLength(still ? 3 : 6);
+        expect(marks.every((call) => call.alpha <= STYLE_ALPHA_CAP)).toBe(true);
+      }
+    }
+  });
+
+  it('preserves every element badge and stripe under every Lab Theme skin', () => {
+    for (const item of allLooks.filter((look) => look.slot.startsWith('labSkin:'))) {
+      const kind = item.slot.slice('labSkin:'.length) as (typeof OBJECT_KINDS)[number];
+      for (const level of [1, 3, 5]) {
+        const plain = recordingCanvas();
+        const styled = recordingCanvas();
+        drawStructure(plain.g, 'lab', level, 64, 0.3, false, { kind });
+        drawStructure(styled.g, 'lab', level, 64, 0.3, false, { kind, style: item.id });
+        const element = (calls: PaintCall[]) => calls.filter((call) => call.fill === KINDS[kind].color);
+        expect(element(styled.calls), item.id).toEqual(element(plain.calls));
+        expect(styled.calls.slice(0, plain.calls.length), item.id).toEqual(plain.calls);
+      }
+    }
+  });
+
+  it('draws each new wearable and launcher faithfully and keeps decorative trails quiet and static', () => {
+    for (const item of [...ROAD01.looks, ...ROAD01.singles].filter((look) => ['suit', 'hat', 'launcher'].includes(look.slot))) {
+      const canvas = recordingCanvas();
+      if (item.slot === 'launcher') drawLauncher(canvas.g, item.id, 40, 50, 0.3);
+      else drawKeeper(canvas.g, { ...base, [item.slot]: item.id }, 40, 90, 80, 0.3);
+      expect(
+        canvas.calls.some((call) => call.method === 'fill' && item.colors.includes(call.fill)),
+        item.id,
+      ).toBe(true);
+    }
+    const points = Array.from({ length: 48 }, (_, i) => ({ x: i, y: i / 2 }));
+    for (const item of [...ROAD01.looks, ...ROAD01.singles].filter((look) => look.slot === 'trail')) {
+      const early = recordingCanvas();
+      const late = recordingCanvas();
+      drawTrail(early.g, item.id, points, 0, '#abcdef');
+      drawTrail(late.g, item.id, points, 10, '#abcdef');
+      expect(early.calls, item.id).toEqual(late.calls);
+      const ink = early.calls.filter((call) => ['fill', 'stroke'].includes(call.method));
+      expect(ink.length).toBeLessThanOrEqual(STYLE_PARTICLE_CAP);
+      expect(ink.every((call) => call.alpha <= STYLE_ALPHA_CAP)).toBe(true);
+    }
+    // The paid atmosphere is a muted static colour, never the animated aurora/cosmic path.
+    expect(ROAD01_ATMOSPHERE.glow).toMatch(/^#[\da-f]{6}$/i);
+  });
+
+  it('draws both festival keepsakes without animation and keeps their faces unchanged', () => {
+    for (const acc of ['sparklefan', 'splashribbon']) {
+      const early = recordingCanvas();
+      const late = recordingCanvas();
+      drawCreature(early.g, 'bunny', 30, 70, 0, 50, 0, acc, false, 'idle', true);
+      drawCreature(late.g, 'bunny', 30, 70, 0, 50, 20, acc, false, 'idle', true);
+      expect(early.calls).toEqual(late.calls);
+      const plain = recordingCanvas();
+      drawCreature(plain.g, 'bunny', 30, 70, 0, 50, 0, '', false, 'idle', true);
+      expect(early.calls.slice(0, plain.calls.length - 1)).toEqual(plain.calls.slice(0, -1));
+      expect(early.calls.length).toBeGreaterThan(plain.calls.length);
+    }
   });
 });

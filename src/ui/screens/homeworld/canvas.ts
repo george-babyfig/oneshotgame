@@ -1,3 +1,14 @@
+import {
+  ROAD_LANDMARKS,
+  roadLandmarkOpen,
+  roadLandmarkState,
+  roadLandmarkName,
+  roadLandmarkDecorationName,
+  roadLandmarkTitleName,
+  roadLandmarkCompletedStage,
+} from '../../../meta/roadLandmarks';
+import { drawRoadLandmark, roadLandmarkPlacement } from '../../art/landmarks';
+import { roadLandmarkSheet } from './sheets';
 import { landsSection } from '../../../meta/reveals';
 import { HOMEWORLD_MAX_LEVEL } from '../../../meta/tuning';
 import { h, btn, modal, toast } from '../../dom';
@@ -544,6 +555,11 @@ export function showHomeworld(app: App) {
     if (landmarkState(p, 'sky_bridge').stage === 4) {
       const size = Math.min(74, R * 0.8);
       const anchors = drawFloatingIsle(g, geo.cx + R * 1.24, geo.cy - R * 0.7, size);
+      const roadSite = ROAD_LANDMARKS.find((site) => roadLandmarkOpen(p, site.id));
+      if (roadSite) {
+        const place = roadLandmarkPlacement(geo.cx + R * 1.24, geo.cy - R * 0.7, size);
+        drawRoadLandmark(g, roadLandmarkState(p, roadSite.id).stage, place.x, place.y, place.size);
+      }
       anchors.forEach(([x, y], spot) => {
         const id = home.isleDecor[spot];
         if (id) drawIsleDecoration(g, id, x, y, size * 0.52);
@@ -812,12 +828,25 @@ export function showHomeworld(app: App) {
           bestDistance = distance;
         }
       }
-      // Nearest-anchor regions cover the body, and each extends at least 22 pt outside it.
-      if (bestDistance <= ISLE_TARGET || (Math.abs(x - ix) <= isleSize * 0.55 && Math.abs(y - iy) <= isleSize * 0.42)) {
+      const site = roadLandmarkPlacement(ix, iy, isleSize);
+      const siteHit =
+        ROAD_LANDMARKS.some((site) => roadLandmarkOpen(p, site.id)) &&
+        Math.abs(x - site.x) <= Math.max(ISLE_TARGET, site.size / 2) &&
+        Math.abs(y - site.y) <= Math.max(ISLE_TARGET, site.size / 2);
+      // The site and anchor regions share one sheet, with at least a 44 pt target.
+      if (siteHit || bestDistance <= ISLE_TARGET || (Math.abs(x - ix) <= isleSize * 0.55 && Math.abs(y - iy) <= isleSize * 0.42)) {
         // The anchors are too close for three separate 44 pt targets on the canvas.
         // One large Isle target opens rows that each have a full 44 pt target.
         const chooser = modal([
           h('div', { class: 'm-title' }, t('Floating Isle')),
+          ...ROAD_LANDMARKS.filter((site) => roadLandmarkOpen(p, site.id)).map((site) => {
+            const button = btn(roadLandmarkName(), 'ghost wide', () => {
+              chooser.close();
+              roadLandmarkSheet(app, site.id, renderPanel);
+            });
+            button.style.minHeight = '44px';
+            return button;
+          }),
           ...ISLE_SPOTS.map((_, spot) => {
             const choice = btn(t('Isle spot {n}', { n: spot + 1 }), 'ghost wide', () => {
               chooser.close();
@@ -973,9 +1002,16 @@ export function showHomeworld(app: App) {
     const cards = ids.map((id) => {
       const friend = /^friend:([^:]+):level:(\d)$/.exec(id);
       const site = LANDMARKS.find((item) => id.startsWith(`${item.id}:stage:`));
-      const stage = site ? Number(id.slice(id.lastIndexOf(':') + 1)) : 0;
+      const roadSite = ROAD_LANDMARKS.find((item) => id.startsWith(`${item.id}:stage:`));
+      const stage = site || roadSite ? Number(id.slice(id.lastIndexOf(':') + 1)) : 0;
       const level = friend ? Number(friend[2]) : 0;
-      const title = friend ? t('Friendship Level {n}!', { n: level }) : site ? t(site.name) : t('Homeworld celebration');
+      const title = friend
+        ? t('Friendship Level {n}!', { n: level })
+        : site
+          ? t(site.name)
+          : roadSite
+            ? roadLandmarkName()
+            : t('Homeworld celebration');
       const gift =
         level === 2
           ? t('Your friend earned the Bow!')
@@ -994,11 +1030,19 @@ export function showHomeworld(app: App) {
           null,
           friend
             ? gift
-            : site && stage === 4
-              ? t('{name} is finished! {gift}', { name: t(site.name), gift: t(site.finish) })
-              : site
-                ? t('Stage {n} is complete!', { n: stage })
-                : t('Something lovely grew on your Homeworld!'),
+            : roadSite && stage === 4
+              ? t('{landmark} is complete. Your {decoration} and {title} are ready.', {
+                  landmark: roadLandmarkName(),
+                  decoration: roadLandmarkDecorationName(),
+                  title: roadLandmarkTitleName(),
+                })
+              : roadSite
+                ? roadLandmarkCompletedStage(stage)
+                : site && stage === 4
+                  ? t('{name} is finished! {gift}', { name: t(site.name), gift: t(site.finish) })
+                  : site
+                    ? t('Stage {n} is complete!', { n: stage })
+                    : t('Something lovely grew on your Homeworld!'),
         ),
       );
     });

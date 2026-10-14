@@ -590,3 +590,43 @@ it('concurrent launch status checks rotate a cloned identity only once', async (
   expect(JSON.parse(rotations[0][1]).on).toBe(false);
   expect(storeCalls()).toBe(0);
 });
+
+it.each(['revoked', 'different-store-account'] as const)('restoring never imports Road 1 paid looks from a %s backup', async (mode) => {
+  const { ROAD01 } = await import('../src/meta/content/road01');
+  const product = ROAD01.products.find((product) => product.kind === 'road_pass')!;
+  const saved = profile.defaultProfile(0);
+  saved.skins.push('moonpetal');
+  saved.skin = 'moonpetal';
+  saved.wardrobe.push('moonpetal_launcher', 'moonpetal_banner');
+  saved.roadPassEntitlements.push('road01');
+  saved.meta.productEntitlements = [product.id];
+  saved.roadRecords.road01 = { ...saved.roadRecords.road00, claimedPaidTierIds: ROAD01.road.tiers.map((tier) => tier.id) };
+  if (mode === 'revoked') {
+    p.meta.revokedProducts = { [product.id]: Date.now() - 1000 };
+    p.meta.refundQuietUntil = Date.now() + 6 * 86400000;
+  }
+  await backup.setBackupOn(true);
+  expect(await backup.restoreBackup(put(saved))).toBe('ok');
+  expect(p.skins).not.toContain('moonpetal');
+  expect(p.skin).toBe('classic');
+  expect(p.roadPassEntitlements).not.toContain('road01');
+  expect(p.wardrobe).not.toContain('moonpetal_launcher');
+  expect(p.wardrobe).not.toContain('moonpetal_banner');
+  if (mode === 'revoked') expect(p.meta.revokedProducts).toHaveProperty(product.id);
+});
+
+it('restoring re-derives reached Road 1 looks when this device still owns its Pass', async () => {
+  const { ROAD01 } = await import('../src/meta/content/road01');
+  const product = ROAD01.products.find((product) => product.kind === 'road_pass')!;
+  const saved = profile.defaultProfile(0);
+  saved.roadRecords.road01 = { ...saved.roadRecords.road00, points: 200, claimedPaidTierIds: ROAD01.road.tiers.map((tier) => tier.id) };
+  saved.skins.push('moonpetal');
+  saved.skin = 'moonpetal';
+  p.roadPassEntitlements = ['road01'];
+  p.meta.productEntitlements = [product.id];
+  await backup.setBackupOn(true);
+  expect(await backup.restoreBackup(put(saved))).toBe('ok');
+  expect(p.skins).toContain('moonpetal');
+  expect(p.skin).toBe('moonpetal');
+  expect(p.wardrobe).toContain('moonpetal_banner');
+});

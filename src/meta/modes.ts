@@ -1,4 +1,5 @@
 import { DAILY_REWARD, RUSH_REWARD, CHALLENGE_REWARD } from './tuning';
+import { calendarSalt } from './almanac';
 import { earn } from './wallet';
 // Level builders and scoring for the extra modes: Daily Planet, Meteor Rush,
 // Zen Garden and Challenge a Friend. All seeded, so no server is needed.
@@ -32,7 +33,8 @@ export function dailyNumber(day: string) {
 }
 
 export function dailyLevel(day: string, taught = 16): LevelDef {
-  const L = makeLevel(16, `DAY-${day}`, { rules: rulesForLevel(Math.min(16, taught)) });
+  const salt = calendarSalt(day);
+  const L = makeLevel(16, `DAY-${day}`, { rules: rulesForLevel(Math.min(16, taught)), ...(salt ? { salt } : {}) });
   const available = (Object.keys(TROUBLES) as TroubleId[]).filter((id) => TROUBLES[id].debut <= taught);
   if (L.troubles.length && available.length) {
     const first = Math.floor(rngFrom(`DAY-${day}-weather`)() * available.length);

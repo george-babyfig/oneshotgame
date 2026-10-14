@@ -1,3 +1,5 @@
+import { ROAD01 } from '../../meta/content/road01';
+import { RELEASE } from '../../meta/release';
 import {
   backupStatus,
   setBackupOn,
@@ -175,14 +177,12 @@ function renderGrownups(app: App) {
     }
   });
   const sections = [
-    p.chapters.length && Date.now() >= quietUntil
+    p.level >= 5 && p.meta.sessions > 1 && p.chapters.length && Date.now() >= quietUntil
       ? h(
           'section',
           { class: 'grownups-section' },
-          h('h2', null, t("What's new")),
-          ...PRODUCTS.filter((x) => !x.consumable)
-            .slice(-3)
-            .map((x) => h('p', null, t(x.title))),
+          h('h2', null, t("What's new in {version}", { version: RELEASE.version })),
+          ...ROAD01.products.map((x) => h('p', null, t(x.title))),
         )
       : null,
     shopSection(app),

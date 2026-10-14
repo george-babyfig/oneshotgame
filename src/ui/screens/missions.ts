@@ -5,22 +5,18 @@ import { inboxOpen } from '../../meta/reveals';
 import { unlocked } from '../../meta/unlocks';
 import { stylesAccess } from '../../meta/stylesAccess';
 import { chestsReady } from '../../meta/progression';
-import { currentRoad, roadReady } from '../../meta/starroad';
+import { currentRoad, anyRoadReady } from '../../meta/starroad';
 import { today } from '../../meta/profile';
 import { canStamp } from '../../meta/calendar';
 import { letterOf } from '../../meta/inbox';
 import { wishesPanel } from '../flows/wishes';
 import { festivalReady } from '../../meta/festivals';
-import { STYLES_RELEASE } from '../../meta/cosmetics';
+import { stylesNewDot } from '../../meta/cosmetics';
 import { menuParticles } from '../motion';
-import { refundQuietUntil } from '../../meta/economy';
 
 export function showMissions(app: App) {
   const p = app.p;
-  document.documentElement.classList.toggle(
-    'styles-new',
-    stylesAccess(p) && p.stylesNewSeen !== STYLES_RELEASE && refundQuietUntil(p) <= Date.now(),
-  );
+  document.documentElement.classList.toggle('styles-new', stylesAccess(p) && stylesNewDot(p, today()));
   const open = unlocked(p, 'quests');
   const entry = (label: string, ready: number, action: () => void, enabled = true, reason = '') => {
     const button = btn(
@@ -43,9 +39,7 @@ export function showMissions(app: App) {
         'div',
         { class: 'scroll' },
         open ? wishesPanel(app) : h('p', { class: 'locked-note' }, t('Opens at planet {n}', { n: 12 })),
-        open && unlocked(p, 'star_road')
-          ? entry(t(currentRoad(p).name), roadReady(p, currentRoad(p).id).length, () => app.showRoad())
-          : null,
+        open && unlocked(p, 'star_road') ? entry(t(currentRoad(p).name), Number(anyRoadReady(p)), () => app.showRoad()) : null,
         open && chestsReady(p).length ? entry(t('Star Map'), chestsReady(p).length, () => app.showStarMap()) : null,
         open && unlocked(p, 'star_calendar')
           ? entry(

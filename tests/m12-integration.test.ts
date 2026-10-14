@@ -38,7 +38,6 @@ describe('M12 integration', () => {
     p.roadRecords.road00.points = p.roadPoints = 50;
     const pass = PRODUCT_BY_KEY.pass;
     expect(grantProduct(p, pass.id, 'pass-tx')).not.toBeNull();
-    expect(grantRoadPass(p)).toHaveLength(5);
     expect(grantRoadPass(p)).toHaveLength(0);
     expect(p.roadRecords.road00.claimedPaidTierIds).toEqual(STAR_ROAD.slice(0, 5).map((tier) => tier.id));
     expect(owns(p, 'frame_starfield')).toBe(true);

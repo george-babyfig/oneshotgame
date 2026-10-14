@@ -1,3 +1,17 @@
+import {
+  ROAD_LANDMARKS,
+  roadLandmarkOpen,
+  roadLandmarkState,
+  roadLandmarkReady,
+  buildRoadLandmarkStage,
+  roadLandmarkName,
+  roadLandmarkDecorationName,
+  roadLandmarkTitleName,
+  roadLandmarkAsk,
+  roadLandmarkRouteLabel,
+} from '../../../meta/roadLandmarks';
+import type { RoadLandmarkId } from '../../../meta/m14types';
+import { drawRoadLandmark } from '../../art/landmarks';
 import type { Profile } from '../../../meta/profile';
 import { tripVisible, launchBayBuildable, dyeTab, landsSection } from '../../../meta/reveals';
 import { structIcon } from './panel';
@@ -58,7 +72,7 @@ import { SEASON_EMOJI, SEASON_NAMES, seasonOf } from '../../../meta/seasons';
 import { drawSeason } from '../../art/seasons';
 import { passportName } from '../../../meta/passport';
 import { getLang, planetName, t, tp } from '../../../i18n';
-import { clearStyleSlot, COSMETICS, equip, owns, previewLook } from '../../../meta/cosmetics';
+import { visibleCosmetics, clearStyleSlot, equip, owns, previewLook } from '../../../meta/cosmetics';
 import { homeworldStyleColors } from '../../art/styleRender';
 import { whenText } from '../../../meta/dates';
 import { canvasDpr } from '../../devcapture';
@@ -268,6 +282,7 @@ export function landSheet(app: App, gap: number, after: () => void) {
 
 export function isleDecorationName(id: string | null): string {
   if (!id) return t('Empty spot');
+  if (id === 'decor_sky_loom') return roadLandmarkDecorationName();
   if (id.startsWith('keepsake:')) {
     const species = SPECIES_BY_ID[id.slice('keepsake:'.length)];
     return t('Keepsake from {name}', { name: species ? t(species.name) : id });
@@ -382,6 +397,12 @@ export function homeworldListSheet(app: App, onPlot: (index: number) => void, af
       ...(landmarkState(p, 'sky_bridge').stage === 4
         ? [
             h('div', { class: 'sec-title' }, t('Floating Isle')),
+            ...ROAD_LANDMARKS.filter((site) => roadLandmarkOpen(p, site.id)).map((site) =>
+              btn(roadLandmarkName(), 'ghost wide', () => {
+                m.close();
+                roadLandmarkSheet(app, site.id, after);
+              }),
+            ),
             ...p.home.isleDecor.map((id, spot) =>
               btn(t('Isle spot {n}: {name}', { n: spot + 1, name: isleDecorationName(id) }), 'ghost wide', () => {
                 m.close();
@@ -1148,25 +1169,27 @@ export function paintSheet(app: App) {
           h('b', null, owned ? (on ? '✓' : '') : `💎${x.gems}`),
         );
       }),
-      ...COSMETICS.filter((x) => x.slot === channel && owns(p, x.id) && !p.settings.hidePaidLooks).map((x) =>
-        h(
-          'button',
-          {
-            class: `paint${previewLook(p)[channel] === x.id ? ' on' : ''}`,
-            onclick: () => {
-              equip(p, x.id);
-              sfx.click();
-              haptic.light();
-              app.save();
-              m.close();
-              paintSheet(app);
+      ...visibleCosmetics(p, channel)
+        .filter((x) => owns(p, x.id))
+        .map((x) =>
+          h(
+            'button',
+            {
+              class: `paint${previewLook(p)[channel] === x.id ? ' on' : ''}`,
+              onclick: () => {
+                equip(p, x.id);
+                sfx.click();
+                haptic.light();
+                app.save();
+                m.close();
+                paintSheet(app);
+              },
             },
-          },
-          h('i', { style: `background:${x.colors[0]}` }),
-          h('small', null, t(x.name)),
-          h('b', null, previewLook(p)[channel] === x.id ? '✓' : ''),
+            h('i', { style: `background:${x.colors[0]}` }),
+            h('small', null, t(x.name)),
+            h('b', null, previewLook(p)[channel] === x.id ? '✓' : ''),
+          ),
         ),
-      ),
     );
   const m = modal([
     h('div', { class: 'm-title' }, t('Paint your Homeworld')),
@@ -1386,4 +1409,87 @@ function accSheet(app: App, species: string, back: () => void) {
     // An explicit way out for VoiceOver users, who cannot tap the scrim (J2).
     btn(t('Back'), 'ghost wide', () => m.close()),
   ]);
+}
+
+/** Isle build rows share the 44 px sheet controls and never contain a purchase path. */
+export function roadLandmarkSheet(app: App, id: RoadLandmarkId, after: () => void) {
+  const p = app.p;
+  const site = ROAD_LANDMARKS.find((site) => site.id === id);
+  if (!site || !roadLandmarkOpen(p, id)) return;
+  const state = roadLandmarkState(p, id);
+  const stage = state.stage;
+  const picture = document.createElement('canvas');
+  const dpr = canvasDpr();
+  picture.width = Math.round(112 * dpr);
+  picture.height = Math.round(100 * dpr);
+  picture.style.cssText = 'width:112px;height:100px';
+  const g = picture.getContext('2d')!;
+  g.scale(dpr, dpr);
+  drawRoadLandmark(g, stage, 56, 53, 88);
+  const routes =
+    stage < 3
+      ? site.stages[stage as 0 | 1 | 2].routes.map((route, lane) =>
+          h(
+            'p',
+            { class: 'hw-landmark-route' },
+            t('{name}: {done}/{total}', {
+              name: roadLandmarkRouteLabel(stage, lane),
+              done: Math.min(route.target, state.progress[stage * 2 + lane] ?? 0),
+              total: route.target,
+            }),
+          ),
+        )
+      : stage === 3
+        ? Object.entries(site.delivery).map(([mat, count]) =>
+            h(
+              'p',
+              { class: 'hw-landmark-route' },
+              t('{name}: {have}/{need}', {
+                name: t(ESSENCE_NAME[mat as keyof typeof ESSENCE_NAME]),
+                have: p.mats[mat as keyof typeof p.mats] ?? 0,
+                need: count,
+              }),
+            ),
+          )
+        : [];
+  const ready = roadLandmarkReady(p, id);
+  const build = btn(t('Build'), ready ? 'primary wide' : 'ghost wide dim', () => {
+    if (!buildRoadLandmarkStage(p, id)) return;
+    app.save();
+    sfx.levelUp();
+    burst(build, 'bright');
+    m.close();
+    after();
+    roadLandmarkSheet(app, id, after);
+  });
+  build.style.minHeight = '44px';
+  build.disabled = !ready;
+  build.setAttribute('aria-disabled', String(!ready));
+  const m = modal(
+    [
+      h('div', { class: 'm-title' }, roadLandmarkName()),
+      btn(t('Back'), 'ghost wide hw-sheet-back', () => m.close()),
+      h('div', { class: 'hw-landmark-picture', 'aria-hidden': 'true' }, picture),
+      h('p', null, landmarkStageLabel(stage)),
+      stage < 4
+        ? h('p', null, roadLandmarkAsk(stage))
+        : h(
+            'p',
+            null,
+            t('{landmark} is complete. Your {decoration} and {title} are ready.', {
+              landmark: roadLandmarkName(),
+              decoration: roadLandmarkDecorationName(),
+              title: roadLandmarkTitleName(),
+            }),
+          ),
+      ...routes,
+      h(
+        'p',
+        { class: 'muted' },
+        t('You can build {landmark} on the Floating Isle. Its steps stay open.', { landmark: roadLandmarkName() }),
+      ),
+      stage < 4 ? build : null,
+    ],
+    { cls: 'hw-landmark-sheet hw-road-landmark-sheet' },
+  );
 }

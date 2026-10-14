@@ -25,6 +25,7 @@ import { readFileSync } from 'node:fs';
 const roadOne: RoadDefinition = {
   id: 'road01',
   name: 'Second Road',
+  addedIn: '1.2',
   opensOn: '2026-01-02',
   tiers: [{ id: 'road01:tier00', stars: 5, reward: { gems: 5 }, pass: { item: 'l_orbit' } }],
 };
@@ -34,7 +35,7 @@ describe('Star Roads', () => {
     expect(COSMIC_ROAD_ID).toBe('road00');
     expect(STAR_ROAD.map((tier) => tier.id)).toEqual(STAR_ROAD.map((_, i) => `road00:tier${String(i).padStart(2, '0')}`));
     expect(STAR_ROAD.map((tier) => tier.stars)).toEqual(Array.from({ length: 20 }, (_, i) => (i + 1) * 10));
-    expect(FREE_ROAD_GEMS).toBe(150);
+    expect(FREE_ROAD_GEMS.road00).toBe(150);
     expect(STAR_ROAD.reduce((n, tier) => n + Number(!!tier.pass.item) + Number(!!tier.pass.skin), 0)).toBe(12);
     expect(ROAD_PACING.regularDays).toBeGreaterThanOrEqual(42);
     expect(ROAD_PACING.regularDays).toBeLessThanOrEqual(56);
@@ -74,28 +75,57 @@ describe('Star Roads', () => {
 
   it('uses the Road close date for every child, with no personal Road 0 catch-up window', () => {
     expect(roadCloseOn('road00')).toBeUndefined();
-    expect(roadCloseOn('road00', [...ROAD_CATALOG, roadOne])).toBe('2026-01-01');
+    expect(roadCloseOn('road00', [ROAD_CATALOG[0], roadOne])).toBe('2026-01-01');
     const p = defaultProfile(0);
     grantProfileRoadPoints(p, { source: 'daily', date: '2026-09-01', earningKey: 'one', delta: 3 });
     expect(p.roadRecords.road00.plannedEndOn).toBeUndefined();
     expect(roadCap(p.roadRecords.road00, '2026-11-01')).toBe(4);
   });
 
-  it('waits for installed content, then fills the oldest unfinished Past Road before the current one', () => {
+  it('shares the 2nd and 4th daily points with a started Past Road across batched events', () => {
     const p = defaultProfile(0);
-    p.roadRecords.road00.points = 199;
-    p.roadPoints = 199;
-    expect(currentRoad(p, '2027-01-01').id).toBe('road00');
-    expect(pastRoads(p, '2027-01-01')).toEqual([]);
-    const catalog = [...ROAD_CATALOG, roadOne];
+    p.roadRecords.road00.points = p.roadPoints = 150;
+    const catalog = [ROAD_CATALOG[0], { ...roadOne, tiers: [{ ...roadOne.tiers[0], stars: 200 }] }];
+    expect(currentRoad(p, '2026-01-01', catalog).id).toBe('road00');
     expect(currentRoad(p, '2026-01-03', catalog).id).toBe('road01');
     expect(pastRoads(p, '2026-01-03', catalog).map((road) => road.id)).toEqual(['road00']);
-    const event = { source: 'daily' as const, date: '2026-01-03', earningKey: 'daily:2026-01-03:star:1', delta: 3 };
+    const event = { source: 'daily' as const, date: '2026-01-03', earningKey: 'daily:one', delta: 3 };
     expect(grantProfileRoadPoints(p, event, catalog)).toBe(3);
-    expect(p.roadRecords.road00.points).toBe(200);
+    expect(p.roadRecords.road00.points).toBe(151);
     expect(p.roadRecords.road01.points).toBe(2);
     expect(grantProfileRoadPoints(p, event, catalog)).toBe(0);
-    expect(p.roadDay.earned).toBe(3);
+    expect(grantProfileRoadPoints(p, { ...event, source: 'wish', earningKey: 'wish:one', delta: 1 }, catalog)).toBe(1);
+    expect(p.roadRecords.road00.points).toBe(152);
+    expect(p.roadRecords.road01.points).toBe(2);
+    expect(p.roadDay.earned).toBe(4);
+    expect(grantProfileRoadPoints(p, { ...event, earningKey: 'full' }, catalog)).toBe(0);
+    expect(grantProfileRoadPoints(p, { ...event, date: '2026-01-04', earningKey: 'next' }, catalog)).toBe(3);
+    expect(p.roadRecords.road00.points).toBe(153);
+    expect(p.roadRecords.road01.points).toBe(4);
+    expect(p.roadRecords.road00.creditedEarningKeys).toEqual([]);
+    expect(p.roadRecords.road01.creditedEarningKeys).toEqual([]);
+  });
+
+  it('gives an unstarted Past Road only overflow once the current Road fills', () => {
+    const p = defaultProfile(0);
+    const catalog = [ROAD_CATALOG[0], roadOne];
+    const event = { source: 'campaign' as const, date: '2026-01-03', earningKey: 'one', delta: 3 };
+    expect(grantProfileRoadPoints(p, event, catalog)).toBe(3);
+    expect(p.roadPoints).toBe(0);
+    expect(p.roadRecords.road01.points).toBe(3);
+    expect(grantProfileRoadPoints(p, { ...event, date: '2026-01-04', earningKey: 'two' }, catalog)).toBe(3);
+    expect(p.roadRecords.road01.points).toBe(5);
+    expect(p.roadPoints).toBe(1);
+  });
+
+  it('redirects a sharing point when the started Past Road finishes', () => {
+    const p = defaultProfile(0);
+    p.roadRecords.road00.points = p.roadPoints = 199;
+    const catalog = [ROAD_CATALOG[0], roadOne];
+    grantProfileRoadPoints(p, { source: 'daily', date: '2026-01-03', earningKey: 'one', delta: 3 }, catalog);
+    grantProfileRoadPoints(p, { source: 'wish', date: '2026-01-03', earningKey: 'wish', delta: 1 }, catalog);
+    expect(p.roadPoints).toBe(200);
+    expect(p.roadRecords.road01.points).toBe(3);
   });
 
   it('gives one point per keyed Wish under the shared daily cap', () => {
@@ -150,7 +180,7 @@ describe('Star Roads', () => {
     const p = defaultProfile(0);
     p.roadRecords.road01 = newRoadState();
     p.roadRecords.road01.points = 5;
-    expect(grantRoadPass(p, 'road01', [...ROAD_CATALOG, roadOne])).toEqual([roadOne.tiers[0].pass]);
+    expect(grantRoadPass(p, 'road01', [ROAD_CATALOG[0], roadOne])).toEqual([roadOne.tiers[0].pass]);
     expect(p.pass).toBe(false);
     expect(roadHasPass(p, 'road01')).toBe(true);
     expect(roadHasPass(p, COSMIC_ROAD_ID)).toBe(false);

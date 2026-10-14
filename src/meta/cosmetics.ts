@@ -6,7 +6,10 @@ import { spend } from './wallet';
 // Ownership is derived from progress wherever possible, so unlocks are
 // retroactive and never need a save migration.
 import type { Profile } from './profile';
-import { STAR_ROAD } from './starroad';
+import { COSMIC_ROAD_ID, ROAD_CATALOG, productOpen, roadHasPass, roadOpen, type RoadId } from './starroad';
+import { ROAD01 } from './content/road01';
+import { PRODUCTS } from './tuning';
+import { today } from './profile';
 import { getLang, t } from '../i18n';
 import { HABITATS } from './habitats';
 import { dyeColors } from './dyes';
@@ -253,6 +256,7 @@ export const STARDUST_COSMETICS: Cosmetic[] = [
     colors: ['#b3ade2'],
     set: 'Moonbloom',
   },
+  ...ROAD01.stardust,
 ];
 export const M12_STARDUST_COSMETICS: Cosmetic[] = [
   {
@@ -504,6 +508,10 @@ export const COSMETICS: Cosmetic[] = [
   ...STARDUST_COSMETICS,
   ...M12_STARDUST_COSMETICS,
   ...M12_COSMETICS,
+  ...ROAD01.looks,
+  ...ROAD01.singles,
+  ...ROAD01.samplers,
+  ...(ROAD01.theme.id ? themed(ROAD01.theme) : []),
   {
     id: 'tr_kite',
     slot: 'trail',
@@ -516,11 +524,44 @@ export const COSMETICS: Cosmetic[] = [
 ];
 
 export const COSMETIC_BY_ID: Record<string, Cosmetic> = Object.fromEntries(COSMETICS.map((x) => [x.id, x]));
-export const STYLES_RELEASE = 'm12';
+export const STYLES_RELEASE = 'm14';
 
-/** Step-0 preserves the existing dot; Package A adds Road availability gating. */
-export function stylesNewDot(p: Profile, _day: string): boolean {
-  return p.stylesNewSeen !== STYLES_RELEASE;
+/** Installed future content does not replace the catalogue release a child can visit today. */
+export function availableStylesRelease(p: Profile, day = today()): string {
+  return roadOpen(ROAD01.road, day > p.roadSeenDay ? day : p.roadSeenDay) ? STYLES_RELEASE : 'm12';
+}
+
+/** Visiting Styles records only the catalogue that is available, including a quiet/grown-up visit. */
+export function markStylesReleaseSeen(p: Profile, day = today()): boolean {
+  const release = availableStylesRelease(p, day);
+  if (p.stylesNewSeen === release) return false;
+  p.stylesNewSeen = release;
+  return true;
+}
+
+/** One dot per available release. 1.0's catalogue dot keeps its rules; Road 1's adds decision 82's gates. */
+export function stylesNewDot(p: Profile, day: string): boolean {
+  const release = availableStylesRelease(p, day);
+  if (p.stylesNewSeen === release || Date.now() < (p.meta.refundQuietUntil ?? 0)) return false;
+  if (release !== STYLES_RELEASE) return true;
+  return p.level >= 5 && p.meta.sessions > 1 && !p.settings.hidePaidLooks;
+}
+/** Kid surfaces never reveal installed future content, even when its product is owned. */
+export function cosmeticOpen(p: Profile, x: Cosmetic, day = today()): boolean {
+  // Decision 82: a Theme or Style Single a grown-up bought before its Road opens is worn at once.
+  // Other Road looks (samplers, Road and Pass lanes) still wait for the Road.
+  if (x.source === 'product' && owns(p, x.id)) return true;
+  const seen = day > p.roadSeenDay ? day : p.roadSeenDay;
+  const def = x.productId && PRODUCTS.find((product) => product.id === x.productId);
+  if (def && !productOpen(def, seen)) return false;
+  const inRoad =
+    [...ROAD01.looks, ...ROAD01.singles, ...ROAD01.stardust, ...ROAD01.samplers].some((item) => item.id === x.id) ||
+    (!!ROAD01.theme.id && x.productId === `com.pocketplanet.game.theme.${ROAD01.theme.id}`);
+  return !inRoad || roadOpen(ROAD01.road, seen);
+}
+export function atmosphereOpen(p: Profile, id: string, day = today()): boolean {
+  const road = ROAD_CATALOG.find((def) => def.tiers.some((tier) => tier.reward.skin === id || tier.pass.skin === id));
+  return !road || roadOpen(road, day > p.roadSeenDay ? day : p.roadSeenDay);
 }
 
 export function isPaidLook(x: Cosmetic): boolean {
@@ -530,6 +571,7 @@ export function isPaidLook(x: Cosmetic): boolean {
 export function visibleCosmetics(p: Profile, slot?: StyleSlot): Cosmetic[] {
   return COSMETICS.filter(
     (x) =>
+      cosmeticOpen(p, x) &&
       (!slot || x.slot === slot) &&
       (p.meta.sessions > 1 || owns(p, x.id) || (x.source !== 'gems' && !isPaidLook(x))) &&
       (!p.settings.hidePaidLooks || (!isPaidLook(x) && (x.id !== 'frame_gold' || goldenFrameEarned(p)))),
@@ -564,12 +606,13 @@ export const DEFAULT_LOOK: Record<Slot, string> = {
   emote: 'em_cheer',
 };
 
-/** Star Road tier index (free or pass lane) that grants an item. */
-export function roadTierOf(id: string): { i: number; lane: 'free' | 'pass' } | null {
-  for (let i = 0; i < STAR_ROAD.length; i++) {
-    if (STAR_ROAD[i].reward.item === id) return { i, lane: 'free' };
-    if (STAR_ROAD[i].pass.item === id) return { i, lane: 'pass' };
-  }
+/** Tier identity includes its Road; identical indices never cross ownership lanes. */
+export function roadTierOf(id: string): { road: RoadId; i: number; lane: 'free' | 'pass' } | null {
+  for (const road of ROAD_CATALOG)
+    for (let i = 0; i < road.tiers.length; i++) {
+      if (road.tiers[i].reward.item === id || road.tiers[i].reward.skin === id) return { road: road.id, i, lane: 'free' };
+      if (road.tiers[i].pass.item === id || road.tiers[i].pass.skin === id) return { road: road.id, i, lane: 'pass' };
+    }
   return null;
 }
 
@@ -602,10 +645,17 @@ export function owns(p: Profile, id: string): boolean {
     case 'road':
     case 'pass': {
       // One-time migration preserves the old Pass paints while their Pass is owned.
-      if (x.source === 'pass' && p.pass && p.wardrobe.includes(id)) return true;
       const r = roadTierOf(id);
       if (!r) return false;
-      return r.lane === 'free' ? p.road.includes(r.i) : p.pass && p.roadPass.includes(r.i);
+      if (r.road === COSMIC_ROAD_ID) {
+        if (x.source === 'pass' && p.pass && p.wardrobe.includes(id)) return true;
+        return r.lane === 'free' ? p.road.includes(r.i) : roadHasPass(p, r.road) && p.roadPass.includes(r.i);
+      }
+      const tier = ROAD_CATALOG.find((def) => def.id === r.road)!.tiers[r.i];
+      const state = p.roadRecords[r.road];
+      return r.lane === 'free'
+        ? !!state?.claimedFreeTierIds.includes(tier.id)
+        : roadHasPass(p, r.road) && !!state?.claimedPaidTierIds.includes(tier.id);
     }
   }
 }
@@ -619,6 +669,7 @@ export function currentLook(p: Profile): StyledLook {
       id &&
       COSMETIC_BY_ID[id]?.slot === s &&
       owns(p, id) &&
+      cosmeticOpen(p, COSMETIC_BY_ID[id]) &&
       (!p.settings.hidePaidLooks || (!isPaidLook(COSMETIC_BY_ID[id]) && (id !== 'frame_gold' || goldenFrameEarned(p))))
     )
       out[s] = id;
@@ -685,8 +736,9 @@ export function finishStyleDraft(p: Profile, draft: StyleDraft): void {
 }
 
 /** The Wish reward caller grants a named sampler once, with no paid entitlement. */
-export function grantWishSampler(p: Profile, id: 'sampler_tidepool' | 'sampler_cometcandy' | 'sampler_crystalfrost'): boolean {
-  if (p.wardrobe.includes(id)) return false;
+export function grantWishSampler(p: Profile, id: string, day = today()): boolean {
+  const item = COSMETIC_BY_ID[id];
+  if (!item || item.source !== 'wish' || !cosmeticOpen(p, item, day) || p.wardrobe.includes(id)) return false;
   p.wardrobe.push(id);
   return true;
 }
@@ -708,7 +760,7 @@ export function fullSet(look: Look): string | null {
 }
 
 export function ownedCount(p: Profile) {
-  return COSMETICS.filter((x) => !isPaidLook(x) && owns(p, x.id)).length;
+  return visibleCosmetics(p).filter((x) => !isPaidLook(x) && owns(p, x.id)).length;
 }
 
 /** How to get an item, for the locked tile. */
@@ -740,7 +792,11 @@ export function sourceText(x: Cosmetic): string {
       return t('Constellation');
     case 'road': {
       const r = roadTierOf(x.id);
-      return r ? t('Cosmic Road {n} points', { n: STAR_ROAD[r.i].stars }) : t('Cosmic Road');
+      const def = r && ROAD_CATALOG.find((road) => road.id === r.road);
+      if (!r || !def) return t('Cosmic Road');
+      return r.road === COSMIC_ROAD_ID
+        ? t('Cosmic Road {n} points', { n: def.tiers[r.i].stars })
+        : `${t(def.name)} · 🛣️${def.tiers[r.i].stars}`;
     }
     case 'pass':
       return t('Try on');

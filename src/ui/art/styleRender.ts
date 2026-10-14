@@ -48,12 +48,45 @@ export function drawFriendOutfit(g: G, look: StyledLook, x: number, y: number, s
     g.closePath();
     g.fill();
   }
+  if (styleMotif(item.id, item.motif ?? '') === 'fold') {
+    g.fillStyle = item.colors[1] ?? item.colors[0];
+    drawStyleMotif(g, x + size * 0.17, y + size * 0.2, size * 0.045, 'fold');
+  }
   g.restore();
 }
 
-function motif(g: G, x: number, y: number, r: number, shape: string) {
+/** New geometric variants share the saved motif families; no new gameplay or motion channel. */
+export function styleMotif(id: string, family: string): string {
+  if (id.startsWith('crescentlace_')) return 'orbit';
+  if (id.startsWith('wovensky_')) return 'weave';
+  if (/^(moonpetal_|papergarden_|sampler_papergarden|road01_)/.test(id)) return 'fold';
+  return family;
+}
+
+export function drawStyleMotif(g: G, x: number, y: number, r: number, shape: string) {
   g.beginPath();
-  if (shape === 'crystal' || shape === 'nebula') {
+  if (shape === 'fold') {
+    g.moveTo(x - r, y + r * 0.45);
+    g.quadraticCurveTo(x - r * 0.8, y - r, x + r, y - r * 0.45);
+    g.lineTo(x, y + r * 0.2);
+    g.closePath();
+  } else if (shape === 'orbit') {
+    // A small open crescent, with no glow or moving satellites.
+    g.ellipse(x, y, r, r * 0.55, -0.45, 0.2, Math.PI * 1.8);
+    g.ellipse(x, y, r * 0.6, r * 0.25, -0.45, Math.PI * 1.8, 0.2, true);
+    g.closePath();
+  } else if (shape === 'weave') {
+    g.moveTo(x - r, y - r * 0.45);
+    g.lineTo(x + r, y + r * 0.45);
+    g.lineTo(x + r * 0.6, y + r * 0.8);
+    g.lineTo(x - r, y - r * 0.1);
+    g.closePath();
+    g.moveTo(x + r, y - r * 0.45);
+    g.lineTo(x - r * 0.6, y + r * 0.8);
+    g.lineTo(x - r, y + r * 0.45);
+    g.lineTo(x + r * 0.6, y - r * 0.8);
+    g.closePath();
+  } else if (shape === 'crystal' || shape === 'nebula') {
     g.moveTo(x, y - r);
     g.lineTo(x + r * 0.7, y);
     g.lineTo(x, y + r);
@@ -81,7 +114,7 @@ function marks(g: G, id: string | undefined, points: readonly Point[], still: bo
     const index = Math.floor((i * points.length) / count);
     const p = points[index];
     g.globalAlpha = STYLE_ALPHA_CAP * ((index + 1) / points.length);
-    motif(g, p.x, p.y, 2.5, item.motif);
+    drawStyleMotif(g, p.x, p.y, 2.5, styleMotif(item.id, item.motif));
   }
   g.restore();
 }
@@ -102,7 +135,7 @@ export function drawStyledBurst(g: G, look: StyledLook, kind: Kind, x: number, y
   const count = still ? 3 : 6;
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2;
-    motif(g, x + Math.cos(a) * radius * 0.8, y + Math.sin(a) * radius * 0.8, 3, item.motif);
+    drawStyleMotif(g, x + Math.cos(a) * radius * 0.8, y + Math.sin(a) * radius * 0.8, 3, styleMotif(item.id, item.motif));
   }
   g.restore();
 }
@@ -125,7 +158,7 @@ export function drawStyledEvent(
   const count = still ? 3 : 6;
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2;
-    motif(g, x + Math.cos(a) * radius, y + Math.sin(a) * radius, 3, item.motif);
+    drawStyleMotif(g, x + Math.cos(a) * radius, y + Math.sin(a) * radius, 3, styleMotif(item.id, item.motif));
   }
   g.restore();
 }

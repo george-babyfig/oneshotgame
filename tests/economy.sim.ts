@@ -1,3 +1,7 @@
+import { ROAD01 } from '../src/meta/content/road01';
+import { ROAD_CATALOG, grantProfileRoadPoints } from '../src/meta/starroad';
+import { defaultProfile } from '../src/meta/profile';
+import { ROAD_LANDMARKS } from '../src/meta/roadLandmarks';
 import { COSMETICS } from '../src/meta/cosmetics';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
@@ -457,4 +461,174 @@ if (process.env.SIM === '1') {
       expect.soft(regular.days.slice(0, 60).reduce((n, day) => n + (day.spent.gems_cosmetic ?? 0), 0)).toBeGreaterThan(0);
       expect.soft(replayShare(regular)).toBeLessThanOrEqual(30);
     }, 1_200_000);
+}
+
+if (process.env.SIM === '1') {
+  it('M14 gates Road 1 cohorts, sink supply and Landmark pacing', async () => {
+    // Scenario only: no owner launch date has been supplied (decision 81).
+    const opensOn = '2026-02-26';
+    const catalog = [ROAD_CATALOG[0], { ...ROAD01.road, opensOn }];
+    expect(catalog[1].tiers).toHaveLength(20);
+    const rows = [];
+    for (const seed of process.env.SIM_NIGHTLY === '1' ? ['default', 'night2'] : ['default']) {
+      const install = await simulate('Regular', seed, { roadCatalog: catalog, startDay: opensOn, days: 90 });
+      const cohort = await simulate('Regular', seed, { roadCatalog: catalog, startDay: '2026-01-01', days: 120 });
+      for (const career of [install, cohort]) assertAccounting(career);
+      const finish = (career: Career) => career.days.find((day) => (day.roadRecords.road01 ?? 0) >= 200)?.day ?? null;
+      const installFinish = finish(install);
+      const cohortFinish = finish(cohort);
+      const cohortFromOpen = cohortFinish === null ? null : cohortFinish - 56;
+      const newInstall = install.days.slice(0, 57).reduce((sum, day) => sum + day.freeGems, 0);
+      const launchCohort = cohort.days.slice(56, 112).reduce((sum, day) => sum + day.freeGems, 0);
+      const singles = ROAD01.singles.reduce((sum, look) => sum + (look.gems ?? 0), 0);
+      const supply = Math.max(newInstall, launchCohort);
+      const pace = [install, cohort].flatMap((career, careerIndex) =>
+        ROAD_LANDMARKS.flatMap((site) =>
+          [1, 2, 3, 4].map((stage) => {
+            const opened =
+              stage === 1 ? career.roadLandmarkOpenDays[site.id] : career.roadLandmarkStageDays[site.id][(stage - 1) as 1 | 2 | 3];
+            const finished = career.roadLandmarkStageDays[site.id][stage as 1 | 2 | 3 | 4];
+            const activeDays =
+              opened === undefined || finished === undefined
+                ? null
+                : career.days.filter((day) => day.active && (stage === 1 ? day.day >= opened : day.day > opened) && day.day <= finished)
+                    .length;
+            return { cohort: careerIndex === 0 ? 'install' : 'launch', stage, opened, finished, activeDays };
+          }),
+        ),
+      );
+      const row = {
+        seed,
+        opensOn,
+        installFinish,
+        cohortFinish,
+        cohortFromOpen,
+        newInstall,
+        launchCohort,
+        supply,
+        singles,
+        coverage: singles / supply,
+        pace,
+      };
+      rows.push(row);
+      console.log(`M14 B3/B5/B11 ${JSON.stringify(row)}`);
+      for (const [name, day] of [
+        ['install', installFinish],
+        ['cohort', cohortFromOpen],
+      ] as const) {
+        expect.soft(day, `B3 ${seed} ${name} completes`).not.toBeNull();
+        expect.soft(day!, `B3 ${seed} ${name} ≥42 days`).toBeGreaterThanOrEqual(42);
+        expect.soft(day!, `B3 ${seed} ${name} ≤56 days`).toBeLessThanOrEqual(56);
+      }
+      expect.soft(singles, 'B5 singles ≥3000').toBeGreaterThanOrEqual(3000);
+      if (process.env.SIM_NIGHTLY === '1') expect.soft(singles / supply, `B5 ${seed} hard coverage`).toBeGreaterThanOrEqual(0.8);
+      else console.log(`B5 PR soft Watch target ≥.85: ${(singles / supply).toFixed(3)}`);
+      for (const stage of pace) {
+        expect.soft(stage.activeDays, `B11 ${seed} ${stage.cohort} stage ${stage.stage} completes`).not.toBeNull();
+        if (stage.activeDays !== null) {
+          expect.soft(stage.activeDays, `B11 ${seed} ${stage.cohort} stage ${stage.stage} ≥1 day`).toBeGreaterThanOrEqual(1);
+          expect.soft(stage.activeDays, `B11 ${seed} ${stage.cohort} stage ${stage.stage} target ≤3 days`).toBeLessThanOrEqual(3);
+          expect.soft(stage.activeDays, `B11 ${seed} ${stage.cohort} stage ${stage.stage} hard ≤5 days`).toBeLessThanOrEqual(5);
+        }
+      }
+      // Road 1's actual reward lane must retain the inherited economy bands.
+      expect
+        .soft(cohort.days.slice(0, 90).reduce((n, day) => n + day.freeGems, 0) / 90, `M14 ${seed} inherited 90-day free gems/day`)
+        .toBeGreaterThanOrEqual(95);
+      const wins = cohort.days.reduce((n, day) => n + day.wins, 0);
+      expect.soft(cohort.freeBoosters / wins, `M14 ${seed} booster band`).toBeLessThanOrEqual(0.5);
+    }
+    // The slow-player Watch is a precise Road-input persona, not a changed flight bot.
+    const slow = defaultProfile(Date.parse('2026-01-01T12:00:00Z'));
+    const slowDays: { day: number; road00: number; road01: number }[] = [];
+    for (let day = 1; day <= 220; day++) {
+      const date = new Date(Date.UTC(2026, 0, day, 12)).toISOString().slice(0, 10);
+      for (const source of ['campaign', 'wish'] as const)
+        grantProfileRoadPoints(slow, { source, date, earningKey: `slow:${day}:${source}`, delta: 1 }, catalog);
+      slowDays.push({ day, road00: slow.roadRecords.road00?.points ?? 0, road01: slow.roadRecords.road01?.points ?? 0 });
+    }
+    const slowFinish = Object.fromEntries(
+      (['road00', 'road01'] as const).map((id) => [id, slowDays.find((day) => day[id] >= 200)?.day ?? null]),
+    );
+    console.log(
+      `M14 B4 slow player finish days ${JSON.stringify(slowFinish)}; Road 1 from opening ${slowFinish.road01 === null ? 'unreached' : slowFinish.road01 - 56}`,
+    );
+    for (let i = 56; i < slowDays.length; i++)
+      if (slowDays[i - 1].road00 < 200)
+        expect.soft(slowDays[i].road00, `B4 Road 0 no stall day ${i + 1}`).toBeGreaterThan(slowDays[i - 1].road00);
+    const reportPath = new URL('./sim/economy/report.json', import.meta.url);
+    const report = JSON.parse(readFileSync(reportPath, 'utf8'));
+    report.m14 = { ...report.m14, scenario: true, opensOn, rows, slowFinish, slowDays: slowDays.slice(0, 120) };
+    writeFileSync(reportPath, JSON.stringify(report, (_key, value) => (value === Infinity ? 'Infinity' : value), 2) + '\n');
+    const larger = Math.max(...rows.map((row) => row.supply));
+    writeFileSync(
+      new URL('../docs/handoff/m14-d-supply.md', import.meta.url),
+      `# M14 D free gem supply\n\n${rows.map((row) => `- ${row.seed}: new install days 0–56 **${row.newInstall}**; launch cohort days 57–112 **${row.launchCohort}**; C singles **${row.singles}**, coverage **${row.coverage.toFixed(4)}**.`).join('\n')}\n\nLargest window: **${larger} gems**. Hard minimum **${Math.ceil(larger * 0.8)}**; target minimum **${Math.ceil(larger * 0.85)}**.\n\nPost-C M14 scenario measurement through real reward and settlement APIs. Catalogue Road 1 opens 2026-02-26; new install starts then, launch cohort starts 2026-01-01 and runs 120 days. These are test dates, not a player-visible launch commitment. New-install offsets 0–56 are inclusive: career rows 1–57, with row 1 played on opensOn. The cohort window is career rows 57–112 (56 active days).\n\nInitial inherited-tree reference: default 6700/4035; night2 6268/4442; target 5695.\n`,
+    );
+  }, 600_000);
+}
+
+if (process.env.SIM === '1') {
+  it('M14 each Road Landmark alternative independently fits the Regular effort band', async () => {
+    const opensOn = '2026-02-26';
+    const catalog = [ROAD_CATALOG[0], { ...ROAD01.road, opensOn }];
+    const witnesses = [];
+    for (const seed of process.env.SIM_NIGHTLY === '1' ? ['default', 'night2'] : ['default'])
+      for (const lane of [0, 1] as const) {
+        const career = await simulate('Regular', seed, { roadCatalog: catalog, startDay: '2026-01-01', days: 75, roadLandmarkLane: lane });
+        const opened = career.roadLandmarkOpenDays.rl_road01;
+        const finishes = career.roadLandmarkStageDays.rl_road01;
+        const days = [1, 2, 3].map((stage) => {
+          const before = stage === 1 ? opened : finishes[(stage - 1) as 1 | 2];
+          const after = finishes[stage as 1 | 2 | 3];
+          return before === undefined || after === undefined
+            ? null
+            : career.days.filter((day) => day.active && (stage === 1 ? day.day >= before : day.day > before) && day.day <= after).length;
+        });
+        witnesses.push({ seed, lane, days, finishes });
+        console.log(`M14 B11 independent route ${JSON.stringify(witnesses.at(-1))}`);
+        for (const daysTaken of days) {
+          expect.soft(daysTaken, `${seed} lane ${lane} completes`).not.toBeNull();
+          if (daysTaken !== null) {
+            expect.soft(daysTaken, `${seed} lane ${lane} ≥1 day`).toBeGreaterThanOrEqual(1);
+            expect.soft(daysTaken, `${seed} lane ${lane} ≤3 days`).toBeLessThanOrEqual(3);
+          }
+        }
+      }
+    const path = new URL('./sim/economy/report.json', import.meta.url);
+    const report = JSON.parse(readFileSync(path, 'utf8'));
+    report.m14 = { ...report.m14, routeWitnesses: witnesses };
+    writeFileSync(path, JSON.stringify(report, (_key, value) => (value === Infinity ? 'Infinity' : value), 2) + '\n');
+  }, 600_000);
+}
+
+if (process.env.SIM === '1') {
+  it('M14 Road 1 Pass and purchases preserve the no-purchase growth twin', async () => {
+    const opensOn = '2026-02-26';
+    const catalog = [ROAD_CATALOG[0], { ...ROAD01.road, opensOn }];
+    const pairs = [];
+    for (const seed of process.env.SIM_NIGHTLY === '1' ? ['default', 'night2'] : ['default']) {
+      const paid = await simulate('Payer', seed, { roadCatalog: catalog, startDay: opensOn, days: 90 });
+      const twin = await simulate('Payer', seed, { roadCatalog: catalog, startDay: opensOn, days: 90, purchases: false });
+      assertAccounting(paid);
+      assertAccounting(twin);
+      expect(paid.profile.roadPassEntitlements).toContain('road01');
+      expect(twin.profile.roadPassEntitlements).not.toContain('road01');
+      const milestones = (career: Career) => ({
+        home5: career.homeLevelDays[5],
+        labs5: career.exhausted.lab,
+        beacon: career.landmarkStageDays.keepers_beacon[4],
+        roadLandmark: career.roadLandmarkStageDays.rl_road01,
+        road: career.days.find((day) => (day.roadRecords.road01 ?? 0) >= 200)?.day,
+      });
+      const pair = { seed, paid: milestones(paid), twin: milestones(twin) };
+      pairs.push(pair);
+      console.log(`M14 purchases twin ${JSON.stringify(pair)}`);
+      expect.soft(pair.paid, `M14 ${seed} purchases never speed growth`).toEqual(pair.twin);
+    }
+    const path = new URL('./sim/economy/report.json', import.meta.url);
+    const report = JSON.parse(readFileSync(path, 'utf8'));
+    report.m14 = { ...report.m14, purchaseTwins: pairs };
+    writeFileSync(path, JSON.stringify(report, (_key, value) => (value === Infinity ? 'Infinity' : value), 2) + '\n');
+  }, 600_000);
 }

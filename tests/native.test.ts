@@ -150,3 +150,247 @@ describe('A12 dormant iCloud backup bridge', () => {
     expect(swift).toContain('96 * 1024');
   });
 });
+
+describe('M14 custom Road link', () => {
+  it('registers the custom scheme and preserves scene URL forwarding without associated domains', () => {
+    expect(info).toMatch(
+      /<key>CFBundleURLTypes<\/key>\s*<array>[\s\S]*?<key>CFBundleURLSchemes<\/key>\s*<array><string>cometgarden<\/string><\/array>/,
+    );
+    const scene = read(`${app}/SceneDelegate.swift`);
+    expect(scene).toContain('SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)');
+    expect(scene).toContain('SceneDelegateProxy.shared.scene(scene, openURLContexts: URLContexts)');
+    expect(read(`${app}/App.entitlements`)).not.toContain('associated-domains');
+    expect(read('src/main.ts')).toContain('installDeepLinks(app, readyForLinks)');
+  });
+  it('accepts only the internal Road route', async () => {
+    const { isRoadLink } = await import('../src/ui/deeplink');
+    expect(isRoadLink('cometgarden://road')).toBe(true);
+    expect(isRoadLink('cometgarden://road/')).toBe(true);
+    for (const url of [
+      'https://road',
+      'cometgarden://shop',
+      'cometgarden://road/buy',
+      'cometgarden://road?buy=1',
+      'cometgarden://road#shop',
+      'cometgarden://adult@road',
+      'cometgarden://road:80',
+      'bad',
+    ])
+      expect(isRoadLink(url)).toBe(false);
+  });
+  it('keeps session 1, tutorials, rounds and gates intact; locked players go Home', async () => {
+    const { defaultProfile } = await import('../src/meta/profile');
+    const { routeRoadLink } = await import('../src/ui/deeplink');
+    const p = defaultProfile(0);
+    const linked = { p, screen: 'home', showHome: vi.fn(), showRoad: vi.fn() };
+    p.level = 45;
+    p.meta.sessions = 1;
+    p.tutorial = true;
+    expect(routeRoadLink(linked, 'cometgarden://road', false)).toBe(false);
+    p.meta.sessions = 2;
+    p.tutorial = false;
+    expect(routeRoadLink(linked, 'cometgarden://road', false)).toBe(false);
+    p.tutorial = true;
+    linked.screen = 'level';
+    expect(routeRoadLink(linked, 'cometgarden://road', false)).toBe(false);
+    linked.screen = 'home';
+    expect(routeRoadLink(linked, 'cometgarden://road', true)).toBe(false);
+    expect(linked.showRoad).not.toHaveBeenCalled();
+    const before = JSON.stringify(p);
+    expect(routeRoadLink(linked, 'cometgarden://road', false)).toBe(true);
+    expect(linked.showRoad).toHaveBeenCalledOnce();
+    expect(JSON.stringify(p)).toBe(before);
+    p.level = 21;
+    expect(routeRoadLink(linked, 'cometgarden://road', false)).toBe(true);
+    expect(linked.showHome).toHaveBeenCalledWith(true);
+  });
+  it('holds cold/warm delivery until init completes and removes only its own listener', async () => {
+    const { defaultProfile } = await import('../src/meta/profile');
+    const { installDeepLinks } = await import('../src/ui/deeplink');
+    const p = defaultProfile(0);
+    p.level = 45;
+    p.tutorial = true;
+    p.meta.sessions = 2;
+    const linked = { p, screen: 'home', showHome: vi.fn(), showRoad: vi.fn() };
+    let resolve!: (ok: boolean) => void;
+    const ready = new Promise<boolean>((done) => {
+      resolve = done;
+    });
+    let receive!: (data: { url: string }) => void;
+    const remove = vi.fn(async () => {});
+    const native = {
+      addListener: vi.fn(async (_: 'appUrlOpen', callback: typeof receive) => {
+        receive = callback;
+        return { remove };
+      }),
+      getLaunchUrl: vi.fn(async () => ({ url: 'cometgarden://road' })),
+    };
+    const dispose = installDeepLinks(linked, ready, native, () => false);
+    receive({ url: 'cometgarden://road' }); // retained cold appUrlOpen
+    expect(linked.showRoad).not.toHaveBeenCalled();
+    resolve(true);
+    await vi.waitFor(() => expect(linked.showRoad).toHaveBeenCalledOnce());
+    receive({ url: 'cometgarden://road' });
+    await vi.waitFor(() => expect(linked.showRoad).toHaveBeenCalledTimes(2));
+    dispose();
+    expect(remove).toHaveBeenCalledOnce();
+    receive({ url: 'cometgarden://road' });
+    await Promise.resolve();
+    expect(linked.showRoad).toHaveBeenCalledTimes(2);
+    expect(native.getLaunchUrl).not.toHaveBeenCalled();
+  });
+  it('uses retained cold delivery once and refuses recovery delivery', async () => {
+    const { defaultProfile } = await import('../src/meta/profile');
+    const { installDeepLinks } = await import('../src/ui/deeplink');
+    const p = defaultProfile(0);
+    p.level = 45;
+    p.tutorial = true;
+    p.meta.sessions = 2;
+    const linked = { p, screen: 'home', showHome: vi.fn(), showRoad: vi.fn() };
+    const native = {
+      addListener: vi.fn(async (_: 'appUrlOpen', callback: (data: { url: string }) => void) => {
+        callback({ url: 'cometgarden://road' });
+        return { remove: async () => {} };
+      }),
+      getLaunchUrl: vi.fn(async () => ({ url: 'cometgarden://road' })),
+    };
+    installDeepLinks(linked, Promise.resolve(true), native, () => false);
+    await vi.waitFor(() => expect(linked.showRoad).toHaveBeenCalledOnce());
+    expect(native.getLaunchUrl).not.toHaveBeenCalled();
+    linked.showRoad.mockClear();
+    installDeepLinks(linked, Promise.resolve(false), native, () => false);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(linked.showRoad).not.toHaveBeenCalled();
+  });
+  it('checks M14 release metadata against major.minor before the release CLI mutates anything', async () => {
+    // @ts-expect-error Plain JS helper has no declaration file.
+    const { assertReleaseVersion } = await import('../scripts/ios-release.mjs');
+    expect(() => assertReleaseVersion("{version: '1.2'}", '1.2.0')).not.toThrow();
+    expect(() => assertReleaseVersion("{version: '1.2'}", '1.2.7')).not.toThrow();
+    expect(() => assertReleaseVersion("{version: '1.2'}", '1.0.0')).toThrow('must match');
+    const cli = read('scripts/ios-release.mjs');
+    expect(cli.indexOf('assertReleaseVersion(readFileSync')).toBeLessThan(cli.indexOf("run('npm', ['ci'])"));
+    expect(cli).toContain("RELEASE_CHECK: '1'");
+    expect(cli).toContain('RUNWAY_FROM: new Date().toISOString().slice(0, 10)');
+  });
+});
+
+it.each(['cold', 'warm'] as const)('queues %s Road links through every Home popup, then routes once', async (launch) => {
+  const { defaultProfile } = await import('../src/meta/profile');
+  const { installDeepLinks } = await import('../src/ui/deeplink');
+  const p = defaultProfile(0);
+  p.level = 45;
+  p.tutorial = true;
+  p.meta.sessions = 3;
+  const linked = { p, screen: 'home', linkBusy: false, showHome: vi.fn(), showRoad: vi.fn() };
+  let receive!: (data: { url: string }) => void;
+  let changed!: () => void;
+  let blocked = true;
+  let homePopup = true;
+  const disconnect = vi.fn();
+  vi.stubGlobal('document', { body: {} });
+  vi.stubGlobal(
+    'MutationObserver',
+    class {
+      constructor(callback: () => void) {
+        changed = callback;
+      }
+      observe() {}
+      disconnect = disconnect;
+    },
+  );
+  const native = {
+    addListener: vi.fn(async (_event: 'appUrlOpen', callback: typeof receive) => {
+      receive = callback;
+      return { remove: vi.fn(async () => {}) };
+    }),
+    getLaunchUrl: vi.fn(async () => ({ url: 'cometgarden://road' })),
+  };
+  let resolve!: (ok: boolean) => void;
+  const ready =
+    launch === 'cold'
+      ? new Promise<boolean>((done) => {
+          resolve = done;
+        })
+      : Promise.resolve(true);
+  const dispose = installDeepLinks(
+    linked,
+    ready,
+    native,
+    () => blocked,
+    () => homePopup,
+  );
+  try {
+    receive({ url: 'cometgarden://road' });
+    if (launch === 'cold') {
+      await Promise.resolve();
+      expect(linked.showRoad).not.toHaveBeenCalled();
+      resolve(true);
+    }
+    await Promise.resolve();
+    expect(linked.showRoad).not.toHaveBeenCalled();
+    changed(); // Away closes but another Home card is still open.
+    expect(linked.showRoad).not.toHaveBeenCalled();
+    receive({ url: 'cometgarden://road/' }); // Coalesce duplicate pending delivery.
+    await Promise.resolve();
+    blocked = homePopup = false;
+    changed();
+    changed();
+    expect(linked.showRoad).toHaveBeenCalledOnce();
+    expect(disconnect).toHaveBeenCalledOnce();
+    expect(native.getLaunchUrl).not.toHaveBeenCalled();
+
+    // An open gate or purchase must not become queued navigation, nor can busy purchase work route.
+    blocked = true;
+    receive({ url: 'cometgarden://road' });
+    await Promise.resolve();
+    blocked = false;
+    changed();
+    linked.linkBusy = true;
+    receive({ url: 'cometgarden://road' });
+    await Promise.resolve();
+    linked.linkBusy = false;
+    changed();
+    expect(linked.showRoad).toHaveBeenCalledOnce();
+  } finally {
+    dispose();
+    vi.unstubAllGlobals();
+  }
+});
+
+it('a WebView reload with only a stale launch URL never routes; a new retained event still works', async () => {
+  const { defaultProfile } = await import('../src/meta/profile');
+  const { installDeepLinks } = await import('../src/ui/deeplink');
+  const p = defaultProfile(0);
+  p.level = 45;
+  p.tutorial = true;
+  p.meta.sessions = 4;
+  const linked = { p, screen: 'home', showHome: vi.fn(), showRoad: vi.fn() };
+  let receive!: (data: { url: string }) => void;
+  const native = {
+    addListener: vi.fn(async (_event: 'appUrlOpen', callback: typeof receive) => {
+      receive = callback;
+      return { remove: vi.fn(async () => {}) };
+    }),
+    getLaunchUrl: vi.fn(async () => ({ url: 'cometgarden://road' })),
+  };
+  const firstBoot = installDeepLinks(linked, Promise.resolve(true), native, () => false);
+  receive({ url: 'cometgarden://road' });
+  await Promise.resolve();
+  expect(linked.showRoad).toHaveBeenCalledOnce();
+  firstBoot();
+  linked.showRoad.mockClear();
+  const reload = installDeepLinks(linked, Promise.resolve(true), native, () => false);
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(native.getLaunchUrl).not.toHaveBeenCalled();
+  expect(linked.showRoad).not.toHaveBeenCalled();
+  for (const url of ['bad', 'cometgarden://road?buy=1', 'cometgarden://shop']) receive({ url });
+  await Promise.resolve();
+  expect(linked.showRoad).not.toHaveBeenCalled();
+  receive({ url: 'cometgarden://road/' });
+  await Promise.resolve();
+  expect(linked.showRoad).toHaveBeenCalledOnce();
+  reload();
+});

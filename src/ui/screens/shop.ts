@@ -1,3 +1,5 @@
+import { productOpeningText } from '../flows/contents';
+import { today } from '../../meta/profile';
 // The shop is a section of the gated Grown-ups area.
 import { h, btn, fmt } from '../dom';
 import { PRODUCTS } from '../../meta/tuning';
@@ -25,6 +27,7 @@ export function shopSection(app: App) {
     ...PRODUCTS.map((product) => {
       const piggy = product.key === 'piggy';
       const owned = ownsProduct(app.p, product.id);
+      const opening = productOpeningText(product, today() > app.p.roadSeenDay ? today() : app.p.roadSeenDay);
       const buy = btn(
         owned ? t('Owned') : app.priceOf(product.key) || t('Price unavailable'),
         'buy-real',
@@ -49,6 +52,7 @@ export function shopSection(app: App) {
                   : t('Nothing saved yet')
               : t(product.description),
           ),
+          opening ? h('small', null, opening) : null,
           piggy && app.p.pendingPiggy ? h('small', null, t("Waiting for a grown-up's approval")) : null,
           // Ask to Buy sends no decline, so a parent can stop waiting; a late approval still grants.
           piggy && app.p.pendingPiggy

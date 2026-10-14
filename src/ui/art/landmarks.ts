@@ -170,10 +170,49 @@ export function drawFloatingIsle(g: G, x: number, y: number, size: number): [num
 export function drawIsleDecoration(g: G, id: string, x: number, y: number, size: number): void {
   g.save();
   g.translate(x, y);
-  if (id.startsWith('keepsake:')) {
+  if (id === 'decor_sky_loom') {
+    // A small ribbon keepsake stands on the chosen anchor; the site keeps its full loom.
+    g.scale(size / 48, size / 48);
+    ellipse(g, 0, -1, 8, 2, 'rgba(18,35,50,.2)');
+    g.fillStyle = '#805b46';
+    g.fillRect(-6, -13, 12, 11);
+    ellipse(g, 0, -13, 8, 2, '#d6c9bc');
+    ellipse(g, 0, -2, 8, 2, '#d6c9bc');
+    for (let y = -11; y <= -4; y += 2) line(g, '#b5a7bd', 1.5, -6, y, 6, y);
+    line(g, '#a9b7a0', 2, 3, -8, 10, -5, 11, -1);
+    flower(g, -2, -14, '#c5b6a3');
+  } else if (id.startsWith('keepsake:')) {
     ellipse(g, -3, -2, size * 0.12, size * 0.08, '#e9c69d');
     ellipse(g, 2, -3, size * 0.14, size * 0.09, '#f5dcb1');
     flower(g, 1, -size * 0.19, '#c5e5ee');
   } else drawStructure(g, id as BuildingType, 1, size, 0);
   g.restore();
+}
+
+/** A quiet ribbon loom, assembled in code with no extra animation. */
+export function drawRoadLandmark(g: G, stage: number, x: number, y: number, size: number): void {
+  g.save();
+  g.translate(x, y);
+  g.scale(size / 48, size / 48);
+  ellipse(g, 0, 17, 20, 5, 'rgba(18,35,50,.2)');
+  if (stage === 0) {
+    line(g, '#805b46', 3, 0, 16, 0, -8);
+    g.fillStyle = '#d6c9bc';
+    g.fillRect(-10, -10, 20, 8);
+  } else {
+    line(g, '#60736d', 3, -15, 16, -15, -16, 15, -16, 15, 16);
+    line(g, '#b5a7bd', 2, -18, 13, 18, 13);
+    if (stage >= 2) for (let i = -10; i <= 10; i += 5) line(g, '#d6c9bc', 1.4, i, -13, i, 10);
+    if (stage >= 3) for (let i = -8; i <= 8; i += 4) line(g, i % 8 ? '#b5a7bd' : '#a9b7a0', 2.4, -11, i, 11, i);
+    if (stage >= 4) {
+      flower(g, -18, 12, '#c5b6a3');
+      flower(g, 18, 12, '#b5a7bd');
+    }
+  }
+  g.restore();
+}
+
+/** The site sits behind the Isle's three child-selected decoration anchors. */
+export function roadLandmarkPlacement(x: number, y: number, isleSize: number) {
+  return { x, y: y - isleSize * 0.55, size: isleSize * 0.55 };
 }

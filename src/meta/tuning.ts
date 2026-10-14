@@ -1,5 +1,6 @@
 // Canonical prices, rewards and costs. Review changes against the tuning snapshot.
 // DIFFICULTY_DUST stays in core/levels.ts so core never imports meta.
+import { ROAD01, ROAD01_ATMOSPHERE } from './content/road01';
 import { version } from '../../package.json';
 import { t } from '../i18n';
 import { unlocked } from './unlocks';
@@ -293,6 +294,7 @@ export const PRODUCTS: ProductDef[] = [
     consumable: false,
     fallbackPrice: '$1.99',
   },
+  ...ROAD01.products,
 ];
 
 // Samplers are earned from a Wish and are separate from paid entitlements.
@@ -300,6 +302,7 @@ export const FREE_SAMPLERS = {
   theme_tidepool: 'sampler_tidepool',
   theme_cometcandy: 'sampler_cometcandy',
   pack_crystalfrost: 'sampler_crystalfrost',
+  theme_papergarden: 'sampler_papergarden',
 } as const;
 
 export const PRODUCT_BY_KEY: Record<string, ProductDef> = Object.fromEntries(PRODUCTS.map((p) => [p.key, p]));
@@ -334,6 +337,7 @@ export const SKINS: SkinDef[] = [
   { id: 'gold', name: 'Solar Gold', glow: '#ffd24a', gems: 0, road: true },
   { id: 'aurora', name: 'Aurora', glow: 'aurora', gems: 0, starter: true },
   { id: 'cosmic', name: 'Cosmic', glow: 'cosmic', gems: 0, pass: true, road: true },
+  ROAD01_ATMOSPHERE,
 ];
 
 // Round and mode rewards.
@@ -1266,6 +1270,8 @@ export const RESIDENT_ACCS: { id: string; name: string; friend?: number; gems?: 
   { id: 'shades', name: 'Sunglasses', gems: 40 },
   { id: 'party', name: 'Party Hat', gems: 40 },
   // festival keepsakes (see meta/festivals.ts), never sold
+  { id: 'sparklefan', name: 'Sparkle Fan', fest: true },
+  { id: 'splashribbon', name: 'Splash Ribbon', fest: true },
   { id: 'heart', name: 'Heart Bopper', fest: true },
   { id: 'leaf', name: 'Sprout', fest: true },
   { id: 'rainhat', name: 'Rain Hat', fest: true },

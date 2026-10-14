@@ -1,3 +1,4 @@
+import { ROAD_LANDMARKS } from './roadLandmarks';
 import type { RoadLandmarkId } from './m14types';
 import { tripVisible } from './reveals';
 import { tripOptions, tripPlanets, startTrip, settleTrips, speedUpTrip } from './trips';
@@ -462,6 +463,7 @@ export const GROWABLE_LANDS = (Object.keys(BIOMES) as BiomeId[]).filter((id) => 
 export function ownedIsleDecorations(p: Profile): string[] {
   const owned: string[] = p.home.plots.filter((b) => b && BUILDINGS[b.type].decor).map((b) => b!.type);
   if (p.home.landmarks.sprout_garden.stage === 4) owned.push('flowers');
+  for (const site of ROAD_LANDMARKS) if (p.home.roadLandmarks[site.id]?.stage === 4) owned.push(site.decoration);
   for (const species of p.mementos) if (SPECIES_BY_ID[species]) owned.push(`keepsake:${species}`);
   for (const friend of p.home.residents) if (friend.fp >= 25) owned.push(`keepsake:${friend.species}`);
   return [...new Set(owned)];
@@ -526,7 +528,12 @@ export function mergeHomeCelebrations(p: Profile): string[] {
     }
     const site = /^([^:]+):stage:(\d)$/.exec(id);
     if (site) {
-      const stage = site[1] === 'comet_pier' ? p.cometPier.stage : p.home.landmarks[site[1] as keyof typeof p.home.landmarks]?.stage;
+      const roadSite = ROAD_LANDMARKS.find((landmark) => landmark.id === site[1]);
+      const stage = roadSite
+        ? p.home.roadLandmarks[roadSite.id]?.stage
+        : site[1] === 'comet_pier'
+          ? p.cometPier.stage
+          : p.home.landmarks[site[1] as keyof typeof p.home.landmarks]?.stage;
       if (stage) merged.set(site[1], `${site[1]}:stage:${stage}`);
     } else merged.set(id, id);
   }

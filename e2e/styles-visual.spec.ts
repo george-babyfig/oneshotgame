@@ -102,3 +102,67 @@ test('double tapping Done cannot spend gems; Get this look needs a separate conf
   expect(await page.evaluate(() => (window as any).__app.p.gems)).toBe(30);
   expect(await page.evaluate(() => (window as any).__app.p.wardrobe.includes('hat_sprout'))).toBe(true);
 });
+
+// Content availability is owner-pinned; the spec never invents a production opening date.
+import { ROAD01 } from '../src/meta/content/road01';
+import { installJourneyClock } from './helpers';
+
+const road01Samples = [
+  ['Suit', 'Petal Scout suit'],
+  ['Hat', 'Moonpetal folded hat'],
+  ['Launcher looks', 'Moonpetal launcher look'],
+  ['Trail', 'Crescent Lace trail'],
+  ['Effects', 'Crescent Lace Supernova style'],
+  ['Effects', 'Woven Sky Supernova'],
+  ['Homeworld looks', 'Paper Garden Rock Lab'],
+  ['Friend outfits', 'Paper Garden friend outfit'],
+] as const;
+
+test('M14 Road 1 installed future looks stay off kid-side Styles', async ({ page }) => {
+  const date = ROAD01.road.opensOn;
+  const before = date ? new Date(`${date}T12:00:00Z`) : new Date('2026-01-01T12:00:00Z');
+  if (date) before.setUTCDate(before.getUTCDate() - 1);
+  await installJourneyClock(page, before.toISOString());
+  await freshInstall(page);
+  await midGame(page, { level: 45 });
+  await page.evaluate(() => {
+    const a = (window as any).__app;
+    a.p.meta.sessions = 2;
+    a.p.roadSeenDay = '';
+    a.p.settings.hidePaidLooks = false;
+    a.selectTab('styles');
+  });
+  for (const [tab, name] of road01Samples) {
+    await page.locator('.tabs').getByRole('button', { name: tab, exact: true }).click();
+    await expect(page.locator('.ws-item').filter({ has: page.locator('b', { hasText: name }) })).toHaveCount(0);
+  }
+});
+
+for (const [tab, name] of road01Samples) {
+  test(`M14 ${name} uses the faithful stage preview with reversible Done`, async ({ page }, testInfo) => {
+    test.skip(!ROAD01.road.opensOn, 'Owner launch date is required before Road 1 opens on the kid side');
+    await installJourneyClock(page, `${ROAD01.road.opensOn}T12:00:00Z`);
+    await freshInstall(page);
+    await midGame(page, { level: 45 });
+    await page.evaluate(() => {
+      const a = (window as any).__app;
+      a.p.meta.sessions = 2;
+      a.p.settings.reduceMotion = true;
+      a.p.settings.hidePaidLooks = false;
+      a.selectTab('styles');
+    });
+    await page.locator('.tabs').getByRole('button', { name: tab, exact: true }).click();
+    const before = await painted(page);
+    await page
+      .locator('.ws-item')
+      .filter({ has: page.locator('b', { hasText: name }) })
+      .click();
+    await settle(page);
+    expect(await painted(page)).not.toBe(before);
+    await expect(page.locator('.ws-bar')).not.toContainText(/Buy|\$|€|£|¥/);
+    await testInfo.attach(`M14-${name}`, { body: await page.screenshot(), contentType: 'image/png' });
+    await page.locator('.ws-bar').getByRole('button', { name: 'Done', exact: true }).click();
+    await settle(page);
+    expect(await painted(page)).toBe(before);
+  });
+}

@@ -16,7 +16,7 @@ import { rarityName, speciesHint } from '../text';
 import { claimHabitat } from '../../meta/habitats';
 import { LORE, LORE_AT, STUDIED_AT, loreUnlocked, sightings, studied } from '../../meta/lore';
 import type { Profile } from '../../meta/profile';
-import { STICKERS, albumReady, ownedStickers } from '../../meta/stickers';
+import { visibleStickers, albumReady, ownedStickers } from '../../meta/stickers';
 import { icon } from '../icons';
 import { effectiveReduceMotion } from '../motion';
 import { traitBadge } from '../art/traits';
@@ -140,7 +140,10 @@ export function showLifebook(app: App) {
                 h(
                   'small',
                   null,
-                  t('{have}/{total} stickers · decorate your scrapbook', { have: ownedStickers(app.p).length, total: STICKERS.length }),
+                  t('{have}/{total} stickers · decorate your scrapbook', {
+                    have: ownedStickers(app.p).length,
+                    total: visibleStickers(app.p).length,
+                  }),
                 ),
               ),
               albumReady(app.p) ? h('span', { class: 'nb dot' }, String(albumReady(app.p))) : null,

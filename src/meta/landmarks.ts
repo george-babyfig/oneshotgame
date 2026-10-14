@@ -204,7 +204,7 @@ function featDelta(state: StoredLandmarkState, stage: number, route: LandmarkRou
   return Math.max(0, featCount(event, route) - priorEvidence(state, `feat:${stage}:${event.planetKey}:${featMetric(route)}:`));
 }
 
-function storeFeatEvidence(state: StoredLandmarkState, stage: number, route: LandmarkRoute, event: LandmarkRoundEvent): void {
+export function storeFeatEvidence(state: StoredLandmarkState, stage: number, route: LandmarkRoute, event: LandmarkRoundEvent): void {
   const count = featCount(event, route);
   if (!count) return; // A zero first win never locks a better replay.
   const prefix = `feat:${stage}:${event.planetKey}:${featMetric(route)}:`;
@@ -214,7 +214,7 @@ function storeFeatEvidence(state: StoredLandmarkState, stage: number, route: Lan
   state.planets.push(`${prefix}${best}`);
 }
 
-function storeGrownEvidence(state: StoredLandmarkState, stage: number, route: LandmarkRoute, event: LandmarkRoundEvent): void {
+export function storeGrownEvidence(state: StoredLandmarkState, stage: number, route: LandmarkRoute, event: LandmarkRoundEvent): void {
   if (route.metric !== 'grown' || !event.improvedSectorIds) return;
   const prefix = `grown:${stage}:${event.planetKey}:`;
   for (const sector of new Set((route.biomes ?? []).flatMap((biome) => event.improvedSectorIds?.[biome] ?? []))) {
@@ -223,7 +223,7 @@ function storeGrownEvidence(state: StoredLandmarkState, stage: number, route: La
   }
 }
 
-function storeBestEvidence(state: StoredLandmarkState, event: LandmarkRoundEvent): void {
+export function storeBestEvidence(state: StoredLandmarkState, event: LandmarkRoundEvent): void {
   state.planets ??= [];
   for (const [biome, count] of Object.entries(event.improvedSectors)) {
     const prefix = `best:${event.planetKey}:${biome}:`;
@@ -237,7 +237,7 @@ function storeBestEvidence(state: StoredLandmarkState, event: LandmarkRoundEvent
   state.planets.push(`${prefix}${stars}`);
 }
 
-function metricDelta(state: StoredLandmarkState, stage: number, route: LandmarkRoute, event: LandmarkRoundEvent): number {
+export function metricDelta(state: StoredLandmarkState, stage: number, route: LandmarkRoute, event: LandmarkRoundEvent): number {
   switch (route.metric) {
     case 'grown':
       return grownDelta(state, event, route.biomes ?? []);
@@ -439,7 +439,7 @@ export function finishLandmark(p: Profile, id: LandmarkId, at = Date.now()): 'ok
 }
 
 /** Content costs keep Atlas alternatives honest as the catalogue changes. */
-function routeEffort(route: LandmarkRoute): number {
+export function routeEffort(route: LandmarkRoute): number {
   if (route.metric === 'constellations')
     return CONSTELLATIONS.map((item) => item.bundles.length)
       .sort((a, b) => a - b)

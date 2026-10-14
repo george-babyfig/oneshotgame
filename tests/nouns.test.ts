@@ -624,7 +624,7 @@ function recordSnapshot(snapshot: Snapshot): Surface[] {
     if (keys.some((k) => FAMILIES.Essences.members.includes(k))) expect(unlocked(snapshot.p, 'homeworld'), name).toBe(true);
     const closedPointers = [
       ['quests', /\bWishes?\b/i],
-      ['star_road', /\b(?:Cosmic Road|Road points?)\b/i],
+      ['star_road', /\b(?:Cosmic Road|Road points?|Your Road)\b/i],
       ['star_calendar', /Star Calendar day/i],
       ['star_atlas', /\bConstellation\b/i],
       ['sticker_album', /\bstickers?\b/i],

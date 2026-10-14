@@ -28,8 +28,10 @@ import {
   sourceText,
   isPaidLook,
   visibleCosmetics,
+  cosmeticOpen,
+  atmosphereOpen,
   toggleFavourite,
-  STYLES_RELEASE,
+  markStylesReleaseSeen,
   DEFAULT_LOOK,
   PRESETS,
   loadPreset,
@@ -508,7 +510,7 @@ function atmospherePanel(app: App, selected: string) {
   return h(
     'div',
     { class: 'ws-grid' },
-    ...SKINS.filter((x) => !p.settings.hidePaidLooks || (!x.starter && !x.pass)).map((x) => {
+    ...SKINS.filter((x) => atmosphereOpen(p, x.id) && (!p.settings.hidePaidLooks || (!x.starter && !x.pass))).map((x) => {
       const owned = p.skins.includes(x.id) || (x.starter && p.starter);
       return h(
         'button',
@@ -615,14 +617,13 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
     activeDraft.selection = beginStyleDraft(p);
     activeDraft.skin = undefined;
   }
+  if (tryOn && !(COSMETIC_BY_ID[tryOn] ? cosmeticOpen(p, COSMETIC_BY_ID[tryOn]) : atmosphereOpen(p, tryOn))) tryOn = undefined;
+  if (inspectedId && COSMETIC_BY_ID[inspectedId] && !cosmeticOpen(p, COSMETIC_BY_ID[inspectedId])) inspectedId = '';
   if (tryOn) inspectedId = tryOn;
   if (tryOn && COSMETIC_BY_ID[tryOn]) activeDraft.selection = tryStyle(activeDraft.selection, tryOn);
   setStyleDraft(p, activeDraft.selection);
   if (slot === 'atmosphere' && tryOn && SKINS.some((skin) => skin.id === tryOn)) activeDraft.skin = tryOn;
-  if (p.stylesNewSeen !== STYLES_RELEASE) {
-    p.stylesNewSeen = STYLES_RELEASE;
-    app.save();
-  }
+  if (markStylesReleaseSeen(p)) app.save();
   document.documentElement.classList.remove('styles-new');
   const worn = currentLook(p);
   const preview: Look = previewLook(p);
@@ -640,7 +641,8 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
     slot === 'friends'
       ? ''
       : (preview[slot === 'dye' ? 'suit' : slot] ?? ''));
-  const item = COSMETIC_BY_ID[sel];
+  const selectedItem = COSMETIC_BY_ID[sel];
+  const item = selectedItem && cosmeticOpen(p, selectedItem) ? selectedItem : undefined;
   const canvas = h('canvas', { class: 'ws-stage' }) as HTMLCanvasElement;
   let repaintPreview = () => {};
   const completeDraft = () => {
@@ -768,7 +770,7 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
                     );
                   }),
               );
-  const previewSkin = SKINS.find((x) => x.id === (activeDraft?.skin ?? p.skin));
+  const previewSkin = SKINS.find((x) => x.id === (activeDraft?.skin ?? p.skin) && atmosphereOpen(p, x.id));
   const glow = previewSkin && (!p.settings.hidePaidLooks || (!previewSkin.starter && !previewSkin.pass)) ? previewSkin.glow : SKINS[0].glow;
   const stageView = stage(
     canvas,
@@ -791,7 +793,7 @@ export function showStyles(app: App, slot: Tab = lastSlot, tryOn?: string) {
         'div',
         { class: 'page-title' },
         t('Styles'),
-        h('small', { class: 'muted' }, ` ${ownedCount(p)}/${COSMETICS.filter((x) => !isPaidLook(x)).length}`),
+        h('small', { class: 'muted' }, ` ${ownedCount(p)}/${visibleCosmetics(p).filter((x) => !isPaidLook(x)).length}`),
       ),
       h(
         'div',

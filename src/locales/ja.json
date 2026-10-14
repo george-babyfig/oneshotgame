@@ -2129,5 +2129,8 @@
   "Your {road} looks": "きみの {road}の コーデ",
   "{landmark} is complete!": "{landmark}が できたよ！",
   "{landmark} is complete. Your {decoration} and {title} are ready.": "{landmark}が できたよ。{decoration}と、「{title}」の 称号も きみの ものに なったよ。",
-  "{landmark} is ready to build": "{landmark}を つくれるよ"
+  "{landmark} is ready to build": "{landmark}を つくれるよ",
+  "Build": "つくる",
+  "Make 8 Fusions or 8 Supernovas": "フュージョンを 8こ つくるか、スーパーノヴァを 8回 つかう",
+  "Reach the end of {road}": "{road}の さいごまで すすもう"
 }

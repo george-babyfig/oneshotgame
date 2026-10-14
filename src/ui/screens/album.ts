@@ -9,7 +9,7 @@ import {
   MILESTONE_EVERY,
   SCRAP_BGS,
   SCRAP_PAGES,
-  STICKERS,
+  visibleStickers,
   STICKER_BY_ID,
   bgUnlocked,
   claimMilestones,
@@ -37,6 +37,7 @@ let tab: 'collect' | 'scrap' = 'collect';
 let pageNo = 0;
 
 function hintOf(s: Sticker) {
+  if (s.hintText) return s.hintText();
   const [text, vars] = s.hint;
   const v = { ...(vars ?? {}) };
   if (typeof v.name === 'string') v.name = t(v.name);
@@ -140,6 +141,7 @@ function renderPage(app: App, pi: number, W: number): HTMLCanvasElement {
 // ------------------------------------------------------------------ collection
 function collection(app: App) {
   const p = app.p;
+  const stickers = visibleStickers(p);
   const owned = ownedStickers(p).length;
   const milestoneOwned = ownedStickers(p).filter((s) => !s.bonus).length;
   const ms = milestonesReady(p);
@@ -148,8 +150,8 @@ function collection(app: App) {
     h(
       'div',
       { class: 'progress' },
-      h('i', { style: `width:${(owned / STICKERS.length) * 100}%` }),
-      h('span', null, t('{have}/{total} stickers', { have: owned, total: STICKERS.length })),
+      h('i', { style: `width:${(owned / stickers.length) * 100}%` }),
+      h('span', null, t('{have}/{total} stickers', { have: owned, total: stickers.length })),
     ),
     ms
       ? btn(t('Claim sticker bonus · 💎{n}', { n: ms * 10 }), 'primary wide', () => {
@@ -162,7 +164,7 @@ function collection(app: App) {
       : h('p', { class: 'muted' }, t('Every {n} stickers earns 💎10. Next bonus at {next}.', { n: MILESTONE_EVERY, next })),
     ...ALBUM_PAGES.map((pg) => {
       const list = pageStickers(pg.id);
-      const display = [...list, ...STICKERS.filter((s) => s.bonus && s.kind === pg.id)];
+      const display = [...list, ...stickers.filter((s) => s.bonus && s.kind === pg.id)];
       const have = list.filter((s) => s.earned(p)).length;
       const done = pageDone(p, pg.id);
       const claimed = p.album.pagesClaimed.includes(pg.id);

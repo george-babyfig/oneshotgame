@@ -1,4 +1,5 @@
 import { EVENT_TIERS } from './tuning';
+import { almanacTheme } from './almanac';
 // Weekly Voyage themes are selected from the ISO week and local hemisphere.
 import type { BiomeId } from '../core/world';
 import type { Profile } from './profile';
@@ -121,14 +122,25 @@ function themeId(monday: Date, hemisphere: Hemisphere): string {
   return id;
 }
 
-export function eventFor(week: string, hemisphere: Hemisphere = 'north'): WeeklyTheme {
+/** undefined = unopened week; null = a started 1.0 route with no saved theme. */
+export function eventForWeek(week: string, hemisphere: Hemisphere = 'north', savedTheme?: string | null): WeeklyTheme {
+  if (savedTheme) {
+    const saved = EVENTS.find((theme) => theme.id === savedTheme);
+    if (saved) return saved;
+  }
   // Open pre-M12 weeks keep the theme and atmosphere children were already shown.
   if (week >= '2026-W41' && week <= '2026-W44') {
     const [year, number] = week.split('-W').map(Number);
     return EVENTS[(year * 53 + number) % EVENTS.length];
   }
-  const id = themeId(weekStart(week), hemisphere);
+  const rotation = themeId(weekStart(week), hemisphere);
+  // Almanac spotlights never enter the rotation's recursive phase chain.
+  const id = savedTheme === null ? rotation : almanacTheme(week, hemisphere, rotation);
   return EVENTS.find((theme) => theme.id === id)!;
+}
+
+export function eventFor(week: string, hemisphere: Hemisphere = 'north', savedTheme?: string | null): WeeklyTheme {
+  return eventForWeek(week, hemisphere, savedTheme);
 }
 
 /** Milliseconds until the event ends (next Monday 00:00 local). */

@@ -31,11 +31,12 @@ import { helpedLine } from '../../meta/helped';
 
 // Levels are pure functions of week + base + stop, so cache them for the session.
 const cache = new Map<string, LevelDef>();
-function stopLevel(week: string, base: number, i: number, taught: number, hemisphere: 'north' | 'south') {
-  const key = `${week}|${base}|${i}|${taught}|${hemisphere}`;
+// A started week keeps the theme it opened with (decision 90), so the saved theme is part of the key.
+function stopLevel(week: string, base: number, i: number, taught: number, hemisphere: 'north' | 'south', savedTheme: string | null) {
+  const key = `${week}|${base}|${i}|${taught}|${hemisphere}|${savedTheme ?? ''}`;
   let L = cache.get(key);
   if (!L) {
-    L = voyageLevel(week, base, i, taught, hemisphere);
+    L = voyageLevel(week, base, i, taught, hemisphere, savedTheme);
     cache.set(key, L);
   }
   return L;
@@ -72,7 +73,7 @@ export function showVoyage(app: App) {
   const p = app.p;
   const v = ensureVoyage(p);
   const hemisphere = voyageHemisphere(p);
-  const theme = eventFor(v.week, hemisphere);
+  const theme = eventFor(v.week, hemisphere, v.theme ?? null);
   const now = Date.now();
   const until = untilText(now + eventEndsIn(new Date(now)), now, getLang());
   const untilLabel =
@@ -82,7 +83,7 @@ export function showVoyage(app: App) {
         ? t('until {day}', until.vars)
         : t('until {date}', until.vars);
   const stops = Array.from({ length: VOYAGE_LEN }, (_, i) => {
-    const L = stopLevel(v.week, v.base, i, p.level, hemisphere);
+    const L = stopLevel(v.week, v.base, i, p.level, hemisphere, v.theme ?? null);
     const open = voyageUnlocked(p, i);
     const s = v.stars[i] ?? 0;
     const last = i === VOYAGE_LEN - 1;
@@ -169,10 +170,10 @@ function stopSheet(app: App, i: number) {
   const p = app.p;
   const v = p.voyage;
   const hemisphere = voyageHemisphere(p);
-  const L = stopLevel(v.week, v.base, i, p.level, hemisphere);
+  const L = stopLevel(v.week, v.base, i, p.level, hemisphere, v.theme ?? null);
   const first = i === v.cleared;
   const m = modal([
-    h('div', { class: 'm-sub' }, t('{voyage} · Stop {n}', { voyage: t(eventFor(v.week, hemisphere).name), n: i + 1 })),
+    h('div', { class: 'm-sub' }, t('{voyage} · Stop {n}', { voyage: t(eventFor(v.week, hemisphere, v.theme ?? null).name), n: i + 1 })),
     h('div', { class: 'm-title' }, planetName(L.name)),
     h('div', { class: 'vthumb' }, thumb(L, 120, false)),
     i === VOYAGE_LEN - 1 ? h('div', { class: 'twist-chip' }, t('☄️ Comet Guardian — hit it 3 times!')) : null,
@@ -208,7 +209,7 @@ function play(app: App, i: number) {
   const p = app.p;
   const v = p.voyage;
   const week = v.week;
-  const L = stopLevel(week, v.base, i, p.level, voyageHemisphere(p));
+  const L = stopLevel(week, v.base, i, p.level, voyageHemisphere(p), v.theme ?? null);
   p.stats.plays++;
   const opts = app.sceneOpts(
     'voyage',

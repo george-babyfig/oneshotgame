@@ -1,3 +1,4 @@
+import { ROAD_LANDMARKS, roadLandmarkOpen, roadLandmarkTitleName } from './roadLandmarks';
 // Planet Passport: the player's profile card. Names come from two word lists
 // (kid-safe: no free text, nothing to moderate), titles and badges are earned.
 import type { Profile } from './profile';
@@ -12,7 +13,8 @@ import { LANDMARKS } from './tuning';
 import { friendLevel } from './homeworld';
 import { unlocked } from './unlocks';
 import { mementosVisible } from './reveals';
-import { owns } from './cosmetics';
+import { COSMETICS, cosmeticOpen, isPaidLook, owns } from './cosmetics';
+import { ROAD_CONTENT_ROADS } from './roadAvailability';
 
 // Names are proper nouns: they stay the same in every language, like a gamer tag.
 export const NAME_A = [
@@ -110,6 +112,8 @@ export function titlesOwned(p: Profile): TitleDef[] {
   LANDMARKS.forEach((site, index) => {
     if (p.home.landmarks[site.id].stage === 4) out.push({ id: `landmark:${site.id}`, text: landmarkTitles[index], gold: true });
   });
+  for (const site of ROAD_LANDMARKS)
+    if (p.home.roadLandmarks[site.id]?.stage === 4) out.push({ id: site.title, text: roadLandmarkTitleName(), gold: true });
   if (owns(p, 'title_star_captain') && !p.settings.hidePaidLooks) out.push({ id: 'pass', text: 'Star Captain', gold: true });
   return out;
 }
@@ -126,6 +130,9 @@ export interface BannerDef {
   colors: [string, string];
   unlocked: (p: Profile) => boolean;
   how: string;
+  cosmeticId?: string;
+  visible?: (p: Profile) => boolean;
+  paid?: boolean;
 }
 
 export const BANNERS: BannerDef[] = [
@@ -141,13 +148,28 @@ export const BANNERS: BannerDef[] = [
     unlocked: (p) => p.rank >= 4 || p.chapters.includes(4),
     how: 'Open chapter 4 chest',
   },
-  { id: 6, name: 'Aurora Passport banner', colors: ['#6ef2c0', '#6a4dff'], unlocked: (p) => owns(p, 'banner_aurora'), how: 'Starter Crew' },
-  { id: 7, name: 'Gilded Passport banner', colors: ['#c5a966', '#584c3b'], unlocked: (p) => owns(p, 'banner_gilded'), how: 'Cosmic Road' },
+  // Catalogue order preserves saved Aurora (6) and Gilded (7) selections and includes Road banners.
+  ...COSMETICS.filter((look) => look.slot === 'banner').map((look, index): BannerDef => ({
+    id: 6 + index,
+    cosmeticId: look.id,
+    name: look.name,
+    colors: look.id === 'banner_aurora' ? ['#6ef2c0', '#6a4dff'] : [look.colors[0], look.colors[1] ?? '#584c3b'],
+    unlocked: (p) => cosmeticOpen(p, look) && owns(p, look.id),
+    visible: (p) => cosmeticOpen(p, look),
+    paid: isPaidLook(look),
+    how:
+      ROAD_CONTENT_ROADS.find((road) => road.tiers.some((tier) => tier.pass.item === look.id || tier.reward.item === look.id))?.name ??
+      (look.source === 'pass' ? 'Cosmic Road' : 'Starter Crew'),
+  })),
 ];
+
+export function visibleBanners(p: Profile): BannerDef[] {
+  return BANNERS.filter((banner) => (!banner.visible || banner.visible(p)) && (!p.settings.hidePaidLooks || !banner.paid));
+}
 
 export function currentBanner(p: Profile): BannerDef {
   const b = BANNERS[p.passport.banner];
-  return b && b.unlocked(p) && (!p.settings.hidePaidLooks || b.id < 6) ? b : BANNERS[0];
+  return b && b.unlocked(p) && visibleBanners(p).includes(b) ? b : BANNERS[0];
 }
 
 export const PORTRAIT_FRAMES = [
@@ -256,6 +278,9 @@ export function passportStats(p: Profile): { label: string; value: number | stri
     ...(mementosVisible(p) ? [{ label: t('Mementos'), value: p.mementos.length }] : []),
     ...(unlocked(p, 'landmark_signpost') || LANDMARKS.some((site) => p.home.landmarks[site.id].stage === 4)
       ? [{ label: t('Landmarks finished'), value: LANDMARKS.filter((site) => p.home.landmarks[site.id].stage === 4).length }]
+      : []),
+    ...(ROAD_LANDMARKS.some((site) => roadLandmarkOpen(p, site.id))
+      ? [{ label: t('Road Landmarks'), value: ROAD_LANDMARKS.filter((site) => p.home.roadLandmarks[site.id]?.stage === 4).length }]
       : []),
     { label: t('Best friends'), value: bestFriends(p).length },
     { label: t('Days exploring'), value: days },

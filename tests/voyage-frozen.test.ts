@@ -8,7 +8,7 @@ import { VOYAGE_LEN, voyageBase, voyageLevel } from '../src/meta/voyage';
 
 const file = 'tests/fixtures/voyage/frozen-weeks.json';
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-it('preserves every 1.0 Voyage stop across the 1.1 calendar runway', () => {
+it('preserves every M13-frozen Voyage stop byte for byte in M14', () => {
   const rows = [];
   // Local noon each Sunday: isoWeek reads local time, so midnight UTC would shift a week by time zone.
   for (

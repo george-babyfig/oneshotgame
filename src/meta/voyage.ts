@@ -1,4 +1,5 @@
 import { VOYAGE_REWARDS } from './tuning';
+import { calendarSalt } from './almanac';
 // Weekly Voyage: a 7-planet mini-chapter that changes every Monday (same within
 // each hemisphere, seeded by the ISO week). Planets unlock one after another, the last
 // one has a Comet Guardian, and finishing the whole trip counts toward Voyage
@@ -41,7 +42,7 @@ export const THEME_PORTS: Record<string, readonly string[]> = {
   star: ['Starlight Port', 'Comet Cove', 'Moon Hill', 'Starlit Path', 'Nebula Bay', 'Aurora Arch', 'Starlit Summit'],
 };
 
-const THEME_HUES: Record<string, number> = { volcano: 24, ocean: 205, bloom: 125, critter: 38, frost: 190, star: 275 };
+export const THEME_HUES: Record<string, number> = { volcano: 24, ocean: 205, bloom: 125, critter: 38, frost: 190, star: 275 };
 const BONUS_GEMS = 80; // About 130/week with the old Voyage's 45, while new gem sinks cover free supply.
 const REPEAT_ATMOSPHERE_DUST = 1125; // 150-gem atmosphere at the economy's 7.5 dust/gem median.
 const RETIRED_EVENT_DUST_PER_STOP = 175; // Replaces roughly 9,600 dust per 60 days from retired Events.
@@ -66,7 +67,7 @@ export function ensureVoyage(p: Profile, week = isoWeek()) {
     const catchUp = Math.floor((bonus * p.voyage.cleared) / VOYAGE_LEN);
     if (catchUp) applyReward(p, { gems: catchUp }, 'voyage');
     if (p.voyage.cleared === VOYAGE_LEN && !legacyEventAtmospherePaid(p, p.voyage.week))
-      applyReward(p, { skin: eventFor(p.voyage.week, voyageHemisphere(p)).skin }, 'voyage');
+      applyReward(p, { skin: eventFor(p.voyage.week, voyageHemisphere(p), p.voyage.theme ?? null).skin }, 'voyage');
   }
   p.voyage.legacyCatchUpPaid = true;
   return p.voyage;
@@ -86,16 +87,23 @@ export function voyageName(week: string) {
   return VOYAGE_NAMES[weekNum(week) % VOYAGE_NAMES.length];
 }
 
-export function portName(week: string, i: number, hemisphere: Hemisphere = 'north') {
-  if (week > '2026-W44') return THEME_PORTS[eventFor(week, hemisphere).id][i];
+export function portName(week: string, i: number, hemisphere: Hemisphere = 'north', savedTheme?: string | null) {
+  if (week > '2026-W44') return THEME_PORTS[eventFor(week, hemisphere, savedTheme).id][i];
   return PORTS[(weekNum(week) * 3 + i) % PORTS.length];
 }
 
 const stopCache = new Map<string, LevelDef>();
 
 /** Stop i (0-based): a little harder each stop; the last has a Comet Guardian. */
-export function voyageLevel(week: string, base: number, i: number, taught = base + i * 2, hemisphere: Hemisphere = 'north'): LevelDef {
-  const key = JSON.stringify([week, base, i, taught, hemisphere]);
+export function voyageLevel(
+  week: string,
+  base: number,
+  i: number,
+  taught = base + i * 2,
+  hemisphere: Hemisphere = 'north',
+  savedTheme?: string | null,
+): LevelDef {
+  const key = JSON.stringify([week, base, i, taught, hemisphere, savedTheme, calendarSalt(week, i)]);
   const cached = stopCache.get(key);
   if (cached) return structuredClone(cached);
   const n = base + i * 2;
@@ -105,15 +113,16 @@ export function voyageLevel(week: string, base: number, i: number, taught = base
     rules: rulesForLevel(Math.min(n, taught)),
     obstacleCap: taught,
   };
-  const theme = week > '2026-W44' ? eventFor(week, hemisphere) : undefined;
+  const theme = week > '2026-W44' ? eventFor(week, hemisphere, savedTheme) : undefined;
   const seed = theme ? `VOY-${week}-${theme.id}-${i}` : `VOY-${week}-${i}`;
-  const first = makeLevel(n, seed, options);
+  const override = calendarSalt(week, i);
+  const first = makeLevel(n, seed, override ? { ...options, salt: override } : options);
   let L = first;
   // Keep trips already open to children fixed; later weeks redraw solver traps.
   if (week > '2026-W43') {
     let found = false;
     for (let salt = 0; salt <= 256; salt++) {
-      if (salt) L = makeLevel(n, seed, { ...options, salt });
+      if (salt) L = makeLevel(n, seed, { ...options, salt: override + salt });
       if (week > '2026-W44' && (pressureOf(L) > budgetFor(L) || skyWall(L))) continue;
       const blind = solve0(L);
       const aware = solve2(L);
@@ -149,7 +158,7 @@ export function voyageLevel(week: string, base: number, i: number, taught = base
   }
   const stop = {
     ...L,
-    name: portName(week, i, hemisphere),
+    name: portName(week, i, hemisphere, savedTheme),
     ...(theme ? { hue: THEME_HUES[theme.id] } : {}),
   };
   stopCache.set(key, stop);
@@ -165,7 +174,7 @@ export function stopReward(p: Profile, i: number): Reward {
   const bonus = Math.max(0, BONUS_GEMS - legacyEventGems(p, v.week));
   const gems = Math.floor((bonus * (i + 1)) / VOYAGE_LEN) - Math.floor((bonus * i) / VOYAGE_LEN);
   const finalAtmosphere = i === VOYAGE_LEN - 1 && !legacyEventAtmospherePaid(p, v.week);
-  const atmosphere = finalAtmosphere ? eventFor(v.week, voyageHemisphere(p)).skin : undefined;
+  const atmosphere = finalAtmosphere ? eventFor(v.week, voyageHemisphere(p), v.theme ?? null).skin : undefined;
   return {
     ...VOYAGE_REWARDS[i],
     dust:

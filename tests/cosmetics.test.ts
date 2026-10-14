@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultProfile } from '../src/meta/profile';
-import { STAR_ROAD } from '../src/meta/starroad';
+import { ROAD_CATALOG } from '../src/meta/starroad';
 import {
   COSMETICS,
   COSMETIC_BY_ID,
@@ -40,10 +40,11 @@ describe('cosmetics', () => {
       const r = roadTierOf(c.id);
       expect(r, c.id).not.toBeNull();
       expect(r!.lane).toBe(c.source === 'road' ? 'free' : 'pass');
-      const hits = STAR_ROAD.filter((t) => t.reward.item === c.id || t.pass.item === c.id).length;
+      const hits = ROAD_CATALOG.flatMap((road) => road.tiers).filter((t) => t.reward.item === c.id || t.pass.item === c.id).length;
       expect(hits).toBe(1);
     }
-    for (const t of STAR_ROAD) for (const it of [t.reward.item, t.pass.item]) if (it) expect(COSMETIC_BY_ID[it]).toBeDefined();
+    for (const t of ROAD_CATALOG.flatMap((road) => road.tiers))
+      for (const it of [t.reward.item, t.pass.item]) if (it) expect(COSMETIC_BY_ID[it]).toBeDefined();
   });
 
   it('derives ownership from progress (retroactive, no migration)', () => {

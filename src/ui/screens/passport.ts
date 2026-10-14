@@ -4,11 +4,11 @@ import { h, btn, fmt, modal, toast } from '../dom';
 import { sfx } from '../audio';
 import { haptic } from '../haptics';
 import { totalStars } from '../../meta/profile';
-import { currentLook } from '../../meta/cosmetics';
+import { COSMETIC_BY_ID, currentLook } from '../../meta/cosmetics';
 import { ACHIEVEMENTS } from '../../meta/achievements';
 import {
   BADGE_SLOTS,
-  BANNERS,
+  visibleBanners,
   NAME_A,
   NAME_B,
   badgeEmoji,
@@ -275,7 +275,7 @@ export function editPassport(app: App, first = false) {
   const swatches = h(
     'div',
     { class: 'pe-banners' },
-    ...BANNERS.filter((x) => !p.settings.hidePaidLooks || (x.id !== 6 && x.id !== 7)).map((x) => {
+    ...visibleBanners(p).map((x) => {
       const ok = x.unlocked(p);
       const el = h(
         'button',
@@ -286,7 +286,7 @@ export function editPassport(app: App, first = false) {
           onclick: () => {
             if (!ok)
               return toast(
-                `🔒 ${x.id === 7 && !unlocked(p, 'star_road') ? t('Opens at planet {n}', { n: UNLOCKS.find((row) => row.id === 'star_road')!.planet }) : t(x.how)}`,
+                `🔒 ${x.cosmeticId && COSMETIC_BY_ID[x.cosmeticId]?.source === 'pass' && !unlocked(p, 'star_road') ? t('Opens at planet {n}', { n: UNLOCKS.find((row) => row.id === 'star_road')!.planet }) : t(x.how)}`,
               );
             banner = x.id;
             sfx.click();

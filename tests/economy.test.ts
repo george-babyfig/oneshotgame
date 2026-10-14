@@ -1,3 +1,4 @@
+import { ROAD01 } from '../src/meta/content/road01';
 import { describe, expect, it } from 'vitest';
 import { defaultProfile, migrate, totalStars, PROFILE_VERSION } from '../src/meta/profile';
 import {
@@ -168,7 +169,17 @@ describe('economy', () => {
 
   it('offers permanent stardust looks in two rising-price series', () => {
     const p = defaultProfile(0);
-    expect(STARDUST_COSMETICS.map((x) => x.dust)).toEqual([5000, 10000, 18000, 25000, 12000, 22000, 35000, 50000]);
+    expect(STARDUST_COSMETICS.map((x) => x.dust)).toEqual([
+      5000,
+      10000,
+      18000,
+      25000,
+      12000,
+      22000,
+      35000,
+      50000,
+      ...ROAD01.stardust.map((look) => look.dust),
+    ]);
     p.dust = 5000;
     expect(buyCosmetic(p, 'suit_sunseed')).toBe(true);
     expect(p.dust).toBe(0);

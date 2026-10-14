@@ -1,3 +1,4 @@
+import { roadLandmarkMail, roadLandmarkLetter } from './roadLandmarks';
 import { INBOX_GIFTS } from './tuning';
 // Inbox: letters shipped with the app, delivered when something happens
 // (milestones, seasons, meteor showers, new friends). Some carry a small gift.
@@ -256,7 +257,7 @@ function seasonKey(d: Date) {
 }
 
 export function checkMail(p: Profile, now = new Date()): number {
-  let n = 0;
+  let n = roadLandmarkMail(p);
   for (const r of RULES) {
     const id = r.key(p, now);
     if (!id || p.mailSeen.includes(id) || p.mail.some((m) => m.id === id)) continue;
@@ -274,6 +275,8 @@ export function checkMail(p: Profile, now = new Date()): number {
 }
 
 export function letterOf(m: Mail): LetterDef | null {
+  const roadLetter = roadLandmarkLetter(m);
+  if (roadLetter) return roadLetter;
   // Pre-M10 letters had no vars and promised 300 stardust. Preserve an unclaimed gift.
   if (m.kind === 'homeworld' && !m.vars?.m10) {
     return { from: MC, title: 'A planet of your own', body: LAB_TEXT.letterBody, gift: { dust: 300 } };

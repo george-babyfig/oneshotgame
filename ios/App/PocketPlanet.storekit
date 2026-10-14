@@ -481,6 +481,126 @@
       "productID": "com.pocketplanet.game.style.firefly",
       "referenceName": "Style Single: Firefly Sparks",
       "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "3.99",
+      "familyShareable": true,
+      "internalID": "6600000013",
+      "localizations": [
+        {
+          "description": "12 looks along the Moonpetal paid lane",
+          "displayName": "Cosmic Pass: Moonpetal",
+          "locale": "en_US"
+        },
+        {
+          "description": "12 looks de pago del Camino Pétalo Lunar",
+          "displayName": "Pase Cósmico: Pétalo Lunar",
+          "locale": "es_MX"
+        },
+        {
+          "description": "12 looks de la voie payante, Pétale-de-Lune",
+          "displayName": "Pass Cosmique : Pétale-de-Lune",
+          "locale": "fr_FR"
+        },
+        {
+          "description": "12 Pass-Looks auf der Mondblütenblatt-Straße",
+          "displayName": "Kosmos-Pass: Mondblütenblatt",
+          "locale": "de_DE"
+        },
+        {
+          "description": "12 visuais na pista paga da Pétala-da-Lua",
+          "displayName": "Passe Cósmico: Pétala-da-Lua",
+          "locale": "pt_BR"
+        },
+        {
+          "description": "つきのはなびらロードの有料レーンで手に入るコーデ12点",
+          "displayName": "コズミックパス：つきのはなびら",
+          "locale": "ja_JP"
+        }
+      ],
+      "productID": "com.pocketplanet.game.road01",
+      "referenceName": "Cosmic Pass: Moonpetal",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "2.99",
+      "familyShareable": true,
+      "internalID": "6600000014",
+      "localizations": [
+        {
+          "description": "Paper Garden paints, skins and friend outfits",
+          "displayName": "Homeworld Theme: Paper Garden",
+          "locale": "en_US"
+        },
+        {
+          "description": "Pinturas, aspectos y ropa: Jardín de Papel",
+          "displayName": "Planeta Hogar: Jardín de Papel",
+          "locale": "es_MX"
+        },
+        {
+          "description": "Peintures, bâtiments, tenues : Jardin origami",
+          "displayName": "Planète Mère : Jardin origami",
+          "locale": "fr_FR"
+        },
+        {
+          "description": "Papiergarten-Farben, -Looks und -Outfits",
+          "displayName": "Heimatwelt: Papiergarten",
+          "locale": "de_DE"
+        },
+        {
+          "description": "Tintas, visuais e roupas do Jardim de Papel",
+          "displayName": "Mundo-Lar: Jardim de Papel",
+          "locale": "pt_BR"
+        },
+        {
+          "description": "おりがみのお庭のペイント、スキン、友だちコーデ",
+          "displayName": "ホームワールドテーマ：おりがみのお庭",
+          "locale": "ja_JP"
+        }
+      ],
+      "productID": "com.pocketplanet.game.theme.papergarden",
+      "referenceName": "Homeworld Theme: Paper Garden",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "1.99",
+      "familyShareable": true,
+      "internalID": "6600000015",
+      "localizations": [
+        {
+          "description": "Crescent Lace Supernova and matching trail",
+          "displayName": "Style Single: Crescent Lace",
+          "locale": "en_US"
+        },
+        {
+          "description": "Supernova Encaje Media Luna y estela",
+          "displayName": "Estilo: Encaje Media Luna",
+          "locale": "es_MX"
+        },
+        {
+          "description": "Supernova Dentelle lunaire et traînée",
+          "displayName": "Style : Dentelle lunaire",
+          "locale": "fr_FR"
+        },
+        {
+          "description": "Halbmondspitzen-Supernova und passende Spur",
+          "displayName": "Einzelstil: Halbmondspitzen",
+          "locale": "de_DE"
+        },
+        {
+          "description": "Supernova e rastro Renda Meia-Lua",
+          "displayName": "Estilo: Renda Meia-Lua",
+          "locale": "pt_BR"
+        },
+        {
+          "description": "みかづきレースのスーパーノヴァスタイルとおそろいのトレイル",
+          "displayName": "スタイル単品：みかづきレース",
+          "locale": "ja_JP"
+        }
+      ],
+      "productID": "com.pocketplanet.game.style.crescentlace",
+      "referenceName": "Style Single: Crescent Lace",
+      "type": "NonConsumable"
     }
   ],
   "settings": {},

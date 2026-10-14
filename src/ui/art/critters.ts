@@ -825,6 +825,34 @@ export const HAS_ART = (id: string) => id in SPECS;
 /** Accessories drawn relative to the head: top of head, face level, neck. */
 function drawAccessory(g: G, id: string, hx: number, hy: number, top: number, hr: number, u: number, t: number) {
   switch (id) {
+    case 'sparklefan': {
+      // A folded fan above the forehead, never over the eyes.
+      const y = top - u * 0.02;
+      for (let i = 0; i < 5; i++) {
+        const a = Math.PI * (1.1 + i * 0.2);
+        const b = a + Math.PI * 0.18;
+        tri(
+          g,
+          hx,
+          y,
+          hx + Math.cos(a) * u * 0.23,
+          y + Math.sin(a) * u * 0.23,
+          hx + Math.cos(b) * u * 0.23,
+          y + Math.sin(b) * u * 0.23,
+          i % 2 ? '#c5b6a3' : '#a8abd2',
+        );
+      }
+      break;
+    }
+    case 'splashribbon': {
+      const x = hx + hr * 0.6;
+      const y = top + hr * 0.05;
+      tri(g, x, y, x - u * 0.12, y - u * 0.09, x - u * 0.13, y + u * 0.03, '#86b6aa');
+      tri(g, x, y, x + u * 0.12, y - u * 0.06, x + u * 0.11, y + u * 0.06, '#a8abd2');
+      tri(g, x, y, x + u * 0.02, y + u * 0.2, x + u * 0.08, y + u * 0.13, '#86b6aa');
+      ell(g, x, y, u * 0.03, u * 0.03, '#d6c9bc');
+      break;
+    }
     case 'bow': {
       const x = hx + hr * 0.45;
       const y = top + hr * 0.1;

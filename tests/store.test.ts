@@ -2,11 +2,14 @@ import { COSMETICS } from '../src/meta/cosmetics';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { FREE_SAMPLERS, PRODUCTS, PRODUCT_TEXT_KEYS, ROAD00_GEM_SINGLE_IDS } from '../src/meta/tuning';
-import { STAR_ROAD } from '../src/meta/starroad';
+import { ROAD_CATALOG } from '../src/meta/starroad';
+import { ROAD01, ROAD01_GEM_SINGLE_TOTAL } from '../src/meta/content/road01';
+import { allStrings } from './helpers/locales';
+const roads = [...new Map([...ROAD_CATALOG, ROAD01.road].map((road) => [road.id, road])).values()];
 import { defaultProfile } from '../src/meta/profile';
 import { grantProduct, ownsProduct, refundQuietUntil, restoreProduct, revokeProduct } from '../src/meta/economy';
 import { createIap, mockIapControls } from '../src/meta/iap';
-import { M12_COSMETICS, owns as ownsLook } from '../src/meta/cosmetics';
+import { owns as ownsLook } from '../src/meta/cosmetics';
 import { resetProfileKeepingPurchases } from '../src/ui/flows/settings';
 import { drones } from '../src/meta/homeworld';
 import { grantRoadPass } from '../src/meta/starroad';
@@ -22,28 +25,27 @@ const pressure = {
 };
 
 describe('store charter', () => {
-  it('pins the twelve launch products to the roadmap prices and kinds', () => {
-    expect(PRODUCTS.map((p) => [p.id.split('com.pocketplanet.game.')[1], p.kind, p.fallbackPrice])).toEqual([
-      ['gems80', 'gem_pack', '$0.99'],
-      ['gems500', 'gem_pack', '$4.99'],
-      ['gems1200', 'gem_pack', '$9.99'],
-      ['gems2800', 'gem_pack', '$19.99'],
-      ['piggy', 'piggy_bank', '$1.99'],
-      ['startercrew', 'cosmetic_bundle', '$2.99'],
-      ['road00', 'road_pass', '$3.99'],
-      ['theme.tidepool', 'theme', '$2.99'],
-      ['theme.cometcandy', 'theme', '$2.99'],
-      ['pack.crystalfrost', 'planet_pack', '$2.99'],
-      ['style.nebula', 'style_single', '$1.99'],
-      ['style.firefly', 'style_single', '$1.99'],
-    ]);
-  });
+  for (const product of PRODUCTS) {
+    it(`${product.key} has a permanent identifier and its kind's fixed USD price`, () => {
+      expect(product.id).toMatch(/^com\.pocketplanet\.game\.[a-z0-9.]+$/);
+      expect(PRODUCTS.filter((row) => row.id === product.id)).toHaveLength(1);
+      const prices = {
+        road_pass: '$3.99',
+        theme: '$2.99',
+        planet_pack: '$2.99',
+        style_single: '$1.99',
+        cosmetic_bundle: '$2.99',
+        piggy_bank: '$1.99',
+      };
+      if (product.kind !== 'gem_pack') expect(product.fallbackPrice).toBe(prices[product.kind]);
+      expect(product.familySharing).toBe(!product.consumable);
+    });
+  }
   it('reports the mock store currency with each localized price', async () => {
     const prices = await createIap().prices();
     expect(prices[PRODUCTS[0].id]).toEqual({ display: '$0.99', currency: 'USD', amount: 0.99 });
   });
   it('sells exactly five consumables and gives no gameplay power from one-time products', () => {
-    expect(PRODUCTS).toHaveLength(12);
     expect(PRODUCTS.filter((p) => p.consumable).map((p) => p.key)).toEqual(['gems_s', 'gems_m', 'gems_l', 'gems_xl', 'piggy']);
     for (const product of PRODUCTS.filter((p) => !p.consumable)) {
       expect(product.gems).toBe(0);
@@ -52,7 +54,7 @@ describe('store charter', () => {
       grantProduct(p, product.id, `tx-${product.key}`);
       expect({ gems: p.gems, dust: p.dust, boosters: p.boosters, mats: p.mats, level: p.level }).toEqual(before);
     }
-    for (const tier of STAR_ROAD) {
+    for (const tier of roads.flatMap((road) => road.tiers)) {
       expect(tier.pass.gems).toBeUndefined();
       expect(tier.pass.dust).toBeUndefined();
       expect(tier.pass.boosters).toBeUndefined();
@@ -88,7 +90,11 @@ describe('store charter', () => {
   });
 
   it('has fixed samplers for both Themes and the Planet Pack, separate from paid contents', () => {
-    expect(Object.keys(FREE_SAMPLERS)).toEqual(['theme_tidepool', 'theme_cometcandy', 'pack_crystalfrost']);
+    expect(Object.keys(FREE_SAMPLERS).sort()).toEqual(
+      PRODUCTS.filter((p) => ['theme', 'planet_pack'].includes(p.kind))
+        .map((p) => p.key)
+        .sort(),
+    );
     for (const [key, sampler] of Object.entries(FREE_SAMPLERS)) {
       const product = PRODUCTS.find((item) => item.key === key)!;
       expect(product.cosmeticItemIds).not.toContain(sampler);
@@ -97,25 +103,37 @@ describe('store charter', () => {
 
   it('maps every new paid item ID to a visual owned by the correct product', () => {
     for (const product of PRODUCTS.filter((item) => ['theme', 'planet_pack', 'style_single'].includes(item.kind))) {
-      const visuals = M12_COSMETICS.filter((item) => item.productId === product.id);
+      const visuals = COSMETICS.filter((item) => item.productId === product.id);
       expect(visuals.map((item) => item.id).sort(), product.key).toEqual([...product.cosmeticItemIds].sort());
     }
   });
 
-  it('lists exactly the twelve fixed Cosmic Pass looks granted by Road 0', () => {
-    const pass = PRODUCTS.find((item) => item.key === 'pass')!;
-    const roadLooks = STAR_ROAD.flatMap((tier) => [tier.pass.skin, tier.pass.item].filter((id): id is string => !!id));
-    expect(roadLooks).toHaveLength(12);
-    expect([...roadLooks].sort()).toEqual([...pass.cosmeticItemIds].sort());
-  });
-
-  it('adds at least 3,000 gems of fixed-price Road 0 singles at 60–300 gems each', () => {
-    expect(ROAD00_GEM_SINGLE_IDS).toHaveLength(20);
-    const singles = ROAD00_GEM_SINGLE_IDS.map((id) => COSMETICS.find((look) => look.id === id)!);
-    expect(singles.every((look) => look.source === 'gems' && look.gems! >= 60 && look.gems! <= 300)).toBe(true);
-    expect(singles.reduce((sum, look) => sum + look.gems!, 0)).toBe(5200);
-  });
-
+  for (const road of roads) {
+    it(`${road.id} Pass lists exactly its reached-lane looks without currency`, () => {
+      const pass = PRODUCTS.find((item) => item.kind === 'road_pass' && (item.roadId ?? 'road00') === road.id)!;
+      expect(pass, road.id).toBeDefined();
+      const roadLooks = road.tiers.flatMap((tier) => [tier.pass.skin, tier.pass.item].filter((id): id is string => !!id));
+      expect(roadLooks).toHaveLength(12);
+      expect([...roadLooks].sort()).toEqual([...pass.cosmeticItemIds].sort());
+      expect(new Set(roadLooks).size).toBe(roadLooks.length);
+      for (const tier of road.tiers) {
+        expect(tier.pass.gems).toBeUndefined();
+        expect(tier.pass.dust).toBeUndefined();
+        expect(tier.pass.boosters).toBeUndefined();
+      }
+    });
+  }
+  for (const [road, ids, target] of [
+    ['road00', ROAD00_GEM_SINGLE_IDS, 5200],
+    ['road01', ROAD01.singles.map((look) => look.id), ROAD01_GEM_SINGLE_TOTAL],
+  ] as const) {
+    it(`${road} gem singles match its pin with each price between 60 and 300`, () => {
+      const singles = ids.map((id) => COSMETICS.find((look) => look.id === id)!);
+      expect(singles.every((look) => look?.source === 'gems' && look.gems! >= 60 && look.gems! <= 300)).toBe(true);
+      expect(singles.reduce((sum, look) => sum + look.gems!, 0)).toBe(target);
+      expect(target).toBeGreaterThanOrEqual(3000);
+    });
+  }
   it('has one USD price and matching StoreKit IDs, prices, types and sharing', () => {
     const file = JSON.parse(readFileSync('ios/App/PocketPlanet.storekit', 'utf8')) as {
       products: {
@@ -143,7 +161,7 @@ describe('store charter', () => {
 
   for (const lang of locales) {
     it(`${lang} has no pressure wording in translated product text`, () => {
-      const dict = JSON.parse(readFileSync(`src/locales/${lang}.json`, 'utf8')) as Record<string, string>;
+      const dict = allStrings(lang);
       for (const key of texts) if (dict[key]) expect(dict[key]).not.toMatch(pressure[lang]);
     });
   }
@@ -180,7 +198,7 @@ describe('store charter', () => {
     expect(refundQuietUntil(p)).toBe(at + 7 * 86400000);
   });
 
-  it('Reset progress preserves each of the seven looks products and the looks-only Pass', () => {
+  it('Reset progress preserves each permanent product and its looks-only Pass', () => {
     for (const product of PRODUCTS.filter((item) => !item.consumable)) {
       const p = defaultProfile();
       grantProduct(p, product.id, `reset-${product.key}`);

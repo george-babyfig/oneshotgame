@@ -4,6 +4,7 @@ import type { Difficulty } from '../core/levels';
 import type { Profile } from './profile';
 import type { EconomyMode } from './homeworldTypes';
 import { grownSectorsOf, queueHomeCelebration, recordHomeworldWin } from './homeworld';
+import { recordRoadLandmarkRound } from './roadLandmarks';
 import { recordLandmarkRound } from './landmarks';
 import type { Planet } from '../core/world';
 import type { EligibleRoundResult } from './homeworldLife';
@@ -101,6 +102,9 @@ export function settleHomeworldRound(p: Profile, round: SettledRound): EligibleR
     ...evidence,
     grownSectors,
   });
+  const roadResult = recordRoadLandmarkRound(p, { ...round, ...evidence, grownSectors });
+  result.earned.push(...roadResult.earned);
+  result.celebrations.push(...roadResult.celebrations);
   for (const id of result.celebrations) queueHomeCelebration(p, id);
   return result;
 }

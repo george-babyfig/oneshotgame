@@ -5,6 +5,7 @@ import { HOMEWORLD_MAX_LEVEL } from '../../meta/tuning';
 import type { BuildingType } from '../../meta/homeworld';
 import { KINDS, type Kind } from '../../core/world';
 import { shade } from './color';
+import { drawStyleMotif, styleMotif } from './styleRender';
 import { COSMETIC_BY_ID } from '../../meta/cosmetics';
 
 type G = CanvasRenderingContext2D;
@@ -330,7 +331,10 @@ export function drawStructure(
     } else if (type === 'lantern') {
       rr(g, -s * 0.09, -s * 0.31, s * 0.18, s * 0.11, s * 0.03, style.colors[1] ?? style.colors[0]);
     }
-    if (style.motif === 'wave') {
+    if (styleMotif(style.id, style.motif) === 'fold') {
+      // Tiny folded panels stay on the side shutters, clear of the Lab badge and stripe.
+      for (const side of [-1, 1]) drawStyleMotif(g, side * s * 0.25, -s * 0.17, s * 0.035, 'fold');
+    } else if (style.motif === 'wave') {
       g.beginPath();
       g.arc(0, -s * 0.1, s * 0.12, 0.1, Math.PI - 0.1);
       g.stroke();

@@ -1,3 +1,4 @@
+import { ROAD01 } from './content/road01';
 import type { WishOrigin } from './m13types';
 // Creature Wishes are stored in the old quest slot so existing saves migrate without a new profile field.
 import { SPECIES_BY_ID, type BiomeId, type Planet } from '../core/world';
@@ -479,8 +480,8 @@ export function claimWish(p: Profile, id: string, day?: string): boolean {
   earn(p, 'dust', WISH_REWARD.dust, 'wish');
   grantProfileRoadPoints(p, { source: 'wish', date: day ?? today(), earningKey: card.id, delta: WISH_REWARD.roadPoints });
   // Each named sampler is earned from a Wish, with no paid entitlement.
-  for (const id of ['sampler_tidepool', 'sampler_cometcandy', 'sampler_crystalfrost'] as const) {
-    if (grantWishSampler(p, id)) break;
+  for (const id of ['sampler_tidepool', 'sampler_cometcandy', 'sampler_crystalfrost', ...ROAD01.samplers.map((item) => item.id)]) {
+    if (grantWishSampler(p, id, day ?? today())) break;
   }
   const resident = p.home.residents.find((r) => r.species === card.species);
   if (resident) {

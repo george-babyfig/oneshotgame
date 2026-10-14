@@ -5,8 +5,8 @@ import type { BackupKeyMeta, BackupReason, BackupRestoreResult, CloudBackupPlugi
 import { loadKey, removeKey, saveKeyChecked } from './storage';
 import { purchaseHistory } from './ledger';
 import { purchaseGrants } from './purchaseGrants';
-import { PRODUCTS, PRODUCT_BY_KEY } from './tuning';
-import { restoreProduct } from './economy';
+import { PRODUCTS, PRODUCT_BY_KEY, SKINS } from './tuning';
+import { ownsProduct, restoreProduct, revokeProduct } from './economy';
 import { COSMETICS, isPaidLook, owns } from './cosmetics';
 
 const cloud = registerPlugin<CloudBackupPlugin>('CloudBackup');
@@ -303,21 +303,18 @@ async function keepDevice(restored: Profile, device: Profile, gemIds = device.pr
       !COSMETICS.some((look) => look.id === id && isPaidLook(look)) &&
       (id !== 'frame_gold' || restored.home.landmarks.keepers_beacon.stage === 4),
   );
-  restored.skins = restored.skins.filter((id) => id !== 'aurora' && id !== 'cosmic');
+  restored.skins = restored.skins.filter((id) => !SKINS.some((skin) => skin.id === id && (skin.pass || skin.starter)));
   restored.starter = false;
   restored.pass = false;
+  // Clear copied Pass bits during re-derivation so restoreProduct cannot short-circuit its looks.
+  restored.roadPassEntitlements = [];
   restored.meta.productEntitlements = [];
   for (const product of PRODUCTS) {
-    const owned =
-      product.key === 'starter'
-        ? device.starter
-        : product.key === 'pass'
-          ? device.pass
-          : device.meta.productEntitlements?.includes(product.id);
-    if (owned && !device.meta.revokedProducts?.[product.id]) restoreProduct(restored, product.id);
+    if (ownsProduct(device, product.id) && !device.meta.revokedProducts?.[product.id]) restoreProduct(restored, product.id);
   }
   restored.starter = device.starter;
   restored.pass = device.pass;
+  restored.roadPassEntitlements = [...device.roadPassEntitlements];
   restored.meta.productEntitlements = [...(device.meta.productEntitlements ?? [])];
   restored.meta.passLooksOnly = device.meta.passLooksOnly;
   // Legacy Pass grants are device entitlements, never another device's earned gifts.
@@ -325,6 +322,8 @@ async function keepDevice(restored: Profile, device: Profile, gemIds = device.pr
     if (device.pass && !restored.wardrobe.includes(id)) restored.wardrobe.push(id);
   for (const look of COSMETICS.filter(isPaidLook))
     if (owns(restored, look.id) && !restored.wardrobe.includes(look.id)) restored.wardrobe.push(look.id);
+  // A backup cannot overrule this device's current refunds, even if store reconciliation fails.
+  for (const [id, at] of Object.entries(device.meta.revokedProducts ?? {})) revokeProduct(restored, id, at);
   if (!restored.skins.includes(restored.skin)) restored.skin = 'classic';
   return true;
 }

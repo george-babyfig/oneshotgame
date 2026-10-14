@@ -643,7 +643,7 @@ Every product is priced in US dollars, sold only in Grown-ups behind Gate v2, an
 | **Homeworld Theme: Comet Candy** | $2.99 | Same structure                                                                                                                                                                                      | New                                                                                  |
 | **Planet Pack: Crystal Frost**   | $2.99 | A Keeper set, a trail and burst for all 6 objects, and a Fusion style                                                                                                                               | New                                                                                  |
 | **Style Single: Nebula Swirl**   | $1.99 | A Supernova style and a matching trail                                                                                                                                                              | New                                                                                  |
-| **Style Single: Firefly Glow**   | $1.99 | A Supernova style and a matching trail                                                                                                                                                              | New                                                                                  |
+| **Style Single: Firefly Sparks** | $1.99 | A Supernova style and a matching trail                                                                                                                                                              | New                                                                                  |
 
 Suggested product IDs: `com.pocketplanet.game.startercrew`, `.road00`, `.theme.tidepool`, `.theme.cometcandy`, `.pack.crystalfrost`, `.style.nebula`, `.style.firefly`. Every Theme and Pack also contains one free sampler item that any child can earn from a Wish. Paid decorations are skins of free ones, with the same (now purely visual) effect.
 
@@ -1605,6 +1605,35 @@ Each route on its own is completable by the Regular persona (a sim assertion). T
 - Verification logs: `docs/handoff/m13-step0.md`, `docs/handoff/m13-fx.md`.
 
 **M14: Road 1 and the live-ops calendar (M).** Road 1's content (Cosmic Pass lane of 12 looks, free lane, one Theme or Pack, 1-2 Style Singles, at least 3,000 gems of singles, new stardust looks). A data table of weeks with a fall-back to today's rotation; the 98-day runway test; App Store In-App Events; the release train. From Road 1, one free, play-gated Landmark per Road, themed on its Voyage weeks, which stays open after the Road ends (HOMEWORLD.md §6.3). Festival edition 2 if there is an art budget. Files: `src/meta/starroad.ts`, new `src/meta/almanac.ts`, `src/meta/cosmetics.ts`, `src/meta/festivals.ts`, `tests/runway.test.ts`. About 40 strings per Road.
+
+**M14 ✅ built 14 October 2026 (update 1.2; dormant until the owner sets Road 1's date).**
+
+- **Roads per Road:** Star Roads now run per Road. Road 0 is unchanged on every B9 field. Points are shared with a started Past Road (decision 80), and `roadSeenDay` is a high-water mark.
+- **Road 1, "Moonpetal Road" (working name):**
+  - a free lane with Road 0's exact shape;
+  - a 12-look Cosmic Pass lane;
+  - the Paper Garden Theme;
+  - the Crescent Lace Style Single;
+  - 22 gem singles totalling 5,700 gems (coverage 0.86 / 0.89 of free supply);
+  - four Woven Sky stardust looks.
+    All are code-drawn and translated.
+- **Buying before Road 1 opens:** the Theme and Single can be bought and worn at once (decision 82). The Pass shows "Opens {date}".
+- **Road Landmark 1, "Sky Loom":** on the Floating Isle, four builds of 1-3 active days each, with a decoration and the "Sky Weaver" title.
+- **Almanac:** append-only, with the frozen weeks unchanged.
+- **Runway:** 98 days plus 2 days of margin, zero issues.
+- **Deep link:** `cometgarden://`, which queues behind Home's cards and never bypasses the gate.
+- **Save v8.**
+- **Measured:**
+  - B3: 50 / 51 days to finish the free lane;
+  - B4: Road 0 finishes on day 144 and Road 1 on day 200, with no stall;
+  - B5: 0.86 / 0.89;
+  - every M13 gate still green.
+- **Owner actions before 1.2:**
+  - set Road 1's `opensOn` (at least 28 days after the 1.2 submission);
+  - approve the catalogue and the Road 1 name;
+  - capture the three review screenshots;
+  - create the three products and the In-App Event in App Store Connect (`store/review-notes.md`, `store/in-app-events/road01.md`, `docs/qa/release-train.md`).
+- Logs: `docs/handoff/m14-step0.md`, `docs/handoff/m14-d.md`.
 
 **M15: Content drop: more reactions and Troubles (L).** Space Pebble and the Comet Guardian's pebbles from the planet-50 boss (after the Scene Bot confirms the flight model). Firemount, Rainbow and Flood. Wonder: a mark above 3 stars set at 95% of an offline planner's score (precomputed `par.json`), shown only after a planet is 3-starred, earned only, never with help or assists. Star Motes: at most 1 per planet (+1 throw or a wider shot, no picker). Space Pebble needs its own ladder row, slotted around planets 51 and 53. Launcher and obstacle candidates (a moon-slingshot launcher, a comet-tail obstacle) only if the bands allow; any new obstacle or Combo rule is a versioned rules change (`RULES_VERSION` 2) that never drops stored stars. All bands must stay green. About 60 strings.
 

@@ -1,8 +1,8 @@
-import { grantProfileRoadPoints, anyRoadReady, roadForProduct, ROAD_CATALOG } from '../src/meta/starroad';
+import { grantProfileRoadPoints, anyRoadReady, roadForProduct, roadOpen, ROAD_CATALOG } from '../src/meta/starroad';
 import { ALMANAC, CALENDAR_OVERRIDES, almanacTheme, calendarSalt } from '../src/meta/almanac';
 import { ROAD01 } from '../src/meta/content/road01';
 import { ROAD_LANDMARKS, roadLandmarkMail } from '../src/meta/roadLandmarks';
-import { COSMETICS, STYLES_RELEASE, stylesNewDot, themed } from '../src/meta/cosmetics';
+import { COSMETICS, availableStylesRelease, stylesNewDot, themed } from '../src/meta/cosmetics';
 import { describe, expect, it, vi } from 'vitest';
 import { defaultProfile, migrate, PROFILE_VERSION, today } from '../src/meta/profile';
 import { readFileSync } from 'node:fs';
@@ -339,23 +339,19 @@ describe('M14 step-0 save v8 contract', () => {
 });
 
 describe('M14 step-0 dormant contracts', () => {
-  it('adds no playable Road, Landmark, override or Road 1 look', () => {
-    expect(ROAD_CATALOG.map((road) => road.id)).toEqual(['road00']);
-    expect(ROAD_CATALOG[0].addedIn).toBe('1.0');
-    for (const list of [
-      ROAD01.road.tiers,
-      ROAD01.looks,
-      ROAD01.products,
-      ROAD01.singles,
-      ROAD01.stardust,
-      ROAD01.samplers,
-      ROAD_LANDMARKS,
-      ALMANAC,
-      CALENDAR_OVERRIDES,
-    ])
-      expect(list).toEqual([]);
+  it('installs Road 1, its Landmark and content, all dormant until the owner pins the opening date', () => {
+    expect(ROAD_CATALOG.map((road) => road.id)).toEqual(['road00', 'road01']);
+    expect(ROAD_CATALOG.map((road) => road.addedIn)).toEqual(['1.0', '1.2']);
+    // Decision 86: no invented date, so Road 1 is not playable yet.
+    expect(ROAD01.road.opensOn).toBeUndefined();
+    expect(roadOpen(ROAD01.road, today())).toBe(false);
+    for (const list of [ROAD01.road.tiers, ROAD01.looks, ROAD01.products, ROAD01.singles, ROAD01.stardust, ROAD_LANDMARKS])
+      expect(list.length).toBeGreaterThan(0);
     expect(COSMETICS.some((look) => look.productId === 'com.pocketplanet.game.road01')).toBe(false);
-    expect(readFileSync('src/meta/content/road01.ts', 'utf8')).not.toMatch(/from ['"].*cosmetics/);
+    // Content data stays plain: at most a type-only import from cosmetics, never a runtime one.
+    expect(readFileSync('src/meta/content/road01.ts', 'utf8')).not.toMatch(/^import (?!type)[^\n]*from ['"].*cosmetics/m);
+    expect(Array.isArray(ALMANAC)).toBe(true);
+    expect(Array.isArray(CALENDAR_OVERRIDES)).toBe(true);
   });
   it('retains the current Road mapping, calendar seeds and Styles dot without sending mail', () => {
     expect(roadForProduct('com.pocketplanet.game.road00')).toBe('road00');
@@ -368,9 +364,12 @@ describe('M14 step-0 dormant contracts', () => {
     expect(almanacTheme('2026-W53', 'south', 'ocean')).toBe('ocean');
     expect(calendarSalt('2026-12-31')).toBe(0);
     expect(calendarSalt('2026-W53', 0)).toBe(0);
+    // Before Road 1 opens the dot announces 1.0's catalogue with 1.0's rules (Home and Missions also
+    // require Styles access); Road 1's own dot adds decision 82's planet and session gates.
+    expect(availableStylesRelease(p, '2026-10-14')).toBe('m12');
     expect(stylesNewDot(p, '2026-10-14')).toBe(true);
     expect(p).toEqual(before);
-    p.stylesNewSeen = STYLES_RELEASE;
+    p.stylesNewSeen = availableStylesRelease(p, '2026-10-14');
     expect(stylesNewDot(p, '2026-10-14')).toBe(false);
   });
   it('accepts Theme data without changing either installed Theme factory output', () => {

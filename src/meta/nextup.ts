@@ -1,10 +1,11 @@
+import { activeRoadLandmark, roadLandmarkReady, roadLandmarkName, roadLandmarkAsk, ROAD_LANDMARK_STRINGS } from './roadLandmarks';
 import { tripVisible } from './reveals';
 import { HOMEWORLD_MAX_LEVEL } from './tuning';
 import { t } from '../i18n';
 import type { Profile } from './profile';
 import { UNLOCKS, unlocked } from './unlocks';
 import { chestsReady } from './progression';
-import { roadReady } from './starroad';
+import { anyRoadReady } from './starroad';
 import { wishClaimable, wishText, type WishCard } from './wishes';
 import { CONSTELLATIONS } from './tuning';
 import { habitatProgress, habitatsReady, HABITATS } from './habitats';
@@ -118,10 +119,19 @@ export function nextUp(p: Profile, _now: number): NextUp {
     };
   if (p.home.plots.some((b) => b && b.done && b.done <= _now))
     return { kind: 'claim', title: t('A Homeworld build is ready'), subtitle: t('Visit your Homeworld'), action: 'homeworld' };
-  if (unlocked(p, 'quests') && ((unlocked(p, 'star_road') && roadReady(p).length) || wishClaimable(p)))
+  if (unlocked(p, 'quests') && ((unlocked(p, 'star_road') && anyRoadReady(p)) || wishClaimable(p)))
     return { kind: 'claim', title: t('A reward is ready'), subtitle: t('Visit Missions'), action: 'missions' };
   if (unlocked(p, 'lifebook') && habitatsReady(p).length)
     return { kind: 'claim', title: t('A reward is ready'), subtitle: t('Lifebook'), action: 'lifebook' };
+  const roadBuild = activeRoadLandmark(p);
+  if (unlocked(p, 'homeworld') && roadBuild && roadLandmarkReady(p, roadBuild.id))
+    return {
+      kind: 'claim',
+      title: roadLandmarkName(),
+      subtitle: ROAD_LANDMARK_STRINGS.openTitle(roadLandmarkName()),
+      action: 'homeworld',
+      homeTarget: 'landmark',
+    };
   const nearWish = (p.quests.list as WishCard[]).find((q) => q.template && q.species && !q.claimed && q.progress >= q.goal * 0.8);
 
   if (unlocked(p, 'quests') && nearWish && firstHourStep(p) !== 'done')
@@ -197,6 +207,15 @@ export function homeworldNextUp(p: Profile, now = Date.now()): NextUp {
       action: 'homeworld',
       homeTarget: 'landmark',
     };
+  const roadSite = activeRoadLandmark(p);
+  if (roadSite && roadLandmarkReady(p, roadSite.id))
+    return {
+      kind: 'claim',
+      title: roadLandmarkName(),
+      subtitle: ROAD_LANDMARK_STRINGS.openTitle(roadLandmarkName()),
+      action: 'homeworld',
+      homeTarget: 'landmark',
+    };
   if (p.home.level < HOMEWORLD_MAX_LEVEL && canExpand(p) === 'ok')
     return {
       kind: 'claim',
@@ -241,6 +260,14 @@ export function homeworldNextUp(p: Profile, now = Date.now()): NextUp {
         kind: 'goal',
         title: t(site.name),
         subtitle: t(landmarkAsk(site, p.home.landmarks[site.id].stage)),
+        action: 'homeworld',
+        homeTarget: 'landmark',
+      };
+    if (roadSite)
+      return {
+        kind: 'goal',
+        title: roadLandmarkName(),
+        subtitle: roadLandmarkAsk(p.home.roadLandmarks[roadSite.id]?.stage ?? 0),
         action: 'homeworld',
         homeTarget: 'landmark',
       };

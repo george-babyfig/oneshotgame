@@ -4,6 +4,10 @@ Run this for each release candidate. The native floor is iOS 15.4 and the bundle
 
 ## Prepare the candidate
 
+- [ ] Follow [the release train](release-train.md): owner-confirmed Road dates, at least 28 days of submission lead time and phased release on. Keep `RELEASE.version` aligned to the package major.minor when the owner approves the release bump.
+- [ ] Run `RELEASE_CHECK=1 RUNWAY_FROM=$(date -u +%F) npm run runway` from the run date: 100 Daily dates (98 + 2 time-zone margin), every touching ISO week, both hemispheres and all taught levels. Require zero issues and no unset current-release Road dates. Preserve the M13 calendar goldens; salt fixes are append-only and outside the frozen boundary.
+- [ ] Review [the owner-only Road 1 event draft](../../store/in-app-events/road01.md), native-reviewed six-language metadata, free-only art and cold/warm `cometgarden://road` evidence. Confirm session 1, unlocks, active rounds and gates are intact and no link opens a purchase.
+
 - [ ] Confirm CI and nightly are green, including typecheck, unit tests, `npm run sim:quick`, level lint and runway pre-flight, economy and loadout sims, web journeys, and the native Simulator build.
 - [ ] Run J1–J7 at 320×568, 375×667, 390×844, and 430×932 in Chromium and WebKit, in en, es, fr, de, pt-BR, ja, plus pseudo. Check clipping, 44 px tap targets, errors, and overlay count.
 - [ ] Check a saved profile from every prior version loads without loss. Run the Scene Bot planets 1–30 and a 50-planet frame time and memory soak.

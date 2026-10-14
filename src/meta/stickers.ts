@@ -1,3 +1,7 @@
+import { t } from '../i18n';
+import { roadOpen } from './starroad';
+import { today } from './profile';
+import { ROAD01 } from './content/road01';
 import { HOMEWORLD_MAX_LEVEL } from './tuning';
 import { MILESTONE_REWARD } from './tuning';
 import { ALBUM_PAGES } from './tuning';
@@ -24,6 +28,8 @@ export interface Sticker {
   /** How to earn it: an English template and its values. */
   hint: [string, Record<string, string | number>?];
   earned: (p: Profile) => boolean;
+  visible?: (p: Profile) => boolean;
+  hintText?: () => string;
   /** Decorative bonus stickers never affect album rewards or milestones. */
   bonus?: boolean;
 }
@@ -114,6 +120,24 @@ const COMBO_STICKERS: Sticker[] = COMBO_STAMP_NAMES.map((name, i) => ({
 }));
 
 export const STICKERS: Sticker[] = [
+  ...ROAD01.road.tiers.flatMap((tier): Sticker[] =>
+    tier.reward.sticker
+      ? [
+          {
+            id: tier.reward.sticker,
+            kind: 'feat',
+            name: ROAD01.road.name,
+            art: 'atlas',
+            hint: ['Reach the end of {road}', { road: ROAD01.road.name }],
+            hintText: () => t('Reach the end of {road}', { road: t('Moonpetal Road') }),
+            visible: (p) => roadOpen(ROAD01.road, today() > p.roadSeenDay ? today() : p.roadSeenDay),
+            earned: (p) =>
+              roadOpen(ROAD01.road, today() > p.roadSeenDay ? today() : p.roadSeenDay) && p.roadStickers.includes(tier.reward.sticker!),
+            bonus: true,
+          },
+        ]
+      : [],
+  ),
   {
     id: 'cosmic_road',
     kind: 'feat',
@@ -174,8 +198,12 @@ export { ALBUM_PAGES } from './tuning';
 export const pageStickers = (kind: StickerKind) =>
   STICKERS.filter((s) => !s.bonus && (s.kind === kind || (kind === 'feat' && s.kind === 'fusion')));
 
+export function visibleStickers(p: Profile) {
+  return STICKERS.filter((s) => !s.visible || s.visible(p));
+}
+
 export function ownedStickers(p: Profile) {
-  return STICKERS.filter((s) => s.earned(p));
+  return visibleStickers(p).filter((s) => s.earned(p));
 }
 
 export const hasSticker = (p: Profile, id: string) => !!STICKER_BY_ID[id]?.earned(p);

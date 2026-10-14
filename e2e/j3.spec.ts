@@ -602,3 +602,123 @@ test('J3 fresh-install looks owner can open Styles before chapter 1', async ({ p
     await expect(page.locator('.host')).not.toContainText('Opens after chapter 1');
   }
 });
+
+// Data-driven release sweep: future products stay reviewable in Grown-ups from install.
+test('J3 M14 every new product: opening label, try-on, exact contents, grant, replay, refund and restore', async ({ page }, info) => {
+  test.setTimeout(180_000);
+  const guard = watchErrors(page);
+  await freshInstall(page);
+  await player(page, info);
+  const release = await page.evaluate(async () => {
+    const { ROAD01 } = await (window as any).__e2eImport('/src/meta/content/road01.ts');
+    const { COSMETICS } = await (window as any).__e2eImport('/src/meta/cosmetics.ts');
+    const app = (window as any).__app;
+    // This is a scenario date; no real opening date is installed by this test.
+    ROAD01.road.opensOn = '2099-01-02';
+    app.p.roadSeenDay = '';
+    app.p.level = 50;
+    app.p.home.level = 5;
+    app.showStyles();
+    const ids = new Set(
+      [
+        ...ROAD01.looks,
+        ...ROAD01.singles,
+        ...ROAD01.stardust,
+        ...ROAD01.samplers,
+        ...COSMETICS.filter((x: any) => x.productId === `com.pocketplanet.game.theme.${ROAD01.theme.id}`),
+      ].map((x: any) => x.id),
+    );
+    return {
+      name: ROAD01.road.name,
+      looks: COSMETICS.filter((x: any) => ids.has(x.id)).map((x: any) => x.name),
+      products: ROAD01.products,
+    };
+  });
+  await waitScreen(page, 'styles');
+  for (const name of release.looks) await expect(page.locator('.host .ws-item').filter({ hasText: name })).toHaveCount(0);
+  await expect(page.locator('html')).not.toHaveClass(/styles-new/);
+
+  // After observing the opening, every product has a reversible try-on before purchase.
+  await page.evaluate(async () => {
+    const app = (window as any).__app;
+    const { observeRoadDay, newRoadState } = await (window as any).__e2eImport('/src/meta/starroad.ts');
+    observeRoadDay(app.p, '2099-01-02');
+    app.p.roadRecords.road01 = { ...newRoadState(), points: 20 };
+  });
+  for (const product of release.products) {
+    const itemName = await page.evaluate(async (id) => {
+      const { COSMETICS } = await (window as any).__e2eImport('/src/meta/cosmetics.ts');
+      const { roadForProduct, ROAD_CATALOG } = await (window as any).__e2eImport('/src/meta/starroad.ts');
+      const { showStyles } = await (window as any).__e2eImport('/src/ui/screens/styles.ts');
+      const road = roadForProduct(id);
+      const item = road
+        ? COSMETICS.find((x: any) => ROAD_CATALOG.find((r: any) => r.id === road).tiers[0].pass.item === x.id)
+        : COSMETICS.find((x: any) => x.productId === id && ['ground', 'trail'].includes(x.slot));
+      showStyles((window as any).__app, item.slot);
+      return item.name;
+    }, product.id);
+    await expect(page.locator('.host .ws-item').filter({ hasText: itemName })).toContainText('Try on');
+    await page.locator('.host .ws-item').filter({ hasText: itemName }).click();
+    await expect(page.locator('.host .ws-top')).toContainText(itemName);
+    await expect(page.locator('.host .ws-top')).toContainText('Done');
+    await expect(page.locator('.host')).not.toContainText(product.fallbackPrice);
+    await expect(page.locator('.host .buy-real')).toHaveCount(0);
+  }
+
+  // Return to the unopened scenario so the Pass caption is exercised during checkout.
+  await page.evaluate(() => {
+    (window as any).__app.p.roadSeenDay = '';
+  });
+  await openGrownups(page, 'en', 'styles');
+  for (const product of release.products) {
+    const row = productRow(page, product.title);
+    await expect(row).toBeVisible();
+    if (product.kind === 'road_pass') await expect(row).toContainText('Opens January 2, 2099');
+    await startBuying(page, product.title);
+    const sheet = contentsSheet(page);
+    await expect(sheet).toContainText(product.fallbackPrice);
+    await expect(sheet).toContainText('Family Sharing: yes');
+    await expect(sheet).toContainText('Never expires');
+    for (const item of product.contents) await expect(sheet.locator('li').filter({ hasText: item })).toBeVisible();
+    if (product.kind === 'road_pass') {
+      await expect(sheet).toContainText('Opens January 2, 2099');
+      await expect(sheet).toContainText('2 of 20 Road steps reached');
+    }
+    const before = await wallet(page);
+    await sheet.getByRole('button', { name: 'Buy', exact: true }).click();
+    await expect(receipt(page)).toBeVisible();
+    const after = await wallet(page);
+    expect(after.gems).toBe(before.gems);
+    expect(after.tx).toHaveLength(before.tx.length + 1);
+    await receipt(page).getByRole('button', { name: 'Done', exact: true }).click();
+    await page.evaluate(([id, tx]) => (window as any).__iap.replay(id, tx), [product.id, after.tx.at(-1)!]);
+    expect(await wallet(page)).toEqual(after);
+    await expect(receipt(page)).toHaveCount(0);
+    await page.evaluate((id) => (window as any).__iap.revoke(id), product.id);
+    expect(
+      await page.evaluate(async (id) => {
+        const { ownsProduct } = await (window as any).__e2eImport('/src/meta/economy.ts');
+        return ownsProduct((window as any).__app.p, id);
+      }, product.id),
+    ).toBe(false);
+    await page.evaluate(async (id) => {
+      const { restoreProduct } = await (window as any).__e2eImport('/src/meta/economy.ts');
+      restoreProduct((window as any).__app.p, id);
+    }, product.id);
+    expect((await wallet(page)).gems).toBe(after.gems);
+  }
+  await page.evaluate(async () => {
+    const app = (window as any).__app;
+    const { observeRoadDay, grantRoadPass } = await (window as any).__e2eImport('/src/meta/starroad.ts');
+    observeRoadDay(app.p, '2099-01-02');
+    grantRoadPass(app.p, 'road01');
+    app.showRoad();
+  });
+  await waitScreen(page, 'road');
+  await expect(page.locator('.host .page-title')).toContainText(release.name);
+  await expect(page.locator('.host .rhead button')).toHaveText(`Your ${release.name} looks`);
+  await page.locator('.host .rhead button').click();
+  await expect(page.locator(OPEN_MODAL)).toContainText(`Your ${release.name} looks`);
+  await expect(page.locator(OPEN_MODAL)).not.toContainText('$');
+  expectNoErrors(guard);
+});

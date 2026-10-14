@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { guardGrownups } from '../src/ui/screens/grownups';
 import { defaultProfile } from '../src/meta/profile';
-import { COSMETICS, isPaidLook, visibleCosmetics } from '../src/meta/cosmetics';
+import { COSMETICS, cosmeticOpen, isPaidLook, visibleCosmetics } from '../src/meta/cosmetics';
 import { PRODUCTS } from '../src/meta/tuning';
 import { clearLedger, ledger, playTimeThisWeek, purchaseHistory, recordPurchase, spentThisMonth } from '../src/meta/ledger';
 import { deviceCurrency, formatCurrency } from '../src/meta/currency';
@@ -32,7 +32,7 @@ describe('Grown-ups boundary', () => {
     p.meta.sessions = 2;
     const paid = COSMETICS.filter(isPaidLook);
     expect(paid.length).toBeGreaterThan(0);
-    expect(visibleCosmetics(p)).toEqual(COSMETICS);
+    expect(visibleCosmetics(p)).toEqual(COSMETICS.filter((look) => cosmeticOpen(p, look)));
     p.settings.hidePaidLooks = true;
     expect(visibleCosmetics(p).some(isPaidLook)).toBe(false);
     expect(visibleCosmetics(p).some((x) => x.source === 'gems')).toBe(true);
@@ -88,4 +88,18 @@ it('M6/M18 uses the irreversible reset warning unless this progress line has a v
   expect(settings).toContain('await hasCurrentBackup()');
   expect(settings).toContain("t('Erase all progress? This cannot be undone.')");
   expect(settings).toContain("t('Erase all progress? Your iCloud backup is kept.')");
+});
+
+it('M14 uses one release-dot helper in kid hubs and the release product list in Grown-ups', () => {
+  for (const name of ['home', 'missions']) {
+    const screen = readFileSync(`src/ui/screens/${name}.ts`, 'utf8');
+    expect(screen).toContain('stylesNewDot(p, today())');
+    expect(screen).not.toContain('p.stylesNewSeen !==');
+  }
+  const grownups = readFileSync('src/ui/screens/grownups.ts', 'utf8');
+  expect(grownups).toContain('ROAD01.products');
+  expect(grownups).not.toContain('.slice(-3)');
+  const contents = readFileSync('src/ui/flows/contents.ts', 'utf8');
+  expect(contents).toContain('releaseReceipt');
+  expect(contents).toContain("t('Your Road is in Missions')");
 });

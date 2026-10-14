@@ -9,6 +9,18 @@ const FACE_WIDTHS = [0.54, 0.49, 0.55, 0.53];
 const FACE_HEIGHTS = [0.48, 0.54, 0.45, 0.5];
 
 const col = (id: string, i: number, fb: string) => COSMETIC_BY_ID[id]?.colors[i] ?? fb;
+const folded = (id: string) => /^(moonpetal_|road01_)/.test(id);
+
+/** A quiet folded-paper seam shared by earned and gem looks; no added animation. */
+function paperFold(g: G, x: number, y: number, r: number, color: string) {
+  g.fillStyle = color;
+  g.beginPath();
+  g.moveTo(x - r, y + r * 0.4);
+  g.quadraticCurveTo(x - r * 0.7, y - r, x + r, y - r * 0.4);
+  g.lineTo(x, y + r * 0.15);
+  g.closePath();
+  g.fill();
+}
 
 function suitFill(g: G, c: string, r: number, t: number) {
   if (c !== 'aurora') return c;
@@ -159,6 +171,12 @@ export function drawKeeper(g: G, look: Look, x: number, y: number, size: number,
       g.lineTo(0, badgeY + size * 0.07);
     } else g.ellipse(0, badgeY, size * 0.045, size * 0.07, 0.5, 0, Math.PI * 2);
     g.stroke();
+  }
+  if (folded(body)) {
+    g.save();
+    g.globalAlpha = 0.45;
+    paperFold(g, size * 0.12, -size * 0.37, size * 0.04, trim);
+    g.restore();
   }
   // arms (raised when cheering)
   g.strokeStyle = suitFill(g, main, size * 0.3, t);
@@ -574,6 +592,19 @@ function drawHat(g: G, id: string, x: number, hy: number, r: number, t: number) 
       break;
     }
     default: {
+      if (folded(id)) {
+        // Low folded brim and a single petal, clear of the face.
+        g.fillStyle = c0;
+        g.beginPath();
+        g.moveTo(x - r * 0.75, top + r * 0.1);
+        g.lineTo(x - r * 0.45, top - r * 0.23);
+        g.lineTo(x + r * 0.32, top - r * 0.18);
+        g.lineTo(x + r * 0.72, top + r * 0.1);
+        g.closePath();
+        g.fill();
+        paperFold(g, x + r * 0.22, top - r * 0.16, r * 0.21, c1);
+        break;
+      }
       // Catalogue hats share a quiet silhouette; their palette makes each preview real.
       if (!COSMETIC_BY_ID[id]?.colors.length) break;
       g.strokeStyle = c0;
@@ -656,6 +687,22 @@ export function drawLauncher(g: G, id: string, x: number, y: number, t: number, 
     g.stroke();
     g.globalAlpha = 1;
   };
+  if (folded(id)) {
+    g.strokeStyle = c0;
+    g.lineWidth = 7;
+    g.lineCap = 'round';
+    g.beginPath();
+    g.moveTo(x, y + 44);
+    g.lineTo(x, y + 15);
+    g.lineTo(x - 28, y - 7);
+    g.moveTo(x, y + 15);
+    g.lineTo(x + 28, y - 7);
+    g.stroke();
+    for (const side of [-1, 1]) paperFold(g, x + side * 28, y - 10, 7, c1);
+    forkBand(-28, 28, -7);
+    g.restore();
+    return;
+  }
   switch (id) {
     case 'l_bloom':
     case 'l_moonbeam': {
@@ -822,6 +869,24 @@ export function drawTrail(g: G, id: string, pts: { x: number; y: number }[], t: 
   const n = pts.length;
   if (!n) return;
   g.save();
+  if (folded(id) || id === 'crescentlace_trail') {
+    const count = Math.min(12, pts.length);
+    g.fillStyle = col(id, 0, kindColor);
+    g.strokeStyle = col(id, 0, kindColor);
+    g.lineWidth = 1.5;
+    for (let i = 0; i < count; i++) {
+      const at = Math.floor((i * pts.length) / count);
+      const p = pts[at];
+      g.globalAlpha = (0.45 * (at + 1)) / pts.length;
+      if (id === 'crescentlace_trail') {
+        g.beginPath();
+        g.ellipse(p.x, p.y, 3, 1.6, -0.45, 0.25, Math.PI * 1.8);
+        g.stroke();
+      } else paperFold(g, p.x, p.y, 2.5, col(id, 0, kindColor));
+    }
+    g.restore();
+    return;
+  }
   pts.forEach((p, k) => {
     const a = (k + 1) / n;
     switch (id) {

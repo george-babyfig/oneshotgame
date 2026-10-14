@@ -1,3 +1,5 @@
+import { ROAD01 } from '../meta/content/road01';
+import { atmosphereOpen } from '../meta/cosmetics';
 import { recordPurchaseGrant } from '../meta/purchaseGrants';
 import { backupStatus, bindBackupProfile, maybeBackup } from '../meta/backup';
 import { waysToEarnGems } from './flows/earn';
@@ -45,7 +47,7 @@ import {
   revokeProduct,
   spendGems,
 } from '../meta/economy';
-import { grantRoadPass } from '../meta/starroad';
+import { grantRoadPass, roadForProduct, observeRoadDay } from '../meta/starroad';
 import { chapterOf } from '../meta/progression';
 import { ensureWishes } from '../meta/wishes';
 import { MOMENTUM_PERKS, momentumActive, momentumLoss, momentumRoundPerk, momentumWin } from '../meta/momentum';
@@ -82,7 +84,7 @@ import { showPassport } from './screens/passport';
 import { showHomeworld } from './screens/homeworld';
 import { showLaunchBay } from './screens/launchbay';
 import { bindGateProfile, parentalGate } from './flows/gate';
-import { contentsSheet } from './flows/contents';
+import { contentsSheet, releaseReceipt } from './flows/contents';
 import { receiptCard } from './flows/receipt';
 import { inboxFlow } from './flows/inbox';
 import { showSky } from './screens/sky';
@@ -107,7 +109,7 @@ import { GUSTY_WIND_TIP, debutsAt, unlocked } from '../meta/unlocks';
 import { stylesAccess, stylesLockReason } from '../meta/stylesAccess';
 import { chestsReady } from '../meta/progression';
 import { inboxOpen } from '../meta/reveals';
-import { roadReady } from '../meta/starroad';
+import { anyRoadReady } from '../meta/starroad';
 import { letterOf } from '../meta/inbox';
 import { homeBadge } from '../meta/homeworld';
 import { wishClaimable } from '../meta/wishes';
@@ -179,6 +181,9 @@ export class App {
   private awayMs = 0;
   private lastAbsenceMs = 0;
   private busy = false;
+  get linkBusy(): boolean {
+    return this.busy;
+  }
   private homeSeenThisOpen = false;
   private popupShownThisOpen = false;
   private roundFirstCampaignClear = false;
@@ -235,6 +240,7 @@ export class App {
       matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => this.applySettings());
     }
     ensureWishes(this.p, today());
+    if (observeRoadDay(this.p)) this.save();
     fixClock(this.p);
     addVisitors(this.p, Date.now());
     tickHome(this.p);
@@ -259,6 +265,7 @@ export class App {
       CapApp.addListener('resume', () => {
         pauseAudio(false);
         ensureWishes(this.p, today());
+        if (observeRoadDay(this.p)) this.save();
         fixClock(this.p);
         if (addVisitors(this.p, Date.now())) this.save();
         tickHome(this.p);
@@ -266,12 +273,16 @@ export class App {
         this.awayMs = Math.max(this.awayMs, this.lastAbsenceMs);
         if (this.lastAbsenceMs >= 30 * 60_000) this.popupShownThisOpen = false;
         this.p.meta.lastSeen = Math.max(this.p.meta.lastSeen, Date.now());
-        if (this.screen === 'home') this.showHome();
+        this.refresh();
         void this.reconcilePurchases();
       });
     }
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) return;
+      if (!document.hidden) {
+        if (observeRoadDay(this.p)) this.save();
+        this.refresh();
+        return;
+      }
       this.checkpointRound(true);
       this.p.meta.lastSeen = Math.max(this.p.meta.lastSeen, Date.now());
       const p = this.p;
@@ -519,7 +530,7 @@ export class App {
     const p = this.p;
     const mailGifts = inboxOpen(p) ? p.mail.filter((mail) => !mail.claimed && !!letterOf(mail)?.gift).length : 0;
     const missionReady = unlocked(p, 'quests')
-      ? wishClaimable(p) + (unlocked(p, 'star_road') ? roadReady(p).length : 0) + chestsReady(p).length + mailGifts
+      ? wishClaimable(p) + (unlocked(p, 'star_road') ? Number(anyRoadReady(p)) : 0) + chestsReady(p).length + mailGifts
       : 0;
     const tabs: { id: MainTab; label: string; symbol: string; badge: number; reason?: string }[] = [
       { id: 'home', label: t('Play'), symbol: 'planet', badge: 0 },
@@ -647,11 +658,14 @@ export class App {
     if (quiet) return;
     if (this.breakDue) {
       this.breakDue = false;
-      const card = modal([
-        h('div', { class: 'm-title' }, t('Time for a stretch?')),
-        h('p', null, t('Your planets will wait.')),
-        btn(t('Keep playing'), 'primary wide', () => card.close()),
-      ]);
+      const card = modal(
+        [
+          h('div', { class: 'm-title' }, t('Time for a stretch?')),
+          h('p', null, t('Your planets will wait.')),
+          btn(t('Keep playing'), 'primary wide', () => card.close()),
+        ],
+        { cls: 'home-popup' },
+      );
       return;
     }
     this.homeSeenThisOpen = true;
@@ -692,7 +706,7 @@ export class App {
               })
             : btn(t('Close'), 'primary wide', () => card.close()),
         ],
-        { dismiss: false },
+        { dismiss: false, cls: 'home-popup' },
       );
     }
   }
@@ -891,7 +905,10 @@ export class App {
     const roundKey = extra.roundKey ?? globalThis.crypto?.randomUUID?.() ?? `${Date.now()}:${Math.random()}`;
     const knownKindsAtStart = extra.knownKindsBefore ?? [...this.p.seen];
     this.roundBuildsSpedUp = false;
-    const skin = SKINS.find((s) => s.id === this.p.skin && (!this.p.settings.hidePaidLooks || (!s.starter && !s.pass))) ?? SKINS[0];
+    const skin =
+      SKINS.find(
+        (s) => s.id === this.p.skin && atmosphereOpen(this.p, s.id) && (!this.p.settings.hidePaidLooks || (!s.starter && !s.pass)),
+      ) ?? SKINS[0];
     const look = currentLook(this.p);
     const aimLevel = tutorial || (fullAimEnabled(this.p) && !['daily', 'rush', 'challenge', 'remix'].includes(mode)) ? 3 : 2;
     const chosenLauncher = resolveLauncher(
@@ -1297,7 +1314,11 @@ export class App {
   }
 
   skinGlow() {
-    return (SKINS.find((s) => s.id === this.p.skin && (!this.p.settings.hidePaidLooks || (!s.starter && !s.pass))) ?? SKINS[0]).glow;
+    return (
+      SKINS.find(
+        (s) => s.id === this.p.skin && atmosphereOpen(this.p, s.id) && (!this.p.settings.hidePaidLooks || (!s.starter && !s.pass)),
+      ) ?? SKINS[0]
+    ).glow;
   }
 
   // ------------------------------------------------------------------ purchases
@@ -1340,7 +1361,16 @@ export class App {
     }
     if (!this.canBuy(key)) return;
     this.busy = true;
-    if (!(await parentalGate('buy')) || !(await contentsSheet(pr, this.priceOf(key), this.p.piggy, this.p.roadPoints))) {
+    if (
+      !(await parentalGate('buy')) ||
+      !(await contentsSheet(
+        pr,
+        this.priceOf(key),
+        this.p.piggy,
+        this.p.roadRecords[roadForProduct(pr.id) ?? 'road00']?.points ?? 0,
+        today() > this.p.roadSeenDay ? today() : this.p.roadSeenDay,
+      ))
+    ) {
       this.busy = false;
       return;
     }
@@ -1408,7 +1438,8 @@ export class App {
       if (product.key === 'piggy') piggyQuote = recorded.gems;
     }
     const g = grantProduct(this.p, productId, txId, piggyQuote);
-    if (product?.key === 'pass' && g) grantRoadPass(this.p);
+    const road = roadForProduct(productId);
+    if (road && g) grantRoadPass(this.p, road);
     if (!g && alreadyProcessed) {
       await saveProfileChecked(this.p);
       if (this.iap.kind === 'native') await this.iap.ack([txId]);
@@ -1438,7 +1469,10 @@ export class App {
     sfx.gem();
     haptic.success();
     this.refresh();
-    if (product) this.lastReceipt = receiptCard(product, g.gems);
+    if (product)
+      this.lastReceipt = ROAD01.products.some((def) => def.id === product.id)
+        ? releaseReceipt(product, this.p, today() > this.p.roadSeenDay ? today() : this.p.roadSeenDay)
+        : receiptCard(product, g.gems);
   }
 
   private async flushPendingPurchaseRecords() {
@@ -1469,7 +1503,8 @@ export class App {
     let backfilled = false;
     for (const id of owned) {
       if (restoreProduct(this.p, id)) restored++;
-      if (PRODUCT_BY_ID[id]?.key === 'pass' && grantRoadPass(this.p).length) backfilled = true;
+      const road = roadForProduct(id);
+      if (road && grantRoadPass(this.p, road).length) backfilled = true;
     }
     if (restored || backfilled) this.saveNow();
     return restored;

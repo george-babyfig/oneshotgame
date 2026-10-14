@@ -9,6 +9,8 @@ import { t } from './i18n';
 import { loadDiagnostics, recordDiagnostic } from './meta/diagnostics';
 import { newBackupLine } from './meta/backup';
 import { parentalGate } from './ui/flows/gate';
+import { installDeepLinks } from './ui/deeplink';
+import { ROAD01 } from './meta/content/road01';
 
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 const app = new App(document.getElementById('app')!);
@@ -70,11 +72,17 @@ window.addEventListener('unhandledrejection', (e) => {
 });
 // Diagnostics load alongside the app; startup never waits on them.
 void loadDiagnostics();
+let linksReady!: (ok: boolean) => void;
+const readyForLinks = new Promise<boolean>((resolve) => {
+  linksReady = resolve;
+});
+installDeepLinks(app, readyForLinks);
 app
   .init()
   .then(() => {
     app.connectBackup();
     const notice = profileLoadNotice();
+    linksReady(notice !== 'newer' && notice !== 'read-only');
     if (notice === 'newer') showRecovery(t('This progress was saved by a newer version. Update Comet Garden, then try again.'));
     else if (notice === 'read-only') showRecovery(t('Your saved progress could not be read. You can try again or start fresh.'));
     else if (notice === 'recovered') {
@@ -87,9 +95,17 @@ app
     }
   })
   .catch(async (e) => {
+    linksReady(false);
     await recordDiagnostic(e);
     console.error(e);
     await prepareInitRecovery();
     showRecovery(t('Your garden could not open. You can try again or start fresh.'));
   });
-if (import.meta.env.DEV) (window as unknown as { __app: App }).__app = app;
+if (import.meta.env.DEV) {
+  const dev = window as unknown as { __app: App; __e2eRoadOpening: (day: string | undefined) => void };
+  dev.__app = app;
+  // Scenario injection avoids WebKit's module-import failure under Playwright's page clock.
+  dev.__e2eRoadOpening = (day) => {
+    ROAD01.road.opensOn = day;
+  };
+}

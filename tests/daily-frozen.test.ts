@@ -5,7 +5,7 @@ import { expect, it } from 'vitest';
 import { dailyLevel } from '../src/meta/modes';
 
 const file = 'tests/fixtures/daily/frozen-days.json';
-it('preserves every 1.0 Daily Planet across the 1.1 calendar runway', () => {
+it('preserves every M13-frozen Daily Planet byte for byte in M14', () => {
   const rows = [];
   for (let at = Date.UTC(2026, 10, 2); at <= Date.UTC(2027, 0, 20); at += 86400000) {
     const day = new Date(at).toISOString().slice(0, 10);

@@ -2129,5 +2129,8 @@
   "Your {road} looks": "Tes looks de la {road}",
   "{landmark} is complete!": "Le Lieu magique {landmark} est terminé !",
   "{landmark} is complete. Your {decoration} and {title} are ready.": "Le Lieu magique {landmark} est terminé. Ta décoration {decoration} et ton titre {title} sont prêts.",
-  "{landmark} is ready to build": "Tu peux construire le Lieu magique {landmark}"
+  "{landmark} is ready to build": "Tu peux construire le Lieu magique {landmark}",
+  "Build": "Construire",
+  "Make 8 Fusions or 8 Supernovas": "Crée 8 Fusions ou 8 Supernovas",
+  "Reach the end of {road}": "Atteins la fin de la {road}"
 }

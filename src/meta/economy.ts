@@ -14,7 +14,7 @@ import { collectAll, pendingHomeProduction } from './homeworld';
 import { openVisitor } from './visitors';
 import { WELCOME_BACK_GEMS } from './tuning';
 import { getLang, t } from '../i18n';
-import { grantProfileRoadPoints } from './starroad';
+import { COSMIC_ROAD_ID, ROAD_CATALOG, grantProfileRoadPoints, grantRoadPass, roadForProduct, roadHasPass } from './starroad';
 import { mementosVisible } from './reveals';
 import { takeWonContinues } from './continues';
 
@@ -305,7 +305,8 @@ export function ownsProduct(p: Profile, productId: string): boolean {
   const def = PRODUCT_BY_ID[productId];
   if (!def || def.consumable) return false;
   if (def.key === 'starter') return p.starter;
-  if (def.key === 'pass') return p.pass;
+  const road = roadForProduct(productId);
+  if (road) return roadHasPass(p, road);
   return (p.meta.productEntitlements ?? []).includes(productId);
 }
 
@@ -315,7 +316,7 @@ export function restoreProduct(p: Profile, productId: string): boolean {
   if (!def || def.consumable) return false;
   const meta = p.meta;
   // Repair older saves that kept the Pass bit but lost its looks-only marker.
-  if (def.key === 'pass' && p.pass) meta.passLooksOnly = true;
+  if (roadForProduct(productId) === COSMIC_ROAD_ID && p.pass) meta.passLooksOnly = true;
   if (ownsProduct(p, productId)) return false;
   if (meta.revokedProducts?.[productId]) {
     const { [productId]: _revoked, ...remaining } = meta.revokedProducts;
@@ -324,10 +325,16 @@ export function restoreProduct(p: Profile, productId: string): boolean {
   if (def.key === 'starter') {
     p.starter = true;
     if (!p.skins.includes('aurora')) p.skins.push('aurora');
-  } else if (def.key === 'pass') {
-    p.pass = true;
-    meta.passLooksOnly = true;
-    if (p.roadRecords?.road00?.claimedPaidTierIds.includes('road00:tier00') && !p.skins.includes('cosmic')) p.skins.push('cosmic');
+  } else if (roadForProduct(productId)) {
+    const road = roadForProduct(productId)!;
+    if (road === COSMIC_ROAD_ID) meta.passLooksOnly = true;
+    else meta.productEntitlements = [...new Set([...(meta.productEntitlements ?? []), productId])];
+    // The product marker opens Styles; only the Road entitlement and claims own Pass looks.
+    grantRoadPass(p, road);
+    // A restore reinstates already-claimed atmospheres without paying rewards twice.
+    for (const tier of ROAD_CATALOG.find((def) => def.id === road)?.tiers ?? [])
+      if (tier.pass.skin && p.roadRecords[road]?.claimedPaidTierIds.includes(tier.id) && !p.skins.includes(tier.pass.skin))
+        p.skins.push(tier.pass.skin);
   } else {
     meta.productEntitlements = [...(meta.productEntitlements ?? []), productId];
   }
@@ -357,10 +364,13 @@ export function revokeProduct(p: Profile, productId: string, at = Date.now()): b
     p.skins = p.skins.filter((id) => id !== 'aurora');
     if (p.skin === 'aurora') p.skin = 'classic';
   }
-  if (def.key === 'pass') {
-    p.pass = false;
-    p.skins = p.skins.filter((id) => id !== 'cosmic');
-    if (p.skin === 'cosmic') p.skin = 'classic';
+  const road = roadForProduct(productId);
+  if (road) {
+    p.roadPassEntitlements = p.roadPassEntitlements.filter((id) => id !== road);
+    if (road === COSMIC_ROAD_ID) p.pass = false;
+    const skins = ROAD_CATALOG.find((def) => def.id === road)?.tiers.flatMap((tier) => (tier.pass.skin ? [tier.pass.skin] : [])) ?? [];
+    p.skins = p.skins.filter((id) => !skins.includes(id));
+    if (skins.includes(p.skin)) p.skin = 'classic';
   }
   return true;
 }

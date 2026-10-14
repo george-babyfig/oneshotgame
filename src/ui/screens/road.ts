@@ -5,7 +5,7 @@ import { haptic } from '../haptics';
 import { rewardText, type Reward } from '../../meta/progression';
 import {
   COSMIC_ROAD_ID,
-  ROAD_CATALOG,
+  playableRoads,
   claimReachedPaidRoad,
   claimRoad,
   currentRoad,
@@ -47,7 +47,7 @@ function cell(p: Profile, r: Reward, state: 'claimed' | 'ready' | 'locked', prem
 export function showRoad(app: App, selectedId?: RoadId) {
   const p = app.p;
   const active = currentRoad(p);
-  const def = ROAD_CATALOG.find((road) => road.id === selectedId) ?? active;
+  const def = playableRoads(p).find((road) => road.id === selectedId) ?? active;
   // A restored Pass quietly catches up reached looks before the Road is drawn.
   if (claimReachedPaidRoad(p, def.id).length) app.save();
   const state = p.roadRecords[def.id];
@@ -102,10 +102,7 @@ export function showRoad(app: App, selectedId?: RoadId) {
   const pct = nextTier ? Math.min(100, (points / nextTier.stars) * 100) : 100;
   const closeOn = roadCloseOn(def.id);
   const closeDate = closeOn ? new Date(`${closeOn}T12:00:00Z`) : undefined;
-  const lastPlayable =
-    past.some((road) => road.id === def.id) && closeDate
-      ? new Intl.DateTimeFormat(getLang(), { day: 'numeric', month: 'long' }).format(closeDate)
-      : undefined;
+  const lastPlayable = closeDate ? new Intl.DateTimeFormat(getLang(), { day: 'numeric', month: 'long' }).format(closeDate) : undefined;
   app.mount(
     h(
       'div',
@@ -137,18 +134,22 @@ export function showRoad(app: App, selectedId?: RoadId) {
             )
           : null,
         lastPlayable
-          ? h('p', { class: 'muted' }, t('This Road was here until {date}. You can still finish it.', { date: lastPlayable }))
+          ? h(
+              'p',
+              { class: 'muted' },
+              past.some((road) => road.id === def.id)
+                ? t('This Road was here until {date}. You can still finish it.', { date: lastPlayable })
+                : t('until {date}', { date: lastPlayable }),
+            )
           : null,
         h(
           'div',
           { class: `rhead${showPaidLane ? '' : ' no-paid'}` },
           h('span', null, t('Free')),
           h('span', null, ''),
-          !showPaidLane ||
-            def.id !== COSMIC_ROAD_ID ||
-            !def.tiers.some((tier) => state?.claimedPaidTierIds.includes(tier.id) && (tier.pass.item || tier.pass.skin))
+          !showPaidLane || !def.tiers.some((tier) => state?.claimedPaidTierIds.includes(tier.id) && (tier.pass.item || tier.pass.skin))
             ? null
-            : btn(t('Your Cosmic Road looks'), 'small', () => showPass(app)),
+            : btn(t('Your {road} looks', { road: roadName(def.id, def.name) }), 'small', () => showPass(app, def.id)),
         ),
         ...rows,
         h(

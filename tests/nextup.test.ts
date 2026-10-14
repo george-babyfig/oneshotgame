@@ -94,3 +94,58 @@ describe('noun window suggestions', () => {
     }
   });
 });
+
+it('M14 sends a ready Road Landmark stage to its Homeworld build row', async () => {
+  const { vi } = await import('vitest');
+  const roads = await import('../src/meta/starroad');
+  const { ROAD01 } = await import('../src/meta/content/road01');
+  const catalog = [roads.ROAD_CATALOG[0], { ...ROAD01.road, opensOn: '2026-02-26' }];
+  const original = roads.playableRoads;
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-02-26T12:00:00Z'));
+  vi.spyOn(roads, 'playableRoads').mockImplementation((p, day) => original(p, day, catalog));
+  try {
+    const p = defaultProfile();
+    p.level = 121;
+    p.home.level = 5;
+    p.home.firstHour = 2;
+    for (const state of Object.values(p.home.landmarks)) state.stage = 4;
+    p.cometPier.stage = 4;
+    const { roadLandmarkState } = await import('../src/meta/roadLandmarks');
+    roadLandmarkState(p, 'rl_road01').progress[0] = 12;
+    expect(homeworldNextUp(p)).toMatchObject({
+      kind: 'claim',
+      homeTarget: 'landmark',
+      title: 'Sky Loom',
+      subtitle: 'Sky Loom is ready to build',
+    });
+    p.chapters = Array.from({ length: 12 }, (_, i) => i + 1);
+    expect(nextUp(p, Date.now())).toMatchObject({
+      kind: 'claim',
+      homeTarget: 'landmark',
+      title: 'Sky Loom',
+      subtitle: 'Sky Loom is ready to build',
+    });
+    roadLandmarkState(p, 'rl_road01').progress[0] = 0;
+    expect(homeworldNextUp(p)).toMatchObject({ kind: 'goal', homeTarget: 'landmark', title: 'Sky Loom' });
+  } finally {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  }
+});
+
+it('M14 Next Up detects a claim in Road 1 with Road 0 fully claimed', async () => {
+  const { vi } = await import('vitest');
+  const roads = await import('../src/meta/starroad');
+  const p = defaultProfile();
+  p.level = 121;
+  p.meta.sessions = 2;
+  p.chapters = Array.from({ length: 12 }, (_, i) => i + 1);
+  const spy = vi.spyOn(roads, 'anyRoadReady').mockReturnValue(true);
+  try {
+    expect(nextUp(p, Date.now())).toMatchObject({ kind: 'claim', action: 'missions' });
+    expect(spy).toHaveBeenCalledWith(p);
+  } finally {
+    spy.mockRestore();
+  }
+});

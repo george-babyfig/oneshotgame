@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { PRODUCTS } from '../src/meta/tuning';
+import { allStrings } from './helpers/locales';
 
 const sheet = readFileSync('store/catalogue-sheet.md', 'utf8');
 const compliance = readFileSync('store/compliance.md', 'utf8');
@@ -28,16 +29,15 @@ function tableRows(markdown: string, heading: string): string[][] {
     );
 }
 
-describe('frozen launch catalogue', () => {
-  it('has 12 matched product IDs, types, USD prices and Family Sharing flags', () => {
+describe('frozen per-product catalogue', () => {
+  it('matches every product ID, types, USD prices and Family Sharing flags', () => {
     const rows = tableRows(sheet, '## Products');
     const complianceRows = tableRows(compliance, '## In-app purchases');
-    expect(PRODUCTS).toHaveLength(12);
-    expect(rows).toHaveLength(12);
-    expect(complianceRows).toHaveLength(12);
-    expect(storekit.products).toHaveLength(12);
-    expect(new Set(PRODUCTS.map((p) => p.id)).size).toBe(12);
-    expect(new Set(rows.map((r) => r[0])).size).toBe(12);
+    expect(rows).toHaveLength(PRODUCTS.length);
+    expect(complianceRows).toHaveLength(PRODUCTS.length);
+    expect(storekit.products).toHaveLength(PRODUCTS.length);
+    expect(new Set(PRODUCTS.map((p) => p.id)).size).toBe(PRODUCTS.length);
+    expect(new Set(rows.map((r) => r[0])).size).toBe(PRODUCTS.length);
     for (const p of PRODUCTS) {
       const row = rows.find((r) => r[0] === p.id);
       const doc = complianceRows.find((r) => r[0] === p.id);
@@ -62,7 +62,7 @@ describe('frozen launch catalogue', () => {
 
   it('has six localized StoreKit records matching the sheet within Apple text limits', () => {
     const rows = tableRows(sheet, '## Localized App Store Connect metadata');
-    expect(rows).toHaveLength(72);
+    expect(rows).toHaveLength(PRODUCTS.length * locales.length);
     for (const p of PRODUCTS) {
       const sk = storekit.products.find((s) => s.productID === p.id)!;
       expect(sk.localizations.map((l) => l.locale)).toEqual(locales);
@@ -84,13 +84,36 @@ describe('frozen launch catalogue', () => {
     for (const product of PRODUCTS) {
       const store = storekit.products.find((item) => item.productID === product.id)!;
       for (const [locale, language] of Object.entries(languages)) {
-        const dict = JSON.parse(readFileSync(`src/locales/${language}.json`, 'utf8')) as Record<string, string>;
+        const dict = allStrings(language);
         const localized = store.localizations.find((item) => item.locale === locale);
         expect(localized?.displayName, `${product.key} ${locale} name`).toBe(dict[product.title]);
         expect(localized?.description, `${product.key} ${locale} description`).toBe(dict[product.description]);
       }
     }
   });
+
+  for (const product of PRODUCTS) {
+    it(`${product.key} has bounded names and descriptions in every runtime dictionary`, () => {
+      for (const lang of ['en', 'es', 'fr', 'de', 'pt', 'ja']) {
+        const dict = allStrings(lang);
+        expect(dict[product.title], `${lang} title`).toBeDefined();
+        expect(dict[product.description], `${lang} description`).toBeDefined();
+        expect([...dict[product.title]].length).toBeLessThanOrEqual(30);
+        expect([...dict[product.description]].length).toBeLessThanOrEqual(45);
+      }
+    });
+  }
+
+  // Real Simulator artifacts are qualified separately once the integrated build is ready.
+  for (const product of PRODUCTS) {
+    it.runIf(process.env.STORE_REVIEW_IMAGES === '1')(`${product.key} has a full-resolution PNG review capture`, () => {
+      const suffix = product.id.slice('com.pocketplanet.game.'.length);
+      const file = readFileSync(`store/iap-review/${suffix}.png`);
+      expect(file.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+      expect(file.readUInt32BE(16)).toBeGreaterThanOrEqual(320);
+      expect(file.readUInt32BE(20)).toBeGreaterThanOrEqual(568);
+    });
+  }
 
   it('keeps the hosted and docs privacy policy identical', () => {
     expect(readFileSync('site/privacy.html', 'utf8')).toBe(readFileSync('docs/privacy.html', 'utf8'));

@@ -1,3 +1,12 @@
+import * as roadLandmarks from '../../../src/meta/roadLandmarks';
+import {
+  ROAD_LANDMARKS,
+  activeRoadLandmark,
+  roadLandmarkOpen,
+  roadLandmarkReady,
+  buildRoadLandmarkStage,
+} from '../../../src/meta/roadLandmarks';
+import type { RoadLandmarkId } from '../../../src/meta/m14types';
 import { tripOptions, tripPlanets, startTrip } from '../../../src/meta/trips';
 import type { TripReturn } from '../../../src/meta/m13types';
 import { makeLevel, rngFrom, starsFor, type LevelDef } from '../../../src/core/levels';
@@ -77,7 +86,8 @@ import { settleHomeworldRound } from '../../../src/meta/roundSettlement';
 import { refreshLandmarkSnapshots } from '../../../src/meta/landmarks';
 import { LANDMARKS, type LandmarkDef, type LandmarkRoute } from '../../../src/meta/tuning';
 import { applyReward, chestsReady, openChest } from '../../../src/meta/progression';
-import { claimRoad, grantRoadPass, roadReady } from '../../../src/meta/starroad';
+import * as roads from '../../../src/meta/starroad';
+import { ROAD_CATALOG, playableRoads, type RoadDefinition, claimRoad, grantRoadPass, roadReady } from '../../../src/meta/starroad';
 import { claimWish, ensureWishes, recordWishRound, swapWish } from '../../../src/meta/wishes';
 import { unlocked } from '../../../src/meta/unlocks';
 import { ALBUM_PAGES, claimMilestones, claimPage, pageDone } from '../../../src/meta/stickers';
@@ -118,6 +128,8 @@ export interface DayRow {
   activeDust: number;
   freeGems: number;
   roadPoints: number;
+  roadRecords: Record<string, number>;
+  roadLandmarkStages: Record<string, number>;
   idleActiveRatio: number | null;
   labBlocks: Partial<Record<Kind, string>>;
   homeLevel: number;
@@ -144,6 +156,8 @@ export interface TripSendRow {
 }
 export interface Career {
   profile: Profile;
+  roadLandmarkOpenDays: Partial<Record<RoadLandmarkId, number>>;
+  roadLandmarkStageDays: Record<string, Partial<Record<1 | 2 | 3 | 4, number>>>;
   bayLevelDays: Partial<Record<1 | 2 | 3 | 4 | 5, number>>;
   type: PlayerType;
   start: Record<Currency, number>;
@@ -341,10 +355,10 @@ const totals = (economy: Record<string, number>, prefix: string) =>
       .map(([key, value]) => [key.slice(prefix.length), value]),
   );
 
-function attemptsFor(type: PlayerType, day: number): number {
+function attemptsFor(type: PlayerType, day: number, start = START): number {
   if (type === 'Waiting-room') return 3;
   if (type === 'Engaged') return 13;
-  if (type === 'Weekender') return new Date(START + (day - 1) * DAY).getUTCDay() % 6 === 0 ? 15 : 0;
+  if (type === 'Weekender') return new Date(start + (day - 1) * DAY).getUTCDay() % 6 === 0 ? 15 : 0;
   if (type === 'Lapsed' && day >= 15 && day <= 24) return 0;
   return 6;
 }
@@ -355,10 +369,12 @@ function round(level: LevelDef, seed: string, loadout?: Loadout) {
 }
 
 // Inbox gifts are not modelled in this career. Rewards below follow visible entry points.
-function claimReady(p: Profile, date: Date) {
+function claimReady(p: Profile, date: Date, catalog: readonly RoadDefinition[] = ROAD_CATALOG) {
   const before = Object.values(p.boosters).reduce((sum, count) => sum + count, 0);
   for (const chapter of chestsReady(p)) openChest(p, chapter);
-  if (unlocked(p, 'star_road')) for (const tier of roadReady(p)) claimRoad(p, tier);
+  if (unlocked(p, 'star_road'))
+    for (const road of playableRoads(p, today(date), catalog))
+      for (const tier of roadReady(p, road.id, catalog)) claimRoad(p, tier, road.id, catalog);
   for (const q of p.quests.list) claimWish(p, q.id, today(date));
   if (festivalActive(p)) for (const tier of festivalReady(p, date)) claimFestival(p, tier, date);
   for (const habitat of habitatsReady(p)) claimHabitat(p, habitat.id);
@@ -512,7 +528,7 @@ function visit(
   landmarkRouteWitness: Career['landmarkRouteWitness'],
   opts: SimulationOptions,
 ) {
-  const now = START + (day - 1) * DAY + visitNo * 4 * 3_600_000;
+  const now = (opts.startDay ? Date.parse(`${opts.startDay}T12:00:00Z`) : START) + (day - 1) * DAY + visitNo * 4 * 3_600_000;
   vi.setSystemTime(now);
   const date = new Date(now);
   const dayKey = date.toISOString().slice(0, 10);
@@ -535,7 +551,7 @@ function visit(
   if (stuck) swapWish(p, stuck.id, dayKey);
   if (festivalActive(p)) ensureFestival(p, date);
   if (voyageActive(p)) ensureVoyage(p, isoWeek(date));
-  const firstRewards = claimReady(p, date);
+  const firstRewards = claimReady(p, date, opts.roadCatalog);
   freeBoosters += firstRewards;
   boosterSources.rewards += firstRewards;
   let wins = 0;
@@ -731,7 +747,7 @@ function visit(
       p.bosses.push(n);
       applyReward(p, BOSS_REWARD, 'boss');
     }
-    const rewards = claimReady(p, date);
+    const rewards = claimReady(p, date, opts.roadCatalog);
     freeBoosters += rewards;
     boosterSources.rewards += rewards;
     if (p.level > previousLevel) opts.onLevel?.(structuredClone(p), now);
@@ -799,7 +815,7 @@ function visit(
       ledger.count('round_won');
     } else ledger.count('round_failed');
   }
-  const lastRewards = claimReady(p, date);
+  const lastRewards = claimReady(p, date, opts.roadCatalog);
   freeBoosters += lastRewards;
   boosterSources.rewards += lastRewards;
   const labBlocks = spendPolicy(p, type, day, now);
@@ -844,19 +860,43 @@ function visit(
 /** `purchases: false` plays the Payer persona without buying anything: the paired control for "money never buys growth". */
 export interface SimulationOptions {
   purchases?: boolean;
+  roadCatalog?: readonly RoadDefinition[];
+  /** Evidence run: ignore the other route's progress, while playing identical rounds. */
+  roadLandmarkLane?: 0 | 1;
+  /** Calendar date of career day 1 (the install/opening date). */
+  startDay?: string;
   /** Full calendar days, including absence days; supports the backup size career. */
   days?: number;
   untilLevel?: number;
   onLevel?: (p: Profile, now: number) => void;
 }
 export async function simulate(type: PlayerType, masterSeed = 'default', opts: SimulationOptions = {}): Promise<Career> {
+  const startTime = opts.startDay ? Date.parse(`${opts.startDay}T12:00:00Z`) : START;
+  if (!Number.isFinite(startTime)) throw new RangeError('startDay must be a calendar date');
   const dayCount = opts.days ?? 90;
   if (!Number.isInteger(dayCount) || dayCount < 1 || dayCount > 180) throw new RangeError('days must be an integer from 1 to 180');
+  const originalPoints = roads.grantProfileRoadPoints;
+  const roadSpy = opts.roadCatalog
+    ? vi.spyOn(roads, 'grantProfileRoadPoints').mockImplementation((p, event) => originalPoints(p, event, opts.roadCatalog))
+    : undefined;
+  const originalRoadRound = roadLandmarks.recordRoadLandmarkRound;
+  const landmarkSpy = opts.roadCatalog
+    ? vi.spyOn(roadLandmarks, 'recordRoadLandmarkRound').mockImplementation((p, event) => {
+        const result = originalRoadRound(p, event, opts.roadCatalog);
+        if (opts.roadLandmarkLane !== undefined)
+          for (const state of Object.values(p.home.roadLandmarks)) {
+            if (state && state.stage < 3) state.progress[state.stage * 2 + (1 - opts.roadLandmarkLane)] = 0;
+          }
+        return result;
+      })
+    : undefined;
+  const roadLandmarkOpenDays: Career['roadLandmarkOpenDays'] = {};
+  const roadLandmarkStageDays: Career['roadLandmarkStageDays'] = Object.fromEntries(ROAD_LANDMARKS.map((site) => [site.id, {}]));
   const buys = type === 'Payer' && opts.purchases !== false;
   await clearLedger();
   vi.useFakeTimers();
-  vi.setSystemTime(START);
-  const p = defaultProfile(START);
+  vi.setSystemTime(startTime);
+  const p = defaultProfile(startTime);
   const start = balances(p);
   const walletCalls: Record<string, number> = {};
   const originalAdd = ledger.add;
@@ -886,7 +926,7 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: S
   let day60Sinks: Career['reachableSinks'] | null = null;
   try {
     for (let day = 1; day <= dayCount && p.level <= (opts.untilLevel ?? Infinity); day++) {
-      const budget = attemptsFor(type, day);
+      const budget = attemptsFor(type, day, startTime);
       const visits = budget ? (type === 'Weekender' ? 1 : 3) : 0;
       let wins = 0;
       let tripSends = 0;
@@ -894,12 +934,13 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: S
       const tripReturns: TripReturn[] = [];
       const friendshipBefore = friendshipTotal(p);
       let labBlocks: DayRow['labBlocks'] = {};
-      const before = { ...ledgerSummary(START + (day - 1) * DAY).economy };
-      vi.setSystemTime(START + (day - 1) * DAY);
+      const before = { ...ledgerSummary(startTime + (day - 1) * DAY).economy };
+      vi.setSystemTime(startTime + (day - 1) * DAY);
       if (buys && day === 1) {
         grantProduct(p, 'com.pocketplanet.game.startercrew', 'sim-starter-crew');
-        grantProduct(p, 'com.pocketplanet.game.road00', 'sim-cosmic-road');
-        grantRoadPass(p);
+        const passRoad = roads.currentRoad(p, today(), opts.roadCatalog);
+        grantProduct(p, `com.pocketplanet.game.${passRoad.id}`, 'sim-cosmic-road');
+        grantRoadPass(p, passRoad.id, opts.roadCatalog);
       }
       if (buys && day % 7 === 1) grantProduct(p, 'com.pocketplanet.game.gems500', `sim-gems-${day}`);
       for (let v = 0; v < visits && p.level <= (opts.untilLevel ?? Infinity); v++) {
@@ -930,7 +971,7 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: S
           boosterSources[key] += visitResult.boosterSources[key];
         labBlocks = visitResult.labBlocks;
       }
-      const now = START + (day - 1) * DAY + (visits ? (visits - 1) * 4 * 3_600_000 : 0);
+      const now = startTime + (day - 1) * DAY + (visits ? (visits - 1) * 4 * 3_600_000 : 0);
       vi.setSystemTime(now);
       if (activeLandmark(p)?.id === 'keepers_beacon' && landmarkState(p, 'keepers_beacon').stage === 2) {
         // The career lights the two visible constellations using saved Essences.
@@ -944,6 +985,15 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: S
       if (site) {
         refreshLandmarkSnapshots(p);
         if (landmarkFinishStatus(p, site.id) === 'ready') finishLandmark(p, site.id, now);
+      }
+      const roadSite = activeRoadLandmark(p, opts.roadCatalog);
+      if (roadSite && roadLandmarkReady(p, roadSite.id, opts.roadCatalog)) buildRoadLandmarkStage(p, roadSite.id, now, opts.roadCatalog);
+      for (const site of ROAD_LANDMARKS) {
+        if (roadLandmarkOpen(p, site.id, opts.roadCatalog) && roadLandmarkOpenDays[site.id] === undefined)
+          roadLandmarkOpenDays[site.id] = day;
+        const stage = p.home.roadLandmarks[site.id]?.stage ?? 0;
+        for (const reached of [1, 2, 3, 4] as const)
+          if (stage >= reached && roadLandmarkStageDays[site.id][reached] === undefined) roadLandmarkStageDays[site.id][reached] = day;
       }
       for (const id of landmarkIds) {
         if (landmarkOpen(p, id) && landmarkOpenDays[id] === undefined) landmarkOpenDays[id] = day;
@@ -993,6 +1043,8 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: S
         activeDust,
         freeGems,
         roadPoints: p.roadPoints,
+        roadRecords: Object.fromEntries(Object.entries(p.roadRecords).map(([id, state]) => [id, state?.points ?? 0])),
+        roadLandmarkStages: Object.fromEntries(ROAD_LANDMARKS.map((site) => [site.id, p.home.roadLandmarks[site.id]?.stage ?? 0])),
         idleActiveRatio: activeDust ? idleDust / activeDust : idleDust ? Infinity : null,
         labBlocks,
         homeLevel: p.home.level,
@@ -1021,11 +1073,13 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: S
       )
         exhausted.looks = day;
     }
-    const summary = ledgerSummary(START + (days.length - 1) * DAY + 8 * 3_600_000);
+    const summary = ledgerSummary(startTime + (days.length - 1) * DAY + 8 * 3_600_000);
     const active = days.filter((x) => x.active);
     const career: Career = {
       type,
       profile: p,
+      roadLandmarkOpenDays,
+      roadLandmarkStageDays,
       bayLevelDays,
       start,
       final: balances(p),
@@ -1071,6 +1125,8 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: S
     return career;
   } finally {
     spy.mockRestore();
+    roadSpy?.mockRestore();
+    landmarkSpy?.mockRestore();
     vi.useRealTimers();
   }
 }

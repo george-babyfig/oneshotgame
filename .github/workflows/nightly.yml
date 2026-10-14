@@ -23,7 +23,20 @@ jobs:
         run: SIM=1 SIM_NIGHTLY=1 npx vitest run tests/sim/flying-nightly.sim.ts --disableConsoleIntercept
       - name: Calendar pre-flight (120 Daily Planets, 104 Voyage weeks)
         if: always()
-        run: SIM=1 SIM_NIGHTLY=1 npx vitest run tests/sim/calendar-preflight.sim.ts --disableConsoleIntercept
+        run: SIM=1 SIM_NIGHTLY=1 CALENDAR_PREFLIGHT=1 npx vitest run tests/sim/calendar-preflight.sim.ts --disableConsoleIntercept
+
+  # Rolling runway checks use the run date, independently of the 120/104 sweep.
+  runway:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: RUNWAY_FROM=$(date -u +%F) npm run runway
 
   shadow-curve:
     runs-on: ubuntu-latest
@@ -49,7 +62,7 @@ jobs:
       - run: npm ci
       - run: SIM_NIGHTLY=1 npm run sim:economy:all
 
-  # M11.5 release layout: six shipped languages at four sizes in both engines.
+  # M14 release layout: six shipped languages at four sizes in both engines.
   homeworld-life:
     runs-on: ubuntu-latest
     strategy:
@@ -65,11 +78,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps ${{ matrix.browser }}
-      - name: J5 and J2 Homeworld Life qualification
+      - name: J2, J3, J5 and deep-link qualification
         env:
           M115_VIEWPORT: ${{ matrix.viewport }}
           LOCALE: en,es,fr,de,pt,ja
-        run: npx playwright test e2e/j5.spec.ts e2e/j2.spec.ts -g 'M11.5|M13' --project=${{ matrix.browser }}-320x568
+        run: npx playwright test e2e/j5.spec.ts e2e/j2.spec.ts e2e/j3.spec.ts e2e/deeplink.spec.ts -g 'M11.5|M13|M14' --project=${{ matrix.browser }}-320x568
       - uses: actions/upload-artifact@v5
         if: failure()
         with:

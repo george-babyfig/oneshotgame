@@ -66,7 +66,7 @@ function tree(node: unknown): Tree | string {
   return { tag: item.tag, attrs: item.attrs, children: item.children.map(tree) };
 }
 
-function panelAt(level: 1 | 3) {
+function panelAt(level: 1 | 3, setup?: (p: ReturnType<typeof defaultProfile>) => void) {
   const p = defaultProfile(Date.UTC(2026, 9, 6, 12));
   p.home.intro = true;
   p.level = level === 1 ? 5 : 30;
@@ -76,6 +76,7 @@ function panelAt(level: 1 | 3) {
     p.dust = 2500;
     p.mats.leaf = 25;
   }
+  setup?.(p);
   const app = {
     p,
     save() {},
@@ -140,4 +141,39 @@ describe('Homeworld screen structure', () => {
     expect(tree(capture.sheet)).toMatchSnapshot('friends');
     expect(tree(levelChecklist(view.app, 2))).toMatchSnapshot('level-checklist');
   });
+});
+
+it('M14 adds a separate accessible Road Landmark list without changing the five-site list', async () => {
+  const roads = await import('../src/meta/starroad');
+  const { ROAD01 } = await import('../src/meta/content/road01');
+  const catalog = [roads.ROAD_CATALOG[0], { ...ROAD01.road, opensOn: '2026-02-26' }];
+  const original = roads.playableRoads;
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-02-26T12:00:00Z'));
+  vi.spyOn(roads, 'playableRoads').mockImplementation((p, day) => original(p, day, catalog));
+  try {
+    const view = panelAt(3, (p) => {
+      p.home.level = 5;
+      p.home.firstHour = 2;
+      p.level = 121;
+      for (const state of Object.values(p.home.landmarks)) state.stage = 4;
+      p.cometPier.stage = 4;
+    });
+    expect(view.panel).toMatchSnapshot('m14-road-landmark-list');
+    expect(JSON.stringify(view.panel)).toContain('Sky Loom');
+    expect(JSON.stringify(view.panel)).toContain('Road Landmarks');
+    vi.setSystemTime(new Date('2026-02-25T12:00:00Z'));
+    const closed = panelAt(3, (p) => {
+      p.home.level = 5;
+      p.home.firstHour = 2;
+      p.level = 121;
+      for (const state of Object.values(p.home.landmarks)) state.stage = 4;
+      p.cometPier.stage = 4;
+    });
+    expect(JSON.stringify(closed.panel)).not.toContain('Sky Loom');
+    expect(JSON.stringify(closed.panel)).not.toContain('Road Landmarks');
+  } finally {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  }
 });

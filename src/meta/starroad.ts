@@ -1,10 +1,14 @@
+import { COSMIC_ROAD_ID, ROAD_CONTENT_ROADS, roadOpen, validRoadDay as validDay } from './roadAvailability';
+import { ROAD01 } from './content/road01';
+import { PRODUCTS } from './tuning';
+import type { ProductDef } from './m12types';
 import { ROAD_EARNING_KEY_LIMIT } from './m14types';
 import type { Profile } from './profile';
 import { today } from './profile';
 import { applyReward, type Reward } from './progression';
 
 export type RoadId = `road${string}`;
-export const COSMIC_ROAD_ID: RoadId = 'road00';
+export { COSMIC_ROAD_ID, roadOpen } from './roadAvailability';
 export type RoadTierId = `${RoadId}:tier${string}`;
 export type RoadPointSource = 'campaign' | 'daily' | 'voyage' | 'wish';
 export interface RoadPointEvent {
@@ -66,7 +70,10 @@ export const STAR_ROAD: RoadTier[] = [
   { id: 'road00:tier18', stars: 190, reward: { boosters: { spark: 1 } }, pass: {} },
   { id: 'road00:tier19', stars: 200, reward: { dust: 1000, sticker: 'cosmic_road' }, pass: {} },
 ];
-export const ROAD_CATALOG: readonly RoadDefinition[] = [{ id: COSMIC_ROAD_ID, name: 'Cosmic Road', addedIn: '1.0', tiers: STAR_ROAD }];
+export const ROAD_CATALOG: readonly RoadDefinition[] = [
+  { id: COSMIC_ROAD_ID, name: 'Cosmic Road', addedIn: '1.0', tiers: STAR_ROAD },
+  ...ROAD_CONTENT_ROADS,
+];
 export const ROAD_DAILY_CAP = 4;
 export const ROAD_CATCH_UP_CAP = 8;
 export const ROAD_LENGTH_DAYS = 56;
@@ -84,9 +91,7 @@ function datePlus(day: string, offset: number): string {
   date.setUTCDate(date.getUTCDate() + offset);
   return date.toISOString().slice(0, 10);
 }
-function validDay(day: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(day) && !Number.isNaN(Date.parse(`${day}T12:00:00Z`));
-}
+
 export function roadCap(state: RoadState, day: string): number {
   return state.plannedEndOn && day >= datePlus(state.plannedEndOn, -13) && day <= state.plannedEndOn ? ROAD_CATCH_UP_CAP : ROAD_DAILY_CAP;
 }
@@ -123,9 +128,24 @@ export function grantRoadPoints(state: RoadState, event: RoadPointEvent): number
   return granted;
 }
 
+/** Observation advances availability, never the point-event daily cap or reward claims. */
+export function observeRoadDay(p: Profile, day = today(), catalog: readonly RoadDefinition[] = ROAD_CATALOG): boolean {
+  const advanced = validDay(day) && day > p.roadSeenDay;
+  if (advanced) p.roadSeenDay = day;
+  for (const road of catalog) {
+    const state = p.roadRecords[road.id];
+    if (state) state.plannedEndOn = roadCloseOn(road.id, catalog);
+  }
+  return advanced;
+}
+
+export function productOpen(def: ProductDef, day: string): boolean {
+  if (def.opensOn) return validDay(def.opensOn) && def.opensOn <= day;
+  if (ROAD01.products.some((product) => product.id === def.id) || def.roadId === ROAD01.road.id) return roadOpen(ROAD01.road, day);
+  return true;
+}
 export function playableRoads(p: Profile, day = today(), catalog: readonly RoadDefinition[] = ROAD_CATALOG): RoadDefinition[] {
-  const installed = catalog.filter((road) => !road.opensOn || road.opensOn <= day);
-  return installed.length ? installed : [catalog[0]];
+  return catalog.filter((road) => roadOpen(road, day > p.roadSeenDay ? day : p.roadSeenDay));
 }
 export function currentRoad(p: Profile, day = today(), catalog: readonly RoadDefinition[] = ROAD_CATALOG): RoadDefinition {
   return playableRoads(p, day, catalog).at(-1)!;
@@ -160,35 +180,39 @@ function syncLegacy(p: Profile): void {
   p.roadPass = STAR_ROAD.flatMap((tier, index) => (state.claimedPaidTierIds.includes(tier.id) ? [index] : []));
 }
 
-/** Profile API for package B: oldest unfinished Past Road first, then the current Road. */
+/** Decision 80: alternate with the oldest unfinished Past Road the child started. */
 export function grantProfileRoadPoints(p: Profile, event: RoadPointEvent, catalog: readonly RoadDefinition[] = ROAD_CATALOG): number {
   if (!validDay(event.date) || !Number.isFinite(event.delta) || event.delta <= 0) return 0;
+  observeRoadDay(p, event.date, catalog);
   const key = `${event.source}:${event.earningKey}`;
+  // Per-Road evidence is dedupe-only; consolidate legacy callers too, keeping its field empty.
+  const keys = [...Object.values(p.roadRecords).flatMap((s) => s.creditedEarningKeys), ...p.roadCreditedEarningKeys];
+  p.roadCreditedEarningKeys = [...new Set(keys.reverse())].reverse().slice(-ROAD_EARNING_KEY_LIMIT);
+  for (const state of Object.values(p.roadRecords)) state.creditedEarningKeys = [];
   if (p.roadCreditedEarningKeys.includes(key)) return 0;
   const day = p.roadDay.day && event.date < p.roadDay.day ? p.roadDay.day : event.date;
   if (day > p.roadDay.day) p.roadDay = { day, earned: 0 };
-  if (day > p.roadSeenDay) p.roadSeenDay = day;
+  ensureRoad(p, COSMIC_ROAD_ID);
   const roads = playableRoads(p, day, catalog);
-  let left = Math.min(Math.floor(event.delta), event.source === 'wish' ? 1 : 3);
+  const current = roads.at(-1);
+  if (!current) return 0;
+  const unfinished = (road: RoadDefinition) => (p.roadRecords[road.id]?.points ?? 0) < (road.tiers.at(-1)?.stars ?? 0);
+  const past = roads.slice(0, -1).filter(unfinished);
+  const started = past.find((road) => (p.roadRecords[road.id]?.points ?? 0) > 0);
+  const cap = roadCap({ ...newRoadState(), plannedEndOn: roadCloseOn(current.id, catalog) }, day);
+  const limit = Math.min(Math.floor(event.delta), event.source === 'wish' ? 1 : 3, Math.max(0, cap - p.roadDay.earned));
   let granted = 0;
-  const current = roads.at(-1)!;
-  const ordered = [...roads.slice(0, -1).filter((road) => ensureRoad(p, road.id).points < road.tiers.at(-1)!.stars), current];
-  for (const road of ordered) {
-    if (left <= 0) break;
+  for (let i = 0; i < limit; i++) {
+    const share = started && unfinished(started) && (p.roadDay.earned + 1) % 2 === 0;
+    const road = [share ? started : current, current, ...past].find((road) => road && unfinished(road));
+    if (!road) break;
     const state = ensureRoad(p, road.id);
-    if (!state.openedOn) state.openedOn = road.opensOn ?? day;
-    // The closing window belongs to installed Road content, never to a child's first point.
+    state.openedOn ??= road.opensOn ?? day;
     state.plannedEndOn = roadCloseOn(road.id, catalog);
-    const room = Math.max(0, road.tiers.at(-1)!.stars - state.points);
-    const dailyRoom = Math.max(0, roadCap(state, day) - p.roadDay.earned);
-    const amount = Math.min(left, room, dailyRoom);
-    if (!amount) continue;
-    state.points += amount;
+    state.points++;
     state.lastCreditedDay = day;
-    state.earnedOnLastCreditedDay = p.roadDay.earned + amount;
-    p.roadDay.earned += amount;
-    granted += amount;
-    left -= amount;
+    state.earnedOnLastCreditedDay = ++p.roadDay.earned;
+    granted++;
   }
   if (granted) p.roadCreditedEarningKeys = [...p.roadCreditedEarningKeys, key].slice(-ROAD_EARNING_KEY_LIMIT);
   syncLegacy(p);
@@ -209,7 +233,7 @@ export function addRoadPoints(p: Profile, amount: number, day = today(), source:
 
 export function roadReady(p: Profile, id: RoadId = COSMIC_ROAD_ID, catalog: readonly RoadDefinition[] = ROAD_CATALOG): number[] {
   const def = catalog.find((road) => road.id === id);
-  if (!def) return [];
+  if (!def || !playableRoads(p, today(), catalog).some((road) => road.id === id)) return [];
   const state = ensureRoad(p, id);
   return def.tiers.flatMap((tier, index) =>
     state.points >= tier.stars &&
@@ -226,7 +250,7 @@ export function claimRoad(
 ): Reward[] {
   const def = catalog.find((road) => road.id === id);
   const tier = def?.tiers[index];
-  if (!tier) return [];
+  if (!tier || !playableRoads(p, today(), catalog).some((road) => road.id === id)) return [];
   const state = ensureRoad(p, id);
   if (state.points < tier.stars) return [];
   const got: Reward[] = [];
@@ -246,7 +270,7 @@ export function claimRoad(
 export function claimReachedPaidRoad(p: Profile, id: RoadId = COSMIC_ROAD_ID, catalog: readonly RoadDefinition[] = ROAD_CATALOG): Reward[] {
   if (!roadHasPass(p, id)) return [];
   const def = catalog.find((road) => road.id === id);
-  if (!def) return [];
+  if (!def || !playableRoads(p, today(), catalog).some((road) => road.id === id)) return [];
   const state = ensureRoad(p, id);
   const got: Reward[] = [];
   for (const tier of def.tiers) {
@@ -258,12 +282,17 @@ export function claimReachedPaidRoad(p: Profile, id: RoadId = COSMIC_ROAD_ID, ca
   syncLegacy(p);
   return got;
 }
-export const PASS_GEMS = STAR_ROAD.reduce((sum, tier) => sum + (tier.pass.gems ?? 0), 0);
-export const FREE_ROAD_GEMS = STAR_ROAD.reduce((sum, tier) => sum + (tier.reward.gems ?? 0), 0);
+export const PASS_GEMS: Readonly<Record<RoadId, number>> = Object.fromEntries(
+  ROAD_CATALOG.map((road) => [road.id, road.tiers.reduce((sum, tier) => sum + (tier.pass.gems ?? 0), 0)]),
+);
+export const FREE_ROAD_GEMS: Readonly<Record<RoadId, number>> = Object.fromEntries(
+  ROAD_CATALOG.map((road) => [road.id, road.tiers.reduce((sum, tier) => sum + (tier.reward.gems ?? 0), 0)]),
+);
 
-/** Step-0 compatibility: Package A extends this mapping with per-product metadata. */
+/** Pass identity belongs to product metadata, never the shared legacy Pass bit. */
 export function roadForProduct(id: string): RoadId | undefined {
-  return id === 'com.pocketplanet.game.road00' ? COSMIC_ROAD_ID : undefined;
+  const def = PRODUCTS.find((product) => product.id === id && product.kind === 'road_pass');
+  return def?.roadId ?? (def?.key === 'pass' ? COSMIC_ROAD_ID : undefined);
 }
 /** Only installed, playable Roads can have a claim waiting. */
 export function anyRoadReady(p: Profile): boolean {
