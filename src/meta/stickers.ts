@@ -1,3 +1,7 @@
+import { LAUNCH_FUSION_IDS } from './reactions';
+import { RULESETS, rulesPlay } from '../core/rulesets';
+import type { RulesVersion } from '../core/rules-version';
+import { WONDER_STICKERS } from './wonder';
 import { t } from '../i18n';
 import { roadOpen } from './starroad';
 import { today } from './profile';
@@ -14,7 +18,7 @@ import type { Profile } from './profile';
 import { FESTIVALS } from './festivals';
 import { STUDIED_AT } from './lore';
 import { applyReward, type Reward } from './progression';
-import { REACTIONS, type ReactionId } from '../core/round';
+import { REACTIONS } from '../core/round';
 import { remixFrame } from './remix';
 
 export type StickerKind = 'critter' | 'fest' | 'voyage' | 'feat' | 'fusion';
@@ -28,7 +32,7 @@ export interface Sticker {
   /** How to earn it: an English template and its values. */
   hint: [string, Record<string, string | number>?];
   earned: (p: Profile) => boolean;
-  visible?: (p: Profile) => boolean;
+  visible?: (p: Profile, play?: RulesVersion) => boolean;
   hintText?: () => string;
   /** Decorative bonus stickers never affect album rewards or milestones. */
   bonus?: boolean;
@@ -83,16 +87,25 @@ const FEATS: Feat[] = [
   { id: 'rank', name: 'Seasoned Explorer', hint: 'Open chapter {n} chest', n: 10, earned: (p) => p.rank >= 10 || p.chapters.includes(10) },
 ];
 
-const REACTION_STICKERS: Sticker[] = (Object.keys(REACTIONS) as ReactionId[])
-  .filter((id) => REACTIONS[id].kind === 'fusion')
-  .map((id) => ({
-    id: `r_${id}`,
-    kind: 'fusion',
-    name: REACTIONS[id].name,
-    art: id,
-    hint: ['Discover {name}', { name: REACTIONS[id].name }],
-    earned: (p) => p.fusionsFound.includes(id),
-  }));
+export const REACTION_STICKERS: Sticker[] = LAUNCH_FUSION_IDS.map((id) => ({
+  id: `r_${id}`,
+  kind: 'fusion',
+  name: REACTIONS[id].name,
+  art: id,
+  hint: ['Discover {name}', { name: REACTIONS[id].name }],
+  earned: (p) => p.fusionsFound.includes(id),
+}));
+
+export const V2_REACTION_STICKERS: Sticker[] = (['firemount', 'rainbow'] as const).map((id) => ({
+  id: `r_${id}`,
+  kind: 'fusion',
+  name: REACTIONS[id].name,
+  art: id,
+  hint: ['Discover {name}', { name: REACTIONS[id].name }],
+  bonus: true,
+  visible: (_p, play = rulesPlay()) => RULESETS[play].reactions.includes(id),
+  earned: (p) => p.fusionsFound.includes(id),
+}));
 
 export const COMBO_STAMP_NAMES = [
   'Combo 2',
@@ -181,6 +194,8 @@ export const STICKERS: Sticker[] = [
     bonus: f.bonus,
   })),
   ...REACTION_STICKERS,
+  ...V2_REACTION_STICKERS,
+  ...WONDER_STICKERS,
   ...COMBO_STICKERS,
 ];
 
@@ -198,12 +213,12 @@ export { ALBUM_PAGES } from './tuning';
 export const pageStickers = (kind: StickerKind) =>
   STICKERS.filter((s) => !s.bonus && (s.kind === kind || (kind === 'feat' && s.kind === 'fusion')));
 
-export function visibleStickers(p: Profile) {
-  return STICKERS.filter((s) => !s.visible || s.visible(p));
+export function visibleStickers(p: Profile, play: RulesVersion = rulesPlay()) {
+  return STICKERS.filter((s) => !s.visible || s.visible(p, play));
 }
 
-export function ownedStickers(p: Profile) {
-  return visibleStickers(p).filter((s) => s.earned(p));
+export function ownedStickers(p: Profile, play: RulesVersion = rulesPlay()) {
+  return visibleStickers(p, play).filter((s) => s.earned(p));
 }
 
 export const hasSticker = (p: Profile, id: string) => !!STICKER_BY_ID[id]?.earned(p);
@@ -212,8 +227,8 @@ export const hasSticker = (p: Profile, id: string) => !!STICKER_BY_ID[id]?.earne
 export const MILESTONE_EVERY = 10;
 export { MILESTONE_REWARD } from './tuning';
 
-export function milestonesReady(p: Profile) {
-  return Math.max(0, Math.floor(ownedStickers(p).filter((s) => !s.bonus).length / MILESTONE_EVERY) - p.album.milestones);
+export function milestonesReady(p: Profile, play: RulesVersion = rulesPlay()) {
+  return Math.max(0, Math.floor(ownedStickers(p, play).filter((s) => !s.bonus).length / MILESTONE_EVERY) - p.album.milestones);
 }
 
 export function pageDone(p: Profile, kind: StickerKind) {

@@ -102,8 +102,9 @@ app
     showRecovery(t('Your garden could not open. You can try again or start fresh.'));
   });
 if (import.meta.env.DEV) {
-  const dev = window as unknown as { __app: App; __e2eRoadOpening: (day: string | undefined) => void };
+  const dev = window as unknown as { __app: App; __rulesPlay: 1 | 2; __e2eRoadOpening: (day: string | undefined) => void };
   dev.__app = app;
+  dev.__rulesPlay = new URLSearchParams(window.location.search).get('rules') === '2' ? 2 : 1;
   // Scenario injection avoids WebKit's module-import failure under Playwright's page clock.
   dev.__e2eRoadOpening = (day) => {
     ROAD01.road.opensOn = day;

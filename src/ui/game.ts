@@ -3,11 +3,11 @@ import * as hud from './hud';
 import * as preview from './preview';
 import { MAX_PULL, PULL_TO_SPEED } from './preview';
 import * as fx from './fx';
-import { type BiomeId, BIOMES, SECTORS, clonePlanet, lifeScore, type Kind, type Planet } from '../core/world';
+import { type BiomeId, BIOMES, KINDS, SECTORS, clonePlanet, lifeScore, type Kind, type Planet } from '../core/world';
 import { BOSS_HP, type Goal, type LevelDef } from '../core/levels';
 import { h, type Modal } from './dom';
 import { roundIntro, type CoachEvent } from '../meta/coach';
-import { UNLOCKS } from '../meta/unlocks';
+import { UNLOCKS, lateArrivalIntro, unlocksForPlay } from '../meta/unlocks';
 import { setRemixRim, surfaceK } from './art/planet';
 import { DEFAULT_LOOK, type Look } from '../meta/cosmetics';
 import {
@@ -21,7 +21,8 @@ import {
 } from '../core/round';
 import { feedbackState, type FeedbackState, type FeedbackItem } from './feel';
 import { flyFull, flyFullWithLauncher, sceneGeometry, STAR_SLING, type FlightHit, type FlightWorld } from '../core/flight';
-import { launcherAtTune } from '../core/launchers';
+import { labNovaReach } from '../core/labperks';
+import { launcherAtTune, launcherReach } from '../core/launchers';
 import { EMPTY_SKY_STATE, type ObstacleId, type SkyState } from '../core/sky';
 import type { RoundModifiers } from '../core/modifiers';
 import type { Season } from '../meta/seasons';
@@ -31,12 +32,14 @@ import { drawChapterBackdrop } from './art/backdrops';
 import { chapterOf } from '../meta/progression';
 import { needsBonkBadge } from './feel';
 import type { TroubleState } from '../core/troubles';
-import type { AimTagFacts } from './aimtag';
+import { previewReach as nextReach, type AimTagFacts } from './aimtag';
 import { emptyRoundLog, type HelpRung, type RoundEventLog } from '../meta/help';
 import { helpEndModal } from './flows/results';
 import { PRACTICE_GIFT_LINE } from '../meta/coach';
 import { t } from '../i18n';
 import type { LauncherSelection } from '../meta/launcherPick';
+import type { ExtraThrowSource, RoundAssists, Pickup, MoteDef } from '../meta/m15types';
+export type { RoundAssists } from '../meta/m15types';
 import type { RoundStepEvidence } from '../meta/roundSettlement';
 
 /** Decision 78: native iPad remains dormant; browser/tablet windows get the wide shell. */
@@ -174,6 +177,7 @@ export interface LevelResult {
   throwsTotal: number;
   /** Throws left unused when the player finished early. */
   leftover: number;
+  assists?: RoundAssists;
   continuesUsed?: number;
   gemBoosterUsed?: boolean;
   /** A Comet Guardian was defeated on this planet. */
@@ -242,9 +246,78 @@ export interface Shot {
   brokenRocks?: number[];
   brokenRing?: boolean;
   slingSector?: number | null;
+  touched?: number[];
 }
 
 export class LevelScene {
+  extraUsed = false;
+  extraSource?: ExtraThrowSource;
+  extraAt?: number;
+  wideNext = 0;
+  collectedMotes: number[] = [];
+  pendingPickups: (Pickup | MoteDef)[] = [];
+  bonusQueued = false;
+  /** The checkpoint owner calls this after restoring the scene's counters. */
+  restoreRoundHooks(state: RoundState): void {
+    this.extraUsed = !!state.extraUsed;
+    this.extraSource = state.extraSource;
+    this.extraAt = state.extraAt;
+    this.wideNext = state.wideNext ?? 0;
+    this.collectedMotes = [...(state.motesTaken ?? [])];
+    if (state.assists) {
+      const current = this.assists;
+      this.assists = { ...state.assists };
+      for (const key of ['powerBooster', 'aimBooster', 'help', 'hints', 'practice', 'gentle', 'fullAim'] as const)
+        this.assists[key] = !!state.assists[key] || !!current[key];
+    } else if (this.continuesUsed || this.throwsUsed) this.assists.help = true;
+    this.bonusQueued = this.extraUsed;
+    if (this.extraUsed && this.L.bonusKind) this.L.queue[this.extraAt ?? this.L.throws] = this.L.bonusKind;
+  }
+  assists!: RoundAssists;
+  /** Called only at resolution; bonus queue and announcements share one path. */
+  consumeExtraThrow(result: import('../core/round').StepResult): void {
+    this.extraUsed = !!result.state.extraUsed;
+    this.extraSource = result.state.extraSource;
+    this.wideNext = result.state.wideNext ?? 0;
+    if (result.extraThrow && !this.bonusQueued) {
+      this.bonusQueued = true;
+      const judged = this.assists.judgedScore === undefined;
+      const bonusAt = judged ? this.assists.ownThrows + this.assists.inRuleExtras : this.throwsTotal;
+      this.extraAt = bonusAt;
+      this.L.queue[bonusAt] = result.extraThrow.kind;
+      if (this.qi - 2 === bonusAt) this.cur = result.extraThrow.kind;
+      if (this.qi - 1 === bonusAt) this.next = result.extraThrow.kind;
+      this.throwsLeft += 1;
+      this.throwsTotal += 1;
+      if (judged) this.assists.inRuleExtras += 1;
+      else this.assists.ignoredExtras += 1;
+      this.showExtraThrow(result.extraThrow.source);
+    }
+  }
+  showExtraThrow(source: ExtraThrowSource): void {
+    hud.showExtraThrow(this, source);
+  }
+  previewReach(extra: number): number {
+    const nova = novaForThrow(this.roundState());
+    return nextReach(
+      extra,
+      KINDS[this.cur].stats.reach +
+        this.o.splash +
+        launcherReach(this.o.launcher, this.cur) +
+        (nova ? 1 + labNovaReach(this.o.lab?.[this.cur] ?? 1) : 0),
+    );
+  }
+  roundWonder(score: number): import('../meta/m15types').WonderRound {
+    return { n: this.L.n, score, version: this.L.rulesVersion ?? 1, assists: this.roundAssists() };
+  }
+  closeWonderBudget(force = false): void {
+    if (!this.assists || this.assists.judgedScore !== undefined) return;
+    if (force || this.throwsUsed >= this.assists.ownThrows + this.assists.inRuleExtras) this.assists.judgedScore = this.score;
+  }
+  roundAssists(): RoundAssists {
+    this.assists.continues = this.continuesUsed;
+    return { ...this.assists };
+  }
   continuesUsed = 0;
   gemBoosterUsed = false;
   el: HTMLElement;
@@ -367,6 +440,20 @@ export class LevelScene {
     if (level.sky.obstacle) opts.onSkySeen?.(level.sky.obstacle);
     this.chapterNumber = chapterOf(level.n).n;
     this.o = opts;
+    this.L = { ...level, queue: [...level.queue] };
+    this.assists = {
+      continues: 0,
+      powerBooster: !!opts.boosters.spark,
+      aimBooster: !!opts.boosters.scope,
+      help: !!opts.helpForFail?.(0, level.throws)?.length,
+      hints: !!opts.hintSectors?.length,
+      practice: !!opts.practice || opts.roundMode === 'practice',
+      gentle: !!opts.gentle,
+      fullAim: opts.scopeLevel >= 3,
+      ownThrows: level.throws,
+      inRuleExtras: 0,
+      ignoredExtras: opts.extraThrows + (opts.boosters.shower ? 3 : 0),
+    };
     if (level.sky.gusty && opts.gustTip) this.o.coach = { ...opts.coach, 0: opts.gustTip };
     this.planet = clonePlanet(level.start);
     // P1 seeds only the Trouble state here; the round step owns every action.
@@ -436,7 +523,13 @@ export class LevelScene {
           : opts.intro || (!opts.competitive && !opts.endless && !opts.timeLimit)
             ? roundIntroCandidates(level.n, opts.intro, !!opts.gentle, level.troubles.length > 0, level.troubles.length > 0 && !!opts.buddy)
             : [];
-      for (const row of candidates) {
+      const seen = new Set(
+        unlocksForPlay(this.L.rulesVersion ?? 1)
+          .filter((row) => hud.hasSeenIntro(this, row.id))
+          .map((row) => row.id),
+      );
+      const late = opts.gentle ? undefined : lateArrivalIntro(this.L, seen, this.rules, this.L.rulesVersion ?? 1);
+      for (const row of late ? [late] : candidates.filter((row) => !row.sincePlay)) {
         if (this.introCard(row.id)) break;
       }
       this.raf = requestAnimationFrame(this.frame);
@@ -774,13 +867,14 @@ export class LevelScene {
   }
 
   introCard(id: string) {
-    const row = UNLOCKS.find((x) => x.id === id && x.intro);
+    const row = unlocksForPlay(this.L.rulesVersion ?? 1).find((x) => x.id === id && x.intro);
     if (row) return hud.introCard(this, row);
     return false;
   }
 
   endTimer = 0;
   afterShot() {
+    this.closeWonderBudget();
     if (this.score <= this.scoreAtThrow) this.shrugUntil = this.time + 0.75;
     return hud.afterShot(this);
   }
@@ -799,7 +893,10 @@ export class LevelScene {
 
   endModal(stars: number) {
     const rungs = stars === 0 ? (this.o.helpForFail?.(this.throwsUsed, this.throwsTotal) ?? []) : [];
-    if (rungs.length) return helpEndModal(this, rungs);
+    if (rungs.length) {
+      this.assists.help = true;
+      return helpEndModal(this, rungs);
+    }
     return hud.endModal(this, stars);
   }
 

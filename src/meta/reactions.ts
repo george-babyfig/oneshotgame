@@ -4,7 +4,9 @@ import { DISCOVERY_DUST, COMBO_STAMP_DUST } from './tuning';
 import { earn } from './wallet';
 import { recordWishCombo, recordWishReaction, type WishMode } from './wishes';
 
-export const FUSION_IDS = ['steam', 'rainGarden', 'wildflowers', 'glacier'] as const satisfies readonly ReactionId[];
+export const LAUNCH_FUSION_IDS = ['steam', 'rainGarden', 'wildflowers', 'glacier'] as const satisfies readonly ReactionId[];
+/** Historical import kept for launch-only titles and stamps. */
+export const FUSION_IDS = LAUNCH_FUSION_IDS;
 export const COMBO_STAMP_COUNT = 13;
 export const ALL_COMBO_STAMPS = (1 << COMBO_STAMP_COUNT) - 1;
 

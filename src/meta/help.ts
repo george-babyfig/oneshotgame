@@ -2,7 +2,7 @@ import { BIOMES, KINDS, SECTORS, SPECIES_BY_ID, type Kind } from '../core/world'
 import { type Goal, type LevelDef } from '../core/levels';
 import { NO_MODIFIERS, type RoundMode } from '../core/modifiers';
 import { novaReady, roundState, stepRound, rulesForLevel, type ReactionId } from '../core/round';
-import { TROUBLES, type TroubleEvent } from '../core/troubles';
+import { TROUBLES, TROUBLE_BEHAVIOUR, type TroubleId, type TroubleEvent } from '../core/troubles';
 import { OBSTACLES } from '../core/sky';
 import { t, tp } from '../i18n';
 import type { Profile } from './profile';
@@ -43,18 +43,12 @@ export function helpThrowsForAttempt(p: Profile, planet: number, mode: RoundMode
 /** Most concrete, actionable events lead; the missed goal is the fallback. */
 export function whatHappened(events: RoundEventLog): string[] {
   const facts: string[] = [];
-  for (const id of ['vent', 'vine', 'frost'] as const) {
+  for (const id of Object.keys(TROUBLE_BEHAVIOUR) as TroubleId[]) {
     const acts = events.troubles.filter((event) => event.id === id && (event.kind === 'act' || event.kind === 'spread'));
     if (acts.length) {
       const sectors = new Set(acts.map((event) => event.sector)).size;
       const vars = { trouble: t(TROUBLES[id].name), counter: t(TROUBLES[id].counter) };
-      facts.push(
-        id === 'vent'
-          ? tp(sectors, '{trouble} dried one sector · {counter}', '{trouble} dried {n} sectors · {counter}', vars)
-          : id === 'frost'
-            ? tp(sectors, '{trouble} cooled one sector · {counter}', '{trouble} cooled {n} sectors · {counter}', vars)
-            : tp(sectors, '{trouble} reached one sector · {counter}', '{trouble} reached {n} sectors · {counter}', vars),
-      );
+      facts.push(tp(sectors, ...TROUBLE_BEHAVIOUR[id].helpLine, vars));
     }
   }
   if (events.reactions.includes('scorch')) facts.push(t('A Dry Spell dried the land.'));

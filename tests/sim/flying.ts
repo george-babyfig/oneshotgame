@@ -1,3 +1,5 @@
+import { levelPickups } from '../../src/core/v2/overlay';
+import type { Pickup } from '../../src/meta/m15types';
 import { flyFull, flightParamsForLauncher, sceneGeometry, type FlightHit, type FlightWorld } from '../../src/core/flight';
 import { launcherAtTune, STAR_SLING_SELECTION, type LauncherSelection } from '../../src/core/launchers';
 import { EMPTY_SKY_STATE, type SkyState } from '../../src/core/sky';
@@ -21,12 +23,15 @@ export function flightWorld(
   skyState: SkyState,
   phone: Phone,
   time: number,
+  pickups?: readonly Pickup[],
 ): {
   world: FlightWorld;
   launch: { x: number; y: number };
 } {
   const geo = sceneGeometry(phone.width, phone.height, level.size);
   const rotation = level.twist === 'wobble' ? (level.spin * 1.7 * Math.sin(time * 0.9)) / 0.9 : level.spin * time;
+  const target = planet.sectors.reduce((best, sector, at) => (sector.life > planet.sectors[best].life ? at : best), 0);
+  const contacts = pickups ?? levelPickups(level, target, rotation);
   return {
     launch: geo.launch,
     world: {
@@ -44,6 +49,9 @@ export function flightWorld(
       sky: level.sky,
       skyState,
       bossActive: true,
+      ...(contacts.length
+        ? { pickups: contacts.map((p) => ({ ...p, x: geo.cx + p.x * geo.R, y: geo.cy + p.y * geo.R, r: p.r * geo.R })) }
+        : {}),
     },
   };
 }

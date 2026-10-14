@@ -1,3 +1,6 @@
+import { recordWonder } from './wonder';
+import type { WonderRound } from './m15types';
+export type { RoundAssists } from './m15types';
 import { BIOMES, type BiomeId } from '../core/world';
 import { eligibleStepEvidence, type ReactionId, type StepResult } from '../core/round';
 import type { Difficulty } from '../core/levels';
@@ -10,6 +13,7 @@ import type { Planet } from '../core/world';
 import type { EligibleRoundResult } from './homeworldLife';
 
 export interface RoundStepEvidence {
+  wonder?: WonderRound;
   firstArrivals: string[];
   improvedSectors: Partial<Record<BiomeId, number>>;
   improvedSectorIds?: Partial<Record<BiomeId, number[]>>;
@@ -33,6 +37,7 @@ export function landmarkStepEvidence(step: StepResult): RoundStepEvidence {
 }
 
 export interface SettledRound {
+  wonder?: WonderRound;
   mode: EconomyMode;
   roundKey: string;
   planetKey: string;
@@ -54,6 +59,9 @@ export interface SettledRound {
 export function settleHomeworldRound(p: Profile, round: SettledRound): EligibleRoundResult {
   const empty: EligibleRoundResult = { earned: [], celebrations: [] };
   if (!round.won || !round.writesProgress || !['campaign', 'voyage', 'zen', 'daily'].includes(round.mode)) return empty;
+  const wonder = round.wonder ?? round.steps.at(-1)?.wonder;
+  if (round.mode === 'campaign' && round.stars === 3 && wonder && wonder.assists.judgedScore !== undefined)
+    recordWonder(p, wonder.n, wonder.assists.judgedScore, wonder.version, wonder.assists);
   const grownSectors = grownSectorsOf(round.planet);
   recordHomeworldWin(p, {
     mode: round.mode,

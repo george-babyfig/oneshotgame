@@ -5,12 +5,12 @@ import type { ObstacleId } from './sky';
 import type { Kind } from './world';
 import { RULES_VERSION, type RulesVersion } from './rules-version';
 
-// Planned ids live in the rules contract before their behaviour is implemented.
-export type RuleReactionId = ReactionId | 'firemount' | 'rainbow' | 'flood';
-export type RuleTroubleId = TroubleId | 'pebble';
+// IDs have typed behavior stubs; only the released per-mode lists execute them.
+export type RuleReactionId = ReactionId;
+export type RuleTroubleId = TroubleId;
 export const includeFlood: boolean = false; // T0 must clear Flood before it ships.
 export const RULES_V2_VOYAGE_FROM: string | undefined = undefined;
-const layoutTroubles: readonly TroubleId[] = ['vent', 'vine', 'frost'];
+const layoutTroubles: readonly Exclude<TroubleId, 'pebble'>[] = ['vent', 'vine', 'frost'];
 const layoutObstacles: readonly ObstacleId[] = ['rocks', 'bubble', 'mist', 'ring', 'tug'];
 const launchReactions: readonly ReactionId[] = ['steam', 'rainGarden', 'wildflowers', 'glacier', 'scorch'];
 export const REACTION_DEBUT: Record<RuleReactionId, number> = {
@@ -122,7 +122,7 @@ export interface RuleSet {
   version: RulesVersion;
   reactions: readonly RuleReactionId[];
   troubles: Readonly<Record<RoundMode, readonly RuleTroubleId[]>>;
-  layoutTroubles: readonly TroubleId[];
+  layoutTroubles: readonly Exclude<TroubleId, 'pebble'>[];
   layoutObstacles: readonly ObstacleId[];
   salt: { level: Partial<Record<number, number>>; raw: Partial<Record<number, number>> };
   pebbleTeach?: number;
@@ -197,4 +197,14 @@ export function effectiveVersion(n: number, mode: RoundMode, taught: number, pla
 }
 export function voyagePlay(week: string, play: RulesVersion = RULES_VERSION): RulesVersion {
   return play === 2 && RULES_V2_VOYAGE_FROM !== undefined && week >= RULES_V2_VOYAGE_FROM ? 2 : 1;
+}
+
+/** A local Scene Bot override; the production build folds this branch away. */
+export function rulesPlay(): RulesVersion {
+  // Optional chaining: Playwright imports the ladder in Node, where import.meta.env is absent.
+  if (import.meta.env?.DEV && typeof window !== 'undefined') {
+    const play = (window as unknown as { __rulesPlay?: RulesVersion }).__rulesPlay;
+    if (play === 1 || play === 2) return play;
+  }
+  return RULES_VERSION;
 }

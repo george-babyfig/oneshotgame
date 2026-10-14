@@ -1,3 +1,4 @@
+import type { ExtraThrowSource } from '../meta/m15types';
 import { ledger } from '../meta/ledger';
 import { type BiomeId, BIOMES, KINDS, SPECIES_BY_ID, type Kind } from '../core/world';
 import { goalProgress, goalsMet, starsEarned, type Goal } from '../core/levels';
@@ -20,7 +21,7 @@ import type { LevelScene } from './game';
 import { previewStep, novaReady, REACTIONS, type ReactionId, type RoundRules } from '../core/round';
 import { reactionCanvas, reactionPair } from './art/reactions';
 import { celebrate } from './celebrate';
-import { forecastTroubles, TROUBLES } from '../core/troubles';
+import { forecastTroubles, TROUBLES, TROUBLE_BEHAVIOUR } from '../core/troubles';
 import { marketingMode } from './devcapture';
 
 const roundDiscoveries = new WeakMap<LevelScene, string[]>();
@@ -242,6 +243,20 @@ export function renderHud(scene: LevelScene) {
     scene.hudThrows.replaceChildren(h('span', { class: 'n' }, String(scene.throwsLeft)), h('span', { class: 'l' }, t('throws')));
     scene.hudThrows.classList.toggle('low', scene.throwsLeft <= 2);
   }
+  if (scene.extraUsed && scene.extraSource) {
+    const source = scene.extraSource === 'rainbow' ? t('Rainbow') : t('Star Mote');
+    scene.hudThrows.querySelector('.n')?.append(
+      h(
+        'span',
+        {
+          class: 'extra-throw-badge',
+          'aria-label': t('Extra throw from {source}', { source }),
+          style: 'font-size:12px;margin-left:3px;vertical-align:top',
+        },
+        '+1',
+      ),
+    );
+  }
   const k = KINDS[scene.cur];
   const n = KINDS[scene.next];
   scene.curEl.replaceChildren(projectileCanvas(scene.cur, 40));
@@ -249,6 +264,14 @@ export function renderHud(scene: LevelScene) {
   scene.nextEl.replaceChildren(projectileCanvas(scene.next, 36));
   scene.nextEl.style.setProperty('--c', n.color);
   scene.descEl.replaceChildren(h('b', null, t(k.name)), ` — ${t(k.desc)}`);
+  if (scene.wideNext && scene.throwsLeft > 0)
+    scene.descEl.append(
+      h(
+        'small',
+        { 'aria-label': t('Next throw reach: {n}', { n: scene.previewReach(scene.wideNext) }) },
+        t('The next throw reaches wider.'),
+      ),
+    );
   scene.renderScore();
   scene.renderGoals();
   scene.renderFinish();
@@ -257,12 +280,16 @@ export function renderHud(scene: LevelScene) {
 /** Two upcoming Trouble beats, with number, icon and a distinct target shape. */
 export function renderForecast(scene: LevelScene) {
   const beats = forecastTroubles(scene.roundState(), scene.roundModifiers());
-  const counterIcons = { vent: '☄️ 🌧️', vine: '🔥', frost: '🔥 ☀️' } as const;
+
   scene.forecastEl.replaceChildren(
     ...beats.map((beat) => {
       const def = TROUBLES[beat.id];
-      const shape = beat.sector === null ? '✓' : beat.blockedBy ? '▣' : beat.id === 'vent' ? '◆' : beat.id === 'vine' ? '▲' : '●';
-      const label = `${t(def.name)} · ${forecastInThrows(beat.inThrows)} · ${beat.sector === null ? t('settled next') : t('the marked land')}`;
+      const shape = beat.sector === null ? '✓' : beat.blockedBy ? '▣' : TROUBLE_BEHAVIOUR[beat.id].forecastShape;
+      const voice = TROUBLE_BEHAVIOUR[beat.id].forecastLabel;
+      const label =
+        voice && beat.sector !== null
+          ? t(voice, { n: beat.sector + 1, k: beat.inThrows })
+          : `${t(def.name)} · ${forecastInThrows(beat.inThrows)} · ${beat.sector === null ? t('settled next') : t('the marked land')}`;
       return h(
         'button',
         {
@@ -270,7 +297,16 @@ export function renderForecast(scene: LevelScene) {
           type: 'button',
           'aria-label': label,
           style: 'border:1px solid #c6e9d3;border-radius:9px;background:#172a38;color:#fff;padding:3px 8px;font:700 12px Fredoka,system-ui',
-          onclick: () => scene.popup(scene.cx, scene.cy - scene.R * 1.45, `${t(def.rule)} ${counterIcons[beat.id]}`, '#bdf4d0', 15, 2.4, 2),
+          onclick: () =>
+            scene.popup(
+              scene.cx,
+              scene.cy - scene.R * 1.45,
+              `${t(def.rule)} ${TROUBLE_BEHAVIOUR[beat.id].counterIcons}`,
+              '#bdf4d0',
+              15,
+              2.4,
+              2,
+            ),
         },
         forecastBeatText(def.icon, shape, beat.inThrows),
       );
@@ -467,6 +503,7 @@ export function finishEarly(scene: LevelScene) {
       80 + k * 120,
     );
   }
+  scene.closeWonderBudget(true);
   scene.throwsLeft = 0;
   scene.renderHud();
   const done = () => {
@@ -756,7 +793,8 @@ export function introCard(scene: LevelScene, row: Unlock) {
     // The profile still records the card.
   }
   shownIntros.add(row.id);
-  scene.o.onIntro?.(row.id);
+  // New rule intros use the existing coach history, without the legacy Inbox letter callback.
+  if (!row.sincePlay) scene.o.onIntro?.(row.id);
   const kind = row.id in KINDS ? (row.id as Kind) : null;
   const focus = row.id === 'goals' ? scene.goalsEl : null;
   scene.paused = true;
@@ -917,6 +955,7 @@ export function finish(scene: LevelScene, stars: number) {
       throwsUsed: scene.throwsUsed,
       throwsTotal: scene.throwsTotal,
       leftover: scene.leftover,
+      assists: scene.roundAssists(),
       continuesUsed: scene.continuesUsed,
       gemBoosterUsed: scene.gemBoosterUsed,
       boss: scene.L.twist === 'boss' && scene.bossHp <= 0,
@@ -1030,6 +1069,7 @@ export function checkEnd(scene: LevelScene) {
       ? practiceHelp(scene.L.n, !!scene.o.practice, stars, scene.practiceGifts, !!scene.o.practiceFirstClear)
       : 'none';
   if (help !== 'none') {
+    scene.assists.help = true;
     if (help === 'throws') {
       scene.practiceGifts++;
       scene.throwsLeft += 3;
@@ -1057,4 +1097,36 @@ export function checkEnd(scene: LevelScene) {
     return;
   }
   scene.endModal(stars);
+}
+
+/** One replaceable announcement slot; both sources use the same badge and live region. */
+export function showExtraThrow(scene: LevelScene, source: ExtraThrowSource): void {
+  scene.extraSource = source;
+  scene.extraUsed = true;
+  scene.renderHud();
+  scene.el.querySelector('.extra-throw-toast')?.remove();
+  const message = source === 'rainbow' ? t('Rainbow added one throw!') : t('Star Mote added one throw!');
+  const slot = h(
+    'div',
+    {
+      class: 'extra-throw-toast',
+      role: 'status',
+      style:
+        'position:absolute;left:8px;right:8px;bottom:104px;text-align:center;pointer-events:none;font:700 13px Fredoka,system-ui;color:#fff;background:#172a38;border-radius:9px;padding:5px',
+    },
+    message,
+  );
+  scene.el.append(slot);
+  speak(scene, message);
+  window.setTimeout(() => slot.remove(), 2600);
+}
+export function hasSeenIntro(_scene: LevelScene, id: string): boolean {
+  let seen: string[] = [];
+  try {
+    const raw = JSON.parse(localStorage.getItem('pp.coach.intros') ?? '[]');
+    if (Array.isArray(raw)) seen = raw;
+  } catch {
+    /* private session */
+  }
+  return introAlreadySeen(id, seen, shownIntros);
 }

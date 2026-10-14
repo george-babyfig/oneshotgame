@@ -1,3 +1,6 @@
+import { drawPebble, catchPebble } from './v2/pebbleFx';
+import { drawMotes, collectMote } from './v2/moteFx';
+import { levelPickups } from '../core/v2/overlay';
 import { ruleReactionForPair } from '../core/rulesets';
 import { BIOMES, KINDS, SPECIES_BY_ID, TRAITS, traitOf, neededHabitat, settle, wrap, type Planet, type TraitId } from '../core/world';
 import { stepRound, previewStep, novaForThrow, novaReady, REACTIONS, type RoundState, type StepResult } from '../core/round';
@@ -30,7 +33,7 @@ import { launcherHelpReason, type LauncherHelpCredit } from '../meta/helped';
 import { isWide, type LevelScene, type Shot } from './game';
 import type { TroubleEvent } from '../core/troubles';
 import { drawTroubles } from './art/troubles';
-import { forecastTroubles } from '../core/troubles';
+import { forecastTroubles, TROUBLE_BEHAVIOUR, TROUBLES } from '../core/troubles';
 import { troubleFeel } from './feel';
 import { canvasDpr } from './devcapture';
 
@@ -456,15 +459,7 @@ function drawRoundTraitBadges(scene: LevelScene) {
     const species = scene.planet.sectors[i].species;
     const trait = species ? traitOf(species) : null;
     if (!trait) continue;
-    const protectedByTrait = scene.troubles.some(
-      (trouble) =>
-        !trouble.settled &&
-        (trouble.id === 'vent'
-          ? trait === 'fireproof' || trait === 'swimmer'
-          : trouble.id === 'vine'
-            ? trait === 'weedproof' || trait === 'swimmer'
-            : trait === 'frostproof'),
-    );
+    const protectedByTrait = scene.troubles.some((trouble) => !trouble.settled && TROUBLE_BEHAVIOUR[trouble.id].buddy.includes(trait));
     if (!protectedByTrait) continue;
     const [x, y] = scene.sectorPoint(i, 1.38);
     drawTraitBadge(scene.g, x, y, trait, 17);
@@ -559,6 +554,8 @@ export function drawPlanet(scene: LevelScene) {
     { lab: scene.o.lab ?? {}, marks: scene.labMarks },
     { lab: scene.o.lab ?? {}, marks: aimedStep?.state.labMarks ?? scene.labMarks },
   );
+  drawPebble(scene);
+  drawMotes(scene);
   drawRoundTraitBadges(scene);
   drawTraitPuffs(scene);
   drawHintPulse(scene);
@@ -570,28 +567,12 @@ function showTroubleEffects(scene: LevelScene, events: TroubleEvent[]) {
     const [x, y] = scene.sectorPoint(event.sector, 1.22);
     const feel = troubleFeel(event);
     if (event.kind === 'settled') {
-      scene.popup(
-        x,
-        y - 20,
-        event.id === 'vent' ? t('Vent cooled!') : t('{name} settled!', { name: t(event.id === 'vine' ? 'Tanglevine' : 'Frost Creep') }),
-        feel.color,
-        19,
-        1.4,
-        3,
-      );
+      scene.popup(x, y - 20, t(TROUBLE_BEHAVIOUR[event.id].settledLine, { name: t(TROUBLES[event.id].name) }), feel.color, 19, 1.4, 3);
       if (!scene.o.reduceMotion) scene.ring(x, y, feel.color, 42);
     } else if (event.kind === 'blocked') {
       scene.popup(x, y - 18, preview.safeTroubleText(), feel.color, 15, 1, 2);
     } else {
-      scene.popup(
-        x,
-        y - 18,
-        event.id === 'vine' ? t('A vine reached this land') : event.id === 'frost' ? t('A cool breeze') : t('Warm breeze from the vent'),
-        feel.color,
-        15,
-        1,
-        2,
-      );
+      scene.popup(x, y - 18, t(TROUBLE_BEHAVIOUR[event.id].actLine), feel.color, 15, 1, 2);
     }
     sfx.trouble(event.kind);
     haptic.trouble(event.kind);
@@ -608,16 +589,26 @@ function applyTroubleState(scene: LevelScene, res: Pick<StepResult, 'state' | 't
 
 /** P1 cadence for a spent throw that never landed. */
 function tickTroublesAfterMiss(scene: LevelScene, sh: Shot) {
-  if (!scene.troubles.some((trouble) => !trouble.settled)) {
+  if (!scene.troubles.some((trouble) => !trouble.settled) && scene.rules.version !== 2) {
     if (scene.o.launcher.id === 'skipper' && sh.specialBounced) scene.skipperBounces++;
     return;
   }
   const res = stepRound(
     { ...scene.roundState(), throwsLeft: Number.isFinite(scene.throwsLeft) ? scene.throwsLeft + 1 : scene.throwsLeft },
-    { kind: sh.kind, sector: 0, outcome: 'miss', bounced: !!sh.specialBounced },
+    {
+      kind: sh.kind,
+      sector: 0,
+      outcome: 'miss',
+      bounced: !!sh.specialBounced,
+      ...(scene.rules.version === 2 ? { pickups: scene.pendingPickups } : {}),
+    },
     scene.roundModifiers(),
     scene.rules,
   );
+  scene.pendingPickups = [];
+  scene.consumeExtraThrow(res);
+  if (scene.assists.judgedScore === undefined && scene.throwsUsed === scene.assists.ownThrows + scene.assists.inRuleExtras)
+    scene.assists.judgedScore = res.state.score;
   logRoundStep(scene, res);
   scene.planet = res.state.planet;
   scene.labMarks = res.state.labMarks;
@@ -676,8 +667,20 @@ export function update(scene: LevelScene, dt: number) {
       specialBounced: sh.specialBounced,
       brokenRocks: sh.brokenRocks,
       brokenRing: sh.brokenRing,
+      touched: sh.touched,
     };
     const path = flyWithLauncher(scene.o.launcher, launch, scene.flightWorld(sh.rot0), sh.t0, dt);
+    for (const contact of path.touched ?? []) {
+      const mote = scene.L.motes?.[contact.index];
+      if (!scene.collectedMotes.includes(contact.index)) {
+        if (mote) {
+          scene.collectedMotes.push(contact.index);
+          collectMote(scene);
+        } else catchPebble(scene);
+        const pickup = scene.flightWorld(sh.rot0).pickups?.[contact.index];
+        if (mote || pickup) scene.pendingPickups.push(mote ?? pickup!);
+      }
+    }
     for (const bounce of path.bounces) {
       scene.popup(bounce.x, bounce.y - 16, t('Boing!'), '#b9edff', 18);
       scene.ring(bounce.x, bounce.y, '#b9edff', 25);
@@ -703,6 +706,7 @@ export function update(scene: LevelScene, dt: number) {
       specialBounced: path.state.specialBounced,
       brokenRocks: path.state.brokenRocks,
       brokenRing: path.state.brokenRing,
+      touched: path.state.touched,
     });
     if (
       !scene.mistTipShown &&
@@ -847,14 +851,24 @@ export function land(scene: LevelScene, sh: Shot, i: number) {
   const oldCombo = scene.combo;
   const res = stepRound(
     { ...scene.roundState(), throwsLeft: Number.isFinite(scene.throwsLeft) ? scene.throwsLeft + 1 : scene.throwsLeft },
-    { kind: sh.kind, sector: i, nova: sh.nova, bounced: !!sh.specialBounced },
+    {
+      kind: sh.kind,
+      sector: i,
+      nova: sh.nova,
+      bounced: !!sh.specialBounced,
+      ...(scene.rules.version === 2 ? { pickups: scene.pendingPickups } : {}),
+    },
     mods,
     scene.rules,
   );
+  scene.pendingPickups = [];
+  scene.consumeExtraThrow(res);
+  if (scene.assists.judgedScore === undefined && scene.throwsUsed === scene.assists.ownThrows + scene.assists.inRuleExtras)
+    scene.assists.judgedScore = res.state.score;
   showTraitBlocks(scene, res.troubleEvents);
   logRoundStep(scene, res);
   // Exact sector ids let grown-sector routes count each sector once (L5).
-  scene.landmarkSteps.push(landmarkStepEvidence(res));
+  scene.landmarkSteps.push({ ...landmarkStepEvidence(res), wonder: scene.roundWonder(res.state.score ?? res.after) });
   scene.labSteps.push({ kind: sh.kind, reactions: res.reactions, troubleEvents: res.troubleEvents });
   scene.o.onLabStep?.({ kind: sh.kind, reactions: res.reactions, troubleEvents: res.troubleEvents });
   if (scene.o.launcher.id !== 'sling') {
@@ -1037,6 +1051,9 @@ export function land(scene: LevelScene, sh: Shot, i: number) {
 }
 
 export function flightWorld(scene: LevelScene, rotation: number): FlightWorld {
+  const pebble = scene.troubles.find((t) => t.id === 'pebble' && !t.settled);
+  const target = pebble?.target ?? scene.planet.sectors.reduce((best, s, at) => (s.life > scene.planet.sectors[best].life ? at : best), 0);
+  const pickups = levelPickups(scene.L, target, rotation, !!pebble);
   return {
     cx: scene.cx,
     cy: scene.cy,
@@ -1054,6 +1071,16 @@ export function flightWorld(scene: LevelScene, rotation: number): FlightWorld {
     sky: scene.L.sky,
     skyState: scene.skyState,
     ringBroken: scene.ringBroken,
+    ...(pickups.length
+      ? {
+          pickups: pickups.map((pickup, index) => ({
+            ...pickup,
+            x: scene.cx + pickup.x * scene.R,
+            y: scene.cy + pickup.y * scene.R,
+            r: scene.collectedMotes.includes(index) ? -10000 : pickup.r * scene.R,
+          })),
+        }
+      : {}),
   };
 }
 
@@ -1077,6 +1104,18 @@ export function roundState(scene: LevelScene): RoundState {
     labMarks: scene.labMarks,
     skipperBounces: scene.skipperBounces,
     sparklerPlainUsed: scene.sparklerPlainUsed,
+    ...(scene.assists ? { assists: scene.roundAssists() } : {}),
+    ...(scene.rules?.version === 2
+      ? {
+          extraUsed: scene.extraUsed,
+          ...(scene.L.twist === 'boss' ? { guardianHp: scene.bossHp } : {}),
+          extraSource: scene.extraSource,
+          extraAt: scene.extraAt,
+          wideNext: scene.wideNext,
+          bonusKind: scene.L.bonusKind,
+          motesTaken: scene.collectedMotes,
+        }
+      : {}),
   };
 }
 

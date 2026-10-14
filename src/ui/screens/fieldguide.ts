@@ -1,12 +1,12 @@
-import { RULES_VERSION, type RulesVersion } from '../../core/rules-version';
-import { RULESETS, ruleReactionForPair } from '../../core/rulesets';
+import { type RulesVersion } from '../../core/rules-version';
+import { RULESETS, rulesPlay, ruleReactionForPair } from '../../core/rulesets';
 import { vaultWinLine } from '../text';
 import { h, btn } from '../dom';
 import type { App } from '../app';
 import { KINDS, type Kind } from '../../core/world';
 import { projectileCanvas } from '../art/projectiles';
 import { t } from '../../i18n';
-import { REACTIONS, REACTION_IDS, type ReactionId } from '../../core/round';
+import { REACTIONS, type ReactionId } from '../../core/round';
 import { reactionCanvas } from '../art/reactions';
 import { FUSION_IDS } from '../../meta/reactions';
 import { OBSTACLES, type ObstacleId } from '../../core/sky';
@@ -46,13 +46,12 @@ function statBar(label: string, icon: string, value: number, bonus = 0) {
 
 type GuidePage = 'basics' | 'objects' | 'reactions' | 'combos' | 'sky' | 'creatures';
 
-export function reactionForPair(a: Kind, b: Kind): ReactionId | null {
-  if (a === b) return null;
-  return REACTION_IDS.find((id) => REACTIONS[id].pair.includes(a) && REACTIONS[id].pair.includes(b)) ?? null;
+export function reactionForPair(a: Kind, b: Kind, play: RulesVersion = rulesPlay()): ReactionId | null {
+  return ruleReactionForPair(a, b, RULESETS[play].reactions);
 }
 
 /** A tried pair stays unknown when the play rules can react, until it is discovered. */
-export function pairTriedWithoutReaction(a: Kind, b: Kind, tried: ReadonlySet<string>, play: RulesVersion = RULES_VERSION): boolean {
+export function pairTriedWithoutReaction(a: Kind, b: Kind, tried: ReadonlySet<string>, play: RulesVersion = rulesPlay()): boolean {
   return !ruleReactionForPair(a, b, RULESETS[play].reactions) && tried.has([a, b].sort().join('+'));
 }
 
@@ -196,9 +195,17 @@ export function showFieldGuide(app: App, page: GuidePage = 'basics') {
     h(
       'div',
       { class: 'reaction-list' },
-      ...REACTION_IDS.filter((id) => app.p.fusionsFound.includes(id)).map((id) =>
-        h('div', null, reactionCanvas(id, 28), h('b', null, t(REACTIONS[id].name))),
-      ),
+      ...RULESETS[rulesPlay()].reactions
+        .filter((id) => app.p.fusionsFound.includes(id))
+        .map((id) =>
+          h(
+            'div',
+            null,
+            reactionCanvas(id, 28),
+            h('b', null, t(REACTIONS[id].name)),
+            REACTIONS[id].debut >= 63 ? h('p', null, t(REACTIONS[id].fieldGuide)) : null,
+          ),
+        ),
     ),
   );
   const stampNames = [

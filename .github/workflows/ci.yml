@@ -22,7 +22,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - name: Reject dev tools in production bundle
-        run: '! grep -rqE "Balance Report|__app|__i18n|__scene|__gate" dist/'
+        run: '! grep -rqE "Balance Report|__app|__i18n|__scene|__gate|__rulesPlay" dist/'
 
   # Decision 91: PR content coverage stays pinned to RELEASE.submitOn.
   runway:

@@ -203,3 +203,47 @@ describe('noun window unlocks', () => {
     expect(unlocked(p, 'sticker_album')).toBe(true);
   });
 });
+
+import { lateArrivalIntro, unlocksForPlay } from '../src/meta/unlocks';
+import { makeLevel } from '../src/core/levels';
+import { rulesForLevel } from '../src/core/round';
+import { includeFlood } from '../src/core/rulesets';
+
+it('gates M15 ladder rows by play and keeps Flood absent until its gate is on', () => {
+  const ids = ['wonder', 'pebble', 'motes', 'firemount', 'rainbow', 'flood'];
+  expect(
+    unlocksForPlay(1)
+      .filter((row) => ids.includes(row.id))
+      .map((row) => [row.id, row.planet]),
+  ).toEqual([['wonder', 42]]);
+  expect(
+    unlocksForPlay(2)
+      .filter((row) => ids.includes(row.id))
+      .map((row) => [row.id, row.planet]),
+  ).toEqual([['wonder', 42], ['pebble', 52], ['motes', 56], ['firemount', 63], ['rainbow', 67], ...(includeFlood ? [['flood', 74]] : [])]);
+  for (let n = 1; n <= 120; n++)
+    expect(debutsAt(n, 2).filter((row) => row.intro || row.button || row.letter).length).toBeLessThanOrEqual(1);
+});
+
+it('chooses one present late idea, prioritizing cost and then teaching order', () => {
+  const rules = rulesForLevel(90, 'campaign', 90, 2);
+  const L = {
+    ...makeLevel(90, 'PP', { rulesVersion: 1 }),
+    rulesVersion: 2 as const,
+    queue: ['rock', 'magma', 'storm', 'sun'] as const,
+    troubles: [],
+    motes: [{ kind: 'wide' as const, x: 0, y: -1.4, r: 0.1 }],
+  };
+  const level = { ...L, queue: [...L.queue] };
+  expect(lateArrivalIntro(level, new Set(), rules, 2)?.id).toBe('motes');
+  expect(lateArrivalIntro({ ...level, motes: [], queue: ['seed'] }, new Set(), rules, 2)).toBeUndefined();
+  expect(lateArrivalIntro(level, new Set(['motes']), rules, 2)?.id).toBe('firemount');
+  expect(lateArrivalIntro(level, new Set(['motes', 'firemount']), rules, 2)?.id).toBe('rainbow');
+  expect(lateArrivalIntro(level, new Set(['motes', 'firemount', 'rainbow']), rules, 2)).toBeUndefined();
+  expect(lateArrivalIntro(level, new Set(), rulesForLevel(90, 'campaign', 90, 1), 1)).toBeUndefined();
+  for (let n = 52; n <= 120; n++) {
+    const pebble = { ...level, n, troubles: [{ id: 'pebble' as const, source: 0 }] };
+    expect(lateArrivalIntro(pebble, new Set(), rules, 2)?.id).toBe('pebble');
+    expect(lateArrivalIntro(pebble, new Set(['pebble']), rules, 2)?.id).toBe('motes');
+  }
+});

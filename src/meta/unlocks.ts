@@ -1,4 +1,11 @@
+import { rulesPlay } from '../core/rulesets';
 // Today's unlock points. M3 moves the crowded introductions onto the target ladder.
+import { REACTIONS, rulesForLevel, type RoundRules } from '../core/round';
+import { impact, clonePlanet } from '../core/world';
+import { RULESETS, includeFlood } from '../core/rulesets';
+import { type RulesVersion } from '../core/rules-version';
+import type { LevelDef } from '../core/levels';
+import { M15_STRINGS } from './m15strings';
 import { GOALS_FROM } from '../core/levels';
 import { OBSTACLES, type ObstacleId } from '../core/sky';
 import { KINDS, type Kind } from '../core/world';
@@ -19,6 +26,12 @@ const LEGACY_QUEST_IDS = new Set(['throw25', 'win3', 'star6', 'creature8', 'thre
 
 export type UnlockId =
   | Kind
+  | 'wonder'
+  | 'pebble'
+  | 'motes'
+  | 'firemount'
+  | 'rainbow'
+  | 'flood'
   | 'swap'
   | 'goals'
   | 'supernova'
@@ -68,6 +81,7 @@ export type UnlockId =
 
 export interface Unlock {
   id: UnlockId;
+  sincePlay?: RulesVersion;
   /** Campaign p.level; 0 means an achievement gate. */
   planet: number;
   placement: 'round' | 'home' | 'homeworld' | 'missions' | 'modes' | 'collection' | 'launcher';
@@ -95,8 +109,31 @@ const LAUNCHER_INTROS: Readonly<Record<Exclude<LauncherId, 'sling'>, { body: str
   skipper: { body: 'Skipper bounces once from moons and rocks.', icon: '〽' },
 };
 
-export const UNLOCKS: readonly Unlock[] = [
+const ALL_UNLOCKS: readonly Unlock[] = [
   ...objectRows,
+  // Wonder can ship on v1; its row has no intro or visible entry point.
+  { id: 'wonder', planet: 42, placement: 'round', sincePlay: 1 },
+  {
+    id: 'pebble',
+    planet: 52,
+    placement: 'round',
+    sincePlay: 2,
+    intro: { title: M15_STRINGS.pebble, body: M15_STRINGS.pebbleIntro, icon: '⬟' },
+  },
+  {
+    id: 'motes',
+    planet: 56,
+    placement: 'round',
+    sincePlay: 2,
+    intro: { title: M15_STRINGS.motes, body: M15_STRINGS.motesIntro, icon: '✧' },
+  },
+  ...(['firemount', 'rainbow', ...(includeFlood ? ['flood' as const] : [])] as const).map((id): Unlock => ({
+    id,
+    planet: REACTIONS[id].debut,
+    placement: 'round',
+    sincePlay: 2,
+    intro: { title: REACTIONS[id].name, body: REACTIONS[id].fieldGuide, icon: REACTIONS[id].icon },
+  })),
   {
     id: 'traits_intro',
     planet: 16,
@@ -240,9 +277,10 @@ export const UNLOCKS: readonly Unlock[] = [
   { id: 'inbox', planet: 1, placement: 'home', button: true, letter: 'welcome' },
 ];
 
-export function unlocked(p: Profile, id: UnlockId): boolean {
-  const row = UNLOCKS.find((entry) => entry.id === id);
+export function unlocked(p: Profile, id: UnlockId, play: RulesVersion = rulesPlay()): boolean {
+  const row = unlocksForPlay(play).find((entry) => entry.id === id);
   if (!row) return false;
+  if (id === 'wonder') return lateOpen(p) && p.level >= row.planet;
   if (id === 'workshop') return p.chapters.length >= 1;
   if (p.legacyUnlocks.includes(id)) return true;
   // Existing saves keep modes earned through the retired rank ladder.
@@ -280,6 +318,51 @@ export function unlocked(p: Profile, id: UnlockId): boolean {
   return p.level >= row.planet;
 }
 
-export function debutsAt(planet: number): Unlock[] {
-  return UNLOCKS.filter((entry) => entry.planet === planet && planet > 0);
+export function debutsAt(planet: number, play: RulesVersion = rulesPlay()): Unlock[] {
+  return unlocksForPlay(play).filter((entry) => entry.planet === planet && planet > 0);
+}
+
+/** The dormant ladder cannot introduce content absent from the play rule set. */
+export function unlocksForPlay(play: RulesVersion = rulesPlay()): Unlock[] {
+  const set = RULESETS[play];
+  return ALL_UNLOCKS.filter(
+    (row) =>
+      (!row.sincePlay || row.sincePlay <= play) &&
+      (row.id !== 'pebble' || set.troubles.campaign.includes('pebble')) &&
+      (!['firemount', 'rainbow', 'flood'].includes(row.id) || set.reactions.includes(row.id as 'firemount' | 'rainbow' | 'flood')),
+  );
+}
+export const UNLOCKS: readonly Unlock[] = unlocksForPlay();
+
+/** One slot, based on actual content; costly ideas precede upside, then debut order. */
+export function lateArrivalIntro(
+  L: LevelDef,
+  seen: ReadonlySet<string>,
+  rules: RoundRules = rulesForLevel(L.n, 'campaign', L.n, L.rulesVersion ?? 1),
+  play: RulesVersion = rulesPlay(),
+): Unlock | undefined {
+  if (rules.version !== 2) return undefined;
+  const queue = new Set(L.queue.slice(0, L.throws));
+  const possible = (id: 'firemount' | 'rainbow' | 'flood') => {
+    const def = REACTIONS[id];
+    if (!rules.reactions.includes(id) || !def.pair.every((kind) => queue.has(kind))) return false;
+    const lands = Object.values(def.triggers).flat();
+    if (L.start.sectors.some((s) => lands.includes(s.biome))) return true;
+    for (const kind of queue)
+      for (let at = 0; at < L.start.sectors.length; at++) {
+        const p = clonePlanet(L.start);
+        impact(p, kind, at);
+        if (p.sectors.some((s) => lands.includes(s.biome))) return true;
+      }
+    return false;
+  };
+  if (L.bonusKind && possible('rainbow')) queue.add(L.bonusKind);
+  const present = new Set<string>();
+  if (L.troubles.some((t) => (t.id as string) === 'pebble')) present.add('pebble');
+  if (L.motes?.length) present.add('motes');
+  for (const id of ['firemount', 'rainbow', 'flood'] as const) if (possible(id)) present.add(id);
+  const cost = (id: string) => (id === 'pebble' ? 0 : id === 'flood' ? 1 : 2);
+  return unlocksForPlay(play)
+    .filter((row) => row.intro && present.has(row.id) && !seen.has(row.id))
+    .sort((a, b) => cost(a.id) - cost(b.id) || a.planet - b.planet)[0];
 }

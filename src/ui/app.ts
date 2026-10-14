@@ -1,3 +1,4 @@
+import { rulesPlay } from '../core/rulesets';
 import { ROAD01 } from '../meta/content/road01';
 import { atmosphereOpen } from '../meta/cosmetics';
 import { recordPurchaseGrant } from '../meta/purchaseGrants';
@@ -1071,6 +1072,7 @@ export class App {
             buddySpecies: scene?.o.buddy?.species ?? null,
             at,
             steps: scene?.landmarkSteps ?? [],
+            wonder: scene?.roundWonder?.(result.score),
           });
           this.saveNow();
         }
@@ -1099,7 +1101,7 @@ export class App {
       makeLevel(n, o.resume?.seedPrefix ?? 'PP', {
         salt: o.resume?.salt,
         profile: o.resume?.generationProfile,
-        rulesVersion: o.resume?.rulesVersion ?? (o.resume ? 1 : RULES_VERSION),
+        rulesVersion: o.resume?.rulesVersion ?? (o.resume ? 1 : rulesPlay()),
       });
     const warmup = o.resume?.warmup ?? o.warmup;
     this.roundFirstCampaignClear = o.resume?.practiceFirstClear ?? (!warmup && n === this.p.level && !this.p.stars[n]);
@@ -1257,6 +1259,7 @@ export class App {
     scene.timeLeft = s.timeLeft;
     scene.bossHp = s.bossHp;
     scene.shot = s.shot;
+    scene.restoreRoundHooks?.(s.state);
     if (
       s.landedKinds?.length === scene.landedKinds.length &&
       s.landedKinds.every((kind) => kind === null || (typeof kind === 'string' && kind in KINDS))

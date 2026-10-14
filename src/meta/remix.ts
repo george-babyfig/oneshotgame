@@ -1,5 +1,6 @@
+import { rulesPlay } from '../core/rulesets';
 import { makeLevel, type LevelDef } from '../core/levels';
-import { RULES_VERSION, type RulesVersion } from '../core/rules-version';
+import { type RulesVersion } from '../core/rules-version';
 import { rulesForLevel } from '../core/round';
 import { t } from '../i18n';
 import type { Profile } from './profile';
@@ -22,7 +23,7 @@ export const REMIX_TITLES = [
   { stars: 150, title: 'Comet Gardener' },
 ] as const;
 
-export function remixLevel(n: number, p?: Profile, play: RulesVersion = RULES_VERSION): LevelDef {
+export function remixLevel(n: number, p?: Profile, play: RulesVersion = rulesPlay()): LevelDef {
   const taught = p ? Math.max(1, p.level - 1) : n;
   const level = makeLevel(n, 'RX', {
     rulesVersion: play,

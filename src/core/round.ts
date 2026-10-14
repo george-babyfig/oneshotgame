@@ -1,29 +1,136 @@
+import { rulesPlay } from './rulesets';
 import { BIOMES, KINDS, biomeOf, clonePlanet, impact, lifeScore, novaCharge, settle, wrap, type Kind, type Planet } from './world';
 import { FORM_OF, GUARD_OF, labFusionReach, labGuard, labNovaReach, labPower, type LabEvent } from './labperks';
 import { NO_MODIFIERS, type RoundMode, type RoundModifiers } from './modifiers';
 import { SECTORS, SPECIES_BY_ID, type BiomeId } from './world';
 import type { LevelDef } from './levels';
-import { firebreakBy, troubleTarget, type TroubleEvent, type TroubleId, type TroubleState } from './troubles';
+import { TROUBLE_BEHAVIOUR, firebreakBy, troubleTarget, type TroubleEvent, type TroubleId, type TroubleState } from './troubles';
 import { traitOf } from './world';
 import { RULES_VERSION, RULES_SUPPORTED, type RulesVersion } from './rules-version';
 import { RULESETS, REACTION_DEBUT, TROUBLE_DEBUT, effectiveVersion, type RuleReactionId, type RuleTroubleId } from './rulesets';
+import { V2_REACTIONS } from './v2/reactions';
+import type { MoteDef, Pickup, ExtraThrowSource, RoundAssists } from '../meta/m15types';
+import { applyMote } from './v2/motes';
 import { launcherReach, skipperLosesPower } from './launchers';
 
 export const NOVA_CHARGE = 12;
 export const LATER_NOVA_CHARGE = 18;
 const ROUND_SAVE_VERSION = 2;
 
-export type ReactionId = 'steam' | 'rainGarden' | 'wildflowers' | 'glacier' | 'scorch';
+export type ReactionId = 'steam' | 'rainGarden' | 'wildflowers' | 'glacier' | 'scorch' | 'firemount' | 'rainbow' | 'flood';
 
-export const REACTIONS: Record<ReactionId, { kind: 'fusion' | 'clash'; name: string; pair: [Kind, Kind]; debut: number; icon: string }> = {
-  steam: { kind: 'fusion', name: 'Steam', pair: ['ice', 'magma'], debut: 8, icon: '♨️' },
-  rainGarden: { kind: 'fusion', name: 'Rain Garden', pair: ['seed', 'storm'], debut: 13, icon: '🌿' },
-  wildflowers: { kind: 'fusion', name: 'Wildflowers', pair: ['seed', 'sun'], debut: 22, icon: '🌼' },
-  glacier: { kind: 'fusion', name: 'Glacier', pair: ['rock', 'ice'], debut: 25, icon: '❄️' },
-  scorch: { kind: 'clash', name: 'Dry Spell', pair: ['magma', 'sun'], debut: 32, icon: '🍂' },
+export interface ReactionDef {
+  kind: 'fusion' | 'clash';
+  name: string;
+  pair: [Kind, Kind];
+  debut: number;
+  icon: string;
+  priority: number;
+  triggers: Partial<Record<Kind, readonly BiomeId[]>>;
+  radius: number;
+  charge: number;
+  /** Returning false leaves this sector out of the affected footprint. */
+  effect: (sector: Planet['sectors'][number], distance: number) => void | false;
+  fieldGuide: string;
+  extraThrow?: 'rainbow';
+  /** Only unfinished package stubs are disabled. */
+  enabled?: boolean;
+}
+
+export const REACTIONS: Record<ReactionId, ReactionDef> = {
+  steam: {
+    kind: 'fusion',
+    name: 'Steam',
+    pair: ['ice', 'magma'],
+    debut: 8,
+    icon: '♨️',
+    priority: 0,
+    triggers: { magma: ['icesheet', 'tundra', 'taiga'], ice: ['volcano', 'desert'] },
+    radius: 2,
+    charge: 3,
+    fieldGuide: 'Magma finds icy land and makes Steam!',
+    effect(s, distance) {
+      if (distance === 0) {
+        s.land = Math.min(4, s.land);
+        s.water = Math.min(5, Math.max(s.water, s.land + 1));
+        s.heat = 2;
+      } else {
+        s.water = Math.min(5, s.water + 1);
+        s.heat += s.heat > 0 ? -1 : s.heat < 0 ? 1 : 0;
+      }
+    },
+  },
+  rainGarden: {
+    kind: 'fusion',
+    name: 'Rain Garden',
+    pair: ['seed', 'storm'],
+    debut: 13,
+    icon: '🌿',
+    priority: 1,
+    triggers: { storm: ['meadow', 'forest'], seed: ['marsh', 'swamp'] },
+    radius: 3,
+    charge: 3,
+    fieldGuide: 'Rain Cloud finds a meadow and grows a Rain Garden!',
+    effect(s) {
+      if (s.water > 0) s.life = Math.min(3, s.life + 1);
+    },
+  },
+  wildflowers: {
+    kind: 'fusion',
+    name: 'Wildflowers',
+    pair: ['seed', 'sun'],
+    debut: 22,
+    icon: '🌼',
+    priority: 2,
+    triggers: { sun: ['meadow', 'forest'], seed: ['savanna', 'jungle'] },
+    radius: 2,
+    charge: 3,
+    fieldGuide: 'Sunburst finds a meadow and grows Wildflowers!',
+    effect(s) {
+      if (s.land > 0 || s.water > 0) s.life = Math.min(3, s.life + 1);
+    },
+  },
+  glacier: {
+    kind: 'fusion',
+    name: 'Glacier',
+    pair: ['rock', 'ice'],
+    debut: 25,
+    icon: '❄️',
+    priority: 3,
+    triggers: { ice: ['mountain', 'highland'], rock: ['icesheet', 'tundra'] },
+    radius: 1,
+    charge: 3,
+    fieldGuide: 'Ice Comet finds a mountain and makes a Glacier!',
+    effect(s, distance) {
+      if (distance === 0) s.land = Math.min(5, s.land + 1);
+      s.heat = Math.max(-3, s.heat - 2);
+    },
+  },
+  scorch: {
+    kind: 'clash',
+    name: 'Dry Spell',
+    pair: ['magma', 'sun'],
+    debut: 32,
+    icon: '🍂',
+    priority: 6,
+    triggers: { sun: ['volcano', 'desert', 'savanna'], magma: ['jungle', 'savanna', 'forest'] },
+    radius: 2,
+    charge: 0,
+    fieldGuide: 'Magma or Sunburst on hot, dry land may cause Dry Spell. It hurts the planet. Watch the red outline!',
+    effect(s, distance) {
+      if (distance !== 0) {
+        if (s.species && traitOf(s.species) === 'fireproof') return false;
+        s.life = Math.max(0, s.life - 1);
+        s.heat = Math.min(3, s.heat + 1);
+      }
+    },
+  },
+  ...V2_REACTIONS,
 };
 
-export const REACTION_IDS = Object.keys(REACTIONS) as ReactionId[];
+/** Historical launch inventory; executable evaluation uses explicit priority. */
+export const REACTION_IDS: ReactionId[] = ['steam', 'rainGarden', 'wildflowers', 'glacier', 'scorch'];
+export const REACTION_PRIORITY = (Object.keys(REACTIONS) as ReactionId[]).sort((a, b) => REACTIONS[a].priority - REACTIONS[b].priority);
 
 export interface RoundRules {
   version: number;
@@ -35,7 +142,7 @@ export interface RoundRules {
 export const ROUND_RULES_V0: RoundRules = { version: 1, reactions: [], troubles: [] };
 
 /** Every mode teaches the same reactions at the same planet. */
-export function rulesForLevel(n: number, mode: RoundMode = 'campaign', taught = n, play: RulesVersion = RULES_VERSION): RoundRules {
+export function rulesForLevel(n: number, mode: RoundMode = 'campaign', taught = n, play: RulesVersion = rulesPlay()): RoundRules {
   const cap = mode === 'campaign' ? n : Math.min(n, taught);
   const version = effectiveVersion(n, mode, taught, play);
   const set = RULESETS[version];
@@ -69,6 +176,13 @@ export interface RoundState {
   labMarks?: { rock: number[]; seed: number[] };
   skipperBounces?: number;
   sparklerPlainUsed?: boolean;
+  extraUsed?: boolean;
+  extraSource?: ExtraThrowSource;
+  extraAt?: number;
+  wideNext?: number;
+  bonusKind?: Kind;
+  motesTaken?: number[];
+  assists?: RoundAssists;
 }
 
 export interface RoundAction {
@@ -79,10 +193,13 @@ export interface RoundAction {
   outcome?: 'bonk' | 'fizzle' | 'miss';
   /** Only a Skipper special rebound; ordinary Bubble Moon bounces do not count. */
   bounced?: boolean;
+  /** Own-flight contacts only. Undefined means sector model; [] means physical flight touched nothing. */
+  pickups?: (Pickup | MoteDef)[];
 }
 
 export interface StepResult {
   state: RoundState;
+  extraThrow?: { source: ExtraThrowSource; kind: Kind };
   before: number;
   after: number;
   changed: number[];
@@ -151,14 +268,21 @@ export function roundState(
     score: lifeScore(planet),
     continuesUsed: 0,
     goalsProgress: [],
-    troubles: troubles.map(({ id, source }) => ({
-      id,
-      source,
-      settled: false,
-      nextIn: hard ? 2 : 3,
-      every: hard ? 2 : 3,
-      ...(id === 'vine' ? { tangled: [] } : {}),
-    })),
+    troubles: troubles.map(({ id, source }) => {
+      const trouble: TroubleState = {
+        id,
+        source,
+        settled: false,
+        nextIn: hard ? 2 : 3,
+        every: hard ? 2 : 3,
+        ...(TROUBLE_BEHAVIOUR[id].actKind === 'spread' ? { tangled: [] } : {}),
+      };
+      if (id === 'pebble') {
+        trouble.count = 0;
+        trouble.target = troubleTarget(planet, trouble) ?? wrap(source);
+      }
+      return trouble;
+    }),
     buddyShieldUsed: false,
     calmUsed: false,
     labMarks: { rock: [], seed: [] },
@@ -176,19 +300,9 @@ export function novaForThrow(state: RoundState): boolean {
 
 function reactionAt(planet: Planet, kind: Kind, sector: number, rules: RoundRules, gentle = false) {
   const at = wrap(sector);
-  for (const id of REACTION_IDS) {
-    if (!rules.reactions.includes(id) || (gentle && REACTIONS[id].kind === 'clash')) continue;
-    const lands: Partial<Record<Kind, BiomeId[]>> =
-      id === 'steam'
-        ? { magma: ['icesheet', 'tundra', 'taiga'], ice: ['volcano', 'desert'] }
-        : id === 'rainGarden'
-          ? { storm: ['meadow', 'forest'], seed: ['marsh', 'swamp'] }
-          : id === 'wildflowers'
-            ? { sun: ['meadow', 'forest'], seed: ['savanna', 'jungle'] }
-            : id === 'glacier'
-              ? { ice: ['mountain', 'highland'], rock: ['icesheet', 'tundra'] }
-              : { sun: ['volcano', 'desert', 'savanna'], magma: ['jungle', 'savanna', 'forest'] };
-    const wanted = lands[kind];
+  for (const id of REACTION_PRIORITY) {
+    if (REACTIONS[id].enabled === false || !rules.reactions.includes(id) || (gentle && REACTIONS[id].kind === 'clash')) continue;
+    const wanted = REACTIONS[id].triggers[kind];
     if (!wanted) continue;
     for (const offset of [0, -1, 1]) {
       const partner = wrap(at + offset);
@@ -199,34 +313,14 @@ function reactionAt(planet: Planet, kind: Kind, sector: number, rules: RoundRule
 }
 
 function applyReaction(planet: Planet, id: ReactionId, at: number, extraReach: number, safeAfterRadius = 4): number[] {
-  const baseRadius = id === 'rainGarden' ? 3 : id === 'glacier' ? 1 : 2;
+  const baseRadius = REACTIONS[id].radius;
   const radius = Math.min(4, baseRadius + extraReach);
   const sectors: number[] = [];
   for (let distance = -radius; distance <= radius; distance++) {
     const index = wrap(at + distance);
     const s = planet.sectors[index];
     const beforeExtra = Math.abs(distance) > safeAfterRadius ? { ...s } : null;
-    if (id === 'steam') {
-      if (distance === 0) {
-        s.land = Math.min(4, s.land);
-        s.water = Math.min(5, Math.max(s.water, s.land + 1));
-        s.heat = 2;
-      } else {
-        s.water = Math.min(5, s.water + 1);
-        s.heat += s.heat > 0 ? -1 : s.heat < 0 ? 1 : 0;
-      }
-    } else if (id === 'rainGarden') {
-      if (s.water > 0) s.life = Math.min(3, s.life + 1);
-    } else if (id === 'wildflowers') {
-      if (s.land > 0 || s.water > 0) s.life = Math.min(3, s.life + 1);
-    } else if (id === 'glacier') {
-      if (distance === 0) s.land = Math.min(5, s.land + 1);
-      s.heat = Math.max(-3, s.heat - 2);
-    } else if (distance !== 0) {
-      if (s.species && traitOf(s.species) === 'fireproof') continue;
-      s.life = Math.max(0, s.life - 1);
-      s.heat = Math.min(3, s.heat + 1);
-    }
+    if (REACTIONS[id].effect(s, distance) === false) continue;
     if (beforeExtra && biomeOf(s) !== biomeOf(beforeExtra)) Object.assign(s, beforeExtra);
     s.biome = biomeOf(s);
     sectors.push(index);
@@ -269,41 +363,20 @@ function advanceTroubles(
     const d = ringDistance(action.sector, t.source);
     const guard = labGuard(action.kind, mods.lab[action.kind] ?? 1);
     // Rinse follows the actual Rain Cloud footprint; Trouble source counters remain centred on the landing.
-    const rainBaseReach = KINDS.storm.stats.reach + mods.splash + (nova ? 1 : 0);
+    const rainBaseReach = KINDS.storm.stats.reach + mods.splash + (previous.wideNext ?? 0) + (nova ? 1 : 0);
     const launcherRainReach = launcherReach(mods.launcher ?? NO_MODIFIERS.launcher, 'storm');
-    const rainReach = launcherRainReach
-      ? Math.min(4, rainBaseReach + launcherRainReach + (nova ? labNovaReach(mods.lab.storm ?? 1) : 0))
-      : Math.max(rainBaseReach, Math.min(4, rainBaseReach + (nova ? labNovaReach(mods.lab.storm ?? 1) : 0)));
-    const rinseVine =
-      t.id === 'vine' &&
-      action.kind === 'storm' &&
-      guard === 'rinse' &&
-      (t.tangled ?? []).some((at) => ringDistance(action.sector, at) <= rainReach);
-    const cleared =
-      landed &&
-      ((action.kind === 'storm' && nova && d <= 3) ||
-        (t.id === 'vent' &&
-          ((action.kind === 'ice' && d <= (guard === 'ventCooler' ? 2 : 1)) ||
-            (action.kind === 'storm' && d <= 3) ||
-            (reaction === 'steam' && d <= 2))) ||
-        (t.id === 'vine' &&
-          ((action.kind === 'magma' && (d <= (guard === 'weedBurner' ? 2 : 1) || !!t.tangled?.includes(wrap(action.sector)))) ||
-            rinseVine)) ||
-        (t.id === 'frost' && ((action.kind === 'magma' && d <= 1) || (action.kind === 'sun' && d <= (guard === 'frostMelter' ? 4 : 3)))));
+    const rainReach =
+      launcherRainReach || previous.wideNext
+        ? Math.min(4, rainBaseReach + launcherRainReach + (nova ? labNovaReach(mods.lab.storm ?? 1) : 0))
+        : Math.max(rainBaseReach, Math.min(4, rainBaseReach + (nova ? labNovaReach(mods.lab.storm ?? 1) : 0)));
+    const behaviour = TROUBLE_BEHAVIOUR[t.id];
+    const context = { state: previous, planet, trouble: t, action, reaction, nova, distance: d, guard, rainReach, landed };
+    const cleared = behaviour.clear(context);
     if (cleared) {
       t.settled = true;
       t.tangled = [];
-      if (t.id === 'vine') settle(planet);
-      const perk =
-        t.id === 'vent' && action.kind === 'ice' && d === 2 && reaction !== 'steam' && guard === 'ventCooler'
-          ? guard
-          : t.id === 'vine' && action.kind === 'magma' && d === 2 && !t.tangled?.includes(wrap(action.sector)) && guard === 'weedBurner'
-            ? guard
-            : t.id === 'vine' && rinseVine && !(nova && d <= 3)
-              ? (guard ?? undefined)
-              : t.id === 'frost' && action.kind === 'sun' && d === 4 && guard === 'frostMelter'
-                ? guard
-                : undefined;
+      if (behaviour.settleOnClear) settle(planet);
+      const perk = behaviour.perk?.(context);
       events.push({ id: t.id, kind: 'settled', sector: t.source, clearedByThrow: true, ...(perk ? { perk } : {}) });
       return t;
     }
@@ -311,7 +384,7 @@ function advanceTroubles(
     if (t.nextIn > 0) return t;
     const calmBuddy = mods.buddyShield === 'calm' && !buddyShieldUsed;
     const calmResident = [previous.planet, planet].some((p) => p.sectors.some((s) => s.species && traitOf(s.species) === 'calm'));
-    if (!calmUsed && (calmBuddy || calmResident)) {
+    if (behaviour.calm && !calmUsed && (calmBuddy || calmResident)) {
       calmUsed = true;
       if (calmBuddy) buddyShieldUsed = true;
       t.delayed = true;
@@ -328,13 +401,7 @@ function advanceTroubles(
     }
     const by = firebreakBy(planet, at, t.id, { lab: mods.lab, marks: previous.labMarks });
     const buddy = mods.buddyShield;
-    const matchesBuddy =
-      buddy &&
-      (t.id === 'vent'
-        ? buddy === 'fireproof' || buddy === 'swimmer'
-        : t.id === 'vine'
-          ? buddy === 'weedproof' || buddy === 'swimmer'
-          : buddy === 'frostproof');
+    const matchesBuddy = buddy && behaviour.buddy.includes(buddy);
     // A built firebreak (including Life Spark's strong roots) takes this beat;
     // the Buddy remains ready for a later beat instead of stacking here.
     if (by || (!buddyShieldUsed && matchesBuddy)) {
@@ -344,29 +411,13 @@ function advanceTroubles(
     }
     const s = planet.sectors[at];
     const species = s.species ?? undefined;
-    if (t.id === 'vent') {
-      s.life = Math.max(0, s.life - 1);
-      s.heat = Math.min(3, s.heat + 1);
-    } else if (t.id === 'vine') {
-      t.tangled = [...(t.tangled ?? []), at];
-    } else s.heat = Math.max(-3, s.heat - 1);
+    behaviour.effect(planet, t, at);
     settle(planet);
-    if (t.id === 'vine') {
-      // Tangled land keeps its underlying numbers so Magma can uncover it later.
-      for (const index of t.tangled ?? []) {
-        planet.sectors[index].biome = 'barren';
-        planet.sectors[index].species = null;
-      }
-    }
-    events.push({ id: t.id, kind: t.id === 'vine' ? 'spread' : 'act', sector: at, ...(species ? { species } : {}) });
+    behaviour.repaint(planet, t);
+    events.push({ id: t.id, kind: behaviour.actKind, sector: at, ...(species ? { species } : {}) });
     return t;
   });
-  for (const t of troubles)
-    if (t.id === 'vine' && !t.settled)
-      for (const at of t.tangled ?? []) {
-        planet.sectors[at].biome = 'barren';
-        planet.sectors[at].species = null;
-      }
+  for (const t of troubles) if (!t.settled) TROUBLE_BEHAVIOUR[t.id].repaint(planet, t);
   planet.speciesFound = planet.sectors.flatMap((s) => (s.species ? [s.species] : []));
   return { troubles, events, buddyShieldUsed, calmUsed };
 }
@@ -388,10 +439,11 @@ export function stepRound(
     );
     const settledGain = trouble.events.filter((event) => event.kind === 'settled').length * 3;
     const charge = Math.min(state.nova.threshold, state.nova.charge + settledGain);
-    return {
+    const missed: StepResult = {
       state: {
         ...state,
         planet,
+        ...(rules.version === 2 && state.wideNext ? { wideNext: 0 } : {}),
         ...(mods.launcher?.id === 'skipper' ? { skipperBounces: (state.skipperBounces ?? 0) + Number(!!action.bounced) } : {}),
         troubles: trouble.troubles,
         buddyShieldUsed: trouble.buddyShieldUsed,
@@ -420,6 +472,7 @@ export function stepRound(
       combo: { links: 0, step: 0, ended: 'worse' },
       troubleEvents: trouble.events,
     };
+    return finishPickups(missed, action, rules);
   }
   const planet = clonePlanet(state.planet);
   const priorSpecies = state.planet.sectors.map((s) => s.species);
@@ -449,19 +502,20 @@ export function stepRound(
   let affected: number[] = [];
   const form = !!mods.forms?.[action.kind] && level >= 5;
   const reachDelta = launcherReach(mods.launcher ?? NO_MODIFIERS.launcher, action.kind);
+  const wide = rules.version === 2 ? Math.min(1, Math.max(0, state.wideNext ?? 0)) : 0;
   const skipperBounceNumber = (state.skipperBounces ?? 0) + Number(!!action.bounced && mods.launcher?.id === 'skipper');
   const centerPowerLoss = !!action.bounced && skipperLosesPower(mods.launcher ?? NO_MODIFIERS.launcher, action.kind, skipperBounceNumber);
   const result = impact(
     planet,
     action.kind,
     action.sector,
-    mods.splash,
+    mods.splash + wide,
     {
       nova,
       power: labPower(level),
       novaReach: labNovaReach(level),
       form,
-      ...(reachDelta ? { reachDelta, reachCap: 4 } : {}),
+      ...(reachDelta || wide ? { reachDelta, reachCap: 4 } : {}),
       ...(centerPowerLoss ? { centerPowerLoss: true } : {}),
     },
     (land) => {
@@ -471,16 +525,14 @@ export function stepRound(
           reaction.id,
           reaction.at,
           extraReach,
-          (reaction.id === 'rainGarden' ? 3 : reaction.id === 'glacier' ? 1 : 2) +
-            comboReach +
-            2 * Number(mods.launcher?.id === 'sparkler' && fusion),
+          REACTIONS[reaction.id].radius + comboReach + 2 * Number(mods.launcher?.id === 'sparkler' && fusion),
         );
       if (fusion && comboEnabled && reached >= 4) comboBloom(land, action.sector);
     },
   );
   const labMarks = { rock: [...(state.labMarks?.rock ?? [])], seed: [...(state.labMarks?.seed ?? [])] };
   if ((mods.lab[action.kind] ?? 1) >= 4 && (action.kind === 'rock' || action.kind === 'seed')) {
-    const reach = Math.min(4, KINDS[action.kind].stats.reach + mods.splash + reachDelta + (nova ? 1 + labNovaReach(level) : 0));
+    const reach = Math.min(4, KINDS[action.kind].stats.reach + mods.splash + wide + reachDelta + (nova ? 1 + labNovaReach(level) : 0));
     for (let d = -reach; d <= reach; d++) {
       const at = wrap(action.sector + d);
       if (action.kind === 'seed' || planet.sectors[at].land >= 3) {
@@ -516,7 +568,7 @@ export function stepRound(
   if (form)
     labEvents.push({ type: 'form', kind: action.kind, form: FORM_OF[action.kind], sector: wrap(action.sector), changed: changed.length });
   for (const event of trouble.events)
-    if (event.perk || event.by === 'firewall' || event.by === 'labRoots') {
+    if (TROUBLE_BEHAVIOUR[event.id].perk !== null && (event.perk || event.by === 'firewall' || event.by === 'labRoots')) {
       const kind: Kind = event.by === 'firewall' ? 'rock' : event.by === 'labRoots' ? 'seed' : action.kind;
       labEvents.push({
         type: 'guard',
@@ -553,7 +605,7 @@ export function stepRound(
   if (state.throwsLeft === 1 && combo.links) comboResult.ended = 'round';
   const gain =
     state.novaEnabled && !nova && betterThrow ? novaCharge(changedBetter.length, firstArrivals.length) * (mods.shower ? 2 : 1) : 0;
-  const fusionGain = state.novaEnabled && fusion && betterThrow ? 3 : 0;
+  const fusionGain = state.novaEnabled && reaction && betterThrow ? REACTIONS[reaction.id].charge : 0;
   const threshold = nova ? LATER_NOVA_CHARGE : meter.threshold;
   const troubleGain = state.novaEnabled && betterThrow ? trouble.events.filter((event) => event.kind === 'settled').length * 3 : 0;
   const settledTrouble = trouble.events.some((event) => event.kind === 'settled');
@@ -572,6 +624,7 @@ export function stepRound(
   const next: RoundState = {
     ...state,
     planet,
+    ...(rules.version === 2 && state.wideNext ? { wideNext: 0 } : {}),
     charge,
     bonus: totalBonus,
     regionBests,
@@ -590,7 +643,7 @@ export function stepRound(
     score: lifeScore(planet) + totalBonus,
     guardianHp: state.guardianHp === undefined ? undefined : Math.max(0, state.guardianHp - (action.guardianHit ? (nova ? 2 : 1) : 0)),
   };
-  return {
+  const completed: StepResult = {
     state: next,
     before: result.before,
     after: finalAfter,
@@ -609,6 +662,31 @@ export function stepRound(
     combo: comboResult,
     troubleEvents: trouble.events,
   };
+  return finishPickups(completed, action, rules, reaction?.id);
+}
+
+/** One shared cap; the fixed bonus object is part of the saved round. */
+export function grantExtraThrow(state: RoundState, source: ExtraThrowSource): StepResult['extraThrow'] {
+  if (state.extraUsed || !state.bonusKind) return undefined;
+  state.extraUsed = true;
+  state.extraSource = source;
+  if (state.throwsLeft !== undefined) state.throwsLeft += 1;
+  return { source, kind: state.bonusKind };
+}
+
+function finishPickups(result: StepResult, action: RoundAction, rules: RoundRules, reaction?: ReactionId): StepResult {
+  if (rules.version !== 2) return result;
+  const used = result.state.extraUsed;
+  // Contacts precede the landing reaction; the first source wins.
+  for (const pickup of action.pickups ?? []) if (pickup.kind === 'throw' || pickup.kind === 'wide') applyMote(result.state, pickup);
+  if (!used && result.state.extraUsed && result.state.bonusKind)
+    result.extraThrow = { source: result.state.extraSource ?? 'mote', kind: result.state.bonusKind };
+  if (reaction && REACTIONS[reaction].extraThrow) {
+    const extra = grantExtraThrow(result.state, REACTIONS[reaction].extraThrow!);
+    if (extra) result.extraThrow = extra;
+  }
+  if (result.extraThrow && result.combo.ended === 'round') delete result.combo.ended;
+  return result;
 }
 
 /** A preview uses the same transition and leaves its source untouched. */
@@ -647,6 +725,14 @@ export function restoreRoundWithVersion(json: string): { state: RoundState; rule
       state.combo = { links: 0, rest: false, best: 0 };
       state.comboCharge = 0;
     }
+    if (rulesVersion === 2) {
+      state.extraUsed = !!state.extraUsed;
+      if (state.extraAt !== undefined && (!Number.isInteger(state.extraAt) || state.extraAt < 0 || state.extraAt > 1024)) return null;
+      if (state.bonusKind && !Object.hasOwn(KINDS, state.bonusKind)) return null;
+      if (state.extraSource && state.extraSource !== 'rainbow' && state.extraSource !== 'mote') return null;
+      if (state.motesTaken) state.motesTaken = [...new Set(state.motesTaken.filter((n) => Number.isInteger(n) && n >= 0))];
+      state.wideNext = Number.isInteger(state.wideNext) && state.wideNext! > 0 ? 1 : 0;
+    }
     if (!Array.isArray(state.troubles)) state.troubles = [];
     if (!state.labMarks) state.labMarks = { rock: [], seed: [] };
     if (typeof state.buddyShieldUsed !== 'boolean') state.buddyShieldUsed = false;
@@ -676,6 +762,15 @@ export function restoreRoundWithVersion(json: string): { state: RoundState; rule
       state.comboCharge > 12
     )
       return null;
+    if (rulesVersion === 2)
+      for (const trouble of state.troubles)
+        if (trouble.id === 'pebble') {
+          if (!Number.isInteger(trouble.count) || trouble.count! < 0) trouble.count = 0;
+          if (!Number.isInteger(trouble.target)) {
+            delete trouble.target;
+            trouble.target = troubleTarget(state.planet, trouble) ?? wrap(trouble.source);
+          } else trouble.target = wrap(trouble.target!);
+        }
     return { state, rulesVersion };
   } catch {
     return null;

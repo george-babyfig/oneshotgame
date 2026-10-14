@@ -1,3 +1,4 @@
+import { rulesPlay } from '../core/rulesets';
 import { VOYAGE_REWARDS } from './tuning';
 import { calendarSalt } from './almanac';
 // Weekly Voyage: a 7-planet mini-chapter that changes every Monday (same within
@@ -7,11 +8,11 @@ import { calendarSalt } from './almanac';
 import { budgetFor, goalsMet, makeLevel, pressureOf, skyWall, solve0, solve2, starsFor, type LevelDef } from '../core/levels';
 import { lifeScore } from '../core/world';
 import { rulesForLevel } from '../core/round';
-import { RULES_VERSION, type RulesVersion } from '../core/rules-version';
+import { type RulesVersion } from '../core/rules-version';
 import { voyagePlay } from '../core/rulesets';
 export { voyagePlay } from '../core/rulesets';
 
-export function voyageRules(week: string, n: number, taught: number, play: RulesVersion = RULES_VERSION) {
+export function voyageRules(week: string, n: number, taught: number, play: RulesVersion = rulesPlay()) {
   return rulesForLevel(n, 'voyage', taught, voyagePlay(week, play));
 }
 import { today, type Profile } from './profile';
@@ -109,7 +110,7 @@ export function voyageLevel(
   taught = base + i * 2,
   hemisphere: Hemisphere = 'north',
   savedTheme?: string | null,
-  play: RulesVersion = RULES_VERSION,
+  play: RulesVersion = rulesPlay(),
 ): LevelDef {
   const key = JSON.stringify([week, base, i, taught, hemisphere, savedTheme, voyagePlay(week, play), calendarSalt(week, i)]);
   const cached = stopCache.get(key);

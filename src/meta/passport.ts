@@ -6,7 +6,7 @@ import { totalStars } from './profile';
 import { ACHIEVEMENTS } from './achievements';
 import { recordTitles } from './records';
 import { t } from '../i18n';
-import { FUSION_IDS } from './reactions';
+import { LAUNCH_FUSION_IDS } from './reactions';
 import { ALL_COMBO_STAMPS } from './reactions';
 import { REMIX_TITLES, remixFrame, remixTotal, remixUnlocked } from './remix';
 import { LANDMARKS } from './tuning';
@@ -99,7 +99,7 @@ export function titlesOwned(p: Profile): TitleDef[] {
   const out: TitleDef[] = [];
   for (const a of ACHIEVEMENTS) if (a.done(p)) out.push({ id: `ach:${a.id}`, text: a.title });
   for (const x of recordTitles(p)) out.push({ id: `rec:${x}`, text: x });
-  if (FUSION_IDS.every((id) => p.fusionsFound.includes(id))) out.push({ id: 'reactions', text: 'Little Chemist' });
+  if (LAUNCH_FUSION_IDS.every((id) => p.fusionsFound.includes(id))) out.push({ id: 'reactions', text: 'Little Chemist' });
   if ((p.combo.stamps & ALL_COMBO_STAMPS) === ALL_COMBO_STAMPS) out.push({ id: 'combo', text: 'Chain Maker' });
   for (const key of Object.keys(p.remix ?? {})) {
     const chapter = Number(key);

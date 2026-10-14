@@ -1,18 +1,11 @@
 import type { Kind } from '../core/world';
 import type { FlightHit } from '../core/flight';
 import { EMPTY_SKY_STATE, type SkyState } from '../core/sky';
-import type { TroubleEvent } from '../core/troubles';
+import { TROUBLE_BEHAVIOUR, type TroubleEvent } from '../core/troubles';
 
 export function troubleFeel(event: TroubleEvent): { color: string; haptic: FeelHaptic } {
   return {
-    color:
-      event.kind === 'settled' || event.kind === 'blocked'
-        ? '#a4e8bc'
-        : event.id === 'vent'
-          ? '#ffb587'
-          : event.id === 'vine'
-            ? '#9ee68d'
-            : '#b8e8ff',
+    color: event.kind === 'settled' || event.kind === 'blocked' ? '#a4e8bc' : TROUBLE_BEHAVIOUR[event.id].feel,
     haptic: event.kind === 'settled' ? 'medium' : 'light',
   };
 }

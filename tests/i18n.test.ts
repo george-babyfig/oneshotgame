@@ -1,3 +1,4 @@
+import { M15_DEFERRED_KEYS } from '../src/meta/m15strings';
 import { CONTENT_FRAGMENTS, LANGS, mergeContentStrings, type ContentStrings } from '../src/i18n';
 import { allStrings } from './helpers/locales';
 // Every translatable string must exist in every locale, with the same {placeholders}.
@@ -10,7 +11,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { BIOMES, KINDS, SPECIES, TRAITS } from '../src/core/world';
-import { TROUBLES } from '../src/core/troubles';
+import { TROUBLES, TROUBLE_BEHAVIOUR } from '../src/core/troubles';
 import { LAUNCHERS, LAUNCHER_COPY } from '../src/core/launchers';
 import { TWISTS } from '../src/core/levels';
 import { OBSTACLES } from '../src/core/sky';
@@ -74,7 +75,11 @@ export function allKeys(): string[] {
   Object.values(TRAITS).forEach((x) => (add(x.name), add(x.rule)));
   add(PRACTICE_GIFT_LINE);
   add(GUSTY_WIND_TIP);
-  Object.values(REACTIONS).forEach((x) => add(x.name));
+  M15_DEFERRED_KEYS.forEach(add);
+  Object.values(REACTIONS).forEach((x) => (add(x.name), add(x.fieldGuide)));
+  Object.values(TROUBLE_BEHAVIOUR).forEach(
+    (x) => (x.helpLine.forEach(add), add(x.aimTag), add(x.actLine), add(x.settledLine), add(x.forecastLabel)),
+  );
   UNLOCKS.forEach((x) => (add(x.intro?.title), add(x.intro?.body)));
   SPECIES.forEach((s) => (add(s.name), !s.home && add(s.hint)));
   Object.values(BOOSTERS).forEach((b) => (add(b.name), add(b.desc)));
@@ -210,6 +215,10 @@ describe('i18n', () => {
       const all = allStrings(id);
       for (const fragment of CONTENT_FRAGMENTS) expect(all).toMatchObject(fragment[id]);
     }
+  });
+
+  it('registers the deferred M15 English inventory without translating it', () => {
+    expect(M15_DEFERRED_KEYS.every((key) => keys.includes(key))).toBe(true);
   });
 
   it('collects a sensible number of keys', () => {

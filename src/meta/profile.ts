@@ -1138,7 +1138,12 @@ export function migrate(raw: Record<string, unknown>, { play = RULES_VERSION }: 
     if (p.tutorial) p.legacyUnlocks.push('star_calendar');
     if (Object.values(p.sightings).some((count) => count >= 5)) p.legacyUnlocks.push('buddy');
     for (const row of UNLOCKS) {
-      if (row.intro && !row.id.startsWith('launcher_') && (p.legacyUnlocks.includes(row.id) || (row.planet > 0 && p.level > row.planet))) {
+      if (
+        row.intro &&
+        !row.sincePlay &&
+        !row.id.startsWith('launcher_') &&
+        (p.legacyUnlocks.includes(row.id) || (row.planet > 0 && p.level > row.planet))
+      ) {
         const key = `coach-${row.id}`;
         if (!p.mailSeen.includes(key)) p.mailSeen.push(key);
       }

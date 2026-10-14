@@ -1,3 +1,4 @@
+import type { MoteDef, Pickup } from '../../src/meta/m15types';
 import { goalProgress, goalsMet, makeLevel, rngFrom, starsEarned, starsFor, type Difficulty, type LevelDef } from '../../src/core/levels';
 import {
   SECTORS,
@@ -13,6 +14,7 @@ import {
 } from '../../src/core/world';
 import { NO_MODIFIERS, maxLabModifiers, type RoundModifiers } from '../../src/core/modifiers';
 import {
+  REACTIONS,
   ROUND_RULES_V0,
   lifeSparkSectors,
   novaReady,
@@ -99,7 +101,16 @@ function aimingPolicy(name: string, aimError: number, randomShare: number, aware
       const learning = Math.pow(0.9, context.retry ?? 0);
       if (random() < randomShare * learning) return Math.floor(random() * SECTORS);
       let aim = aware
-        ? (context.awareBest ?? oneStep(context, rulesForLevel(context.level.n)))
+        ? (context.awareBest ??
+          oneStep(
+            context,
+            rulesForLevel(
+              context.level.n,
+              context.level.seed.startsWith('RX-') ? 'remix' : context.level.seed.startsWith('VOY-') ? 'voyage' : 'campaign',
+              context.level.n,
+              context.level.rulesVersion ?? 1,
+            ),
+          ))
         : (context.blindBest ?? oneStep(context, ROUND_RULES_V0));
       if (random() < aimError * learning) aim += random() < 0.5 ? -1 : 1;
       return aim;
@@ -286,7 +297,12 @@ export function playLevel(
   level: LevelDef,
   policy: BotPolicy,
   random: () => number,
-  rules = rulesForLevel(level.n),
+  rules = rulesForLevel(
+    level.n,
+    level.seed.startsWith('RX-') ? 'remix' : level.seed.startsWith('VOY-') ? 'voyage' : 'campaign',
+    level.n,
+    level.rulesVersion ?? 1,
+  ),
   flight?: { phone: Phone; timed?: boolean; badgeAware?: boolean; retry?: number },
   retry = 0,
   loadout?: Loadout,
@@ -302,6 +318,11 @@ export function playLevel(
     settle(start);
   }
   let state = roundState(start, level.nova, level.troubles, level.difficulty !== 'normal');
+  if (rules.version === 2) {
+    state.bonusKind = level.bonusKind;
+    if (level.twist === 'boss') state.guardianHp = 3;
+    level = { ...level, queue: [...level.queue] };
+  }
   const selectedLauncher =
     launcher ??
     loadout?.mods.launcher ??
@@ -314,6 +335,12 @@ export function playLevel(
   };
   let halfStars = 0;
   let throws = level.throws + (loadout?.extraThrows ?? 0);
+  const inRuleBonus = (step: ReturnType<typeof stepRound>) => {
+    if (step.extraThrow) {
+      level.queue[level.throws] = step.extraThrow.kind;
+      throws += 1;
+    }
+  };
   let continuesLeft = loadout?.continues ?? 0;
   let continuesUsed = 0;
   const maybeContinue = (turn: number) => {
@@ -377,6 +404,7 @@ export function playLevel(
     });
     let sector = ((aim % SECTORS) + SECTORS) % SECTORS;
     let bounced = false;
+    let pickups: (Pickup | MoteDef)[] = [];
     if (flight) {
       const timed = flight.timed ?? policy.name !== 'casual';
       const badgeAware = (flight.badgeAware ?? policy.name === 'casual') && !!level.sky.obstacle;
@@ -450,6 +478,17 @@ export function playLevel(
       const pull = noisy(base);
       const actual = flyPull(pull, at, launch, world, selectedLauncher);
       bounced = !!actual.specialBounced;
+      if (rules.version === 2) {
+        const taken = new Set(state.motesTaken ?? []);
+        for (const contact of actual.touched ?? []) {
+          const mote = level.motes?.[contact.index];
+          if (mote && taken.has(contact.index)) continue;
+          const pickup = world.pickups?.[contact.index];
+          if (mote) taken.add(contact.index);
+          if (mote || pickup) pickups.push(mote ?? pickup!);
+        }
+        state.motesTaken = [...taken];
+      }
       if (isBonk(actual.hit) && !isBonk(predicted.hit)) flightStats.noiseBonks++;
       const teaching = !!level.sky.obstacle && level.n === OBSTACLES[level.sky.obstacle].debut;
       const refund: { refund: boolean; practiceUsed: boolean } = isBonk(actual.hit)
@@ -470,6 +509,16 @@ export function playLevel(
           turn--; // Same object, same turn; the round clock and obstacle keep moving.
           continue;
         }
+        if (rules.version === 2) {
+          const missed = stepRound(
+            state,
+            { kind: level.queue[turn % level.queue.length], sector: 0, outcome: 'miss', pickups },
+            modifiers,
+            rules,
+          );
+          state = missed.state;
+          inRuleBonus(missed);
+        }
         if (turn + 1 === Math.floor(level.throws / 2)) halfStars = starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level);
         starHistory.push(starsEarned(state.planet, lifeScore(state.planet) + state.bonus, level));
         maybeContinue(turn);
@@ -478,15 +527,21 @@ export function playLevel(
       sector = actual.hit.sector;
     }
     const thrownKind = level.queue[turn % level.queue.length];
-    const step = stepRound(state, { kind: thrownKind, sector, nova, bounced }, modifiers, rules);
+    const step = stepRound(
+      state,
+      { kind: thrownKind, sector, nova, bounced, ...(flight && rules.version === 2 ? { pickups } : {}) },
+      modifiers,
+      rules,
+    );
     state = step.state;
+    inRuleBonus(step);
     landmarkSteps.push(landmarkStepEvidence(step));
     labSteps.push({ kind: thrownKind, reactions: step.reactions, troubleEvents: step.troubleEvents });
     for (const index of step.changed) regions.push(state.planet.sectors[index].biome);
     for (const species of step.spawned) arrivals.add(species.id);
     for (const reaction of step.reactions) {
       reactionCounts[reaction.id] = (reactionCounts[reaction.id] ?? 0) + 1;
-      if (reaction.id === 'scorch') clash++;
+      if (REACTIONS[reaction.id].kind === 'clash') clash++;
       else fusion++;
     }
     if (step.after - step.before <= 3) {
@@ -604,7 +659,12 @@ export function runPlanet(
       level,
       policy,
       rngFrom(`sim-${masterSeed === 'default' ? '' : `${masterSeed}-`}${policy.name}-${n}-${run}`),
-      rulesForLevel(level.n),
+      rulesForLevel(
+        level.n,
+        level.seed.startsWith('RX-') ? 'remix' : level.seed.startsWith('VOY-') ? 'voyage' : 'campaign',
+        level.n,
+        level.rulesVersion ?? 1,
+      ),
       flight
         ? {
             phone: flight.phone ?? PHONES[(run + n + (policy.name === 'decent' ? 1 : 0)) % PHONES.length],

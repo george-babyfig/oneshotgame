@@ -315,7 +315,7 @@ for (const play of [1, 2] as const)
       saveInterruptedRound(p, c);
       expect(JSON.parse(JSON.parse(p.savedRound!).round).rulesVersion).toBe(2);
       expect(JSON.parse(JSON.parse(p.savedRound!).fingerprint)[3]).toBe(2);
-      expect(readInterruptedRound(p, play)).toEqual(c);
+      expect(readInterruptedRound(p, play)).toEqual({ ...c, state: { ...c.state, extraUsed: false, wideNext: 0 } });
     });
     it('rejects an inconsistent scene version and an unsupported rules version', () => {
       const p = defaultProfile(0);

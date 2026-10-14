@@ -1,3 +1,4 @@
+import { RULES_VERSION } from '../src/core/rules-version';
 import { restoreRound } from '../src/core/round';
 // Save goldens (ROADMAP-v2 7.7, M1 item 1.7): a save from every format must load.
 //
@@ -57,7 +58,8 @@ const DUST_DELTAS: Record<string, number> = {
 type Raw = Record<string, unknown>;
 const load = (f: string): Raw => JSON.parse(readFileSync(join(DIR, f), 'utf8')) as Raw;
 /** Load a fixture the way loadProfile() does: JSON text → migrate(). */
-const loadSave = (f: string, play: 1 | 2 = 1): Profile => migrate(JSON.parse(readFileSync(join(DIR, f), 'utf8')) as Raw, { play });
+const loadSave = (f: string, play: 1 | 2 = RULES_VERSION): Profile =>
+  migrate(JSON.parse(readFileSync(join(DIR, f), 'utf8')) as Raw, { play });
 const EVENT_GEM_DELTAS: Record<string, number> = {
   'b-mid-game.v3.json': 3,
   'c-pre-m0.v3.json': 1,
@@ -389,6 +391,7 @@ describe('save goldens: specific migrations', () => {
     const now = raw.lastCollect as number;
     const p = loadSave('a-new-profile.v3.json');
     const expected = defaultProfile(now);
+    expected.rulesSeen = RULES_VERSION;
     expected.meta.sessions = 1;
     expected.lastCollect = p.lastCollect;
     expected.vault.lastTick = p.vault.lastTick;

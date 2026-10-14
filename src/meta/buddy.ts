@@ -21,6 +21,7 @@ export const COUNTERS: Record<TroubleId, readonly TraitId[]> = {
   vent: ['fireproof', 'swimmer'],
   vine: ['weedproof', 'swimmer'],
   frost: ['frostproof'],
+  pebble: [],
 };
 
 /** Prefer a resident who can meet the level's first Trouble; otherwise remember the Buddy. */

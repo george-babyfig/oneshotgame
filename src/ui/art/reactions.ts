@@ -10,6 +10,9 @@ const COLORS: Record<ReactionId, string> = {
   wildflowers: '#ffb9dd',
   glacier: '#b9e6ff',
   scorch: '#ff8b83',
+  firemount: '#ffad72',
+  rainbow: '#d8b9ff',
+  flood: '#ff8b83',
 };
 
 export function reactionColor(id: ReactionId): string {

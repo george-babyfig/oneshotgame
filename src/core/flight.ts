@@ -1,3 +1,5 @@
+import type { Pickup } from '../meta/m15types';
+export type { Pickup } from '../meta/m15types';
 import { SECTORS } from './world';
 import { launcherAtTune, type LauncherId, type LauncherSelection } from './launchers';
 import { EMPTY_SKY_STATE, gustAt, skyShapesAt, type SkyDef, type SkyState } from './sky';
@@ -35,6 +37,7 @@ export interface FlightLaunch extends FlightPoint {
   specialBounced?: boolean;
   brokenRocks?: number[];
   brokenRing?: boolean;
+  touched?: number[];
 }
 
 export interface FlightWorld {
@@ -54,9 +57,12 @@ export interface FlightWorld {
   ringBroken?: boolean;
   sky?: SkyDef;
   skyState?: SkyState;
+  /** Pixel geometry, prepared by the scene or harness for this frame. */
+  pickups?: readonly Pickup[];
 }
 
 export type FlightHit =
+  | { kind: 'pickup'; index: number }
   | { kind: 'land'; sector: number }
   | { kind: 'bonk'; by: 'moon' | 'rock' | 'ring' | 'bubble'; x: number; y: number; rock?: number }
   | { kind: 'fizzle'; x: number; y: number }
@@ -70,6 +76,8 @@ export interface FlightResult {
   bounces: { x: number; y: number; elapsed: number; special?: boolean }[];
   breaks?: { kind: 'rock' | 'ring'; rock?: number; x: number; y: number }[];
   specialBounced?: boolean;
+  /** Pass-through contacts, in flight order; never the terminal hit. */
+  touched?: Extract<FlightHit, { kind: 'pickup' }>[];
 }
 
 /** The same parameters drive live flight, preview, hints, bots, and reach sweeps. */
@@ -131,6 +139,8 @@ export function fly(params: FlightParams, launch: FlightLaunch, world: FlightWor
   const points: FlightPoint[] = [];
   const bounces: FlightResult['bounces'] = [];
   const breaks: NonNullable<FlightResult['breaks']> = [];
+  const touched: NonNullable<FlightResult['touched']> = [];
+  const seen = new Set(launch.touched ?? []);
   let bounceCount = state.bounceCount ?? 0;
   let hit: FlightHit | null = null;
   const step = params.step;
@@ -185,10 +195,28 @@ export function fly(params: FlightParams, launch: FlightLaunch, world: FlightWor
     }
     state.vx += (dx / r) * a * step;
     state.vy += (dy / r) * a * step;
+    const previousX = state.x,
+      previousY = state.y;
     state.x += state.vx * step;
     state.y += state.vy * step;
     state.elapsed += step;
     points.push({ x: state.x, y: state.y, vx: state.vx, vy: state.vy, elapsed: state.elapsed });
+    const contacts = (world.pickups ?? [])
+      .flatMap((pickup, index) => {
+        if (seen.has(index)) return [];
+        const dx = state.x - previousX,
+          dy = state.y - previousY;
+        const length2 = dx * dx + dy * dy;
+        const along = length2 ? Math.max(0, Math.min(1, ((pickup.x - previousX) * dx + (pickup.y - previousY) * dy) / length2)) : 0;
+        const distance = Math.hypot(previousX + along * dx - pickup.x, previousY + along * dy - pickup.y);
+        return distance <= pickup.r + params.collisionPadding ? [{ index, along }] : [];
+      })
+      .sort((a, b) => a.along - b.along || a.index - b.index);
+    for (const contact of contacts) {
+      seen.add(contact.index);
+      touched.push({ kind: 'pickup', index: contact.index });
+    }
+    if (world.pickups?.length) state.touched = [...seen];
     const time = t0 + state.elapsed;
     const collisionShapes = world.sky?.obstacle
       ? skyShapesAt(
@@ -289,6 +317,7 @@ export function fly(params: FlightParams, launch: FlightLaunch, world: FlightWor
     hit,
     sector: hit?.kind === 'land' ? hit.sector : null,
     bounces,
+    ...(world.pickups?.length ? { touched } : {}),
     ...(params.launcher !== 'sling' ? { breaks, specialBounced: !!state.specialBounced } : {}),
   };
 }

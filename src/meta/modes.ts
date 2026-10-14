@@ -1,3 +1,4 @@
+import { rulesPlay } from '../core/rulesets';
 import { DAILY_REWARD, RUSH_REWARD, CHALLENGE_REWARD } from './tuning';
 import { calendarSalt } from './almanac';
 import { earn } from './wallet';
@@ -22,7 +23,7 @@ import { BIOMES, clonePlanet, lifeScore, settle, type Planet } from '../core/wor
 import { dayGap, type Profile } from './profile';
 import { t } from '../i18n';
 import { grantProfileRoadPoints } from './starroad';
-import { RULES_VERSION, RULES_SUPPORTED, type RulesVersion } from '../core/rules-version';
+import { RULES_SUPPORTED, type RulesVersion } from '../core/rules-version';
 import { RULESETS } from '../core/rulesets';
 
 export const DAILY_EPOCH = '2026-01-01';
@@ -33,7 +34,10 @@ export function dailyNumber(day: string) {
   return dayGap(DAILY_EPOCH, day) + 1;
 }
 
-export function dailyLevel(day: string, taught = 16, play: RulesVersion = RULES_VERSION): LevelDef {
+export type DailyLevel = Omit<LevelDef, 'troubles'> & {
+  troubles: { id: Exclude<import('../core/troubles').TroubleId, 'pebble'>; source: number }[];
+};
+export function dailyLevel(day: string, taught = 16, play: RulesVersion = rulesPlay()): DailyLevel {
   const salt = calendarSalt(day);
   const L = makeLevel(16, `DAY-${day}`, { rulesVersion: play, rules: rulesForLevel(16, 'daily', taught, play), ...(salt ? { salt } : {}) });
   const available = RULESETS[1].layoutTroubles.filter((id) => TROUBLES[id].debut <= taught);
@@ -45,7 +49,8 @@ export function dailyLevel(day: string, taught = 16, play: RulesVersion = RULES_
       if (dailyPreflight(candidate)) return candidate;
     }
   }
-  return L;
+  // Daily is capped at v1, including its weather list, even at global play 2.
+  return L as DailyLevel;
 }
 
 export function dailyPreflight(level: LevelDef): boolean {
@@ -66,7 +71,7 @@ export function dailyWeatherReport(day: string, taught = 16): string | null {
 }
 
 /** Meteor Rush: same generator, but star targets assume ~22 throws in 60 seconds. */
-export function rushLevel(seed: string, taught = 14, play: RulesVersion = RULES_VERSION): LevelDef {
+export function rushLevel(seed: string, taught = 14, play: RulesVersion = rulesPlay()): LevelDef {
   const L = makeLevel(14, `RUSH-${seed}`, { rulesVersion: play, rules: rulesForLevel(14, 'rush', taught, play) });
   const best = greedyScore(L.start, L.queue.concat(L.queue, L.queue), 22);
   const base = lifeScore(L.start);
@@ -77,7 +82,7 @@ export function rushLevel(seed: string, taught = 14, play: RulesVersion = RULES_
   return { ...L, stars, name: 'Beat the clock!', queue: L.queue.concat(L.queue, L.queue, L.queue) };
 }
 
-export function zenLevel(saved: Planet | null, taught = 20, play: RulesVersion = RULES_VERSION): LevelDef {
+export function zenLevel(saved: Planet | null, taught = 20, play: RulesVersion = rulesPlay()): LevelDef {
   const L = makeLevel(20, 'ZEN', { rulesVersion: play, rules: rulesForLevel(20, 'zen', taught, play) });
   const start = saved ? clonePlanet(saved) : L.start;
   settle(start);
@@ -95,7 +100,7 @@ export function newChallengeSeed(rnd = Math.random) {
 }
 
 /** Code = seed + the sender's score, with a check letter so typos are caught. */
-export function encodeChallenge(seed: string, score: number, play: RulesVersion = RULES_VERSION) {
+export function encodeChallenge(seed: string, score: number, play: RulesVersion = rulesPlay()) {
   const version = rulesForLevel(14, 'challenge', 14, play).version;
   const body = `${version}${seed}${score.toString(36).toUpperCase()}`;
   return `${version}-${seed}-${score.toString(36).toUpperCase()}${checkChar(body)}`;
@@ -109,7 +114,7 @@ function checkChar(body: string) {
 
 export function decodeChallenge(
   code: string,
-  play: RulesVersion = RULES_VERSION,
+  play: RulesVersion = rulesPlay(),
 ): { seed: string; score: number; rulesVersion?: RulesVersion } | null {
   if (!RULES_SUPPORTED.includes(play)) return null;
   const m = code
@@ -129,7 +134,7 @@ export function decodeChallenge(
   return { seed, score, ...(Number(version) === 2 ? { rulesVersion: 2 as const } : {}) };
 }
 
-export function challengeLevel(seed: string, taught = 14, play: RulesVersion = RULES_VERSION): LevelDef {
+export function challengeLevel(seed: string, taught = 14, play: RulesVersion = rulesPlay()): LevelDef {
   const L = makeLevel(14, `CH-${seed}`, { rulesVersion: play, rules: rulesForLevel(14, 'challenge', taught, play) });
   return { ...L, name: `Code ${seed}` };
 }

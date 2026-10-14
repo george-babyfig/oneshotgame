@@ -1,6 +1,6 @@
 import { BIOMES, SPECIES_BY_ID, type BiomeId } from '../core/world';
 import { REACTIONS, type StepResult } from '../core/round';
-import { TROUBLES } from '../core/troubles';
+import { TROUBLES, TROUBLE_BEHAVIOUR } from '../core/troubles';
 import { t } from '../i18n';
 
 export interface AimTagFacts {
@@ -33,12 +33,10 @@ export function aimTagFacts(result: StepResult, land: BiomeId): AimTagFacts {
     firstTroubleSettled: result.troubleEvents[0]?.kind === 'settled',
     trouble: result.troubleEvents[0]
       ? result.troubleEvents[0].kind === 'settled'
-        ? result.troubleEvents[0].id === 'vent'
-          ? t('Vent cooled!')
-          : t('{name} settled!', { name: t(TROUBLES[result.troubleEvents[0].id].name) })
+        ? t(TROUBLE_BEHAVIOUR[result.troubleEvents[0].id].settledLine, { name: t(TROUBLES[result.troubleEvents[0].id].name) })
         : result.troubleEvents[0].kind === 'blocked'
           ? t('Safe!')
-          : t('{name} reaches this land', { name: t(TROUBLES[result.troubleEvents[0].id].name) })
+          : t(TROUBLE_BEHAVIOUR[result.troubleEvents[0].id].aimTag, { name: t(TROUBLES[result.troubleEvents[0].id].name) })
       : '',
   };
 }
@@ -54,7 +52,7 @@ export function aimTagSummary(facts: AimTagFacts): string {
   for (const lost of facts.lost) parts.push(t('{creature} wanders off', { creature: t(SPECIES_BY_ID[lost.species].name) }));
   if (facts.trouble) parts.push(facts.trouble);
   for (const event of facts.settled.slice(facts.firstTroubleSettled ? 1 : 0))
-    parts.push(event.id === 'vent' ? t('Vent cooled!') : t('{name} settled!', { name: t(TROUBLES[event.id].name) }));
+    parts.push(t(TROUBLE_BEHAVIOUR[event.id].settledLine, { name: t(TROUBLES[event.id].name) }));
   return parts.join('. ');
 }
 
@@ -156,4 +154,9 @@ export function placeAimTag(
   );
   const rect = alternatives.find(safe);
   return rect ? { rect, anchor } : null;
+}
+
+/** The same reach-four cap applies to the next throw and its preview. */
+export function previewReach(extra: number, base = 0): number {
+  return Math.min(4, Math.max(0, base + extra));
 }

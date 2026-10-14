@@ -155,3 +155,34 @@ If a planet's median lands on an end face, or 2 or more children pick an end, or
 - The filled tables above, pasted into a message to Claude (copy the tables with your answers filled in).
 
 Either way, please make sure no child's real name appears anywhere — Child A/B/C/D/E only. Thank you for running this — it's the only way we get to see the game through a kid's eyes instead of a bot's.
+
+## 7. M15 T0 protocol (owner-run; no results yet)
+
+Use five children and the same 15-minute, paper-only protocol above. Prepare separate short sessions or test saves instead of trying to cover every row in one sitting. Leave sound, Reduce Motion and assists at the child's preference. Do not coach the answer.
+
+| Planet                  | Observe and ask after play                                                 | Face card | Child A | Child B | Child C | Child D | Child E |
+| ----------------------- | -------------------------------------------------------------------------- | --------- | ------- | ------- | ------- | ------- | ------- |
+| 52                      | Space Pebble: what happened, how was it caught, what stopped it?           | Yes       |         |         |         |         |         |
+| 56                      | Star Mote: what changed after passing through it?                          | Yes       |         |         |         |         |         |
+| 58                      | Curve check: first eligible mote pool, retries and readability             | Yes       |         |         |         |         |         |
+| 60                      | Guardian pebbles: can they distinguish a catch from settling the Guardian? | Yes       |         |         |         |         |         |
+| 63                      | Firemount: which object and land made it?                                  | Yes       |         |         |         |         |         |
+| 64                      | Curve check: difficulty after the new Fusion lesson                        | Yes       |         |         |         |         |         |
+| 67                      | Rainbow: which land made it, and what changed in the throw counter?        | Yes       |         |         |         |         |         |
+| 74 (Flood enabled only) | What did Flood do for sea friends and forests?                             | Yes       |         |         |         |         |         |
+
+Record comprehension as Yes / No / Not asked plus the child's own words. The M15 review needs 4 of 5 to explain each idea they met, with face-card median Just right and at most one end answer per teaching planet. Flood specifically needs 4 of 5 to explain both “good for sea friends” and “bad for forests”; do not prompt either side. If that does not clear, Flood moves to rules v3 and the P74 row/deal stays absent from shipping v2.
+
+### Hidden-launcher aim and bounce tallies
+
+These candidates remain hidden in the shipped roster. Use an owner-prepared test build only after the candidate sims have run. Pair each task with the Star Sling on the same seed, and let the child choose whether to continue.
+
+| Candidate | Paired task / tally per child                                                                                                                   | A   | B   | C   | D   | E   |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --- | --- | --- | --- | --- |
+| Sparkler  | Fusion aim: intended land / predicted land / actual land; plain throw compared with Fusion; did the wider effect read clearly?                  |     |     |     |     |     |
+| Pinpoint  | Aim line: intended land / predicted land / actual land; count over-pulls, missed taps and confusion with a smaller landing                      |     |     |     |     |     |
+| Skipper   | Moon/rock bounce: intended bounce / predicted bounce / actual bounce; intended and actual landing; did the weaker bounced landing read clearly? |     |     |     |     |     |
+
+Tally attempts, matches, bonks, retries and voluntary launcher picks without identifying a child. Return the paper summaries and face cards to the lead. The redesign then needs code review and the paired launcher gates: pick share 8–35%, uplift +0.5 to +6 points, never-hurts and max-loadout uplift at most +15. No return or redesign is authorized by these blank protocol rows.
+
+The rules-v2 flip waits for the M15 review or the owner's written waiver (decision 110). Flood comprehension and hidden-launcher T0 cannot be waived. No child playtest or owner action has been performed by S15.

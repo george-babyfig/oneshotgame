@@ -1,3 +1,5 @@
+import { teachRows } from './teach';
+import { RULES_VERSION, type RulesVersion } from '../../src/core/rules-version';
 import { budgetFor, makeLevel, pressureOf, skyWall } from '../../src/core/levels';
 import type { PlanetMetrics } from './harness';
 
@@ -111,7 +113,14 @@ export const CHAPTER_BANDS = [
 const pct = (value: number) => `${Math.round(value * 100)}%`;
 const mean = (rows: PlanetMetrics[]) => rows.reduce((sum, row) => sum + row.fail, 0) / Math.max(1, rows.length);
 
-export function lintCampaign(casual: PlanetMetrics[], decent: PlanetMetrics[], sharp: PlanetMetrics[], last = 120): LintIssue[] {
+export function lintCampaign(
+  casual: PlanetMetrics[],
+  decent: PlanetMetrics[],
+  sharp: PlanetMetrics[],
+  last = 120,
+  play: RulesVersion = RULES_VERSION,
+): LintIssue[] {
+  const levelAt = (n: number) => makeLevel(n, 'PP', { rulesVersion: play });
   const issues: LintIssue[] = [];
   const by = (rows: PlanetMetrics[]) => new Map(rows.map((row) => [row.n, row]));
   const c = by(casual),
@@ -127,7 +136,7 @@ export function lintCampaign(casual: PlanetMetrics[], decent: PlanetMetrics[], s
     [51, 60, 0.6],
   ] as const) {
     if (end > last) continue;
-    const normal = Array.from({ length: end - first + 1 }, (_, i) => makeLevel(first + i)).filter((level) => level.difficulty === 'normal');
+    const normal = Array.from({ length: end - first + 1 }, (_, i) => levelAt(first + i)).filter((level) => level.difficulty === 'normal');
     const share = normal.filter((level) => level.goals.length > 0).length / normal.length;
     if (Math.abs(share - target) > 0.15 + 1e-9)
       add(
@@ -137,25 +146,11 @@ export function lintCampaign(casual: PlanetMetrics[], decent: PlanetMetrics[], s
         'Choose a goal-bearing salt with a buildable recipe.',
       );
   }
-  const lessons: [number, boolean, string][] = [
-    [6, makeLevel(6).goals.length === 1 && makeLevel(6).goals[0].type === 'biome', 'one biome goal'],
-    [8, makeLevel(8).queue[0] === 'magma' && makeLevel(8).queue[1] === 'ice', 'early Steam pair'],
-    [13, makeLevel(13).queue[0] === 'seed' && makeLevel(13).queue[1] === 'storm', 'Rain Garden pair'],
-    [22, makeLevel(22).queue[0] === 'seed' && makeLevel(22).queue[1] === 'sun', 'Wildflowers pair'],
-    [25, makeLevel(25).queue[0] === 'rock' && makeLevel(25).queue[1] === 'ice', 'Glacier pair'],
-    ...([14, 16, 18] as const).map((n): [number, boolean, string] => [n, makeLevel(n).troubles.some((t) => t.id === 'vent'), 'Ember Vent']),
-    [28, makeLevel(28).troubles.some((t) => t.id === 'vine'), 'Tanglevine'],
-    ...([33, 41, 46, 51, 57] as const).map((n, i): [number, boolean, string] => [
-      n,
-      makeLevel(n).sky.obstacle === (['rocks', 'bubble', 'mist', 'ring', 'tug'] as const)[i],
-      'teaching obstacle',
-    ]),
-    [36, makeLevel(36).troubles.some((t) => t.id === 'frost'), 'Frost Creep'],
-  ];
+  const lessons = teachRows(play).map((row) => [row.n, row.check(levelAt(row.n)), row.idea] as const);
   for (const [n, taught, idea] of lessons)
     if (n <= last && !taught) add('TEACH', n, `Missing ${idea}`, 'Restore the teaching layout and deal.');
   for (let n = 1; n <= last; n++) {
-    const level = makeLevel(n);
+    const level = levelAt(n);
     const pressure = pressureOf(level),
       budget = budgetFor(level);
     if (pressure > budget || skyWall(level))
@@ -244,8 +239,8 @@ export function lintCampaign(casual: PlanetMetrics[], decent: PlanetMetrics[], s
         add('CLIFF', n, `5-planet casual fail rises ${pct(rise)}`, 'Re-salt the outlier or make the previous Hard planet a breather.');
     }
     if (n % 10 === 0 && n >= 20) {
-      const current = casual.filter((row) => row.n >= n - 9 && row.n <= n && makeLevel(row.n).difficulty === 'normal');
-      const previous = casual.filter((row) => row.n >= n - 19 && row.n <= n - 10 && makeLevel(row.n).difficulty === 'normal');
+      const current = casual.filter((row) => row.n >= n - 9 && row.n <= n && levelAt(row.n).difficulty === 'normal');
+      const previous = casual.filter((row) => row.n >= n - 19 && row.n <= n - 10 && levelAt(row.n).difficulty === 'normal');
       const rise = mean(current) - mean(previous);
       if (rise > 0.08) add('CLIFF', n, `chapter normal casual fail rises ${pct(rise)}`, 'Review goals and salts at the chapter boundary.');
     }

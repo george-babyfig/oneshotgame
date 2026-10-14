@@ -3,6 +3,7 @@ import { makeLevel, rulesForLevel } from '../src/core/levels';
 import { REACTIONS, ROUND_RULES_V0, novaReady, previewStep, roundState, stepRound, type ReactionId } from '../src/core/round';
 import { SECTORS, newPlanet, settle, traitOf, type Kind, type Planet } from '../src/core/world';
 import { dailyLevel, rushLevel, challengeLevel, zenLevel } from '../src/meta/modes';
+import { RULESETS } from '../src/core/rulesets';
 import { voyageLevel } from '../src/meta/voyage';
 
 const fired = (planet: Planet, kind: Kind, sector: number, n: number) =>
@@ -11,9 +12,10 @@ const fired = (planet: Planet, kind: Kind, sector: number, n: number) =>
 describe('reactions', () => {
   it('teaches the same five pairs in every mode', () => {
     for (const [id, reaction] of Object.entries(REACTIONS) as [ReactionId, (typeof REACTIONS)[ReactionId]][]) {
-      expect(rulesForLevel(reaction.debut - 1).reactions).not.toContain(id);
+      if (!RULESETS[1].reactions.includes(id)) continue;
+      expect(rulesForLevel(reaction.debut - 1, 'campaign', reaction.debut - 1, 1).reactions).not.toContain(id);
       for (const mode of ['campaign', 'voyage', 'zen', 'daily', 'rush', 'challenge', 'remix'] as const)
-        expect(rulesForLevel(reaction.debut, mode).reactions).toContain(id);
+        expect(rulesForLevel(reaction.debut, mode, reaction.debut, 1).reactions).toContain(id);
     }
   });
 

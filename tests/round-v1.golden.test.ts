@@ -70,6 +70,8 @@ it('pins launch rules and per-mode v1 lists, with planned v2 content isolated', 
   expect(RULES_LATEST).toBe(2);
   expect(ROUND_RULES_V0.version).toBe(1);
   expect(RULESETS[2].salt).toBe(RULESETS[1].salt);
+  expect(RULESETS[1].reactions).toEqual(['steam', 'rainGarden', 'wildflowers', 'glacier', 'scorch']);
+  expect(RULESETS[1].layoutTroubles).toEqual(['vent', 'vine', 'frost']);
   const modes: RoundMode[] = ['campaign', 'voyage', 'daily', 'challenge', 'zen', 'rush', 'remix'];
   for (const mode of modes)
     for (let n = 1; n <= 120; n++) {
@@ -77,12 +79,12 @@ it('pins launch rules and per-mode v1 lists, with planned v2 content isolated', 
       expect(rulesForLevel(n, mode, 70, 1)).toEqual({
         version: 1,
         reactions: Object.entries(REACTIONS)
-          .filter(([, r]) => cap >= r.debut)
+          .filter(([id, r]) => RULESETS[1].reactions.includes(id as keyof typeof REACTIONS) && cap >= r.debut)
           .map(([id]) => id),
         troubles: ['zen', 'rush', 'remix'].includes(mode)
           ? []
           : Object.entries(TROUBLES)
-              .filter(([, t]) => cap >= t.debut)
+              .filter(([id, t]) => RULESETS[1].layoutTroubles.includes(id as Exclude<keyof typeof TROUBLES, 'pebble'>) && cap >= t.debut)
               .map(([id]) => id),
         combo: cap >= 26,
       });

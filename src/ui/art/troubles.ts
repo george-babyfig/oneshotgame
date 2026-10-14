@@ -3,13 +3,14 @@ import {
   firebreakBy,
   troubleTarget,
   type GuardContext,
+  TROUBLE_BEHAVIOUR,
   type TroubleEvent,
   type TroubleForecast,
   type TroubleState,
 } from '../../core/troubles';
 
 export const troubleTargetShape = (id: TroubleState['id'], blocked: boolean): string =>
-  blocked ? '▣' : id === 'vent' ? '◆' : id === 'vine' ? '▲' : '●';
+  blocked ? '▣' : TROUBLE_BEHAVIOUR[id].forecastShape;
 
 export function protectedWallSectors(planet: Planet, id: TroubleState['id'], forecasts: TroubleForecast[], guard?: GuardContext): number[] {
   return Array.from({ length: SECTORS }, (_, sector) => sector).filter(
@@ -48,7 +49,7 @@ export function drawTroubles(
   };
   g.save();
   for (const trouble of troubles) {
-    if (trouble.id === 'vine') {
+    if (trouble.tangled?.length) {
       for (const sector of trouble.tangled ?? []) {
         const angle = rot + (sector + 0.5) * step;
         g.save();
@@ -71,12 +72,12 @@ export function drawTroubles(
         g.font = `${Math.max(12, Math.round(radius * 0.12))}px sans-serif`;
         g.textAlign = 'center';
         g.textBaseline = 'middle';
-        g.fillText('✿', vx, vy);
+        g.fillText(TROUBLE_BEHAVIOUR[trouble.id].sourceGlyph, vx, vy);
         g.restore();
       }
     }
     const [sx, sy] = point(trouble.source, 1.12);
-    const color = trouble.settled ? '#84dfac' : trouble.id === 'vent' ? '#ffad72' : trouble.id === 'vine' ? '#8bd773' : '#b8e7ff';
+    const color = trouble.settled ? '#84dfac' : TROUBLE_BEHAVIOUR[trouble.id].sourceColor;
     g.fillStyle = color;
     g.strokeStyle = '#203342';
     g.lineWidth = 2;
@@ -88,7 +89,7 @@ export function drawTroubles(
     g.font = `${Math.round(radius * 0.13)}px sans-serif`;
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    g.fillText(trouble.settled ? '✓' : trouble.id === 'vent' ? '♨' : trouble.id === 'vine' ? '✿' : '❄', sx, sy + 1);
+    g.fillText(trouble.settled ? '✓' : TROUBLE_BEHAVIOUR[trouble.id].sourceGlyph, sx, sy + 1);
     if (trouble.settled) continue;
     const target = previewTroubleTarget(targetPlanet, trouble, previewEvents);
     if (target !== null) {
