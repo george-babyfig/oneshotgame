@@ -46,7 +46,10 @@ export function wishesPanel(app: App): HTMLElement {
       ...cards.map((card) =>
         h(
           'article',
-          { class: `quest wish${card.claimed ? ' claimed' : card.progress >= card.goal ? ' done' : ''}` },
+          {
+            class: `quest wish wish-card${card.claimed ? ' claimed' : card.progress >= card.goal ? ' done' : ''}`,
+            'data-wish-id': card.id,
+          },
           portrait(card),
           h(
             'div',

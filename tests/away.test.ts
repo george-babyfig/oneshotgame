@@ -105,6 +105,7 @@ describe('M13 away trip data', () => {
     const p = defaultProfile(0);
     p.level = 30;
     p.tutorial = true;
+    p.home.plots[0] = { type: 'launch_bay', lv: 3, since: 0 };
     p.home.residents.push({ species: 'bunny', fp: 0, rewarded: 1 });
     p.home.expedition = {
       species: 'bunny',

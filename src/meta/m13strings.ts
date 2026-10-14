@@ -58,7 +58,6 @@ export const M13_STRINGS = Object.freeze({
   backupNewer: (vars: Vars = {}) => t('This backup is from a newer version. Update Comet Garden to restore it.', vars),
   backupFull: (vars: Vars = {}) => t('iCloud backup is full. Remove an old backup to keep backing up.', vars),
   removeBackup: (vars: Vars = {}) => t('Remove backup', vars),
-  restorePointer: (vars: Vars = {}) => t('Grown-ups can restore saved progress from iCloud.', vars),
   erasePrompt: (vars: Vars = {}) => t('Erase all progress? Your iCloud backup is kept.', vars),
   missingPurchases: (vars: Vars = {}) => t("This device has purchases that aren't in this backup, so it can't be restored here.", vars),
   friendshipPoints: (n: number) => tp(n, '+{n} friendship point', '+{n} friendship points'),

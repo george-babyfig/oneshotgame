@@ -91,7 +91,10 @@ export type BackupReason = 'save' | 'pause' | 'hidden';
 export type BackupRestoreResult = 'ok' | 'unavailable' | 'newer' | 'purchases' | 'invalid';
 /** Native code compresses JSON; callers never share a writable key with another device. */
 export interface CloudBackupPlugin {
-  status(): Promise<{ enabled: boolean; account: boolean }>;
+  status(options?: {
+    optIn?: boolean;
+    nonce?: string;
+  }): Promise<{ enabled: boolean; account: boolean; accountChanged?: boolean; deviceNonce?: string }>;
   list(): Promise<{ keys: BackupKeyMeta[] }>;
   read(options: { key: string }): Promise<{ json: string | null; meta?: BackupKeyMeta }>;
   write(options: { key: string; json: string; meta: BackupKeyMeta }): Promise<{ ok: boolean; reason?: 'disabled' | 'account' | 'quota' }>;

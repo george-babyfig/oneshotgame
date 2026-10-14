@@ -1,3 +1,4 @@
+import { tripVisible } from './reveals';
 import { HOMEWORLD_MAX_LEVEL } from './tuning';
 import { t } from '../i18n';
 import type { Profile } from './profile';
@@ -92,7 +93,7 @@ const TARGETS: Record<string, NextUp['action']> = {
 
 /** One gentle suggestion, with actions understood by the Play tab. */
 export function nextUp(p: Profile, _now: number): NextUp {
-  if (p.level >= 21 && p.home.tripReturn) return expeditionNextUp(p);
+  if (tripVisible(p, _now) && p.home.tripReturn) return expeditionNextUp(p);
   if (chestsReady(p).length)
     return { kind: 'claim', title: t('A chapter chest is ready'), subtitle: t('Open your chapter chest'), action: 'starmap' };
   const intro = UNLOCKS.find(
@@ -170,8 +171,8 @@ function expeditionNextUp(p: Profile): NextUp {
 
 /** One specific, actionable suggestion in the Homeworld overview. */
 export function homeworldNextUp(p: Profile, now = Date.now()): NextUp {
-  if (p.level >= 21 && p.home.tripReturn) return expeditionNextUp(p);
-  if (p.home.seen.celebrations.length)
+  if (tripVisible(p, now) && p.home.tripReturn) return expeditionNextUp(p);
+  if (p.home.seen.celebrations.some((id) => !id.startsWith('trip:') || tripVisible(p, now)))
     return {
       kind: 'claim',
       title: t('A Homeworld celebration is waiting'),

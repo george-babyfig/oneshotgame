@@ -82,3 +82,10 @@ it('A12 hides unavailable backup, gates reset and starts a new progress line bef
   expect(reset.indexOf("parentalGate('grownups')")).toBeLessThan(reset.indexOf('confirmBox('));
   expect(reset.indexOf('newBackupLine()')).toBeLessThan(reset.indexOf('resetProfileKeepingPurchases('));
 });
+
+it('M6/M18 uses the irreversible reset warning unless this progress line has a verified backup', () => {
+  const settings = readFileSync('src/ui/flows/settings.ts', 'utf8');
+  expect(settings).toContain('await hasCurrentBackup()');
+  expect(settings).toContain("t('Erase all progress? This cannot be undone.')");
+  expect(settings).toContain("t('Erase all progress? Your iCloud backup is kept.')");
+});

@@ -374,8 +374,19 @@ function testerConsent() {
 async function renderBackup(app: App, host: HTMLElement): Promise<void> {
   try {
     const status = await backupStatus();
+    const undo = (await canUndoRestore())
+      ? btn(t('Undo restore'), 'ghost wide', async () => {
+          if (await undoRestore()) {
+            toast(t('Progress restored.'));
+            await enterGrownups(app);
+          } else {
+            toast(t('This backup could not be restored. Please try again.'));
+            await renderBackup(app, host);
+          }
+        })
+      : null;
     if (!status.enabled || !status.account) {
-      host.replaceChildren();
+      host.replaceChildren(...(undo ? [h('section', { class: 'grownups-section' }, h('h2', null, t('Progress backup')), undo)] : []));
       return;
     }
     const section = h(
@@ -447,15 +458,7 @@ async function renderBackup(app: App, host: HTMLElement): Promise<void> {
         section.append(row);
       }
     }
-    if (await canUndoRestore())
-      section.append(
-        btn(t('Undo restore'), 'ghost wide', async () => {
-          if (await undoRestore()) {
-            toast(t('Progress restored.'));
-            await enterGrownups(app);
-          }
-        }),
-      );
+    if (undo) section.append(undo);
     host.replaceChildren(section);
   } catch {
     host.replaceChildren();

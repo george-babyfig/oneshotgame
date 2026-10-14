@@ -140,7 +140,7 @@ export function awayCollectables(p: Profile, awayMs: number, now = Date.now()) {
   const visitors = p.visitors.reduce((sum, gift) => sum + gift.dust, 0);
   const vaultFull = vault > 0 && vault >= Math.floor(vaultRate(p) * vaultHours(p));
   const trip = p.level >= 21 ? p.home.tripReturn : null;
-  const ready = !!trip || vaultFull || home.dust > 0 || home.gems > 0 || home.boosters > 0 || p.visitors.length > 0;
+  const ready = vaultFull || home.dust > 0 || home.gems > 0 || home.boosters > 0 || p.visitors.length > 0;
   return {
     vault,
     home,

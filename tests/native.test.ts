@@ -139,7 +139,12 @@ describe('A12 dormant iCloud backup bridge', () => {
     expect(swift).toContain('decompressed(using: .zlib)');
     expect(swift).toContain('didChangeExternallyNotification');
     for (const reason of ['server', 'initial', 'quota', 'account']) expect(swift).toContain(`"${reason}"`);
-    expect(swift).toContain('bound != nonce');
+    expect(swift).toContain('bound == nonce');
+    expect(swift).toContain('kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly');
+    expect(swift).toContain('NSKeyedArchiver.archivedData');
+    expect(swift).toContain('"accountChanged": !self.authorized()');
+    expect(swift).toContain('guard enabled, account, authorized()');
+    expect(swift).toContain('guard self.enabled, self.account, self.authorized()');
     expect(swift).toContain('backups.count < 6');
     expect(swift).toContain('900 * 1024');
     expect(swift).toContain('96 * 1024');

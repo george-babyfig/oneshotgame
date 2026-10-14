@@ -10,6 +10,8 @@ const fake = vi.hoisted(() => ({
   enabled: true,
   account: true,
   quota: false,
+  accountChanged: false,
+  deviceNonce: undefined as string | undefined,
   local: new Map<string, string>(),
   cloud: new Map<string, { json: string; meta: BackupKeyMeta }>(),
   gate: vi.fn(async () => true),
@@ -17,7 +19,10 @@ const fake = vi.hoisted(() => ({
   view: null as BackupKeyMeta[] | null,
 }));
 const plugin = vi.hoisted(() => ({
-  status: vi.fn(async () => ({ enabled: fake.enabled, account: fake.account })),
+  status: vi.fn(async (opts?: { optIn?: boolean; nonce?: string }) => {
+    if (opts?.optIn && (!fake.deviceNonce || opts.nonce === fake.deviceNonce)) fake.accountChanged = false;
+    return { enabled: fake.enabled, account: fake.account, accountChanged: fake.accountChanged, deviceNonce: fake.deviceNonce };
+  }),
   list: vi.fn(async () => ({ keys: fake.view ?? [...fake.cloud.values()].map((entry) => entry.meta) })),
   read: vi.fn(async ({ key }: { key: string }) => fake.cloud.get(key) ?? { json: null }),
   write: vi.fn(async ({ key, json, meta }: { key: string; json: string; meta: BackupKeyMeta }) => {
@@ -93,7 +98,8 @@ beforeEach(async () => {
   fake.view = null;
   fake.changed = null;
   fake.installed = fake.native = fake.enabled = fake.account = true;
-  fake.quota = false;
+  fake.quota = fake.accountChanged = false;
+  fake.deviceNonce = undefined;
   fake.gate.mockResolvedValue(true);
   vi.spyOn(Date, 'now').mockReturnValue(Date.UTC(2026, 9, 14));
   backup = await import('../src/meta/backup');
@@ -120,7 +126,7 @@ describe('A12 opt-in snapshots', () => {
     expect(await backup.restoreBackup('anything')).toBe('unavailable');
     expect(await backup.undoRestore()).toBe(false);
     expect(await backup.removeBackup('anything')).toBe(false);
-    expect(await backup.takeBackupPointer(p)).toBe(false);
+    expect(await backup.hasCurrentBackup()).toBe(false);
     expect(storeCalls()).toBe(0);
     expect(plugin.addListener).not.toHaveBeenCalled();
   });
@@ -154,14 +160,18 @@ describe('A12 opt-in snapshots', () => {
     expect(fake.cloud.size).toBe(6);
     expect((await backup.backupStatus()).full).toBe(true);
   });
-  it('shows a pointer once only when a copy exists and the fresh player has finished session 1', async () => {
+  it('only promises a kept backup when a verified copy of this line exists', async () => {
+    expect(await backup.hasCurrentBackup()).toBe(false);
+    expect(storeCalls()).toBe(0);
     await backup.setBackupOn(true);
-    p.meta.sessions = 1;
-    put(p);
-    expect(await backup.takeBackupPointer(p)).toBe(false);
-    p.meta.sessions = 2;
-    expect(await Promise.all([backup.takeBackupPointer(p), backup.takeBackupPointer(p)])).toEqual([true, false]);
-    expect(await backup.takeBackupPointer(p)).toBe(false);
+    put(p); // A sibling's different line is not a copy of this progress.
+    expect(await backup.hasCurrentBackup()).toBe(false);
+    expect(await backup.maybeBackup(p, 'pause')).toBe(true);
+    expect(await backup.hasCurrentBackup()).toBe(true);
+    await backup.newBackupLine();
+    expect(await backup.hasCurrentBackup()).toBe(false);
+    fake.enabled = false;
+    expect(await backup.hasCurrentBackup()).toBe(false);
   });
   it('requires an adult to opt in, then persists off and stops writes', async () => {
     fake.gate.mockResolvedValue(false);
@@ -441,3 +451,142 @@ describe('A12 explicit adult restore', () => {
 // The fake's API also stays aligned with S's native contract.
 const contract: CloudBackupPlugin = plugin;
 void contract;
+
+describe('M13 adversarial backup regressions', () => {
+  it('can restore a second copy after importing transaction IDs, including after Undo', async () => {
+    await backup.setBackupOn(true);
+    const remote = put({ ...profile.defaultProfile(0), processedTx: ['foreign'], gems: 100, level: 22 });
+    const right = put({ ...profile.defaultProfile(0), gems: 20, level: 8 }, 'e'.repeat(32));
+    expect(await backup.restoreBackup(remote)).toBe('ok');
+    expect(await backup.restoreBackup(right)).toBe('ok');
+    expect(p.gems).toBe(20);
+    expect(await backup.restoreBackup(remote)).toBe('ok');
+    expect(await backup.undoRestore()).toBe(true);
+    expect(await backup.restoreBackup(right)).toBe('ok');
+    expect(p.processedTx).toContain('foreign');
+    expect(p.gems).toBe(20);
+  });
+  it('merges exact durable grants even when spending history was pruned, including Piggy', async () => {
+    p.processedTx = ['approval', 'piggy'];
+    fake.local.set(
+      'pp.purchase.grants',
+      JSON.stringify([
+        { tx: 'approval', key: 'gems_m', gems: 500 },
+        { tx: 'piggy', key: 'piggy', gems: 91 },
+      ]),
+    );
+    await backup.setBackupOn(true);
+    expect(await backup.restoreBackup(put({ ...profile.defaultProfile(0), gems: 10 }))).toBe('ok');
+    expect(p.gems).toBe(601);
+  });
+  it('rotates the local line and clears Undo while the account is unavailable', async () => {
+    await backup.setBackupOn(true);
+    p.level = 30;
+    await backup.maybeBackup(p, 'pause');
+    const oldKey = [...fake.cloud.keys()][0];
+    fake.local.set('pp.profile.pre-restore', 'rescue');
+    fake.account = false;
+    const calls = storeCalls();
+    await backup.newBackupLine();
+    expect(storeCalls()).toBe(calls);
+    expect(fake.local.has('pp.profile.pre-restore')).toBe(false);
+    fake.account = true;
+    p.level = 1;
+    await backup.maybeBackup(p, 'pause');
+    expect(JSON.parse(fake.cloud.get(oldKey)!.json).level).toBe(30);
+    expect(fake.cloud.size).toBe(2);
+  });
+  it('detects an account switch while closed before opening the store and requires new opt-in', async () => {
+    await backup.setBackupOn(true);
+    fake.accountChanged = true;
+    vi.resetModules();
+    const launched = await import('../src/meta/backup');
+    expect(await launched.maybeBackup(p, 'pause')).toBe(false);
+    expect(storeCalls()).toBe(0);
+    expect((await launched.backupStatus()).on).toBe(false);
+    expect((await launched.setBackupOn(true)).on).toBe(true);
+    expect(fake.accountChanged).toBe(false);
+  });
+  it('cancels a write when an account event arrives during listing', async () => {
+    await backup.setBackupOn(true);
+    plugin.list.mockImplementationOnce(async () => {
+      fake.changed?.({ reason: 'account' });
+      return { keys: [] };
+    });
+    expect(await backup.maybeBackup(p, 'pause')).toBe(false);
+    expect(plugin.write).not.toHaveBeenCalled();
+  });
+  it('rotates a migrated device identity and opt-in before any store access', async () => {
+    await backup.setBackupOn(true);
+    const old = JSON.parse(fake.local.get('pp.backup.state')!);
+    fake.deviceNonce = 'f'.repeat(32);
+    fake.local.set('pp.profile.pre-restore', 'copied rescue');
+    vi.resetModules();
+    const launched = await import('../src/meta/backup');
+    expect(await launched.maybeBackup(p, 'pause')).toBe(false);
+    const next = JSON.parse(fake.local.get('pp.backup.state')!);
+    expect(next.nonce).toBe(fake.deviceNonce);
+    expect(next.saveId).not.toBe(old.saveId);
+    expect(next.on).toBe(false);
+    expect(fake.local.has('pp.profile.pre-restore')).toBe(false);
+    expect(storeCalls()).toBe(0);
+  });
+  it('keeps the parent PIN through restore and Undo and never uploads it', async () => {
+    p.settings.parentPin = '1'.repeat(64);
+    const pin = p.settings.parentPin;
+    await backup.setBackupOn(true);
+    await backup.maybeBackup(p, 'pause');
+    expect([...fake.cloud.values()][0].json).not.toContain(pin);
+    expect(p.settings.parentPin).toBe(pin);
+    const saved = profile.defaultProfile(0);
+    saved.settings.parentPin = '2'.repeat(64);
+    expect(await backup.restoreBackup(put(saved))).toBe('ok');
+    expect(p.settings.parentPin).toBe(pin);
+    await backup.setBackupOn(false);
+    fake.account = false;
+    const calls = storeCalls();
+    expect(await backup.canUndoRestore()).toBe(true);
+    expect(await backup.undoRestore()).toBe(true);
+    expect(p.settings.parentPin).toBe(pin);
+    expect(storeCalls()).toBe(calls);
+  });
+  it('hides Undo if post-restore purchases cannot be resolved', async () => {
+    await backup.setBackupOn(true);
+    await backup.restoreBackup(put(profile.defaultProfile(0)));
+    p.processedTx.push('unknown-new');
+    expect(await backup.canUndoRestore()).toBe(false);
+  });
+  it('clamps a v7 trip from a fast clock to its advertised duration', async () => {
+    const saved = profile.defaultProfile(0);
+    const ahead = Date.now() + 3 * 86400_000;
+    saved.home.expedition = {
+      n: 25,
+      planet: -1,
+      species: 'bunny',
+      hours: 8,
+      sentAt: ahead,
+      ends: ahead + 8 * 3600_000,
+      yield: { mats: { leaf: 9 }, gems: 3, fp: 3 },
+      match: true,
+    };
+    saved.home.lastTick = ahead;
+    await backup.setBackupOn(true);
+    expect(await backup.restoreBackup(put(saved))).toBe('ok');
+    expect(p.home.expedition!.sentAt).toBe(Date.now());
+    expect(p.home.expedition!.ends).toBe(Date.now() + 8 * 3600_000);
+  });
+});
+
+it('concurrent launch status checks rotate a cloned identity only once', async () => {
+  await backup.setBackupOn(true);
+  fake.deviceNonce = 'f'.repeat(32);
+  const writes = vi.mocked(saveKeyChecked).mock.calls.length;
+  await Promise.all(Array.from({ length: 8 }, () => backup.backupStatus()));
+  const rotations = vi
+    .mocked(saveKeyChecked)
+    .mock.calls.slice(writes)
+    .filter(([key]) => key === 'pp.backup.state');
+  expect(rotations).toHaveLength(1);
+  expect(JSON.parse(rotations[0][1]).on).toBe(false);
+  expect(storeCalls()).toBe(0);
+});

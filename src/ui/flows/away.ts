@@ -51,6 +51,7 @@ export function awayFlow(app: App, awayMs: number) {
       summary.visitorCount ? visitorRows(p.visitors) : null,
       summary.welcomeGems ? h('p', { class: 'away-gift' }, t('💎 {n} welcome gift', { n: summary.welcomeGems })) : null,
       btn(t('Collect all'), 'primary wide', collect),
+      btn(t('Back'), 'ghost wide', () => m.close()),
       longAway && warmup
         ? btn(t('Warm-up planet'), 'ghost wide', () => {
             collect();
@@ -58,6 +59,6 @@ export function awayFlow(app: App, awayMs: number) {
           })
         : null,
     ],
-    { dismiss: false, cls: 'away-card', onAbort: () => app.keepAwayPending(awayMs) },
+    { cls: 'away-card', onClose: () => app.clearAwayPending(), onAbort: () => app.keepAwayPending(awayMs) },
   );
 }

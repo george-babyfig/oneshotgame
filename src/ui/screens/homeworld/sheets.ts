@@ -1,5 +1,5 @@
 import type { Profile } from '../../../meta/profile';
-import { expeditionButton, launchBayBuildable, dyeTab, landsSection } from '../../../meta/reveals';
+import { tripVisible, launchBayBuildable, dyeTab, landsSection } from '../../../meta/reveals';
 import { structIcon } from './panel';
 import { HOMEWORLD_MAX_LEVEL } from '../../../meta/tuning';
 import { h, btn, fmt, modal, toast } from '../../dom';
@@ -654,10 +654,7 @@ export function residentsSheet(app: App, after: () => void) {
   ]);
 }
 
-/** Even a migrated Bay must not introduce the Trip noun before planet 21. */
-export function tripVisible(p: Profile, now = Date.now()): boolean {
-  return p.level >= 21 && expeditionButton(p, now);
-}
+export { tripVisible } from '../../../meta/reveals';
 
 export function tripBlockText(block: TripBlock | null): string {
   switch (block) {
@@ -784,6 +781,17 @@ export function tripSheet(app: App, opts: TripSheetOptions = {}) {
   if (status.trip) {
     const trip = status.trip;
     const friend = friendName(p, trip.species);
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const stop = () => clearInterval(timer);
+    const recheck = () => {
+      const paid = settleTrips(p);
+      if (p.home.expedition === trip) return false;
+      if (paid) app.save();
+      m.close();
+      after();
+      tripSheet(app, opts);
+      return true;
+    };
     const m = modal(
       [
         h('div', { class: 'm-title' }, copy.trips()),
@@ -792,6 +800,7 @@ export function tripSheet(app: App, opts: TripSheetOptions = {}) {
         h('p', null, t('Back at {time}', { time: whenText(trip.ends, Date.now(), getLang()) })),
         h('p', { class: 'muted' }, copy.winSpeedup()),
         btn(copy.callHome({ friend }), 'primary wide', () => {
+          if (recheck()) return;
           if (!callHome(p)) return;
           app.save();
           m.close();
@@ -800,8 +809,9 @@ export function tripSheet(app: App, opts: TripSheetOptions = {}) {
         }),
         btn(t('Back'), 'ghost wide', () => m.close()),
       ],
-      { cls: 'trip-sheet trip-flight' },
+      { cls: 'trip-sheet trip-flight', onClose: stop, onAbort: stop },
     );
+    timer = setInterval(recheck, 1000);
     return;
   }
   if (status.block) {
@@ -825,7 +835,7 @@ export function tripSheet(app: App, opts: TripSheetOptions = {}) {
   const drawRows = () => {
     list.replaceChildren(
       ...rows
-        .map((row) => ({ row, promise: previewTrip(p, row.n, hours) }))
+        .map((row) => ({ row, promise: rowPreview(row.n) }))
         .filter((item) => item.promise && (!filter || (item.promise.yield.mats[filter] ?? 0) > 0))
         .map(({ row, promise }) => {
           const label = copy.planetLabel({
@@ -887,9 +897,39 @@ export function tripSheet(app: App, opts: TripSheetOptions = {}) {
   drawRows();
   drawHours();
 
+  // Sole Trouble counters stay home by default; an explicit choice is always reachable.
+  function rowPreview(n: number) {
+    return previewTrip(p, n, hours) ?? p.home.residents.map((r) => previewTrip(p, n, hours, r.species)).find(Boolean) ?? null;
+  }
+  function chooseFriend(n: number, back: () => void, exclude?: string) {
+    const friends = modal(
+      [
+        h('div', { class: 'm-title' }, copy.someoneElse()),
+        ...p.home.residents
+          .filter((r) => r.species !== exclude && previewTrip(p, n, hours, r.species))
+          .map((r) =>
+            btn(h('span', { class: 'trip-friend-choice' }, critterCanvas(r.species, 44), friendName(p, r.species)), 'ghost wide', () => {
+              friends.close();
+              preview(n, r.species);
+            }),
+          ),
+        btn(t('Back'), 'ghost wide', () => {
+          friends.close();
+          back();
+        }),
+      ],
+      { cls: 'trip-sheet trip-friends' },
+    );
+  }
   function preview(n: number, species?: string) {
     const chosen = previewTrip(p, n, hours, species);
-    if (!chosen) return;
+    if (!chosen) {
+      if (rowPreview(n)) {
+        picker.close();
+        chooseFriend(n, () => tripSheet(app, opts));
+      }
+      return;
+    }
     picker.close();
     const friend = friendName(p, chosen.species);
     const m = modal(
@@ -906,7 +946,12 @@ export function tripSheet(app: App, opts: TripSheetOptions = {}) {
           'div',
           { class: 'trip-actions' },
           btn(t('Send'), 'primary wide', () => {
-            const result = startTrip(p, n, hours, chosen.species);
+            if (chosen.ends <= Date.now()) {
+              m.close();
+              preview(n, chosen.species);
+              return;
+            }
+            const result = startTrip(p, n, hours, chosen.species, Date.now(), chosen.ends);
             if (result !== 'ok') {
               toast(tripBlockText(result));
               return;
@@ -920,28 +965,8 @@ export function tripSheet(app: App, opts: TripSheetOptions = {}) {
             haptic.medium();
           }),
           btn(copy.someoneElse(), 'ghost wide', () => {
-            const alternatives = p.home.residents.filter((r) => r.species !== chosen.species && previewTrip(p, n, hours, r.species));
             m.close();
-            const friends = modal(
-              [
-                h('div', { class: 'm-title' }, copy.someoneElse()),
-                ...alternatives.map((r) =>
-                  btn(
-                    h('span', { class: 'trip-friend-choice' }, critterCanvas(r.species, 44), friendName(p, r.species)),
-                    'ghost wide',
-                    () => {
-                      friends.close();
-                      preview(n, r.species);
-                    },
-                  ),
-                ),
-                btn(t('Back'), 'ghost wide', () => {
-                  friends.close();
-                  preview(n, chosen.species);
-                }),
-              ],
-              { cls: 'trip-sheet trip-friends' },
-            );
+            chooseFriend(n, () => preview(n, chosen.species), chosen.species);
           }),
           btn(t('Cancel'), 'ghost wide', () => {
             m.close();

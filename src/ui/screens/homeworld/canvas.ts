@@ -86,9 +86,11 @@ export function tripMotionPose(kind: 'send' | 'return', progress: number, calm: 
 
 /** A thought is an invitation to Missions; it never claims a reward. */
 export function openFriendWish(app: App, species: string) {
-  const index = app.p.quests.list.findIndex((card) => 'species' in card && card.species === species && !card.claimed);
+  const wish = app.p.quests.list.find((card) => 'species' in card && card.species === species && !card.claimed);
   app.selectTab('missions');
-  const card = document.querySelectorAll<HTMLElement>('.wish-card')[index];
+  const card = Array.from(document.querySelectorAll<HTMLElement>('.wish-card')).find(
+    (node) => node.getAttribute('data-wish-id') === wish?.id,
+  );
   card?.scrollIntoView({ block: 'nearest' });
   card?.setAttribute('tabindex', '-1');
   card?.focus({ preventScroll: true });

@@ -1,4 +1,4 @@
-import { newBackupLine } from '../../meta/backup';
+import { hasCurrentBackup, newBackupLine } from '../../meta/backup';
 import { clearLedger, ledgerSummary } from '../../meta/ledger';
 // Settings, language, how-to-play, credits and reset.
 import { h, btn, modal, confirmBox, toast } from '../dom';
@@ -219,7 +219,10 @@ export function settingsFlow(app: App) {
     btn(t('Reset progress'), 'danger wide', async () => {
       m.close();
       if (!(await parentalGate('grownups'))) return;
-      if (!(await confirmBox(t('Erase all progress? Your iCloud backup is kept.'), t('Erase')))) return;
+      const warning = (await hasCurrentBackup())
+        ? t('Erase all progress? Your iCloud backup is kept.')
+        : t('Erase all progress? This cannot be undone.');
+      if (!(await confirmBox(warning, t('Erase')))) return;
       await newBackupLine();
       app.p = resetProfileKeepingPurchases(app.p);
       bindGateProfile(app.p);

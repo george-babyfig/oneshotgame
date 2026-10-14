@@ -1,5 +1,3 @@
-import { takeBackupPointer } from '../../meta/backup';
-import { enterGrownups } from './grownups';
 // Play: one clear next step beside the galaxy.
 import { vaultWinLine, otherModeVisible } from '../text';
 import { h, btn, fmt, modal, toast } from '../dom';
@@ -185,20 +183,4 @@ export function showHome(app: App) {
   });
   el.querySelector('.next-up-card')?.setAttribute('aria-label', `${t('Next Up')}: ${picked.title}. ${picked.subtitle}`);
   app.mount(el, 'home', view.stop);
-  void takeBackupPointer(p)
-    .then((show) => {
-      if (!show || app.p !== p || !el.isConnected) return;
-      const pointer = h(
-        'div',
-        { class: 'card' },
-        h('p', null, t('Grown-ups can restore saved progress from iCloud.')),
-        btn(t('Grown-ups'), 'ghost wide', () => {
-          pointer.remove();
-          void enterGrownups(app);
-        }),
-        btn(t('Close'), 'ghost wide', () => pointer.remove()),
-      );
-      el.querySelector('.home-body')?.append(pointer);
-    })
-    .catch(() => {});
 }

@@ -5903,12 +5903,12 @@ button.lb {
   margin: 8px 0;
 }
 .trip-picker {
-  height: min(600px, 88dvh);
+  height: auto;
   gap: 6px;
   padding: 12px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
 }
 .trip-picker .m-title,
 .trip-picker .trip-intro,
@@ -5942,8 +5942,9 @@ button.lb {
   box-shadow: inset 0 0 0 2px #ffe8a4;
 }
 .trip-planets {
-  flex: 1 1 auto;
-  min-height: 44px;
+  flex: none;
+  max-height: 42dvh;
+  min-height: 132px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -5955,8 +5956,7 @@ button.lb {
   align-items: flex-start;
 }
 .trip-back {
-  position: sticky;
-  bottom: 0;
+  position: static;
   margin-top: 6px;
 }
 .trip-preview-art {

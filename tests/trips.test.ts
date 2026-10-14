@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { makeLevel } from '../src/core/levels';
 import { BIOMES, KINDS, SPECIES, traitOf, type BiomeId, type Kind, type Planet } from '../src/core/world';
-import { defaultProfile } from '../src/meta/profile';
+import { readFileSync } from 'node:fs';
+import { defaultProfile, migrate } from '../src/meta/profile';
 import { encodeSectors } from '../src/meta/galaxyCodec';
 import { homeLandFor } from '../src/meta/friends';
 import { COUNTERS, buddyEligible, setBuddy } from '../src/meta/buddy';
@@ -238,7 +239,7 @@ describe('settlement, Call home and presentation', () => {
     expect(homeBadge(p, 8 * HOUR)).toBe(1);
     expect(nextUp(p, 8 * HOUR)).toMatchObject({ title: 'A friend is back from a trip', homeTarget: 'expedition' });
     expect(homeworldNextUp(p, 8 * HOUR).title).toBe('A friend is back from a trip');
-    expect(awayCollectables(p, HOUR, 8 * HOUR)).toMatchObject({ trip: p.home.tripReturn, show: true });
+    expect(awayCollectables(p, HOUR, 8 * HOUR)).toMatchObject({ trip: p.home.tripReturn, show: false });
     expect(awayRecapLines(p, HOUR, 8 * HOUR)[1]).toBe('A friend is back from a trip');
     p.home.seen.celebrations = [];
     expect(homeBadge(p, 8 * HOUR)).toBe(0);
@@ -401,5 +402,72 @@ describe('decision 65 amendment (a): list order when Next Up names no colour', (
     expect(after.slice(0, 3).every((row) => !row.mats.frost && !row.mats.ember)).toBe(true);
     expect(after.at(-1)!.n).toBe(30);
     for (const n of before) expect(previewTrip(p, n, 8, 'bunny', 0)).toEqual(previews[n]);
+  });
+});
+
+describe('M13 adversarial trip regressions', () => {
+  it.each([15, 20])('pays the j-release golden silently at planet %i, including reload', (level) => {
+    const raw = JSON.parse(readFileSync('tests/fixtures/saves/j-release-1.0.v6.json', 'utf8'));
+    const now = raw.home.lastTick + 1000;
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(now);
+    try {
+      raw.level = level;
+      const p = migrate(raw);
+      const loot = p.home.expedition!.legacyLoot!;
+      const ends = p.home.expedition!.ends;
+      const before = { dust: p.dust, gems: p.gems, spark: p.boosters.spark };
+      tickHome(p, ends + 1);
+      expect(p.dust).toBe(before.dust + loot.dust);
+      expect(p.gems).toBe(before.gems + loot.gems);
+      expect(p.boosters.spark).toBe(before.spark + (loot.boosters.spark ?? 0));
+      expect(p.home.tripReturn).toBeNull();
+      expect(p.home.seen.celebrations).not.toContain('trip:6');
+      expect(homeBadge(p, ends + 1)).toBe(0);
+      expect(homeworldNextUp(p, ends + 1).homeTarget).not.toBe('celebration');
+      const reloaded = migrate(JSON.parse(JSON.stringify(p)));
+      tickHome(reloaded, ends + 86400000);
+      expect(homeBadge(reloaded, ends + 86400000)).toBe(0);
+      expect(reloaded.home.tripReturn).toBeNull();
+      // Defensive presentation also ignores a stale queue saved by the reviewed build.
+      reloaded.home.seen.celebrations = ['trip:6'];
+      expect(homeBadge(reloaded, ends + 86400000)).toBe(0);
+      expect(homeworldNextUp(reloaded, ends + 86400000).homeTarget).not.toBe('celebration');
+    } finally {
+      clock.mockRestore();
+    }
+  });
+  it('Call home at or after ends pays the stored promise once', () => {
+    const p = fixture();
+    p.home.tripFuel = true;
+    const promised = previewTrip(p, 25, 8, 'penguin', 0)!;
+    const gems = p.gems;
+    expect(startTrip(p, 25, 8, 'penguin', 0)).toBe('ok');
+    expect(callHome(p, 8 * HOUR + 60000)).toBe(true);
+    expect(p.gems).toBe(gems + promised.yield.gems + 10); // Friendship level 2 still pays its gift.
+    expect(p.mats.frost).toBe(promised.yield.mats.frost);
+    expect(p.home.residents[0].fp).toBe(promised.yield.fp);
+    expect(p.home.tripReturn!.yield).toEqual(promised.yield);
+    expect(settleTrips(p, 9 * HOUR)).toBeNull();
+  });
+  it('stores the displayed return clock while using the Send time for clock guards', () => {
+    const p = fixture();
+    p.home.tripFuel = true;
+    const chosen = previewTrip(p, 25, 8, 'penguin', 0)!;
+    p.home.lastTick = 60000;
+    expect(startTrip(p, 25, 8, 'penguin', 7 * 60000, chosen.ends)).toBe('ok');
+    expect(p.home.expedition!.ends).toBe(chosen.ends);
+    expect(p.home.expedition!.sentAt).toBe(7 * 60000);
+  });
+  it('an unseen postcard alone never forces the away card on subsequent returns', () => {
+    const p = fixture();
+    p.tutorial = true;
+    p.home.tripFuel = true;
+    startTrip(p, 25, 1, 'penguin', 0);
+    settleTrips(p, HOUR);
+    for (const now of [HOUR, 2 * HOUR, 3 * HOUR]) {
+      expect(awayCollectables(p, 45 * 60000, now)).toMatchObject({ show: false, trip: p.home.tripReturn });
+    }
+    p.visitors.push({ species: 'bunny', dust: 5 } as (typeof p.visitors)[number]);
+    expect(awayCollectables(p, 45 * 60000, 3 * HOUR).show).toBe(true);
   });
 });

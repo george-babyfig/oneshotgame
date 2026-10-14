@@ -102,3 +102,56 @@ describe('native journal replay', () => {
     });
   }
 });
+
+it('Ask to Buy reconciliation records the exact local grant before acknowledging it', async () => {
+  const product = PRODUCTS.find((item) => item.key === 'gems_m')!;
+  const tx = { productId: product.id, txId: 'ask-to-buy', purchasedAt: Date.now() };
+  const { app, reconcile, acked } = harness([tx]);
+  await reconcile();
+  expect(acked).toContain(tx.txId);
+  expect(JSON.parse(files.get('pp.purchase.grants')!)).toContainEqual({ tx: tx.txId, key: product.key, gems: 500 });
+  expect(app.p.processedTx).toContain(tx.txId);
+});
+
+it('records zero gems for an already-owned delivery and the exact Piggy quote', async () => {
+  const starter = PRODUCTS.find((item) => item.key === 'starter')!;
+  const piggy = PRODUCTS.find((item) => item.key === 'piggy')!;
+  const { app } = harness([]);
+  app.p.starter = true;
+  await app.grant(starter.id, 'owned-redelivery', Date.now(), false);
+  app.p.pendingPiggy = { amount: 91, startedAt: Date.now() };
+  await app.grant(piggy.id, 'approved-piggy', Date.now(), false);
+  expect(JSON.parse(files.get('pp.purchase.grants')!)).toEqual([
+    { tx: 'owned-redelivery', key: 'starter', gems: 0 },
+    { tx: 'approved-piggy', key: 'piggy', gems: 91 },
+  ]);
+});
+
+it('never grants or acknowledges a purchase if its exact local record cannot be saved', async () => {
+  const product = PRODUCTS.find((item) => item.key === 'gems_m')!;
+  const { app, acked } = harness([]);
+  const before = app.p.gems;
+  const set = vi.spyOn(storage, 'setItem').mockImplementationOnce(() => {
+    throw new Error('Disk full');
+  });
+  try {
+    await expect(app.grant(product.id, 'unrecorded', Date.now(), false)).rejects.toThrow('Disk full');
+    expect(app.p.gems).toBe(before);
+    expect(app.p.processedTx).not.toContain('unrecorded');
+    expect(acked).toEqual([]);
+  } finally {
+    set.mockRestore();
+  }
+});
+
+it('reuses the exact Piggy grant after a crash between recording and applying it', async () => {
+  const piggy = PRODUCTS.find((item) => item.key === 'piggy')!;
+  files.set('pp.purchase.grants', JSON.stringify([{ tx: 'interrupted-piggy', key: 'piggy', gems: 91 }]));
+  const { app } = harness([]);
+  app.p.piggy = 120;
+  const gems = app.p.gems;
+  await app.grant(piggy.id, 'interrupted-piggy', Date.now(), false);
+  expect(app.p.gems - gems).toBe(91);
+  expect(app.p.piggy).toBe(29);
+  expect(JSON.parse(files.get('pp.purchase.grants')!)[0].gems).toBe(91);
+});

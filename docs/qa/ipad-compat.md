@@ -32,3 +32,11 @@ Automated coverage:
 **Package B checks:** the eight iPad unit cases pass, the fifteen existing level/rules/flight snapshot cases pass without fixture changes, and `sim:quick` passes all five checks (107.17 s). Typecheck and the separately compiled iPad spec/config pass. The Trip glossary translation gate remains red until the lead finishes consistent Trip wording in the five locale dictionaries, including the pre-M13 welcome letter’s generic “trip”.
 
 **Verification status:** the browser spec is authored but not run in the package sandbox (the lead runs Playwright). This is not simulator qualification. Before submission, re-check the M13 build on iPad mini, iPad Air 11-inch and iPad Pro 13-inch in iPhone compatibility mode, record build/OS identifiers and screenshots, and exercise rotation/window resizing, Trip postcard sharing through Gate v2, VoiceOver and Reduce Motion. The earlier launch-candidate evidence above remains the only native iPad check recorded here.
+
+## 14 October 2026: after M13, three iPad simulators
+
+- **Build:** the M13 tree (trips, friend Wishes, dormant iCloud backup, dormant wide layout). `npm run build`, `cap sync`, a Debug build, installed with `simctl` on iPad (A16), iPad mini (A17 Pro) and iPad Pro 13-inch (M5), all on iPadOS 26.
+- **Fresh install:** planet 1 opens in the iPhone-shaped window on every iPad. The round keeps phone geometry: the 430×932 logical frame applies only to windows 700×700 or larger, and the compatibility window is smaller than that. Screenshot: [ipad/m13-ipad-pro13-planet1.jpg](ipad/m13-ipad-pro13-planet1.jpg).
+- **A seeded planet-45 save from 1.0 (v6):** it migrates to v7 on launch and shows the long-absence "While you were away" card with visitor gifts. Collect all and Back are fully visible. Screenshots: [ipad/m13-ipad-mini-away.jpg](ipad/m13-ipad-mini-away.jpg), [ipad/m13-ipad-pro13-away.jpg](ipad/m13-ipad-pro13-away.jpg).
+- **The dormant wide layout itself** (820×1180 and 1024×1366, Chromium and WebKit): checked by `e2e/ipad.spec.ts` in the browser matrix, which passes.
+- **Still to tap through on iPad:** the gate, purchase, share and Game Center sheets, as listed above.

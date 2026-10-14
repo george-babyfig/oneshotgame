@@ -2066,7 +2066,6 @@
   "Call {friend} home": "Fais rentrer {friend}",
   "Each win brings your friend home 10 minutes sooner": "Chaque victoire fait rentrer ton ami 10 minutes plus tôt",
   "Erase all progress? Your iCloud backup is kept.": "Effacer toute la progression ? Ta sauvegarde iCloud est conservée.",
-  "Grown-ups can restore saved progress from iCloud.": "Les adultes peuvent restaurer la progression sauvegardée sur iCloud.",
   "Invite another friend to go on trips": "Invite un autre ami qui pourra partir en balade",
   "Last backup: {date}": "Dernière sauvegarde : {date}",
   "Longer trips open at Launch Bay level {n}": "Les balades plus longues se débloquent au niveau {n} de la Base de lancement",
@@ -2120,5 +2119,6 @@
   "Your job is simple: fling, grow, and bring planets to life. We packed a little something for your adventure.": "Ta mission est simple : lancer, faire pousser et donner vie aux planètes. On t'a préparé un petit quelque chose pour ton aventure.",
   "Send": "Envoyer",
   "Check your device clock to send a trip": "Vérifie l'heure de ton appareil pour qu'un ami puisse partir en balade",
-  "This backup could not be restored. Please try again.": "Impossible de restaurer cette sauvegarde. Réessaie."
+  "This backup could not be restored. Please try again.": "Impossible de restaurer cette sauvegarde. Réessaie.",
+  "Erase all progress? This cannot be undone.": "Effacer toute la progression ? C'est irréversible."
 }

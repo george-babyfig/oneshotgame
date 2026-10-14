@@ -26,7 +26,7 @@ import { drawShieldPuff, drawTraitBadge } from './art/traits';
 import { SLING_SELECTION } from '../meta/launcherPick';
 import { launcherHelpReason, type LauncherHelpCredit } from '../meta/helped';
 
-import type { LevelScene, Shot } from './game';
+import { isWide, type LevelScene, type Shot } from './game';
 import type { TroubleEvent } from '../core/troubles';
 import { drawTroubles } from './art/troubles';
 import { forecastTroubles } from '../core/troubles';
@@ -1126,7 +1126,7 @@ export function moons(scene: LevelScene): { x: number; y: number; r: number }[] 
 
 /** Phones keep their exact geometry; larger windows never enter the physics model. */
 export function logicalViewport(width: number, height: number): { w: number; h: number } {
-  return { w: Math.min(width, 430), h: Math.min(height, 932) };
+  return isWide(width, height) ? { w: 430, h: 932 } : { w: width, h: height };
 }
 
 export function resize(scene: LevelScene) {

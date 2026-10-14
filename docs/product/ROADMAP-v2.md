@@ -1588,6 +1588,22 @@ Each route on its own is completable by the Regular persona (a sim assertion). T
 
 **M13: Friends and trips (update 1.1, M).** Wishes come first from friends living in your Den, asking for their home-land feats. Friendship also grows from trips. Trips: pick one of your own planets; the game picks the best friend and shows the yield (that planet's Essences and a few gems) before you send; 1/4/8 hours by Launch Bay level (trips launch from the Bay; HOMEWORLD.md §3.5); one at a time; about 8-10 frost from an 8-hour trip with a match; the postcard shows the real planet and shares through the gate. Also: progress backup with iCloud key-value storage (owner decision 7) and an iPad layout pass. Files: `src/meta/homeworld.ts`, `src/meta/wishes.ts`, `src/ui/screens/homeworld.ts`, `src/meta/profile.ts`, new `src/meta/backup.ts`, `src/styles.css`. M13 acceptance now follows decisions 61-79: 25-33% trip frost in the seven days from Regular’s measured Bay-3 day, round frost unchanged at 17.8-21.8 per ten planets (RUNS ≥ 8), and the full inherited economy gates. The exact frozen copy is 62 English keys. Package S implements the save and API contracts; A-D and release acceptance remain pending, and A0 has two measured blockers below.
 
+**M13 ✅ built 14 October 2026 (update 1.1, not yet submitted; 1.0 ships first).**
+
+- **Trips:** pick a planet and the game picks the friend. The yield is shown and fixed at send: that planet's Essences, 1-3 gems and +1-3 friendship. A win must come first, each campaign win brings the friend 10 minutes sooner, Call home pays nothing, and a trip that has already returned is paid. The list leads with the colour the child needs next.
+- **Return and postcard:** the friend comes back with a postcard of the real planet (save v7 stores each planet's lands), shared only through the gate.
+- **When trips appear:** no trip UI before planet 21.
+- **Friends-first Wishes:** two of the three daily Wishes come from friends who live with you and ask for their home lands. These pay friendship, stardust and a Road point instead of gems (decision 70 amendment). Thought bubbles show which friend is asking.
+- **iCloud progress backup:** built but dormant. It needs the owner's entitlement and a grown-up's opt-in. It keeps one key per device, restores behind the gate, never uploads the parent PIN, and keeps purchases.
+- **iPad:** a dormant wide layout, with rounds kept in a 430×932 logical frame only on tablet-sized windows.
+- **Measured:**
+  - trips pay 0 boosters (free boosters 0.20 a win, was 0.66);
+  - A3 passes through the campaign, with one total after it (decision 65 amendment);
+  - free gems 100.8 / 98.1 a day;
+  - Road 0 sink coverage 0.776 / 0.830, with the 300-gem single for the owner to decide;
+  - frost per 10 planets 19.8.
+- Verification logs: `docs/handoff/m13-step0.md`, `docs/handoff/m13-fx.md`.
+
 **M14: Road 1 and the live-ops calendar (M).** Road 1's content (Cosmic Pass lane of 12 looks, free lane, one Theme or Pack, 1-2 Style Singles, at least 3,000 gems of singles, new stardust looks). A data table of weeks with a fall-back to today's rotation; the 98-day runway test; App Store In-App Events; the release train. From Road 1, one free, play-gated Landmark per Road, themed on its Voyage weeks, which stays open after the Road ends (HOMEWORLD.md §6.3). Festival edition 2 if there is an art budget. Files: `src/meta/starroad.ts`, new `src/meta/almanac.ts`, `src/meta/cosmetics.ts`, `src/meta/festivals.ts`, `tests/runway.test.ts`. About 40 strings per Road.
 
 **M15: Content drop: more reactions and Troubles (L).** Space Pebble and the Comet Guardian's pebbles from the planet-50 boss (after the Scene Bot confirms the flight model). Firemount, Rainbow and Flood. Wonder: a mark above 3 stars set at 95% of an offline planner's score (precomputed `par.json`), shown only after a planet is 3-starred, earned only, never with help or assists. Star Motes: at most 1 per planet (+1 throw or a wider shot, no picker). Space Pebble needs its own ladder row, slotted around planets 51 and 53. Launcher and obstacle candidates (a moon-slingshot launcher, a comet-tail obstacle) only if the bands allow; any new obstacle or Combo rule is a versioned rules change (`RULES_VERSION` 2) that never drops stored stars. All bands must stay green. About 60 strings.

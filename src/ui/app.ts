@@ -1,3 +1,4 @@
+import { recordPurchaseGrant } from '../meta/purchaseGrants';
 import { backupStatus, bindBackupProfile, maybeBackup } from '../meta/backup';
 import { waysToEarnGems } from './flows/earn';
 import { ledger, flushLedger, loadLedger, recordPurchase } from '../meta/ledger';
@@ -1395,7 +1396,18 @@ export class App {
     const alreadyProcessed = this.p.processedTx.includes(txId);
     const product = PRODUCT_BY_ID[productId];
     const alreadyOwned = product ? ownsProduct(this.p, product.id) : false;
-    const g = grantProduct(this.p, productId, txId);
+    let piggyQuote: number | undefined;
+    if (product && !alreadyProcessed) {
+      const gems =
+        !product.consumable && alreadyOwned
+          ? 0
+          : product.key === 'piggy'
+            ? Math.max(0, this.p.pendingPiggy?.amount ?? this.p.piggy)
+            : product.gems;
+      const recorded = await recordPurchaseGrant({ tx: txId, key: product.key, gems });
+      if (product.key === 'piggy') piggyQuote = recorded.gems;
+    }
+    const g = grantProduct(this.p, productId, txId, piggyQuote);
     if (product?.key === 'pass' && g) grantRoadPass(this.p);
     if (!g && alreadyProcessed) {
       await saveProfileChecked(this.p);

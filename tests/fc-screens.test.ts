@@ -189,6 +189,7 @@ describe('FC reward feedback and navigation', () => {
   it('updates the existing Homeworld tab badge in place when a trip return is acknowledged', () => {
     const app = appFor();
     app.p.level = 21;
+    app.p.home.plots[0] = { type: 'launch_bay', lv: 3, since: 0 };
     app.p.home.expedition = { species: 'bunny', hours: 4, ends: 1, planet: -1 };
     tickHome(app.p, 1);
     const panel = recordedDom.h('div');

@@ -1,6 +1,7 @@
 import Capacitor
 import Foundation
 import CryptoKit
+import Security
 
 /// Opt-in snapshots in the player's Apple account. No app server or live progress sync.
 @objc(CloudBackupPlugin)
@@ -18,6 +19,8 @@ public class CloudBackupPlugin: CAPPlugin, CAPBridgedPlugin {
     private let keyLimit = 96 * 1024
     private let totalLimit = 900 * 1024
     private let nonceKey = "pp.backup.nativeNonce"
+    private let accountKey = "pp.backup.approvedAccount"
+    private let approvedNonceKey = "pp.backup.approvedNonce"
     private var observer: NSObjectProtocol?
     private var quotaExceeded = false
     private var enabled: Bool { Bundle.main.object(forInfoDictionaryKey: "PPCloudBackup") as? Bool == true }
@@ -25,9 +28,44 @@ public class CloudBackupPlugin: CAPPlugin, CAPBridgedPlugin {
 
     deinit { if let observer = observer { NotificationCenter.default.removeObserver(observer) } }
 
+    /// Quick Start/Finder/iCloud restores cannot copy this key to a different device.
+    private func deviceNonce() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "com.pocketplanet.game.cloud-backup",
+            kSecAttrAccount as String: nonceKey,
+        ]
+        var read = query
+        read[kSecReturnData as String] = true
+        read[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(read as CFDictionary, &result)
+        if status == errSecSuccess, let data = result as? Data {
+            return String(data: data, encoding: .utf8)
+        }
+        guard status == errSecItemNotFound else { return nil }
+        let nonce = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
+        var item = query
+        item[kSecValueData as String] = Data(nonce.utf8)
+        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        guard SecItemAdd(item as CFDictionary, nil) == errSecSuccess else { return nil }
+        return nonce
+    }
+    /// Compare the archived Apple token at launch and again before each store access.
+    private func accountIdentity() -> String? {
+        guard enabled, let token = FileManager.default.ubiquityIdentityToken,
+              let data = try? NSKeyedArchiver.archivedData(withRootObject: token, requiringSecureCoding: false) else { return nil }
+        return hash(data)
+    }
+    private func authorized() -> Bool {
+        guard let identity = accountIdentity(), let nonce = deviceNonce() else { return false }
+        return UserDefaults.standard.string(forKey: accountKey) == identity &&
+            UserDefaults.standard.string(forKey: approvedNonceKey) == nonce
+    }
+
     /// Even obtaining the store is forbidden until an opted-in JS operation arrives.
     private func store() -> NSUbiquitousKeyValueStore? {
-        guard enabled, account else { return nil }
+        guard enabled, account, authorized() else { return nil }
         let store = NSUbiquitousKeyValueStore.default
         if observer == nil {
             observer = NotificationCenter.default.addObserver(
@@ -42,7 +80,9 @@ public class CloudBackupPlugin: CAPPlugin, CAPBridgedPlugin {
                 case NSUbiquitousKeyValueStoreQuotaViolationChange:
                     reason = "quota"
                     self.quotaExceeded = true
-                case NSUbiquitousKeyValueStoreAccountChange: reason = "account"
+                case NSUbiquitousKeyValueStoreAccountChange:
+                    reason = "account"
+                    UserDefaults.standard.removeObject(forKey: self.accountKey)
                 default: reason = "server"
                 }
                 self.notifyListeners("changed", data: ["reason": reason])
@@ -72,7 +112,18 @@ public class CloudBackupPlugin: CAPPlugin, CAPBridgedPlugin {
         return (try? PropertyListSerialization.data(fromPropertyList: value, format: .binary, options: 0).count) ?? totalLimit
     }
     @objc func status(_ call: CAPPluginCall) {
-        call.resolve(["enabled": enabled, "account": account])
+        DispatchQueue.main.async {
+            guard self.enabled else { call.resolve(["enabled": false, "account": false]); return }
+            let nonce = self.deviceNonce()
+            if call.getBool("optIn") == true, let nonce = nonce, call.getString("nonce") == nonce,
+               let identity = self.accountIdentity() {
+                UserDefaults.standard.set(identity, forKey: self.accountKey)
+                UserDefaults.standard.set(nonce, forKey: self.approvedNonceKey)
+            }
+            var status: [String: Any] = ["enabled": true, "account": self.account, "accountChanged": !self.authorized()]
+            if let nonce = nonce { status["deviceNonce"] = nonce }
+            call.resolve(status)
+        }
     }
     @objc func list(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
@@ -103,7 +154,7 @@ public class CloudBackupPlugin: CAPPlugin, CAPBridgedPlugin {
     }
     @objc func write(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
-            guard self.enabled, self.account else {
+            guard self.enabled, self.account, self.authorized() else {
                 call.resolve(["ok": false, "reason": self.enabled ? "account" : "disabled"]); return
             }
             guard let key = call.getString("key"), let (saveId, nonce) = self.parts(key),
@@ -118,8 +169,8 @@ public class CloudBackupPlugin: CAPPlugin, CAPBridgedPlugin {
                   object["v"] as? Int == version, meta["sha256"] as? String == self.hash(raw) else {
                 call.reject("Invalid backup metadata"); return
             }
-            // Binding is local, immutable across progress lines, and never comes from iCloud.
-            if let bound = UserDefaults.standard.string(forKey: self.nonceKey), bound != nonce {
+            // The non-migrating Keychain binding is mandatory, including the first write.
+            guard let bound = self.deviceNonce(), bound == nonce else {
                 call.reject("Another device's key cannot be written"); return
             }
             guard let store = self.store() else { call.resolve(["ok": false, "reason": "account"]); return }
@@ -140,7 +191,6 @@ public class CloudBackupPlugin: CAPPlugin, CAPBridgedPlugin {
                    let oldSeq = oldMeta["seq"] as? Int, seq <= oldSeq {
                     call.reject("Stale device sequence"); return
                 }
-                UserDefaults.standard.set(nonce, forKey: self.nonceKey)
                 store.set(data, forKey: key)
                 store.synchronize() // Local acceptance; propagation to other devices is eventually consistent.
                 call.resolve(["ok": true])

@@ -13,6 +13,7 @@ import { makeLevel } from '../core/levels';
 import { essencesCovered, nextEssenceNeeded } from './nextup';
 import { earn } from './wallet';
 import { ledger } from './ledger';
+import { tripVisible } from './reveals';
 import { legacyExpeditionLoot } from './tripsLegacy';
 
 const HOUR = 3_600_000;
@@ -102,7 +103,14 @@ function blockFor(p: Profile, now: number): TripBlock | null {
   if (!p.home.tripFuel) return 'needs_win';
   return null;
 }
-export function startTrip(p: Profile, n: number, hours: TripHours, species?: string, now = Date.now()): 'ok' | TripBlock {
+export function startTrip(
+  p: Profile,
+  n: number,
+  hours: TripHours,
+  species?: string,
+  now = Date.now(),
+  promisedEnds?: number,
+): 'ok' | TripBlock {
   const block = blockFor(p, now);
   if (block) return block;
   if (!tripOptions(p.home, now).includes(hours)) return 'bay_level';
@@ -110,11 +118,12 @@ export function startTrip(p: Profile, n: number, hours: TripHours, species?: str
   if (!species && tripPlanets(p).some((row) => row.n === n) && !pickFriend(p, n, hours)) return 'no_friend';
   const preview = previewTrip(p, n, hours, species, now);
   if (!preview) return 'no_planets';
+  if (promisedEnds !== undefined && (!Number.isFinite(promisedEnds) || promisedEnds <= now || promisedEnds > preview.ends)) return 'clock';
   ledger.homeworldAction();
   p.home.expedition = {
     species: preview.species,
     hours,
-    ends: preview.ends,
+    ends: promisedEnds ?? preview.ends,
     planet: -1,
     n,
     sentAt: now,
@@ -127,6 +136,7 @@ export function startTrip(p: Profile, n: number, hours: TripHours, species?: str
 }
 export function callHome(p: Profile, now = Date.now()): boolean {
   if (!Number.isFinite(now) || now < (p.home.lastTick ?? 0) || !p.home.expedition) return false;
+  if (p.home.expedition.ends <= now) return !!settleTrips(p, now);
   p.home.expedition = null;
   p.home.tripFuel = true;
   p.home.lastTick = now;
@@ -158,10 +168,10 @@ export function settleTrips(p: Profile, now = Date.now()): TripReturn | null {
     match: !!trip.match,
     ...(trip.legacyLoot ? { legacyLoot: trip.legacyLoot } : { yield: trip.yield }),
   };
-  h.tripReturn = returned;
+  h.tripReturn = tripVisible(p, now) ? returned : null;
   h.lastTick = now;
   h.seen.celebrations = h.seen.celebrations.filter((id) => !id.startsWith('trip:'));
-  queueHomeCelebration(p, `trip:${returned.n}`);
+  if (tripVisible(p, now)) queueHomeCelebration(p, `trip:${returned.n}`);
   return returned;
 }
 export function speedUpTrip(h: HomeState, ms: number, now = Date.now()): boolean {

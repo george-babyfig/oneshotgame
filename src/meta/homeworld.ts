@@ -1,3 +1,4 @@
+import { tripVisible } from './reveals';
 import { tripOptions, tripPlanets, startTrip, settleTrips, speedUpTrip } from './trips';
 import { legacyExpeditionLoot } from './tripsLegacy';
 import type { Trip, TripReturn } from './m13types';
@@ -857,7 +858,7 @@ export function homeBadge(p: Profile, now = Date.now()) {
   let n = 0;
   if (h.plots.some((_, i) => ready(h, i, now) > 0)) n++;
   if (now >= (h.lastTick ?? 0) && h.plots.some((b) => b?.done && b.done <= now)) n++;
-  if (h.seen.celebrations.length) n++;
+  if (h.seen.celebrations.some((id) => !id.startsWith('trip:') || tripVisible(p, now))) n++;
   return n;
 }
 

@@ -127,6 +127,49 @@ for (const loc of localesToRun().filter((locale) => locale !== 'pseudo')) {
       expectNoErrors(guard);
     });
 
+    test('M13 picker fits 320×568 Extra-large text with reachable rows and Back', async ({ page }, info) => {
+      await page.setViewportSize({ width: 320, height: 568 });
+      await installJourneyClock(page);
+      const guard = watchErrors(page);
+      await freshInstall(page);
+      await tripReady(page, { reduceMotion: true });
+      await page.evaluate(() => {
+        const app = (window as any).__app;
+        app.p.settings.textSize = 'extra-large';
+        app.applySettings();
+      });
+      await page.getByRole('button', { name: tr(loc, 'Trip'), exact: true }).click();
+      const picker = page.locator(`${OPEN_MODAL}.trip-picker`).last();
+      await expect(picker).toBeVisible();
+      const list = picker.locator('.trip-planets');
+      const rows = list.locator('.trip-planet-row');
+      expect(await rows.count()).toBeGreaterThanOrEqual(120);
+      const layout = await list.evaluate((el) => {
+        const box = el.getBoundingClientRect();
+        return { height: box.height, clipped: el.scrollHeight > el.clientHeight, overflow: getComputedStyle(el).overflowY };
+      });
+      expect(layout.height).toBeGreaterThanOrEqual(132);
+      expect(layout.clipped).toBe(true);
+      expect(layout.overflow).toBe('auto');
+      const last = rows.last();
+      await last.scrollIntoViewIfNeeded();
+      await expect(last).toBeInViewport();
+      const back = picker.locator('.trip-back');
+      await back.scrollIntoViewIfNeeded();
+      await expect(back).toBeInViewport();
+      const bounds = await picker.evaluate((el) => {
+        const list = el.querySelector('.trip-planets')!.getBoundingClientRect();
+        const back = el.querySelector('.trip-back')!.getBoundingClientRect();
+        return { listBottom: list.bottom, backTop: back.top, width: el.clientWidth, contentWidth: el.scrollWidth };
+      });
+      expect(bounds.backTop).toBeGreaterThanOrEqual(bounds.listBottom);
+      expect(bounds.contentWidth).toBeLessThanOrEqual(bounds.width + 1);
+      await snap(page, info, guard, 'M13-trip-picker-extra-large');
+      await back.click();
+      await expect(picker).not.toBeVisible();
+      expectNoErrors(guard);
+    });
+
     for (const reduceMotion of [false, true]) {
       test(`M13 trip: send, win, return, postcard, gated share and Call home; Reduce Motion ${reduceMotion}`, async ({ page }, info) => {
         await useJourneyViewport(page);

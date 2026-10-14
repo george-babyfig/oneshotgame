@@ -4,6 +4,7 @@ import { migrate, PROFILE_VERSION, saveProfileChecked, storageReadOnly, type Pro
 import type { BackupKeyMeta, BackupReason, BackupRestoreResult, CloudBackupPlugin, CloudBackupStatus } from './m13types';
 import { loadKey, removeKey, saveKeyChecked } from './storage';
 import { purchaseHistory } from './ledger';
+import { purchaseGrants } from './purchaseGrants';
 import { PRODUCTS, PRODUCT_BY_KEY } from './tuning';
 import { restoreProduct } from './economy';
 import { COSMETICS, isPaidLook, owns } from './cosmetics';
@@ -21,6 +22,7 @@ interface State {
   lastAt: number | null;
   sha256: string;
   pointerSeen: boolean;
+  importedTx?: string[];
 }
 let state: State | null = null;
 let localPending: Promise<State> | null = null;
@@ -30,6 +32,7 @@ const changes = new Set<() => void>();
 let generation = 0;
 let listener: Awaited<ReturnType<CloudBackupPlugin['addListener']>> | null = null;
 let queue: Promise<unknown> = Promise.resolve();
+let identityQueue: Promise<unknown> = Promise.resolve();
 let context: { current(): Profile; applied(p: Profile): void; beforeRestore?(): Promise<void>; finished?(): void } | null = null;
 
 /** Refresh adult lists on eventual arrival or quota changes; never apply a cloud profile. */
@@ -104,7 +107,8 @@ async function attachListener(): Promise<void> {
   listener = await cloud.addListener('changed', (event) => {
     if (event.reason === 'quota') full = true;
     // An account change requires a fresh adult opt-in; don't copy a child's save to a new account.
-    if (event.reason === 'account')
+    if (event.reason === 'account') {
+      generation++;
       void serial(async () => {
         const s = await local();
         await persist({ ...s, on: false, sha256: '', lastAt: null });
@@ -112,14 +116,35 @@ async function attachListener(): Promise<void> {
         listener = null;
         changed();
       }).catch(() => {});
-    else changed();
+    } else changed();
   });
+}
+/** Status can be requested by several surfaces; rotate a migrated identity only once. */
+function reconcileIdentity(status: Awaited<ReturnType<typeof nativeStatus>>): Promise<State> {
+  const job = identityQueue.then(async () => {
+    let s = await local();
+    // Native identity is non-migrating. A cloned Preferences file cannot authorize this device.
+    if (status.deviceNonce && status.deviceNonce !== s.nonce) {
+      generation++;
+      await persist({ ...s, nonce: status.deviceNonce, saveId: id(), on: false, seq: 0, sha256: '', lastAt: null });
+      await removeKey(UNDO);
+      s = await local();
+    }
+    if (status.accountChanged && s.on) {
+      generation++;
+      await persist({ ...s, on: false, sha256: '', lastAt: null });
+      s = await local();
+    }
+    return s;
+  });
+  identityQueue = job.catch(() => {});
+  return job;
 }
 export async function backupStatus(): Promise<CloudBackupStatus> {
   const status = await nativeStatus();
   if (!status.enabled || !status.account) return { ...status, on: false, lastAt: null, full: false };
   try {
-    const s = await local();
+    const s = await reconcileIdentity(status);
     if (s.on) await watch();
     return { ...status, on: s.on, lastAt: s.lastAt, full };
   } catch {
@@ -131,13 +156,17 @@ async function adult(): Promise<boolean> {
   return parentalGate('grownups');
 }
 export async function setBackupOn(on: boolean): Promise<CloudBackupStatus> {
-  const status = await nativeStatus();
-  if (!status.enabled || !status.account) return backupStatus();
+  const status = await backupStatus();
+  if (!status.enabled || !status.account) return status;
   if (on && !(await adult())) return backupStatus();
   await serial(async () => {
     const check = await nativeStatus();
     if (!check.enabled || !check.account) return;
     const s = await local();
+    if (on) {
+      const authorized = await cloud.status({ optIn: true, nonce: s.nonce });
+      if (!authorized.enabled || !authorized.account || authorized.accountChanged) return;
+    }
     await persist({ ...s, on });
     if (!on) {
       await listener?.remove();
@@ -173,7 +202,8 @@ function validMeta(meta: BackupKeyMeta): boolean {
 }
 export async function maybeBackup(p: Profile, reason: BackupReason): Promise<boolean> {
   // Capture synchronously: a later save cannot change the snapshot during native work.
-  const json = JSON.stringify(p);
+  const snapshot = { ...p, settings: { ...p.settings, parentPin: null } };
+  const json = JSON.stringify(snapshot);
   const revision = generation;
   return serial(async () => {
     try {
@@ -200,6 +230,7 @@ export async function maybeBackup(p: Profile, reason: BackupReason): Promise<boo
       };
       const own = (await cloud.list()).keys.find((entry) => entry.key === key && validMeta(entry));
       meta.seq = Math.max(s.seq, own?.seq ?? 0) + 1;
+      if (revision !== generation || !(await backupStatus()).on) return false;
       const result = await cloud.write({ key, json, meta });
       full = result.reason === 'quota';
       if (!result.ok) return false;
@@ -236,13 +267,21 @@ export async function removeBackup(key: string): Promise<boolean> {
 }
 
 /** Decision 77: device purchase state survives. Unresolvable purchased gems refuse the whole restore. */
-function keepDevice(restored: Profile, device: Profile, gemIds = device.processedTx): boolean {
+async function keepDevice(restored: Profile, device: Profile, gemIds = device.processedTx): Promise<boolean> {
   let gems = 0;
   const records = [...purchaseHistory(), ...device.pendingPurchaseRecords];
+  const grants = await purchaseGrants();
+  const imported = (await local()).importedTx ?? [];
   for (const tx of gemIds.filter((tx) => !restored.processedTx.includes(tx))) {
+    const grant = grants.find((record) => record.tx === tx);
+    if (grant) {
+      gems += grant.gems;
+      continue;
+    }
     const record = records.find((record) => record.tx === tx);
     const product = record && PRODUCT_BY_KEY[record.key];
     // Piggy amounts were not journalled in 1.0. Guessing from its current amount loses paid gems.
+    if (!record && imported.includes(tx)) continue;
     if (!product || product.key === 'piggy') return false;
     gems += product.gems;
   }
@@ -253,6 +292,7 @@ function keepDevice(restored: Profile, device: Profile, gemIds = device.processe
   restored.roadPassEntitlements = [...device.roadPassEntitlements];
   for (const key of ['productEntitlements', 'revokedProducts', 'refundQuietUntil', 'passLooksOnly', 'installed', 'sessions'] as const)
     Object.assign(restored.meta, { [key]: device.meta[key] });
+  restored.settings.parentPin = device.settings.parentPin;
   restored.settings.notifications = false;
   restored.settings.gameCenter = false;
   // These permission markers belong to this installation, too.
@@ -296,6 +336,11 @@ function clamp(p: Profile): void {
   p.lastCollect = time(p.lastCollect);
   p.meta.lastSeen = time(p.meta.lastSeen);
   p.settings.gatePausedUntil = time(p.settings.gatePausedUntil);
+  if (p.home.expedition) {
+    const trip = p.home.expedition;
+    trip.sentAt = time(trip.sentAt);
+    trip.ends = Math.min(trip.ends, now + trip.hours * 3_600_000);
+  }
 }
 function parse(json: string): Profile {
   if (new TextEncoder().encode(json).length > RAW_LIMIT) throw new Error('Oversize backup');
@@ -340,12 +385,13 @@ export async function restoreBackup(key: string): Promise<BackupRestoreResult> {
       if ((await digest(read.json)) !== read.meta.sha256) return 'invalid';
       const p = parse(read.json);
       const device = context!.current();
-      if (!keepDevice(p, device)) return 'purchases';
+      if (!(await keepDevice(p, device))) return 'purchases';
       clamp(p);
       const s = await local();
       // Durable rescue before replacing the only current profile.
       await saveKeyChecked(UNDO, JSON.stringify({ json: JSON.stringify(device), state: s, restoredTx: p.processedTx }));
-      await commitRestore(p, { ...s, saveId: read.meta.saveId, seq: 0, lastAt: null, sha256: '' }, device, s);
+      const importedTx = [...new Set([...(s.importedTx ?? []), ...p.processedTx.filter((tx) => !device.processedTx.includes(tx))])];
+      await commitRestore(p, { ...s, importedTx, saveId: read.meta.saveId, seq: 0, lastAt: null, sha256: '' }, device, s);
       generation++;
       context!.applied(p);
       return 'ok';
@@ -358,13 +404,22 @@ export async function restoreBackup(key: string): Promise<BackupRestoreResult> {
 }
 export async function canUndoRestore(): Promise<boolean> {
   try {
-    return !!(await loadKey(UNDO));
+    if (!context || storageReadOnly()) return false;
+    const raw = await loadKey(UNDO);
+    if (!raw) return false;
+    const rescue = JSON.parse(raw) as { json: string; restoredTx: string[] };
+    const device = context.current();
+    return await keepDevice(
+      parse(rescue.json),
+      device,
+      device.processedTx.filter((tx) => !rescue.restoredTx.includes(tx)),
+    );
   } catch {
     return false;
   }
 }
 export async function undoRestore(): Promise<boolean> {
-  if (!context || !(await backupStatus()).on || !(await adult())) return false;
+  if (!(await canUndoRestore()) || !(await adult())) return false;
   return serial(async () => {
     try {
       if (storageReadOnly()) return false;
@@ -375,10 +430,15 @@ export async function undoRestore(): Promise<boolean> {
       const p = parse(rescue.json);
       const device = context!.current();
       const added = device.processedTx.filter((tx) => !rescue.restoredTx.includes(tx));
-      if (!keepDevice(p, device, added)) return false;
+      if (!(await keepDevice(p, device, added))) return false;
       clamp(p);
       const previous = await local();
-      await commitRestore(p, { ...rescue.state, on: previous.on, sha256: '', lastAt: null }, device, previous);
+      await commitRestore(
+        p,
+        { ...rescue.state, nonce: previous.nonce, importedTx: previous.importedTx, on: previous.on, sha256: '', lastAt: null },
+        device,
+        previous,
+      );
       generation++;
       context!.applied(p);
       await removeKey(UNDO);
@@ -393,32 +453,16 @@ export async function undoRestore(): Promise<boolean> {
 /** Reset leaves old cloud keys intact and keeps the installation's nonce. */
 export async function newBackupLine(): Promise<void> {
   await serial(async () => {
-    if (!available()) return;
-    const status = await nativeStatus();
-    if (!status.enabled || !status.account) return;
+    await removeKey(UNDO);
+    if (!state && !(await loadKey(STATE))) return;
     const s = await local();
     generation++;
     await persist({ ...s, saveId: id(), seq: 0, lastAt: null, sha256: '' });
-    await removeKey(UNDO);
   });
 }
-export function backupPointerEligible(p: Profile): boolean {
-  return (
-    p.meta.sessions > 1 &&
-    !Object.keys(p.stars).some((n) => +n > 3 && p.stars[+n] > 0) &&
-    !p.processedTx.length &&
-    !p.starter &&
-    !p.pass &&
-    !p.roadPassEntitlements.length &&
-    !(p.meta.productEntitlements ?? []).length
-  );
-}
-export async function takeBackupPointer(p: Profile): Promise<boolean> {
-  return serial(async () => {
-    if (!backupPointerEligible(p) || !(await backupStatus()).on) return false;
-    const s = await local();
-    if (s.pointerSeen || !(await listBackups()).length) return false;
-    await persist({ ...s, pointerSeen: true });
-    return true;
-  });
+/** True only for a verified copy of this progress line; never infer one from opt-in alone. */
+export async function hasCurrentBackup(): Promise<boolean> {
+  if (!(await backupStatus()).on) return false;
+  const s = await local();
+  return (await listBackups()).some((meta) => meta.saveId === s.saveId);
 }

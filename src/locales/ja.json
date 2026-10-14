@@ -2066,7 +2066,6 @@
   "Call {friend} home": "{friend}を よびもどす",
   "Each win brings your friend home 10 minutes sooner": "1回 クリアするごとに、友だちが 10分 はやく かえってくるよ",
   "Erase all progress? Your iCloud backup is kept.": "すべての進みぐあいをけしますか？iCloudのバックアップはのこります。",
-  "Grown-ups can restore saved progress from iCloud.": "おうちの方は、iCloudに保存した進行状況を復元できます。",
   "Invite another friend to go on trips": "おでかけ できる 友だちを もう1ぴき よぼう",
   "Last backup: {date}": "前回のバックアップ：{date}",
   "Longer trips open at Launch Bay level {n}": "もっと ながい おでかけは、ランチャーきちが レベル{n}に なると ひらくよ",
@@ -2120,5 +2119,6 @@
   "Your job is simple: fling, grow, and bring planets to life. We packed a little something for your adventure.": "きみの しごとは かんたん。投げて、そだてて、わくせいに いのちを ふきこもう。ぼうけんの おともに、ちょっとした ものを 用意したよ。",
   "Send": "送りだす",
   "Check your device clock to send a trip": "時計が ずれているみたい。たしかめてから おでかけに 送りだしてね",
-  "This backup could not be restored. Please try again.": "このバックアップを復元できませんでした。もう一度お試しください。"
+  "This backup could not be restored. Please try again.": "このバックアップを復元できませんでした。もう一度お試しください。",
+  "Erase all progress? This cannot be undone.": "すべての進みぐあいをけしますか？もとにはもどせません。"
 }

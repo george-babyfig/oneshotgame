@@ -67,3 +67,6 @@ export function sourceOpen(p: Profile, src: Cosmetic['source']): boolean {
       return true;
   }
 }
+
+/** Trips remain silent until their UI can acknowledge the return. */
+export const tripVisible = (p: Profile, now = Date.now()): boolean => p.level >= 21 && expeditionButton(p, now);

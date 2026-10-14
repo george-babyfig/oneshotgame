@@ -12,6 +12,9 @@ import { renderTripPostcard, shareCanvas } from '../src/ui/postcard';
 import { renderPlanet } from '../src/ui/art/planet';
 import { drawCreature } from '../src/ui/art/critters';
 import { parentalGate } from '../src/ui/flows/gate';
+import { wishesPanel } from '../src/ui/flows/wishes';
+import { ensureWishes } from '../src/meta/wishes';
+import { today } from '../src/meta/profile';
 import { awayFlow } from '../src/ui/flows/away';
 import type { App } from '../src/ui/app';
 
@@ -86,7 +89,7 @@ beforeEach(() => {
   vi.stubGlobal('document', {
     createElement: (tag: string) => new RecordedNode(tag),
     querySelector: () => null,
-    querySelectorAll: () => [],
+    querySelectorAll: vi.fn(() => []),
     dispatchEvent: vi.fn(),
   });
   vi.stubGlobal('window', { devicePixelRatio: 1 });
@@ -307,7 +310,7 @@ describe('M13 trip UI', () => {
     vi.setSystemTime(NOW + 3600000);
     trips.settleTrips(p);
     const before = rewards(p);
-    awayFlow(app, 3600000);
+    awayFlow(app, 4 * 3600000);
     expect(sheet().textContent.split('A friend is back from a trip')).toHaveLength(2);
     expect(rewards(p)).toBe(before);
   });
@@ -322,15 +325,93 @@ describe('M13 trip UI', () => {
       expect(tripMotionPose(kind, 1, true)).toEqual({ lift: 0, alpha: 1 });
     }
   });
-  it('draws the land thought and opens its Wish in Missions without claiming or paying', () => {
+  it('opens and focuses the actual Wish card by ID, regardless of DOM order, without paying', () => {
     const { app, p } = fixture();
-    p.quests.list = [
-      { id: 'thought', species: 'bunny', progress: 0, goal: 2, claimed: false } as unknown as Profile['quests']['list'][number],
-    ];
+    p.seen = ['bunny', 'otter', 'fox'];
+    ensureWishes(p, today());
+    const thought = p.quests.list.find((card) => 'species' in card && card.species === 'bunny')!;
+    expect(thought).toBeDefined();
+    const panel = wishesPanel(app) as unknown as RecordedNode;
+    const cards = panel.querySelectorAll('.wish-card').reverse();
+    const target = cards.find((card) => card.getAttribute('data-wish-id') === thought.id)!;
+    expect(target).toBeDefined();
+    const scroll = vi.fn();
+    Object.assign(target, { scrollIntoView: scroll });
+    const focus = vi.spyOn(target, 'focus');
+    vi.mocked(document.querySelectorAll).mockReturnValue(cards as unknown as NodeListOf<Element>);
     const before = JSON.stringify(p);
     drawWishBubble(new RecordedNode('canvas').getContext() as CanvasRenderingContext2D, 'meadow', 44, 44);
     openFriendWish(app, 'bunny');
     expect(app.selectTab).toHaveBeenCalledWith('missions');
+    expect(scroll).toHaveBeenCalledWith({ block: 'nearest' });
+    expect(target.getAttribute('tabindex')).toBe('-1');
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
     expect(JSON.stringify(p)).toBe(before);
   });
+});
+
+describe('M13 adversarial trip sheets', () => {
+  it.each([
+    [59, 'unicorn'],
+    [99, 'mammoth'],
+  ] as const)('keeps an explicit friend choice reachable at planet %i', (level, other) => {
+    const { app, p } = fixture();
+    p.level = level;
+    p.home.residents = [
+      { species: 'dragon', fp: 0, rewarded: 1 },
+      { species: other, fp: 0, rewarded: 1 },
+    ];
+    expect(trips.pickFriend(p, 1, 8)).toBeNull();
+    tripSheet(app);
+    const row = sheet().querySelector('.trip-planets')!.querySelectorAll('button')[0];
+    expect(row).toBeDefined();
+    row.click();
+    expect(sheet().textContent).toContain('Someone else');
+    expect(sheet().querySelectorAll('button')).toHaveLength(3);
+    sheet().querySelectorAll('button')[0].click();
+    click('Send');
+    expect(p.home.expedition!.species).toBe('dragon');
+  });
+  it('Send seven minutes later stores the return time already displayed', () => {
+    const { app, p } = fixture();
+    tripSheet(app);
+    sheet().querySelector('.trip-planets')!.querySelectorAll('button')[0].click();
+    const promised = trips.previewTrip(p, 1, 8)!.ends;
+    vi.setSystemTime(NOW + 7 * 60000);
+    click('Send');
+    expect(p.home.expedition!.ends).toBe(promised);
+  });
+  it('an open flight sheet rechecks settlement without waiting for a Homeworld tick', () => {
+    const { app, p } = fixture();
+    trips.startTrip(p, 1, 1);
+    const promised = p.home.expedition!.yield!;
+    tripSheet(app);
+    vi.advanceTimersByTime(3600000);
+    expect(p.home.expedition).toBeNull();
+    expect(p.home.tripReturn!.yield).toEqual(promised);
+    expect(sheet().textContent).toContain('Share postcard');
+  });
+  it('a stale Call home handler pays when the sheet spans the return clock', () => {
+    const { app, p } = fixture();
+    trips.startTrip(p, 1, 1);
+    tripSheet(app);
+    vi.setSystemTime(NOW + 3600000 + 60000);
+    click('Call Hopper Bunny home');
+    expect(p.home.expedition).toBeNull();
+    expect(p.home.tripReturn).not.toBeNull();
+    expect(sheet().textContent).toContain('Share postcard');
+  });
+});
+
+it('the away card can be dismissed with Back without collecting or acknowledging a postcard', () => {
+  const { app, p } = fixture();
+  trips.startTrip(p, 1, 1);
+  vi.setSystemTime(NOW + 3600000);
+  trips.settleTrips(p);
+  const before = rewards(p);
+  awayFlow(app, 4 * 3600000);
+  click('Back');
+  expect(app.clearAwayPending).toHaveBeenCalled();
+  expect(p.home.tripReturn).not.toBeNull();
+  expect(rewards(p)).toBe(before);
 });
