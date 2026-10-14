@@ -124,9 +124,23 @@ export interface DayRow {
   bayLevel: number;
   landmarkStages: Record<LandmarkId, number>;
   tripSends: number;
+  /** Decision 61 amendment 2: what each send carried, against Next Up's colour at send (printed only). */
+  tripSendLog: TripSendRow[];
   tripReturns: TripReturn[];
   friendship: number;
   tripFriendship: number;
+}
+export interface TripSendRow {
+  day: number;
+  n: number;
+  hours: number;
+  match: boolean;
+  needed: Mat | null;
+  /** Some offered planet had the needed colour, so the first row should carry it. */
+  neededOffered: boolean;
+  carriesNeeded: boolean;
+  baseFrost: number;
+  mats: Partial<Record<Mat, number>>;
 }
 export interface Career {
   profile: Profile;
@@ -790,15 +804,32 @@ function visit(
   boosterSources.rewards += lastRewards;
   const labBlocks = spendPolicy(p, type, day, now);
   const hours = tripOptions(p.home, now).at(-1);
-  const planet = tripPlanets(p)[0];
+  const offered = tripPlanets(p);
+  const planet = offered[0];
   let tripSends = 0;
+  const tripSendLog: TripSendRow[] = [];
   const lastVisit = type === 'Weekender' ? 0 : 2;
   // Regular/Payer remember one trip at the last visit, before the 16-hour gap.
-  if (hours && planet && (!['Regular', 'Payer'].includes(type) || visitNo === lastVisit))
+  if (hours && planet && (!['Regular', 'Payer'].includes(type) || visitNo === lastVisit)) {
     tripSends = Number(startTrip(p, planet.n, hours, undefined, Math.max(now, p.home.lastTick ?? 0)) === 'ok');
+    const sent = p.home.expedition;
+    if (tripSends && sent?.yield)
+      tripSendLog.push({
+        day,
+        n: planet.n,
+        hours,
+        match: !!sent.match,
+        needed: planet.needed ?? null,
+        neededOffered: !!planet.needed && offered.some((row) => (row.mats[planet.needed!] ?? 0) > 0),
+        carriesNeeded: !!planet.needed && (sent.yield.mats[planet.needed] ?? 0) > 0,
+        baseFrost: planet.mats.frost ?? 0,
+        mats: { ...sent.yield.mats },
+      });
+  }
   return {
     wins,
     tripSends,
+    tripSendLog,
     tripReturns: p.home.tripReturn && p.home.tripReturn !== previousReturn ? [structuredClone(p.home.tripReturn)] : [],
     labBlocks,
     replayEssenceWhileLeveling,
@@ -859,6 +890,7 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: S
       const visits = budget ? (type === 'Weekender' ? 1 : 3) : 0;
       let wins = 0;
       let tripSends = 0;
+      const tripSendLog: TripSendRow[] = [];
       const tripReturns: TripReturn[] = [];
       const friendshipBefore = friendshipTotal(p);
       let labBlocks: DayRow['labBlocks'] = {};
@@ -887,6 +919,7 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: S
         );
         wins += visitResult.wins;
         tripSends += visitResult.tripSends;
+        tripSendLog.push(...visitResult.tripSendLog);
         tripReturns.push(...visitResult.tripReturns);
         replayEssenceWhileLeveling += visitResult.replayEssenceWhileLeveling;
         firstEssenceWhileLeveling += visitResult.firstEssenceWhileLeveling;
@@ -948,6 +981,7 @@ export async function simulate(type: PlayerType, masterSeed = 'default', opts: S
         attempts: budget,
         wins,
         tripSends,
+        tripSendLog,
         tripReturns,
         friendship: friendshipTotal(p) - friendshipBefore,
         tripFriendship: tripReturns.reduce((sum, trip) => sum + (trip.yield?.fp ?? 0), 0),

@@ -64,7 +64,7 @@ Pillar 3 says everything you grow comes back to the fling. Every row below eithe
 | Wishes           | A named goal for the round, voiced by a creature                                                            | Campaign, Voyage, Zen, Daily Planet (never Remix)       | Missions tab, thought bubbles on the Homeworld     |
 | Landmarks        | A named feat to aim for; the Comet Pier also earns a launcher                                               | Counts in Campaign, Voyage, Zen, Daily Planet           | Landmark card, Next Up, results line               |
 | Homeworld Level  | Raises the Lab cap (Lab level ≤ Homeworld Level + 1) and opens buildings                                    | (a cap, not a bonus)                                    | Level badge on the tab, Passport and Star Map      |
-| Trips (M13)      | Essences of the planet you visit, mostly frost and ember                                                    | (outside rounds)                                        | Postcard, Lab cards                                |
+| Trips (M13)      | Essences of the planet you visit, led by the colour you need next                                           | (outside rounds)                                        | Postcard, Lab cards                                |
 
 All player-side bonuses go through the one power budget (4b): the max-legal-loadout bot, with every Lab, top form, launcher tune, Buddy and booster switched on, may add at most 15 points to the decent-aware 3-star rate on normal planets 21-60. The Launch Bay's tunes share that budget with the Labs (section 3.5).
 

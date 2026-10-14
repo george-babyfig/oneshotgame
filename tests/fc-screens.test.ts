@@ -113,6 +113,21 @@ describe('FC clear gem confirmation', () => {
 });
 
 describe('FC reward feedback and navigation', () => {
+  it('decision 70 amendment: a friend Wish claim shows friendship and never "💎 0"', () => {
+    const app = appFor();
+    app.p.home.residents = [{ species: 'otter', fp: 0, rewarded: 1 }];
+    app.p.seen = [...new Set([...app.p.seen, 'otter', 'goat', 'deer'])];
+    const cards = ensureWishes(app.p, '2026-10-06');
+    const friend = cards.find((card) => card.from === 'friend')!;
+    friend.progress = friend.goal;
+    const panel = wishesPanel(app) as unknown as RecordedNode;
+    panel
+      .querySelectorAll('button')
+      .find((button) => button.textContent === 'Claim')!
+      .click();
+    expect(capture.sheet!.textContent).toContain('+2 friendship points');
+    expect(capture.sheet!.textContent).not.toContain('💎 0');
+  });
   it('refreshes wallet and badges and tells the child where the granted look went', () => {
     const app = appFor();
     const cards = ensureWishes(app.p, '2026-10-06');

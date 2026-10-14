@@ -2,7 +2,7 @@ import { drawCreature } from '../art/critters';
 import { h, btn, modal } from '../dom';
 import type { App } from '../app';
 import { today } from '../../meta/profile';
-import { claimWish, ensureWishes, swapWish, wishText, wishRoadPoints, wishOrigin, type WishCard } from '../../meta/wishes';
+import { claimWish, ensureWishes, swapWish, wishText, wishReward, wishRoadPoints, wishOrigin, type WishCard } from '../../meta/wishes';
 import { WISH_REWARD } from '../../meta/tuning';
 import { COSMETIC_BY_ID } from '../../meta/cosmetics';
 import { sfx } from '../audio';
@@ -10,6 +10,18 @@ import { haptic } from '../haptics';
 import { unlocked } from '../../meta/unlocks';
 import { t } from '../../i18n';
 import { M13_STRINGS } from '../../meta/m13strings';
+
+/** One reward line from one source of truth; a zero amount is never shown. */
+function rewardLine(parts: { gems: number; dust: number; friendship: number; road: number }, roadOpen: boolean): string {
+  return [
+    parts.friendship ? M13_STRINGS.friendshipPoints(parts.friendship) : '',
+    parts.gems ? `💎 ${parts.gems}` : '',
+    parts.dust ? `✨ ${parts.dust}` : '',
+    roadOpen && parts.road ? `🛣️ ${parts.road} ${t('Road point')}` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
 
 function portrait(card: WishCard): HTMLCanvasElement {
   const canvas = h('canvas', { width: 64, height: 64, 'aria-label': wishText(card) });
@@ -47,11 +59,7 @@ export function wishesPanel(app: App): HTMLElement {
               h('i', { style: `width:${Math.round((card.progress / card.goal) * 100)}%` }),
               h('span', null, `${card.progress}/${card.goal}`),
             ),
-            h(
-              'small',
-              null,
-              `💎 ${WISH_REWARD.gems} · ✨ ${WISH_REWARD.dust}${unlocked(app.p, 'star_road') && wishRoadPoints(app.p, card) ? ` · 🛣️ ${wishRoadPoints(app.p, card)} ${t('Road point')}` : ''}`,
-            ),
+            h('small', null, rewardLine({ ...wishReward(app.p, card), road: wishRoadPoints(app.p, card) }, unlocked(app.p, 'star_road'))),
             !card.claimed && card.progress === 0 && canSwap
               ? h('small', { class: 'muted wish-swap-note' }, t('Ask for a different Wish (once a day)'))
               : null,
@@ -60,6 +68,7 @@ export function wishesPanel(app: App): HTMLElement {
             ? h('span', { class: 'q-ok' }, '✓')
             : card.progress >= card.goal
               ? btn(t('Claim'), 'primary small', () => {
+                  const promised = wishReward(app.p, card);
                   const before = {
                     gems: app.p.gems,
                     dust: app.p.dust,
@@ -79,7 +88,10 @@ export function wishesPanel(app: App): HTMLElement {
                     h(
                       'p',
                       { class: 'reward-list' },
-                      `💎 ${app.p.gems - before.gems} · ✨ ${app.p.dust - before.dust}${unlocked(app.p, 'star_road') && road ? ` · 🛣️ ${road} ${t('Road point')}` : ''}`,
+                      rewardLine(
+                        { gems: app.p.gems - before.gems, dust: app.p.dust - before.dust, friendship: promised.friendship, road },
+                        unlocked(app.p, 'star_road'),
+                      ),
                     ),
                     !before.bonus && app.p.quests.bonusClaimed
                       ? h('p', null, t('All three Wishes: 💎{n} bonus', { n: WISH_REWARD.allThreeGems }))

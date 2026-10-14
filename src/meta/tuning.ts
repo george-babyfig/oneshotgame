@@ -1300,6 +1300,8 @@ export const CHAPTER_REWARD = { baseGems: 25, gemsPerChapter: 5, dustPerChapter:
 // Seven retired rank payouts are spread over the first seven chapter chests.
 export const CHAPTER_RANK_REWARD = { gems: [0, 30, 35, 40, 45, 50, 55, 60], dust: [0, 300, 450, 600, 750, 900, 1050, 1200] };
 export const WISH_REWARD = { gems: 12, dust: 50, roadPoints: 1, allThreeGems: 15 };
+/** Decision 70 amendment: a card dealt to a friend slot pays friendship instead of gems. */
+export const WISH_FRIEND_REWARD = Object.freeze({ gems: 0, friendship: 2 });
 export const DISCOVERY_DUST = 50;
 export const COMBO_STAMP_DUST = 30;
 export const CALENDAR_REPEAT_ITEM_GEMS = 40;

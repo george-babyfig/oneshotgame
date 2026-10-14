@@ -324,7 +324,7 @@ A missing trait gives no shield and no penalty. The forecast arrow visibly bounc
 2. **Friends.** Play → meet creatures → invite them to your Den → your Buddy helps in rounds and friends give Wishes → friendship grows → accessories and a best-friend letter.
 3. **Growth.** Chapters + stardust + Essences → a Homeworld Level → a bigger planet, more plots, a higher Lab cap, new buildings and a third drone.
 4. **Style.** Paint, decorations, Homeworld Themes, photo mode and postcards.
-5. **Trips (post-launch, M13).** Send a friend to a planet you grew → Essences of that planet's lands. This is the main fix for frost and ember.
+5. **Trips (post-launch, M13).** Send a friend to a planet you grew → Essences of that planet's lands; the list puts the colour you need next first.
 
 **What reaches a level.** Lab perks and top forms, your chosen launcher and its tune (from M10.5), your Buddy's trait and its help-ladder throws, Greenhouse boosters (earned and capped), Wishes, which name a goal for the round, and Landmark feats (from M11.5), which name a goal across rounds. All of it is on in the campaign, Voyage and Zen, and off in Daily Planet, Meteor Rush, Challenge and Remix. The results card has one "Homeworld helped" line, for example "Rock Lab: Firewall stopped 1 Ember Vent".
 
@@ -977,7 +977,7 @@ Milestones are in build order. Each is sized to be built, tested, translated and
 | M11       | Homeworld Level and a fair economy                                                    | M         | Yes                   | Idle ≤ 1.5× active; no stranded currency                                             |
 | M11.5     | Homeworld Life: friends' days, lands and Landmarks                                    | L         | Yes                   | Landmark pacing band; 60 fps with 12 friends on the oldest device                    |
 | M12       | Star Roads, the Styles catalogue and launch prep                                      | L         | Yes                   | 12 products pass the StoreKit matrix                                                 |
-| M13       | Friends and trips (update 1.1)                                                        | M         | After launch          | Frost from trips ≈ 30%                                                               |
+| M13       | Friends and trips (update 1.1)                                                        | M         | After launch          | Trips bring what the child is building and never out-earn play                       |
 | M14       | Road 1 and the live-ops calendar                                                      | M         | After launch          | 98-day runway                                                                        |
 | M15       | Content drop: more reactions and Troubles, Wonder, Star Motes                         | L         | After launch          | Bands still green                                                                    |
 | M16       | Collector's Edition and experiments                                                   | M         | After launch          | Price rule met                                                                       |
@@ -1766,5 +1766,79 @@ Also retired from today's game to pay for the new nouns: Explorer Rank, the Week
 **Owner to-dos (not decisions):** create the Apple Developer account, TestFlight group and bundle ID; create the 12 products after M5 and the Game Center IDs after M4 and M9; run the T0 kid playtests (5 children, parent present, 15 minutes, paper notes); make the repository private and switch the default branch to `main`.
 
 **Decision 61 amendment, A0 measured (14 October 2026).** The step-0 policy builds the Bay early (effective levels 1/2/3/4 on days 8/12/16/36) and invites friends up to Den capacity. On the untouched 1.0 code, two inherited gates are red. Free boosters run 0.66 a win against ≤ 0.5, because 1.0 trips pay up to three boosters. Road 0's sinks cover 0.75-0.79 of free gem supply against ≥ 0.8, because more friends means more friendship-level gems, on top of trip gems. Neither touches money or safety; free boosters only make planets easier. **Default:** ship 1.0 unchanged; M13's trips pay no boosters. Package A re-measures both gates on the 1.1 code. If Road sinks are still under 0.8 after A, the owner decides between tuning friendship gems and M14's Road 1 catalogue, without silently lowering the threshold.
+
+**Decision 61 amendment 2, A1 restated (14 October 2026; open, default applied).**
+Measured on 1.1: in days 16-22, Regular's trips (sent in Next Up's colour, 13.1) bring 5 of 103 frost (4.9%) on the default seed and 29 of 108 (26.9%) on the second seed. The 25% floor stops being a Gate for four checked reasons:
+
+1. **Decision 63 caps it on the default seed.** The frostiest planet the default seed owns has 7 frost lands. A 4-hour matched trip pays round(7 × 0.6 × 1.25) = 5, still 5 at F₄ = 0.625, and the 1-hour trip pays 1. Even a frost-first list peaks at 31/129 = 24.0%.
+2. **Frost holds nothing back that week.** Every Lab waits on the level cap or stardust. Frost rises 62 → 110 (default) and 73 → 125 (second seed), and first blocks a Lab on day 24.
+3. **The 30% target came from the old 3-10 frost band,** which decision 62 replaced (19.8 measured).
+4. **Decision 65 wins any conflict with A1.**
+
+**Default:**
+
+- Gate: trip frost ≤ 33% of all frost in days 16-22, on both seeds.
+- Unit Gate: the trip list leads with the most of the colour Next Up names.
+- Watch: the 25% floor on both seeds, and how many first-row sends carried Next Up's colour (7/7 on both seeds).
+- A3a, the A5 unit Gate and A6 stay Gates.
+- Trips are not steered toward frost no build is waiting for.
+
+**Decision 65 amendment, measured across the campaign (14 October 2026; open, default applied).**
+Every failing window began after the campaign was complete (Regular day 23, Engaged day 9-10). From planet 121, rounds are decision 53's half-rate replays, and Voyage, Daily and Zen pay no Essences. There were two causes:
+
+- With no colour named, the trip list led with the biggest total, which is the most frost. Trips added 9-10 frost a day to a colour with nothing left to buy.
+- After the campaign, a week's ratio mostly reflects which planets the bot replays.
+
+**Default:**
+
+- **(a) List order.** With no colour named, the list leads with planets that add least to colours already covered, then the biggest yield, then the planet number.
+  - A colour is covered when the balance meets what is still wanted by Homeworld Levels, Lab levels, Landmark deliveries, launcher tunes and the open Star Atlas constellations.
+  - Payouts are unchanged and fixed at send. No save field.
+- **(b) Campaign windows.** ≤ 0.5 overall and for frost and ember, in every 7-day window ending on or before the campaign-complete day (the first day level ≥ 121). Days 1-60, Regular and Engaged.
+- **(c) After the campaign.** From the next day to day 60, trips ≤ 0.5× rounds in total, overall and for frost and ember.
+- **(d) Watches.** Post-campaign 7-day windows, the 0.35 level, and the A5 sim mean restricted to 8-hour match trips to planets with ≥ 6 frost sectors.
+
+Decision 64 is unchanged. Measured worst values, (b) then (c), Regular default / second seed:
+
+- all Essences: 0.105 / 0.098, then 0.384 / 0.348
+- frost: 0.073 / 0.472, then 0.294 / 0.209
+- ember: 0.259 / 0.085, then 0.303 / 0.384
+
+Not chosen:
+
+- half-rate trips after the campaign, which would change F₈ in effect;
+- a "last won" default, which needs a v7 field;
+- dropping ember from the after-campaign check;
+- 14- or 28-day windows.
+
+Deferred: the sim's replays following Next Up's colour. With (a) in place it pushes Engaged's after-campaign ember to 0.64 / 0.66.
+
+**Decision 70 amendment, a friend's Wish pays friendship (14 October 2026; open, default applied).**
+Friends-first Wishes complete far more often (101 of 141 claims in days 1-56). Wish gems rose from 1,335 to 2,202, and free supply from 6,953 to 7,912.
+
+**Default:**
+
+- A card dealt to a friend slot pays +2 friendship, ✨50 and 1 Road point, with no gems.
+- Open cards and cards dealt by 1.0 keep 💎12, and finishing all three keeps 💎15.
+- If that friend has said goodbye before the claim, the card pays 💎12.
+- Each card shows its own reward, using the frozen "+{n} friendship point" string.
+- No child has seen a friend card yet, so no promise changes.
+
+Measured: supply 6,700 / 6,268, and free gems per active day 100.8 / 98.1 (band ≥ 95).
+
+Not chosen:
+
+- cutting the all-three bonus, a line 1.0 children see;
+- 4 gems per friend card, which gives coverage 0.736 / 0.775.
+
+**Decision 61 amendment (A0), Road 0 after Package A (14 October 2026; owner decides).**
+After decision 70's amendment, Road 0's 5,200 gems of new singles cover 0.776 (default) and 0.830 (second seed) of free supply over days 1-56. 1.0 was at 0.748 / 0.786.
+
+- **Recommended:** add one 300-gem Road 0 single in 1.1, giving 0.821 / 0.877. If the integrated default-seed supply is above 6,875, add a second.
+- **If there is no answer:**
+  - Road 0 ships unchanged, and the default seed's 0.776 is recorded as an inherited exception.
+  - The default-seed assertion is held at 0.77. The second seed stays at 0.8. The 0.8 target stays printed.
+  - Road 1 (decision 86) sizes its gem singles at ≥ 0.85× the measured 1.1 supply (≥ 5,695 at 6,700).
+- **To settle:** RM §7.5 (RM:837) lists this band as a Watch, while the economy job enforces it.
 
 M13 step 0 (package S, 14 October 2026) is built: save v7, the galaxy codec, frozen 1.0 trip loot, the saved Voyage theme, calendar goldens and the 1.0 sim baseline (Bay-3 day 16). Its verification log and the frozen M13 string list are in [docs/handoff/m13-step0.md](../handoff/m13-step0.md).

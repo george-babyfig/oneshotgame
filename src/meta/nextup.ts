@@ -21,6 +21,10 @@ import { bayLevel } from './homeworld';
 import { M13_STRINGS } from './m13strings';
 import type { Mat } from './constellations';
 import { LAB_ESSENCE, labCost, labPlot } from './labs';
+import { LANDMARKS } from './tuning';
+import { landmarkState } from './landmarks';
+import { MATS, unlockedConstellation } from './constellations';
+import type { LauncherId } from '../core/launchers';
 
 import { inboxOpen, habitatSetsVisible } from './reveals';
 
@@ -308,4 +312,32 @@ export function nextEssenceNeeded(p: Profile): Mat | undefined {
     .filter((item) => item.missing > 0)
     .sort((a, b) => a.missing - b.missing);
   return pending[0]?.gaps.sort((a, b) => b.gap - a.gap)[0]?.mat;
+}
+
+/**
+ * Decision 65 amendment: Essences still wanted by every sink Next Up can point to — Homeworld Levels,
+ * Lab levels, Landmark deliveries, launcher tunes and the Star Atlas constellations that are open now.
+ * Dyes are not counted: Next Up never names them.
+ */
+export function essenceStillWanted(p: Profile): Record<Mat, number> {
+  const want = Object.fromEntries(MATS.map((mat) => [mat, 0])) as Record<Mat, number>;
+  const add = (need: Partial<Record<Mat, number>>) => {
+    for (const [mat, amount] of Object.entries(need) as [Mat, number][]) want[mat] += amount;
+  };
+  for (let level = p.home.level + 1; level <= HOMEWORLD_MAX_LEVEL; level++) add(HOME_LEVEL_REQUIREMENTS[level as HomeworldLevel].essence);
+  for (const kind of Object.keys(KINDS) as Kind[])
+    for (let level = labLevel(p, kind) + 1; level <= 5; level++) want[LAB_ESSENCE[kind]] += labCost(kind, level as 2 | 3 | 4 | 5).amount;
+  for (const site of LANDMARKS) if (landmarkState(p, site.id).stage < 4) add(site.delivery);
+  CONSTELLATIONS.forEach((c, i) => {
+    if (unlockedConstellation(p, i)) for (const b of c.bundles) if (!p.bundles.includes(b.id)) add(b.need);
+  });
+  for (const [id, mat] of Object.entries(LAUNCHER_ESSENCE) as [LauncherId, Mat][])
+    for (let tune = launcherBay.tune(p, id) + 1; tune <= 4; tune++) want[mat] += TUNE_COST[tune as 2 | 3 | 4].essence;
+  return want;
+}
+
+/** Colours the child already holds enough of for every sink in essenceStillWanted. */
+export function essencesCovered(p: Profile): Mat[] {
+  const want = essenceStillWanted(p);
+  return MATS.filter((mat) => (p.mats[mat] ?? 0) >= want[mat]);
 }

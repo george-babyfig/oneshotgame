@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { makeLevel } from '../src/core/levels';
-import { BIOMES, SPECIES, traitOf, type BiomeId, type Planet } from '../src/core/world';
+import { BIOMES, KINDS, SPECIES, traitOf, type BiomeId, type Kind, type Planet } from '../src/core/world';
 import { defaultProfile } from '../src/meta/profile';
 import { encodeSectors } from '../src/meta/galaxyCodec';
 import { homeLandFor } from '../src/meta/friends';
 import { COUNTERS, buddyEligible, setBuddy } from '../src/meta/buddy';
 import { homeBadge, recordHomeworldWin, sendHome, tickHome } from '../src/meta/homeworld';
 import { awayCollectables, awayRecapLines } from '../src/meta/economy';
-import { nextUp, homeworldNextUp, nextEssenceNeeded } from '../src/meta/nextup';
-import { TRIP_FACTOR, TRIP_CAP, TRIP_GEMS, TRIP_FRIENDSHIP } from '../src/meta/tuning';
+import { nextUp, homeworldNextUp, nextEssenceNeeded, essenceStillWanted, essencesCovered } from '../src/meta/nextup';
+import { TRIP_FACTOR, TRIP_CAP, TRIP_GEMS, TRIP_FRIENDSHIP, CONSTELLATIONS, HOME_LEVEL_REQUIREMENTS } from '../src/meta/tuning';
+import { LAB_ESSENCE } from '../src/meta/labs';
 import {
   callHome,
   pickFriend,
@@ -20,7 +21,7 @@ import {
   tripPlanets,
   tripStatus,
 } from '../src/meta/trips';
-import { dropsFor } from '../src/meta/constellations';
+import { dropsFor, MATS, unlockedConstellation, type Mat } from '../src/meta/constellations';
 import { legacyExpeditionLoot } from '../src/meta/tripsLegacy';
 import type { TripHours } from '../src/meta/m13types';
 
@@ -307,5 +308,98 @@ describe('multiple Trouble counter preservation', () => {
     expect(startTrip(p, 25, 8, undefined, 0)).toBe('no_friend');
     // Someone else is an explicit choice; the automatic pick remains protective.
     expect(previewTrip(p, 25, 8, cold.id, 0)).not.toBeNull();
+  });
+});
+
+// Decision 61 amendment 2 / decision 65 amendment: one planet per colour plus a frost-heavy mixed planet.
+const orderEntry = (n: number, lands: BiomeId[]) => ({
+  n,
+  name: `P${n}`,
+  hue: 0,
+  stars: 3,
+  life: 20,
+  species: [],
+  colors: [BIOMES[lands[0]].color],
+  sec: encodeSectors(planet(lands)),
+});
+const ORDER_GALAXY: [number, BiomeId[]][] = [
+  [30, Array(10).fill('tundra')],
+  [31, Array(12).fill('mountain')],
+  [32, Array(14).fill('forest')],
+  [33, Array(12).fill('ocean')],
+  [34, Array(12).fill('volcano')],
+  [35, [...Array(8).fill('tundra'), ...Array(8).fill('forest')]],
+];
+function orderFixture() {
+  const p = defaultProfile(0);
+  p.level = 60;
+  p.chapters = [1, 2, 3, 4, 5];
+  p.home.firstHour = 2;
+  p.home.plots[0] = { type: 'launch_bay', lv: 4, since: 0 };
+  p.home.residents = [{ species: 'bunny', fp: 0, rewarded: 1 }];
+  p.galaxy = ORDER_GALAXY.map(([n, lands]) => orderEntry(n, lands));
+  return p;
+}
+
+describe('decision 61 amendment 2: A1 unit Gate', () => {
+  it('the first row has the most of the colour Next Up names, for every colour', () => {
+    for (const mat of MATS) {
+      const p = orderFixture();
+      p.home.level = 5;
+      for (const kind of Object.keys(KINDS) as Kind[]) p.lab[kind] = 5;
+      const kind = (Object.keys(KINDS) as Kind[]).find((k) => LAB_ESSENCE[k] === mat)!;
+      p.lab[kind] = 2;
+      p.home.plots[1] = { type: 'lab', kind, lv: 2, since: 0 };
+      for (const other of MATS) p.mats[other] = other === mat ? 0 : 10_000;
+      expect(nextEssenceNeeded(p)).toBe(mat);
+      const rows = tripPlanets(p);
+      expect(rows[0].mats[mat]).toBe(Math.max(...rows.map((row) => row.mats[mat] ?? 0)));
+    }
+  });
+});
+
+describe('decision 65 amendment (a): list order when Next Up names no colour', () => {
+  it('reads every sink Next Up can name from data: Levels, Labs, open Atlas bundles; dyes are not counted', () => {
+    const p = orderFixture();
+    const want = essenceStillWanted(p);
+    const levels = [2, 3, 4, 5].reduce((sum, l) => sum + ((HOME_LEVEL_REQUIREMENTS as any)[l].essence.frost ?? 0), 0);
+    const open = CONSTELLATIONS.filter((_, i) => unlockedConstellation(p, i)).flatMap((c) => c.bundles);
+    const bundles = open.reduce((sum, b) => sum + (b.need.frost ?? 0), 0);
+    expect(want.frost).toBe(levels + (10 + 25 + 50 + 180) + bundles);
+    p.dyes = [];
+    expect(essenceStillWanted(p).frost).toBe(want.frost);
+    p.bundles = open.map((b) => b.id);
+    expect(essenceStillWanted(p).frost).toBe(want.frost - bundles);
+  });
+  it('a colour is covered once the balance meets every remaining sink, and only then', () => {
+    const p = orderFixture();
+    p.home.level = 5;
+    for (const kind of Object.keys(KINDS) as Kind[]) p.lab[kind] = 5;
+    const left = essenceStillWanted(p).frost;
+    p.mats.frost = left - 1;
+    expect(essencesCovered(p)).not.toContain('frost');
+    p.mats.frost = left;
+    expect(essencesCovered(p)).toContain('frost');
+  });
+  it('leads with planets that add least to covered colours, then the biggest yield, and never changes a payout', () => {
+    const p = orderFixture();
+    p.home.level = 5;
+    for (const kind of Object.keys(KINDS) as Kind[]) p.lab[kind] = 5;
+    for (const mat of ['stone', 'dew', 'leaf'] as Mat[]) p.mats[mat] = 200; // the open Landmark is covered; later sinks are not
+    p.constellations = ['otter', 'mill']; // lit, so the Atlas now offers the ember and frost constellations
+    p.bundles = CONSTELLATIONS.slice(0, 2).flatMap((c) => c.bundles.map((b) => b.id));
+    expect(nextEssenceNeeded(p)).toBeUndefined();
+    expect(essencesCovered(p)).toEqual([]);
+    const before = tripPlanets(p).map((row) => row.n);
+    expect(before[0]).toBe(35); // biggest total: 8 frost + 4 leaf
+    const previews = Object.fromEntries(before.map((n) => [n, previewTrip(p, n, 8, 'bunny', 0)]));
+    p.mats.frost = essenceStillWanted(p).frost; // 22: the frost constellation's three bundles
+    p.mats.ember = essenceStillWanted(p).ember; // 20: the ember constellation's three bundles
+    expect([p.mats.frost, p.mats.ember]).toEqual([22, 20]);
+    expect(essencesCovered(p)).toEqual(['ember', 'frost']);
+    const after = tripPlanets(p);
+    expect(after.slice(0, 3).every((row) => !row.mats.frost && !row.mats.ember)).toBe(true);
+    expect(after.at(-1)!.n).toBe(30);
+    for (const n of before) expect(previewTrip(p, n, 8, 'bunny', 0)).toEqual(previews[n]);
   });
 });

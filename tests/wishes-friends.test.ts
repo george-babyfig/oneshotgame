@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { impact, KINDS, newPlanet, type Kind } from '../src/core/world';
 import { defaultProfile } from '../src/meta/profile';
 import { homeLandFor, homeSpotFor, reactionsFor } from '../src/meta/friends';
-import { claimWish, ensureWishes, swapWish, WISH_TEMPLATES, wishBubbles, wishOrigin, type WishCard } from '../src/meta/wishes';
+import { claimWish, ensureWishes, swapWish, WISH_TEMPLATES, wishBubbles, wishOrigin, wishReward, type WishCard } from '../src/meta/wishes';
+import { WISH_FRIEND_REWARD, WISH_REWARD } from '../src/meta/tuning';
 import { wishesPanel } from '../src/ui/flows/wishes';
 import { RecordedNode, visibleText } from './helpers/uiRecording';
 import type { App } from '../src/ui/app';
@@ -185,5 +186,58 @@ describe('M13 Wish bubble data (13.6)', () => {
     const saved = JSON.stringify(fresh);
     expect(wishBubbles(fresh)).toEqual([]);
     expect(JSON.stringify(fresh)).toBe(saved);
+  });
+});
+
+describe('decision 70 amendment: a friend Wish pays friendship', () => {
+  it('pins the reward table', () => {
+    expect(WISH_FRIEND_REWARD).toEqual({ gems: 0, friendship: 2 });
+    expect(WISH_REWARD).toEqual({ gems: 12, dust: 50, roadPoints: 1, allThreeGems: 15 });
+  });
+  it('friend cards pay 0 gems, 50 stardust and +2 friendship; the open card and the all-three bonus are unchanged', () => {
+    const p = player(['otter', 'deer']);
+    const cards = ensureWishes(p, day);
+    expect(cards.map(wishOrigin)).toEqual(['friend', 'friend', 'open']);
+    const gems = p.gems;
+    const dust = p.dust;
+    for (const card of cards) {
+      const promised = wishReward(p, card);
+      const before = p.gems;
+      card.progress = card.goal;
+      expect(claimWish(p, card.id, day)).toBe(true);
+      if (card !== cards[2]) expect(p.gems - before).toBe(promised.gems);
+    }
+    expect(p.gems - gems).toBe(0 + 0 + 12 + 15);
+    expect(p.dust - dust).toBe(150);
+    expect(p.home.residents.map((r) => r.fp)).toEqual([2, 2]);
+  });
+  it('1.0 cards (no origin) keep 12 gems even when the wisher lives in the Den', () => {
+    const p = player(['otter']);
+    const card = ensureWishes(p, day)[0];
+    delete card.from;
+    expect(wishReward(p, card)).toEqual({ gems: 12, dust: 50, friendship: 2 });
+    card.progress = card.goal;
+    const gems = p.gems;
+    claimWish(p, card.id, day);
+    expect(p.gems - gems).toBe(12);
+  });
+  it('a friend who said goodbye before the claim: the card shows and pays 12 gems', () => {
+    const p = player(['otter']);
+    const card = ensureWishes(p, day)[0];
+    expect(wishReward(p, card)).toEqual({ gems: 0, dust: 50, friendship: 2 });
+    p.home.residents = [];
+    expect(wishReward(p, card)).toEqual({ gems: 12, dust: 50, friendship: 0 });
+    card.progress = card.goal;
+    const gems = p.gems;
+    claimWish(p, card.id, day);
+    expect(p.gems - gems).toBe(12);
+  });
+  it('each card shows its own reward and never "💎 0"', () => {
+    const p = player(['otter', 'deer']);
+    const root = wishesPanel({ p } as App) as unknown as RecordedNode;
+    const text = visibleText(root);
+    expect(text).toContain('+2 friendship points');
+    expect(text).toContain('💎 12');
+    expect(text).not.toContain('💎 0');
   });
 });

@@ -10,7 +10,7 @@ import { homeLandFor } from './friends';
 import { COUNTERS } from './buddy';
 import { SPECIES_BY_ID, traitOf, type Planet } from '../core/world';
 import { makeLevel } from '../core/levels';
-import { nextEssenceNeeded } from './nextup';
+import { essencesCovered, nextEssenceNeeded } from './nextup';
 import { earn } from './wallet';
 import { ledger } from './ledger';
 import { legacyExpeditionLoot } from './tripsLegacy';
@@ -41,9 +41,12 @@ export function tripPlanets(p: Profile): TripPlanetRow[] {
       const mats = dropsFor(planet, 0);
       return { n: entry.n, entry, planet, mats, total: Object.values(mats).reduce((sum, amount) => sum + amount, 0), needed };
     });
+  // Decision 65 amendment: with no colour named, lead with planets that add least to colours already covered.
+  const covered = needed ? [] : essencesCovered(p);
+  const spare = (row: TripPlanetRow) => covered.reduce((sum, mat) => sum + (row.mats[mat] ?? 0), 0);
   return rows
     .filter((row) => row.total > 0)
-    .sort((a, b) => (needed ? (b.mats[needed] ?? 0) - (a.mats[needed] ?? 0) : 0) || b.total - a.total || a.n - b.n);
+    .sort((a, b) => (needed ? (b.mats[needed] ?? 0) - (a.mats[needed] ?? 0) : spare(a) - spare(b)) || b.total - a.total || a.n - b.n);
 }
 function freeFriends(p: Profile): string[] {
   return p.home.residents

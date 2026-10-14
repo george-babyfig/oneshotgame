@@ -41,6 +41,7 @@ import {
   CHAPTER_REWARD,
   CHAPTER_RANK_REWARD,
   WISH_REWARD,
+  WISH_FRIEND_REWARD,
   CALENDAR_REPEAT_ITEM_GEMS,
   FINISH_DUST_PER_THROW,
   VISITOR_DUST,
@@ -99,6 +100,7 @@ it('pins totals of every central balance table', () => {
       CHAPTER_REWARD,
       CHAPTER_RANK_REWARD,
       WISH_REWARD,
+      WISH_FRIEND_REWARD,
       CALENDAR_REPEAT_ITEM_GEMS,
       FINISH_DUST_PER_THROW,
       VISITOR_DUST,
@@ -176,6 +178,7 @@ it('pins totals of every central balance table', () => {
       "VOYAGE_REWARDS": 1697,
       "WELCOME_BACK_GEMS": 30,
       "WIN_REWARD": 87,
+      "WISH_FRIEND_REWARD": 2,
       "WISH_REWARD": 78,
     }
   `);

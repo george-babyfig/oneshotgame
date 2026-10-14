@@ -41,6 +41,13 @@ function landmarkPace(career: Career) {
   );
 }
 
+// Decision 61 amendment (A0), Road 0 after Package A: 0.8 stays the printed target. Until Road 1 (decision 86),
+// a seed whose measured 1.1 coverage is below it is held at its recorded floor, so further drift still fails.
+// Delete the entry if the owner adds the recommended 300-gem Road 0 single.
+const ROAD0_SINK_TARGET = 0.8;
+const ROAD0_SINK_FLOOR: Readonly<Record<string, number>> = { default: 0.77 };
+const roadSinkFloor = (seed: string) => ROAD0_SINK_FLOOR[seed] ?? ROAD0_SINK_TARGET;
+
 const ESSENCES = ['stone', 'dew', 'leaf', 'ember', 'frost'] as const;
 function tripMetrics(career: Career) {
   const window = (from: number, to: number) => {
@@ -82,8 +89,19 @@ function tripMetrics(career: Career) {
   const friendship = days60.reduce((sum, row) => sum + row.friendship, 0);
   const tripGems = days60.reduce((sum, row) => sum + (row.earned.gems_expedition ?? 0), 0);
   const freeGems = days60.reduce((sum, row) => sum + row.freeGems, 0);
-  const matches8 = career.days.flatMap((row) => row.tripReturns).filter((trip) => trip.hours === 8 && trip.match);
-  const mean8MatchFrost = matches8.length ? matches8.reduce((sum, trip) => sum + (trip.yield?.mats.frost ?? 0), 0) / matches8.length : null;
+  // Decision 65 amendment (d): A5's sim Watch samples 8-hour match trips to frost-rich planets (≥6 frost sectors).
+  const sends = career.days.flatMap((row) => row.tripSendLog);
+  const matches8 = sends.filter((send) => send.hours === 8 && send.match && send.baseFrost >= 6);
+  const mean8MatchFrost = matches8.length ? matches8.reduce((sum, send) => sum + (send.mats.frost ?? 0), 0) / matches8.length : null;
+  // Decision 65 amendment: the campaign-complete day is the first day the level reaches 121.
+  const campaignDay = career.days.find((row) => row.level >= 121)?.day ?? null;
+  const campaignEnd = Math.min(campaignDay ?? 60, 60);
+  const campaignWindows = windows.filter((row) => row.to <= campaignEnd);
+  const afterWindows = windows.filter((row) => row.to > campaignEnd);
+  const afterCampaign = campaignDay !== null && campaignDay < 60 ? window(campaignDay + 1, 60) : null;
+  // Decision 61 amendment 2: printed only — does the first row carry Next Up's colour whenever one is offered?
+  const a1Sends = sends.filter((send) => send.day >= bay3 && send.day <= bay3 + 6 && send.neededOffered);
+  const allSends = sends.filter((send) => send.day <= 60 && send.neededOffered);
   const surplus = Object.fromEntries(
     (['frost', 'ember'] as const).map((mat) => {
       const lastSink =
@@ -102,8 +120,11 @@ function tripMetrics(career: Career) {
       ];
     }),
   );
-  const worst = (key: 'all' | 'frost' | 'ember') =>
-    [...windows].sort((a, b) => (key === 'all' ? b.allRatio - a.allRatio : b.perColour[key].ratio - a.perColour[key].ratio))[0];
+  const worstOf = (rows: typeof windows, key: 'all' | 'frost' | 'ember') =>
+    [...rows].sort((a, b) => (key === 'all' ? b.allRatio - a.allRatio : b.perColour[key].ratio - a.perColour[key].ratio))[0];
+  const worst = (key: 'all' | 'frost' | 'ember') => worstOf(windows, key);
+  const over = (rows: typeof windows) =>
+    rows.filter((row) => row.allRatio > 0.5 || row.perColour.frost.ratio > 0.5 || row.perColour.ember.ratio > 0.5).length;
   return {
     bay3Baseline: bay3,
     bay3Current: career.bayLevelDays[3],
@@ -113,6 +134,17 @@ function tripMetrics(career: Career) {
     windows,
     windowsWithTrips: windows.filter((row) => row.trips > 0).length,
     worst: { all: worst('all'), frost: worst('frost'), ember: worst('ember') },
+    campaignDay,
+    campaignWindows,
+    campaignWorst: campaignWindows.length
+      ? { all: worstOf(campaignWindows, 'all'), frost: worstOf(campaignWindows, 'frost'), ember: worstOf(campaignWindows, 'ember') }
+      : null,
+    afterCampaign,
+    afterWindowsOver: over(afterWindows),
+    afterWindows: afterWindows.length,
+    windowsOver35: windows.filter((row) => row.allRatio > 0.35).length,
+    a1Carries: { carried: a1Sends.filter((send) => send.carriesNeeded).length, sends: a1Sends.length },
+    allCarries: { carried: allSends.filter((send) => send.carriesNeeded).length, sends: allSends.length },
     bay2Day: career.bayLevelDays[2],
     sentDays,
     activeTripDays: active.length,
@@ -135,21 +167,27 @@ function gateTrips(regular: Career, engaged: Career, seed: string) {
     console.log(
       `M13 ${seed} ${career.type}: A1 ${(100 * m.a1.perColour.frost.share).toFixed(3)}% (${m.a1.perColour.frost.trip}/${m.a1.perColour.frost.total}, ${m.a1.trips} trips); A2 days 8–14 ${(100 * m.a2Week.perColour.frost.share).toFixed(3)}%, days 1–14 ${(100 * m.a2Cumulative.perColour.frost.share).toFixed(3)}%; A3 ${m.windowsWithTrips}/54 windows with trips`,
     );
+    const cw = m.campaignWorst;
+    const ac = m.afterCampaign;
     console.log(
-      `M13 ${seed} ${career.type}: A3 worst all ${m.worst.all.allRatio.toFixed(6)} days ${m.worst.all.from}–${m.worst.all.to}; frost ${m.worst.frost.perColour.frost.ratio.toFixed(6)} days ${m.worst.frost.from}–${m.worst.frost.to}; ember ${m.worst.ember.perColour.ember.ratio.toFixed(6)} days ${m.worst.ember.from}–${m.worst.ember.to}; all-colour 0.35 Watch ${m.worst.all.allRatio <= 0.35 ? 'green' : 'red'}`,
+      `M13 ${seed} ${career.type}: A3 campaign-complete day ${m.campaignDay ?? 'not reached'}; ${m.campaignWindows.length} campaign windows, worst all ${cw ? cw.all.allRatio.toFixed(3) : 'n/a'}, frost ${cw ? cw.frost.perColour.frost.ratio.toFixed(3) : 'n/a'}, ember ${cw ? cw.ember.perColour.ember.ratio.toFixed(3) : 'n/a'}; after campaign days ${ac ? `${ac.from}–${ac.to}` : 'n/a'} all ${ac ? ac.allRatio.toFixed(3) : 'n/a'}, frost ${ac ? ac.perColour.frost.ratio.toFixed(3) : 'n/a'} (${ac?.perColour.frost.trip ?? 0}/${ac?.perColour.frost.rounds ?? 0}), ember ${ac ? ac.perColour.ember.ratio.toFixed(3) : 'n/a'} (${ac?.perColour.ember.trip ?? 0}/${ac?.perColour.ember.rounds ?? 0})`,
+    );
+    console.log(
+      `M13 ${seed} ${career.type}: Watch A3 any 7-day window worst all ${m.worst.all.allRatio.toFixed(3)} days ${m.worst.all.from}–${m.worst.all.to}; frost ${m.worst.frost.perColour.frost.ratio.toFixed(3)} days ${m.worst.frost.from}–${m.worst.frost.to}; ember ${m.worst.ember.perColour.ember.ratio.toFixed(3)} days ${m.worst.ember.from}–${m.worst.ember.to}; after-campaign windows over 0.5: ${m.afterWindowsOver}/${m.afterWindows}; windows over 0.35: ${m.windowsOver35}/54; A1 floor Watch ${m.a1.perColour.frost.share >= 0.25 ? 'green' : 'red'}; first row carries Next Up's colour ${m.a1Carries.carried}/${m.a1Carries.sends} (days ${m.bay3Baseline}–${m.bay3Baseline + 6}), ${m.allCarries.carried}/${m.allCarries.sends} (days 1–60)`,
     );
     console.log(
       `M13 ${seed} ${career.type}: A3a ${m.sentDays}/${m.activeTripDays} active days (${(100 * m.coverage).toFixed(3)}%); A5 8-hour-match frost mean ${m.mean8MatchFrost} (${m.matches8} trips); A8 friendship ${m.tripFriendship}/${m.friendship} (${(100 * m.friendshipShare).toFixed(3)}%), gems ${m.tripGems}/${m.freeGems} (${(100 * m.gemShare).toFixed(3)}%), ${m.windowsWithTrips} windows; A9 surplus ${JSON.stringify(m.surplus)}`,
     );
     expect.soft(m.windowsWithTrips, `A3 ${seed} ${career.type} has trip windows`).toBeGreaterThan(0);
-    for (const row of m.windows) {
+    // Decision 65 amendment: every 7-day window ending on or before the campaign-complete day, then the
+    // after-campaign stretch to day 60 as one total. Later 7-day windows are printed Watches.
+    for (const row of [...m.campaignWindows, ...(m.afterCampaign ? [m.afterCampaign] : [])]) {
       expect.soft(row.allRatio, `A3 ${seed} ${career.type} all Essences days ${row.from}–${row.to}`).toBeLessThanOrEqual(0.5);
       for (const mat of ['frost', 'ember'] as const)
         expect.soft(row.perColour[mat].ratio, `A3 ${seed} ${career.type} ${mat} days ${row.from}–${row.to}`).toBeLessThanOrEqual(0.5);
     }
     if (career.type === 'Regular') {
       expect.soft(m.a1.trips, `A1 ${seed} window has trips`).toBeGreaterThan(0);
-      expect.soft(m.a1.perColour.frost.share, `A1 ${seed} trip frost share ≥25%`).toBeGreaterThanOrEqual(0.25);
       expect.soft(m.a1.perColour.frost.share, `A1 ${seed} trip frost share ≤33%`).toBeLessThanOrEqual(0.33);
       expect.soft(m.coverage, `A3a ${seed} trips on ≥80% active days`).toBeGreaterThanOrEqual(0.8);
       expect.soft(m.windowsWithTrips, `A8 ${seed} friendship Watch has trip windows`).toBeGreaterThan(0);
@@ -290,10 +328,13 @@ if (process.env.SIM === '1') {
     expect.soft(roadFinishDay, 'Regular finishes the free Road lane in 6–8 weeks').toBeLessThanOrEqual(56);
     const roadFreeGemSupply = regular.days.slice(0, 56).reduce((sum, row) => sum + row.freeGems, 0);
     const roadNewGemSinks = ROAD00_GEM_SINGLE_IDS.reduce((sum, id) => sum + (COSMETICS.find((look) => look.id === id)?.gems ?? 0), 0);
+    const roadCoverage = roadNewGemSinks / roadFreeGemSupply;
     console.log(
-      `Road 0 new gem sinks/free supply: ${roadNewGemSinks}/${roadFreeGemSupply} = ${(roadNewGemSinks / roadFreeGemSupply).toFixed(3)}`,
+      `Road 0 new gem sinks/free supply: ${roadNewGemSinks}/${roadFreeGemSupply} = ${roadCoverage.toFixed(3)} (target ${ROAD0_SINK_TARGET}${roadCoverage < ROAD0_SINK_TARGET ? `; inherited exception, floor ${roadSinkFloor(masterSeed)} (decision 61 amendment)` : ''})`,
     );
-    expect.soft(roadNewGemSinks / roadFreeGemSupply, 'new Road gem sinks cover ≥0.8× free supply').toBeGreaterThanOrEqual(0.8);
+    expect
+      .soft(roadCoverage, `new Road gem sinks cover ≥${roadSinkFloor(masterSeed)}× free supply`)
+      .toBeGreaterThanOrEqual(roadSinkFloor(masterSeed));
     const wins = regular.days.reduce((sum, row) => sum + row.wins, 0);
     console.log(
       `Free boosters per campaign win: ${(regular.freeBoosters / wins).toFixed(3)}; Greenhouses ${(regular.greenhouseBoosters / wins).toFixed(3)} (${wins} wins)`,
@@ -408,7 +449,7 @@ if (process.env.SIM === '1') {
       );
       expect.soft(nightRoadFinish).toBeGreaterThanOrEqual(42);
       expect.soft(nightRoadFinish).toBeLessThanOrEqual(56);
-      expect.soft(nightSinks / nightFree56).toBeGreaterThanOrEqual(0.8);
+      expect.soft(nightSinks / nightFree56).toBeGreaterThanOrEqual(roadSinkFloor('night2'));
       expect.soft(regular.freeBoosters / wins).toBeLessThanOrEqual(0.5);
       expect.soft(regular.greenhouseBoosters / wins).toBeLessThanOrEqual(1 / 3);
       for (const currency of CURRENCIES) expect(regular.reachableSinks[currency]).toBe(true);

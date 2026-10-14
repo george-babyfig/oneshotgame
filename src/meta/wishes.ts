@@ -4,7 +4,7 @@ import { SPECIES_BY_ID, type BiomeId, type Planet } from '../core/world';
 import { rngFrom } from '../core/levels';
 import { t } from '../i18n';
 import { today, type Profile, type QuestState } from './profile';
-import { QUESTS, QUEST_BONUS, WISH_REWARD } from './tuning';
+import { QUESTS, QUEST_BONUS, WISH_FRIEND_REWARD, WISH_REWARD } from './tuning';
 import { earn } from './wallet';
 import { unlocked } from './unlocks';
 import { addFriendship } from './homeworld';
@@ -456,14 +456,26 @@ export function wishRoadPoints(p: Profile, card: WishCard, day = today()): numbe
   return previewProfileRoadPoints(p, { source: 'wish', date: day, earningKey: card.id, delta: WISH_REWARD.roadPoints });
 }
 
+/** The preview is the payout: a friend card pays friendship while that friend lives in the Den, otherwise gems. */
+export function wishReward(p: Profile, card: WishCard): { gems: number; dust: number; friendship: number } {
+  const resident = p.home.residents.some((r) => r.species === card.species);
+  const friendCard = wishOrigin(card) === 'friend' && resident;
+  return {
+    gems: friendCard ? WISH_FRIEND_REWARD.gems : WISH_REWARD.gems,
+    dust: WISH_REWARD.dust,
+    friendship: resident ? WISH_FRIEND_REWARD.friendship : 0,
+  };
+}
+
 /** Claiming the third card pays the completion bonus exactly once. */
 export function claimWish(p: Profile, id: string, day?: string): boolean {
   if (!unlocked(p, 'quests')) return false;
   const s = wishState(p);
   const card = s.list.find((q) => q.id === id);
   if (!card || card.claimed || card.progress < card.goal) return false;
+  const reward = wishReward(p, card);
   card.claimed = true;
-  earn(p, 'gems', WISH_REWARD.gems, 'wish');
+  earn(p, 'gems', reward.gems, 'wish');
   earn(p, 'dust', WISH_REWARD.dust, 'wish');
   grantProfileRoadPoints(p, { source: 'wish', date: day ?? today(), earningKey: card.id, delta: WISH_REWARD.roadPoints });
   // Each named sampler is earned from a Wish, with no paid entitlement.
@@ -472,7 +484,7 @@ export function claimWish(p: Profile, id: string, day?: string): boolean {
   }
   const resident = p.home.residents.find((r) => r.species === card.species);
   if (resident) {
-    addFriendship(p, resident, 2);
+    addFriendship(p, resident, reward.friendship);
     checkMail(p);
   }
   if (!s.bonusClaimed && s.list.length === 3 && s.list.every((q) => q.claimed)) {
